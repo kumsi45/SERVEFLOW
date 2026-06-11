@@ -398,6 +398,162 @@ h1 {
   font-size: 18px;
 }
 
+.public-cart-review-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  border: 1px solid #2f604d;
+  border-radius: 8px;
+  color: #fff;
+  background: #2f604d;
+  font-weight: 800;
+}
+
+.public-checkout-panel {
+  margin: 0 16px 32px;
+  padding: 16px;
+  border: 1px solid #ddcfbc;
+  border-radius: 8px;
+  background: #fffdf9;
+}
+
+.public-checkout-heading,
+.public-checkout-line,
+.public-checkout-total {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-checkout-heading {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.public-checkout-heading h2,
+.public-checkout-summary h3 {
+  margin-bottom: 0;
+}
+
+.public-checkout-heading h2 {
+  font-size: 20px;
+}
+
+.public-checkout-heading span,
+.public-checkout-field span,
+.public-checkout-line span {
+  color: #6d5747;
+}
+
+.public-checkout-field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: #6d5747;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.public-checkout-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #ddcfbc;
+  border-radius: 8px;
+  color: #241b16;
+  background: #fffdf9;
+  outline: none;
+}
+
+.public-checkout-field input:focus {
+  border-color: #2f604d;
+  box-shadow: 0 0 0 3px rgba(47, 96, 77, 0.15);
+}
+
+.public-checkout-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.public-checkout-summary h3 {
+  color: #2f604d;
+  font-size: 17px;
+}
+
+.public-checkout-lines {
+  display: grid;
+  gap: 10px;
+}
+
+.public-checkout-line {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eadfce;
+}
+
+.public-checkout-line > div {
+  display: grid;
+  gap: 4px;
+}
+
+.public-checkout-line span {
+  font-size: 13px;
+}
+
+.public-checkout-line > strong {
+  color: #8a3f26;
+  white-space: nowrap;
+}
+
+.public-checkout-total {
+  align-items: center;
+  padding-top: 4px;
+  font-size: 18px;
+}
+
+.public-checkout-error {
+  margin: 14px 0 0;
+  color: #7b3426;
+  font-weight: 700;
+}
+
+.public-checkout-submit-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  border: 1px solid #2f604d;
+  border-radius: 8px;
+  color: #fff;
+  background: #2f604d;
+  font-weight: 800;
+}
+
+.public-checkout-submit-button:disabled {
+  cursor: not-allowed;
+  border-color: #c9bcaa;
+  color: #7b6a5b;
+  background: #e8ded0;
+}
+
+.public-order-confirmation {
+  margin: 0 16px 24px;
+  padding: 16px;
+  border: 1px solid #b9d9c7;
+  border-radius: 8px;
+  background: #edf7f1;
+}
+
+.public-order-confirmation h2 {
+  margin-bottom: 8px;
+  color: #24503e;
+  font-size: 20px;
+}
+
+.public-order-confirmation p {
+  margin-bottom: 0;
+  color: #315c49;
+}
+
 @media (min-width: 640px) {
   .restaurant-header {
     padding: 34px 24px 22px;
@@ -405,12 +561,16 @@ h1 {
 
   .menu-controls,
   .menu-content,
-  .public-cart-panel {
+  .public-cart-panel,
+  .public-checkout-panel,
+  .public-order-confirmation {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  .public-cart-panel {
+  .public-cart-panel,
+  .public-checkout-panel,
+  .public-order-confirmation {
     margin-right: 24px;
     margin-left: 24px;
   }

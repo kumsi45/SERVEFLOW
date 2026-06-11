@@ -7,6 +7,7 @@ type PublicQrCartPanelProps = {
   onIncrease: (menuItemId: string, quantity: number) => void;
   onDecrease: (menuItemId: string, quantity: number) => void;
   onRemove: (menuItemId: string) => void;
+  onReviewOrder: () => void;
 };
 
 const currencyFormatter = new Intl.NumberFormat("en", {
@@ -21,6 +22,7 @@ export function PublicQrCartPanel({
   onIncrease,
   onDecrease,
   onRemove,
+  onReviewOrder,
 }: PublicQrCartPanelProps) {
   return (
     <aside className="public-cart-panel" aria-label="Cart">
@@ -71,6 +73,9 @@ export function PublicQrCartPanel({
             <span>Subtotal</span>
             <strong>{currencyFormatter.format(displaySubtotal)}</strong>
           </div>
+          <button className="public-cart-review-button" type="button" onClick={onReviewOrder}>
+            Review order
+          </button>
         </>
       ) : (
         <p className="public-cart-empty">No items added yet.</p>

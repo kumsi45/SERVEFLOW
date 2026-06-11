@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AddPublicQrCartItemInput, PublicQrCartItem } from "../types";
 
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 99;
+const CART_STORAGE_PREFIX = "serveflow.publicQrCart";
+
+function getCartStorageKey(restaurantSlug: string) {
+  return `${CART_STORAGE_PREFIX}:${restaurantSlug}`;
+}
 
 function normalizeQuantity(quantity: number | undefined) {
   if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
@@ -18,8 +23,53 @@ function normalizeNotes(notes: string | undefined) {
   return normalized ? normalized : undefined;
 }
 
-export function usePublicQrCart() {
-  const [items, setItems] = useState<PublicQrCartItem[]>([]);
+function normalizeCartItem(item: unknown): PublicQrCartItem | undefined {
+  if (!item || typeof item !== "object") {
+    return undefined;
+  }
+
+  const payload = item as Partial<PublicQrCartItem>;
+
+  if (
+    typeof payload.menuItemId !== "string" ||
+    typeof payload.name !== "string" ||
+    typeof payload.price !== "number" ||
+    !Number.isFinite(payload.price)
+  ) {
+    return undefined;
+  }
+
+  return {
+    menuItemId: payload.menuItemId,
+    name: payload.name,
+    price: payload.price,
+    quantity: normalizeQuantity(payload.quantity),
+    notes: normalizeNotes(payload.notes),
+  };
+}
+
+function readStoredCartItems(restaurantSlug: string): PublicQrCartItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(getCartStorageKey(restaurantSlug));
+
+    if (!storedValue) {
+      return [];
+    }
+
+    const parsedValue: unknown = JSON.parse(storedValue);
+
+    return Array.isArray(parsedValue) ? parsedValue.flatMap((item) => normalizeCartItem(item) ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function usePublicQrCart(restaurantSlug: string) {
+  const [items, setItems] = useState<PublicQrCartItem[]>(() => readStoredCartItems(restaurantSlug));
 
   const itemCount = useMemo(
     () => items.reduce((total, item) => total + item.quantity, 0),
@@ -30,6 +80,21 @@ export function usePublicQrCart() {
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
     [items]
   );
+
+  useEffect(() => {
+    try {
+      const storageKey = getCartStorageKey(restaurantSlug);
+
+      if (items.length > 0) {
+        window.localStorage.setItem(storageKey, JSON.stringify(items));
+        return;
+      }
+
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // localStorage may be unavailable in private browsing or embedded webviews.
+    }
+  }, [items, restaurantSlug]);
 
   function addItem(input: AddPublicQrCartItemInput) {
     const quantity = normalizeQuantity(input.quantity);
