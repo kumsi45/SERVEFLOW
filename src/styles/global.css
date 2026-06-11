@@ -239,6 +239,25 @@ h1 {
   background: #dceee5;
 }
 
+.menu-item-cart-button {
+  display: block;
+  min-width: 86px;
+  min-height: 36px;
+  margin-top: 12px;
+  border: 1px solid #2f604d;
+  border-radius: 8px;
+  color: #fff;
+  background: #2f604d;
+  font-weight: 800;
+}
+
+.menu-item-cart-button:disabled {
+  cursor: not-allowed;
+  border-color: #c9bcaa;
+  color: #7b6a5b;
+  background: #e8ded0;
+}
+
 .menu-item-image-wrap {
   min-width: 0;
 }
@@ -272,15 +291,128 @@ h1 {
   margin-bottom: 8px;
 }
 
+.public-cart-panel {
+  margin: 0 16px 24px;
+  padding: 16px;
+  border: 1px solid #ddcfbc;
+  border-radius: 8px;
+  background: #fffaf3;
+}
+
+.public-cart-heading,
+.public-cart-line-main,
+.public-cart-total {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-cart-heading {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.public-cart-heading h2 {
+  margin-bottom: 0;
+  font-size: 20px;
+}
+
+.public-cart-heading span,
+.public-cart-empty,
+.public-cart-line p {
+  color: #6d5747;
+}
+
+.public-cart-empty {
+  margin-bottom: 0;
+}
+
+.public-cart-lines {
+  display: grid;
+  gap: 12px;
+}
+
+.public-cart-line {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eadfce;
+}
+
+.public-cart-line strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.public-cart-line p {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.public-cart-line-main > span {
+  color: #8a3f26;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.public-cart-actions {
+  display: grid;
+  grid-template-columns: 38px 32px 38px minmax(82px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.public-cart-actions span {
+  text-align: center;
+  font-weight: 800;
+}
+
+.public-cart-actions button {
+  min-height: 38px;
+  border: 1px solid #2f604d;
+  border-radius: 8px;
+  color: #fff;
+  background: #2f604d;
+  font-weight: 800;
+}
+
+.public-cart-actions button:disabled {
+  cursor: not-allowed;
+  border-color: #c9bcaa;
+  color: #7b6a5b;
+  background: #e8ded0;
+}
+
+.public-cart-actions button:last-child {
+  color: #7b3426;
+  border-color: #e0b4a9;
+  background: #f8dfd8;
+}
+
+.public-cart-total {
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #ddcfbc;
+  font-size: 18px;
+}
+
 @media (min-width: 640px) {
   .restaurant-header {
     padding: 34px 24px 22px;
   }
 
   .menu-controls,
-  .menu-content {
+  .menu-content,
+  .public-cart-panel {
     padding-left: 24px;
     padding-right: 24px;
+  }
+
+  .public-cart-panel {
+    margin-right: 24px;
+    margin-left: 24px;
   }
 
   .menu-item {

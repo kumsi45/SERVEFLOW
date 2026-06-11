@@ -2,6 +2,7 @@ import type { MenuItem } from "../types";
 
 type MenuItemCardProps = {
   item: MenuItem;
+  onAddToCart?: (item: MenuItem) => void;
 };
 
 const currencyFormatter = new Intl.NumberFormat("en", {
@@ -9,7 +10,7 @@ const currencyFormatter = new Intl.NumberFormat("en", {
   currency: "USD",
 });
 
-export function MenuItemCard({ item }: MenuItemCardProps) {
+export function MenuItemCard({ item, onAddToCart }: MenuItemCardProps) {
   return (
     <article className={item.available ? "menu-item" : "menu-item unavailable"}>
       <div className="menu-item-copy">
@@ -21,6 +22,16 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
         <span className={item.available ? "availability available" : "availability"}>
           {item.available ? "Available" : "Unavailable"}
         </span>
+        {onAddToCart ? (
+          <button
+            className="menu-item-cart-button"
+            type="button"
+            onClick={() => onAddToCart(item)}
+            disabled={!item.available}
+          >
+            Add
+          </button>
+        ) : null}
       </div>
       <div className="menu-item-image-wrap">
         {item.image_url ? (
