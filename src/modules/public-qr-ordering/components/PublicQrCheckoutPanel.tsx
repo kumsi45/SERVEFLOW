@@ -1,4 +1,5 @@
 import type { PublicQrCartItem } from "../types";
+import { formatETBPrice } from "../../qr-menu/components/menuPresentation";
 
 type PublicQrCheckoutPanelProps = {
   customerName: string;
@@ -7,14 +8,31 @@ type PublicQrCheckoutPanelProps = {
   submitting: boolean;
   submitError?: string;
   tableNumber?: string;
+  onClose?: () => void;
   onCustomerNameChange: (customerName: string) => void;
   onSubmit: () => void;
 };
 
-const currencyFormatter = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: "USD",
-});
+const MIN_CUSTOMER_NAME_LENGTH = 2;
+const MAX_CUSTOMER_NAME_LENGTH = 30;
+
+function getCustomerNameValidationMessage(customerName: string) {
+  const trimmedName = customerName.trim();
+
+  if (trimmedName.length === 0) {
+    return "Please enter your name before placing the order.";
+  }
+
+  if (trimmedName.length < MIN_CUSTOMER_NAME_LENGTH) {
+    return "Name must be at least 2 characters.";
+  }
+
+  if (trimmedName.length > MAX_CUSTOMER_NAME_LENGTH) {
+    return "Name must be 30 characters or fewer.";
+  }
+
+  return undefined;
+}
 
 export function PublicQrCheckoutPanel({
   customerName,
@@ -23,25 +41,48 @@ export function PublicQrCheckoutPanel({
   submitting,
   submitError,
   tableNumber,
+  onClose,
   onCustomerNameChange,
   onSubmit,
 }: PublicQrCheckoutPanelProps) {
+  const customerNameValidationMessage = getCustomerNameValidationMessage(customerName);
+  const canSubmit = items.length > 0 && !submitting && !customerNameValidationMessage;
+
   return (
-    <section className="public-checkout-panel" aria-label="Checkout">
+    <section className="public-checkout-panel open" aria-label="Checkout">
       <div className="public-checkout-heading">
-        <h2>Checkout</h2>
-        {tableNumber ? <span>Table {tableNumber}</span> : null}
+        <div>
+          <p className="eyebrow">Review Order</p>
+          <h2>Checkout</h2>
+        </div>
+        <div className="checkout-heading-actions">
+          {tableNumber ? <span>Table {tableNumber}</span> : <span>QR table order</span>}
+          {onClose ? (
+            <button className="panel-close-button" type="button" onClick={onClose} aria-label="Close checkout">
+              Close
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <label className="public-checkout-field">
-        <span>Name</span>
+        <span>Your Name</span>
         <input
           type="text"
           value={customerName}
-          placeholder="Optional"
+          placeholder="Abebe"
           autoComplete="name"
+          maxLength={MAX_CUSTOMER_NAME_LENGTH + 1}
+          aria-invalid={customerNameValidationMessage ? "true" : "false"}
+          aria-describedby="public-checkout-name-error"
           onChange={(event) => onCustomerNameChange(event.target.value)}
+          onBlur={() => onCustomerNameChange(customerName.trim())}
         />
+        {customerNameValidationMessage ? (
+          <p className="public-checkout-field-error" id="public-checkout-name-error">
+            {customerNameValidationMessage}
+          </p>
+        ) : null}
       </label>
 
       <div className="public-checkout-summary" aria-label="Order summary">
@@ -52,16 +93,20 @@ export function PublicQrCheckoutPanel({
               <div>
                 <strong>{item.name}</strong>
                 <span>
-                  {item.quantity} x {currencyFormatter.format(item.price)}
+                  {item.quantity} x {formatETBPrice(item.price)}
                 </span>
               </div>
-              <strong>{currencyFormatter.format(item.price * item.quantity)}</strong>
+              <strong>{formatETBPrice(item.price * item.quantity)}</strong>
             </div>
           ))}
         </div>
+        <div className="public-checkout-estimate">
+          <span>Preparation estimate</span>
+          <strong>15-20 min</strong>
+        </div>
         <div className="public-checkout-total">
           <span>Subtotal</span>
-          <strong>{currencyFormatter.format(displaySubtotal)}</strong>
+          <strong>{formatETBPrice(displaySubtotal)}</strong>
         </div>
       </div>
 
@@ -70,7 +115,7 @@ export function PublicQrCheckoutPanel({
       <button
         className="public-checkout-submit-button"
         type="button"
-        disabled={submitting || items.length === 0}
+        disabled={!canSubmit}
         onClick={onSubmit}
       >
         {submitting ? "Placing order..." : "Place order"}
