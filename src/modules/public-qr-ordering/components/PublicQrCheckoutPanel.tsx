@@ -1,15 +1,21 @@
-import type { PublicQrCartItem } from "../types";
+import {
+  PUBLIC_QR_PAYMENT_METHODS,
+  type PublicQrCartItem,
+  type PublicQrPaymentMethod,
+} from "../types";
 import { formatETBPrice } from "../../qr-menu/components/menuPresentation";
 
 type PublicQrCheckoutPanelProps = {
   customerName: string;
   displaySubtotal: number;
   items: PublicQrCartItem[];
+  paymentMethod: PublicQrPaymentMethod | "";
   submitting: boolean;
   submitError?: string;
   tableNumber?: string;
   onClose?: () => void;
   onCustomerNameChange: (customerName: string) => void;
+  onPaymentMethodChange: (paymentMethod: PublicQrPaymentMethod | "") => void;
   onSubmit: () => void;
 };
 
@@ -34,19 +40,31 @@ function getCustomerNameValidationMessage(customerName: string) {
   return undefined;
 }
 
+function getPaymentMethodValidationMessage(paymentMethod: PublicQrPaymentMethod | "") {
+  if (!paymentMethod) {
+    return "Please select a payment method before placing the order.";
+  }
+
+  return undefined;
+}
+
 export function PublicQrCheckoutPanel({
   customerName,
   displaySubtotal,
   items,
+  paymentMethod,
   submitting,
   submitError,
   tableNumber,
   onClose,
   onCustomerNameChange,
+  onPaymentMethodChange,
   onSubmit,
 }: PublicQrCheckoutPanelProps) {
   const customerNameValidationMessage = getCustomerNameValidationMessage(customerName);
-  const canSubmit = items.length > 0 && !submitting && !customerNameValidationMessage;
+  const paymentMethodValidationMessage = getPaymentMethodValidationMessage(paymentMethod);
+  const canSubmit =
+    items.length > 0 && !submitting && !customerNameValidationMessage && !paymentMethodValidationMessage;
 
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
@@ -66,7 +84,7 @@ export function PublicQrCheckoutPanel({
       </div>
 
       <label className="public-checkout-field">
-        <span>Your Name</span>
+        <span>Customer Name *</span>
         <input
           type="text"
           value={customerName}
@@ -81,6 +99,35 @@ export function PublicQrCheckoutPanel({
         {customerNameValidationMessage ? (
           <p className="public-checkout-field-error" id="public-checkout-name-error">
             {customerNameValidationMessage}
+          </p>
+        ) : null}
+      </label>
+
+      <div className="public-checkout-detail-row">
+        <span>Table Number</span>
+        <strong>{tableNumber || "QR table order"}</strong>
+      </div>
+
+      <label className="public-checkout-field">
+        <span>Payment Method *</span>
+        <select
+          value={paymentMethod}
+          aria-invalid={paymentMethodValidationMessage ? "true" : "false"}
+          aria-describedby="public-checkout-payment-error"
+          onChange={(event) =>
+            onPaymentMethodChange(event.target.value as PublicQrPaymentMethod | "")
+          }
+        >
+          <option value="">Select payment method</option>
+          {PUBLIC_QR_PAYMENT_METHODS.map((method) => (
+            <option value={method} key={method}>
+              {method}
+            </option>
+          ))}
+        </select>
+        {paymentMethodValidationMessage ? (
+          <p className="public-checkout-field-error" id="public-checkout-payment-error">
+            {paymentMethodValidationMessage}
           </p>
         ) : null}
       </label>
@@ -110,16 +157,18 @@ export function PublicQrCheckoutPanel({
         </div>
       </div>
 
-      {submitError ? <p className="public-checkout-error">{submitError}</p> : null}
+      <div className="public-checkout-footer">
+        {submitError ? <p className="public-checkout-error">{submitError}</p> : null}
 
-      <button
-        className="public-checkout-submit-button"
-        type="button"
-        disabled={!canSubmit}
-        onClick={onSubmit}
-      >
-        {submitting ? "Placing order..." : "Place order"}
-      </button>
+        <button
+          className="public-checkout-submit-button"
+          type="button"
+          disabled={!canSubmit}
+          onClick={onSubmit}
+        >
+          {submitting ? "Placing order..." : "Place order"}
+        </button>
+      </div>
     </section>
   );
 }

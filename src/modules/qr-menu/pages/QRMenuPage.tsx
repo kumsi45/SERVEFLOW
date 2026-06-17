@@ -12,6 +12,7 @@ import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrC
 import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart";
 import { usePublicQrCheckoutState } from "../../public-qr-ordering/hooks/usePublicQrCheckoutState";
 import { submitPublicQrOrder } from "../../public-qr-ordering/services/publicQrOrderService";
+import { isPaymentMethod } from "../../public-qr-ordering/types";
 import type { SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
 
@@ -57,6 +58,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       return;
     }
 
+    if (!isPaymentMethod(checkout.paymentMethod)) {
+      return;
+    }
+
     setSubmitError(undefined);
     setSubmitting(true);
 
@@ -65,6 +70,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         restaurantSlug,
         tableNumber: checkout.tableNumber,
         customerName,
+        paymentMethod: checkout.paymentMethod,
         items: cart.items,
       });
 
@@ -139,11 +145,13 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               customerName={checkout.customerName}
               displaySubtotal={cart.displaySubtotal}
               items={cart.items}
+              paymentMethod={checkout.paymentMethod}
               submitting={submitting}
               submitError={submitError}
               tableNumber={checkout.tableNumber}
               onClose={() => checkout.setCheckoutVisible(false)}
               onCustomerNameChange={checkout.setCustomerName}
+              onPaymentMethodChange={checkout.setPaymentMethod}
               onSubmit={submitOrder}
             />
           ) : (

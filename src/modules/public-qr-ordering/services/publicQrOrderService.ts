@@ -1,10 +1,11 @@
 import { supabase } from "../../../core/database";
-import type { PublicQrCartItem, SubmittedPublicQrOrder } from "../types";
+import type { PublicQrCartItem, PublicQrPaymentMethod, SubmittedPublicQrOrder } from "../types";
 
 type SubmitPublicQrOrderInput = {
   restaurantSlug: string;
   tableNumber?: string;
   customerName?: string;
+  paymentMethod: PublicQrPaymentMethod;
   items: PublicQrCartItem[];
 };
 
@@ -27,6 +28,7 @@ export async function submitPublicQrOrder({
   restaurantSlug,
   tableNumber,
   customerName,
+  paymentMethod,
   items,
 }: SubmitPublicQrOrderInput): Promise<SubmittedPublicQrOrder> {
   const requestedItems = items.map((item) => ({
@@ -38,6 +40,7 @@ export async function submitPublicQrOrder({
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber ?? "",
     customer_name: customerName ?? "",
+    selected_payment_method: paymentMethod,
     requested_items: requestedItems,
   });
 

@@ -21,7 +21,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -527,7 +528,8 @@ h1 {
   font-weight: 700;
 }
 
-.public-checkout-field input {
+.public-checkout-field input,
+.public-checkout-field select {
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
@@ -538,7 +540,17 @@ h1 {
   outline: none;
 }
 
-.public-checkout-field input:focus {
+.public-checkout-field select {
+  appearance: none;
+  padding-right: 42px;
+  background:
+    linear-gradient(45deg, transparent 50%, #4f4137 50%) right 18px center / 7px 7px no-repeat,
+    linear-gradient(135deg, #4f4137 50%, transparent 50%) right 13px center / 7px 7px no-repeat,
+    #fffdf9;
+}
+
+.public-checkout-field input:focus,
+.public-checkout-field select:focus {
   border-color: #2f604d;
   box-shadow: 0 0 0 3px rgba(47, 96, 77, 0.15);
 }
@@ -553,6 +565,25 @@ h1 {
 .public-checkout-summary {
   display: grid;
   gap: 12px;
+}
+
+.public-checkout-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 11px 12px;
+  border: 1px solid #eadfce;
+  border-radius: 8px;
+  color: #6d5747;
+  background: #fffaf3;
+  font-size: 13px;
+}
+
+.public-checkout-detail-row strong {
+  color: #211b17;
+  text-align: right;
 }
 
 .public-checkout-summary h3 {
@@ -591,15 +622,19 @@ h1 {
 }
 
 .public-checkout-error {
-  margin: 14px 0 0;
+  margin: 0 0 10px;
   color: #7b3426;
   font-weight: 700;
+}
+
+.public-checkout-footer {
+  padding-top: 14px;
+  background: inherit;
 }
 
 .public-checkout-submit-button {
   width: 100%;
   min-height: 44px;
-  margin-top: 14px;
   border: 1px solid #2f604d;
   border-radius: 8px;
   color: #fff;
@@ -1547,14 +1582,26 @@ h1 {
     pointer-events: none;
   }
 
-  .public-cart-panel,
-  .public-checkout-panel {
+  .public-cart-panel {
     max-height: min(78vh, 680px);
     margin: 0;
     overflow-y: auto;
     border-radius: 8px 8px 0 0;
     transform: translateY(110%);
     transition: transform 220ms ease;
+    pointer-events: auto;
+  }
+
+  .public-checkout-panel {
+    max-height: calc(100dvh - 12px);
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 8px 8px 0 0;
+    transform: translateY(110%);
+    transition: transform 220ms ease;
+    -webkit-overflow-scrolling: touch;
     pointer-events: auto;
   }
 
@@ -1620,6 +1667,13 @@ h1 {
   .public-checkout-panel {
     display: block;
     transform: none;
+  }
+
+  .public-checkout-panel {
+    max-height: calc(100vh - 60px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .panel-close-button,
