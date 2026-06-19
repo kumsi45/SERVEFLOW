@@ -1718,3 +1718,394 @@ h1 {
     flex-direction: column;
   }
 }
+
+.cashier-page {
+  width: min(100%, 1180px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18px 16px 44px;
+  color: #211b17;
+}
+
+.staff-login-page,
+.staff-placeholder-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 20px;
+  color: #211b17;
+}
+
+.staff-login-panel,
+.staff-placeholder-panel {
+  width: min(100%, 420px);
+  padding: 22px;
+  border: 1px solid rgba(33, 27, 23, 0.1);
+  border-radius: 8px;
+  background: #fffdf9;
+  box-shadow: 0 20px 50px rgba(33, 27, 23, 0.12);
+}
+
+.staff-login-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.staff-login-panel h1,
+.staff-placeholder-panel h1 {
+  margin-bottom: 0;
+  color: #211b17;
+  font-size: 30px;
+}
+
+.staff-login-eyebrow {
+  margin-bottom: 6px;
+  color: #8a3f26;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.staff-login-field {
+  display: grid;
+  gap: 7px;
+  color: #6a5a4e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.staff-login-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d8c9b8;
+  border-radius: 8px;
+  color: #211b17;
+  background: #fff;
+  outline: none;
+}
+
+.staff-login-field input:focus {
+  border-color: #1e5b4c;
+  box-shadow: 0 0 0 3px rgba(30, 91, 76, 0.15);
+}
+
+.staff-login-panel button {
+  min-height: 44px;
+  border: 1px solid #1e5b4c;
+  border-radius: 8px;
+  color: #fff;
+  background: #1e5b4c;
+  font-weight: 900;
+}
+
+.staff-login-panel button:disabled {
+  cursor: not-allowed;
+  border-color: #c9bcaa;
+  color: #7b6a5b;
+  background: #e8ded0;
+}
+
+.staff-login-error {
+  margin-bottom: 0;
+  padding: 12px;
+  border-radius: 8px;
+  color: #7b3426;
+  background: #f8dfd8;
+  font-weight: 800;
+}
+
+.staff-placeholder-panel p:last-child {
+  margin: 14px 0 0;
+  color: #6a5a4e;
+}
+
+.cashier-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #d8c9b8;
+}
+
+.cashier-header h1 {
+  color: #211b17;
+  font-size: 30px;
+  line-height: 1.12;
+}
+
+.cashier-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.cashier-logo {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #d8c9b8;
+  border-radius: 8px;
+  color: #fff;
+  background: #1e5b4c;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.cashier-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cashier-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cashier-header button,
+.cashier-order-actions button {
+  min-height: 40px;
+  border: 1px solid #1e5b4c;
+  border-radius: 8px;
+  color: #fff;
+  background: #1e5b4c;
+  font-weight: 900;
+}
+
+.cashier-header button {
+  padding: 0 14px;
+}
+
+.cashier-restaurant-name {
+  margin-bottom: 6px;
+  color: #8a3f26;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cashier-alert,
+.cashier-loading,
+.cashier-empty {
+  border-radius: 8px;
+}
+
+.cashier-alert {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  color: #7b3426;
+  background: #f8dfd8;
+  font-weight: 800;
+}
+
+.cashier-loading {
+  display: grid;
+  min-height: 220px;
+  margin-top: 18px;
+  place-items: center;
+  border: 1px dashed #d8c9b8;
+  color: #6a5a4e;
+  background: rgba(255, 253, 249, 0.76);
+}
+
+.cashier-loading p,
+.cashier-empty {
+  margin-bottom: 0;
+}
+
+.cashier-layout {
+  display: grid;
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.cashier-section {
+  min-width: 0;
+}
+
+.cashier-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cashier-section-heading h2 {
+  margin-bottom: 0;
+  color: #211b17;
+  font-size: 20px;
+}
+
+.cashier-section-heading span {
+  display: inline-grid;
+  min-width: 34px;
+  min-height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  color: #1e5b4c;
+  background: #e8f3ed;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.cashier-empty {
+  padding: 16px;
+  border: 1px dashed #d8c9b8;
+  color: #6a5a4e;
+  background: rgba(255, 253, 249, 0.74);
+}
+
+.cashier-order-list {
+  display: grid;
+  gap: 12px;
+}
+
+.cashier-order {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(33, 27, 23, 0.1);
+  border-radius: 8px;
+  background: #fffdf9;
+  box-shadow: 0 12px 28px rgba(33, 27, 23, 0.07);
+}
+
+.cashier-order-topline,
+.cashier-order-actions,
+.cashier-order-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cashier-order-topline h3 {
+  margin-bottom: 4px;
+  color: #211b17;
+  font-size: 18px;
+}
+
+.cashier-order-topline p,
+.cashier-order-details dt,
+.cashier-order-item span,
+.cashier-order-items p {
+  color: #6a5a4e;
+}
+
+.cashier-order-topline p,
+.cashier-order-items p {
+  margin-bottom: 0;
+}
+
+.cashier-order-topline strong {
+  color: #8a3f26;
+  white-space: nowrap;
+}
+
+.cashier-order-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.cashier-order-details div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f7efe3;
+}
+
+.cashier-order-details dt {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cashier-order-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 900;
+}
+
+.cashier-order-actions {
+  flex-wrap: wrap;
+}
+
+.cashier-order-actions button {
+  flex: 1 1 150px;
+  padding: 0 12px;
+}
+
+.cashier-order-actions button:first-child {
+  color: #1e5b4c;
+  background: #fff;
+}
+
+.cashier-order-actions button:disabled {
+  cursor: not-allowed;
+  border-color: #c9bcaa;
+  color: #7b6a5b;
+  background: #e8ded0;
+}
+
+.cashier-order-items {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #e6dacb;
+}
+
+.cashier-order-item strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.cashier-order-item > span {
+  color: #8a3f26;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (min-width: 860px) {
+  .cashier-page {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .cashier-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .cashier-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cashier-header-actions {
+    justify-content: flex-start;
+  }
+
+  .cashier-brand {
+    align-items: flex-start;
+  }
+
+  .cashier-order-details {
+    grid-template-columns: 1fr;
+  }
+}
