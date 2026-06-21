@@ -14,10 +14,13 @@ function isSubmittedPublicQrOrder(value: unknown): value is SubmittedPublicQrOrd
     return false;
   }
 
-  const payload = value as Partial<SubmittedPublicQrOrder>;
+  const payload = value as Record<string, unknown>;
+
+  // The RPC returns 'id' — map it to order_id for the client type
+  const orderId = payload.order_id ?? payload.id;
 
   return Boolean(
-    typeof payload.order_id === "string" &&
+    typeof orderId === "string" &&
       typeof payload.status === "string" &&
       typeof payload.total_price !== "undefined" &&
       typeof payload.created_at === "string"
@@ -52,8 +55,15 @@ export async function submitPublicQrOrder({
     throw new Error("Order could not be confirmed.");
   }
 
+  // Normalize: RPC returns 'id', client expects 'order_id'
+  const normalized = data as Record<string, unknown>;
   return {
-    ...data,
-    total_price: Number(data.total_price),
+    order_id: (normalized.order_id ?? normalized.id) as string,
+    status: normalized.status as string,
+    total_price: Number(normalized.total_price),
+    table_number: normalized.table_number as string | null | undefined,
+    customer_name: normalized.customer_name as string | null | undefined,
+    payment_method: normalized.payment_method as import("../types").PublicQrPaymentMethod | null | undefined,
+    created_at: normalized.created_at as string,
   };
 }

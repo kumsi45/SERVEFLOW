@@ -2,6 +2,7 @@ import { QRMenuPage } from "../../modules/qr-menu/pages/QRMenuPage";
 import { OrderingPage } from "../../modules/ordering/pages/OrderingPage";
 import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedCashierRoute";
 import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
+import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwnerRoute";
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
@@ -23,21 +24,18 @@ function resolveRoute(pathname: string) {
   }
 
   const cashierMatch = pathname.match(/^\/cashier\/([^/]+)\/?$/);
-
   if (cashierMatch) {
-    return {
-      name: "cashier" as const,
-      restaurantId: decodeURIComponent(cashierMatch[1]),
-    };
+    return { name: "cashier" as const, restaurantId: decodeURIComponent(cashierMatch[1]) };
   }
 
   const kitchenMatch = pathname.match(/^\/kitchen\/([^/]+)\/?$/);
-
   if (kitchenMatch) {
-    return {
-      name: "kitchen" as const,
-      restaurantId: decodeURIComponent(kitchenMatch[1]),
-    };
+    return { name: "kitchen" as const, restaurantId: decodeURIComponent(kitchenMatch[1]) };
+  }
+
+  const ownerMatch = pathname.match(/^\/owner\/([^/]+)\/?$/);
+  if (ownerMatch) {
+    return { name: "owner" as const, restaurantId: decodeURIComponent(ownerMatch[1]) };
   }
 
   const orderingMatch = pathname.match(/^\/r\/([^/]+)\/order\/?$/);
@@ -86,6 +84,10 @@ export function AppRouter() {
 
   if (route.name === "kitchen") {
     return <ProtectedKitchenRoute restaurantId={route.restaurantId} />;
+  }
+
+  if (route.name === "owner") {
+    return <ProtectedOwnerRoute restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "qr-menu") {

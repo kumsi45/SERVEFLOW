@@ -66,11 +66,19 @@ function OrderTicket({ order, actionId, onStart, onReady, now }: {
 
       <div className="kd-ticket-meta">
         <div>
-          <div className="kd-ticket-customer" style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>
-            Table {order.tableNumber || "—"}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center",
+              padding: "3px 10px", borderRadius: 6,
+              background: "var(--kd-new)", color: "#fff",
+              fontSize: 12, fontWeight: 800, letterSpacing: "0.08em",
+              textTransform: "uppercase" as const,
+            }}>
+              TABLE {order.tableNumber || "—"}
+            </span>
           </div>
           {order.customerName && (
-            <div style={{ fontSize: 12, color: "var(--kd-muted)", marginTop: 2 }}>{order.customerName}</div>
+            <div style={{ fontSize: 12, color: "var(--kd-muted)" }}>{order.customerName}</div>
           )}
           <div className="kd-ticket-table" style={{ marginTop: 2 }}>{fmtTime(order.createdAt)}</div>
         </div>

@@ -90,9 +90,14 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
 
   if (accessState.status === "unauthorized") {
     if (accessState.reason === "session") {
-      window.location.replace("/staff-login");
+      // Genuine session loss — redirect to login
+      // Use replace so back button doesn't loop
+      if (typeof window !== "undefined") {
+        window.location.replace("/staff-login");
+      }
       return null;
     }
+    // Role/access denied — show message, do NOT sign out
     return (
       <main className="route-message">
         <p>Cashier access is not available for this restaurant.</p>

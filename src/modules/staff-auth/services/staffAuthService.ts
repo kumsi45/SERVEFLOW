@@ -81,7 +81,9 @@ async function clearSupabaseAuthSession() {
     return;
   }
 
-  const { error } = await supabase.auth.signOut();
+  // Only sign out if there is an active session. This clears any stale session
+  // before a new sign-in so the new credentials take effect cleanly.
+  const { error } = await supabase.auth.signOut({ scope: "local" });
 
   if (error) {
     throw new Error(error.message);
@@ -123,7 +125,6 @@ export async function getCurrentStaffSession(): Promise<StaffSession | null> {
     if (isMissingAuthSessionError(sessionError)) {
       return null;
     }
-
     throw new Error(sessionError.message);
   }
 
@@ -135,8 +136,9 @@ export async function getCurrentStaffSession(): Promise<StaffSession | null> {
 }
 
 export async function signInStaff(email: string, password: string): Promise<StaffSession> {
-  await clearSupabaseAuthSession();
-
+  // Do NOT sign out before signing in — calling signOut() fires SIGNED_OUT
+  // to all onAuthStateChange listeners including active dashboard tabs,
+  // causing them to log out. signInWithPassword replaces the session directly.
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -147,7 +149,6 @@ export async function signInStaff(email: string, password: string): Promise<Staf
   }
 
   if (!data.user) {
-    await signOutStaff();
     throw new Error("Staff sign in did not return an authenticated user.");
   }
 
@@ -159,10 +160,23 @@ export async function signInStaff(email: string, password: string): Promise<Staf
   }
 
   return staffSession;
+} const staffSession = await getStaffSessionForUser(data.user.id);
+
+  if (!staffSession) {
+    await signOutStaff();{
+    throw new Error("No active staff role was found for this account.");
+  }
+
+  return staffSession;
 }
 
 export async function signOutStaff() {
-  await clearSupabaseAuthSession();
+  // scope: "local" signs out only this tab — other open dashboards stay alive
+  // until they naturally detect the session is gone via their own auth check.
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export function getStaffDestinations(staffSession: StaffSession): StaffDestination[] {

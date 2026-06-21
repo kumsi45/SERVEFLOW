@@ -247,3 +247,20 @@
 .cd-shift-stat-label { font-size: 11px; font-weight: 600; color: var(--cd-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 .cd-shift-stat-value { font-size: 20px; font-weight: 800; color: var(--cd-text); }
 @media (min-width: 640px) { .cd-shift-grid { grid-template-columns: repeat(4,1fr); } }
+
+/* ─── TABLE BADGE — prominent table identifier ─── */
+.cd-table-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--cd-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}

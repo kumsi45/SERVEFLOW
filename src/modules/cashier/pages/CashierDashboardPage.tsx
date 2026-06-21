@@ -9,9 +9,6 @@ function fmtMoney(v: number) {
   return `ETB ${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 function fmtOrderId(id: string) { return `#${id.slice(0, 6).toUpperCase()}`; }
-function fmtTime(iso: string) {
-  return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
-}
 function fmtDateTime(iso: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
@@ -85,8 +82,9 @@ function RevenueChart({ orders }: { orders: CashierOrder[] }) {
   const labels = ["6AM","8AM","10AM","12PM","2PM","4PM","6PM","8PM","10PM"];
   const hours =  [6,    8,    10,    12,    14,   16,   18,   20,   22  ];
   const buckets = hours.map((h) => {
+    // Revenue is status-independent — use payment_verified_at timestamp
     const total = orders
-      .filter((o) => o.status === "paid" && new Date(o.paymentVerifiedAt ?? o.createdAt).getHours() === h)
+      .filter((o) => o.paymentVerifiedAt !== null && new Date(o.paymentVerifiedAt).getHours() === h)
       .reduce((s, o) => s + o.totalPrice, 0);
     return total;
   });
@@ -108,7 +106,8 @@ function RevenueChart({ orders }: { orders: CashierOrder[] }) {
 
 // ─── Donut chart ─────────────────────────────────────────────────────────────
 function PaymentDonut({ orders }: { orders: CashierOrder[] }) {
-  const paid = orders.filter((o) => o.status === "paid");
+  // Use all verified orders (status-independent revenue)
+  const paid = orders.filter((o) => o.paymentVerifiedAt !== null);
   const methods = ["Cash","Telebirr","CBE Birr","Mobile Banking","Chapa","Credit/Debit Card"];
   const colors = ["#2563eb","#7c3aed","#f59e0b","#10b981","#ef4444","#0ea5e9"];
   const counts = methods.map((m) => paid.filter((o) => o.paymentMethod === m).length);
@@ -229,7 +228,8 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
         const [{ data: staffData }, { data: orderRows, error: oErr }, ] = await Promise.all([
           supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
           supabase.from("orders").select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at")
-            .eq("restaurant_id", restaurantId).in("status", ["pending_payment","paid"])
+            .eq("restaurant_id", restaurantId)
+            .in("status", ["pending_payment","paid","preparing","ready","completed","cancelled"])
             .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString())
             .order("created_at", { ascending: false }),
         ]);
@@ -267,10 +267,9 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
         async (payload) => {
           const row = payload.new as OrderRow;
-          if (!["pending_payment","paid"].includes(row.status)) {
-            setOrders((prev) => prev.filter((o) => o.id !== row.id));
-            return;
-          }
+          // Never remove orders from cashier view — update status in place.
+          // This keeps revenue and history accurate regardless of workflow stage.
+          if (!row?.id) return;
           const { data: itemRows } = await supabase.from("order_items")
             .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
             .eq("restaurant_id", restaurantId).eq("order_id", row.id);
@@ -278,8 +277,11 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
           const updated = normalizeOrder(row, items);
           setOrders((prev) => {
             const idx = prev.findIndex((o) => o.id === updated.id);
-            if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
-            return [updated, ...prev];
+            if (idx >= 0) { const next = [...prev]; next[idx] = { ...next[idx], ...updated, items: next[idx].items.length > 0 ? next[idx].items : items }; return next; }
+            // New order — add it if it's from today
+            const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+            if (new Date(row.created_at) >= todayStart) return [updated, ...prev];
+            return prev;
           });
         })
       .subscribe();
@@ -309,11 +311,15 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   }
 
   // ── derived ────────────────────────────────────────────────────────────────
+  // Revenue = any order with payment_verified_at set (status-independent)
+  const verifiedOrders = useMemo(() => orders.filter((o) => o.paymentVerifiedAt !== null), [orders]);
   const pending = useMemo(() => orders.filter((o) => o.status === "pending_payment"), [orders]);
-  const paid = useMemo(() => orders.filter((o) => o.status === "paid"), [orders]);
-  const todayRevenue = useMemo(() => paid.reduce((s, o) => s + o.totalPrice, 0), [paid]);
-  const avgOrder = paid.length > 0 ? todayRevenue / paid.length : 0;
-  const cashCollected = useMemo(() => paid.filter((o) => o.paymentMethod === "Cash").reduce((s, o) => s + o.totalPrice, 0), [paid]);
+  // "paid" for all metrics and history = all verified orders regardless of current workflow status
+  const paid = verifiedOrders;
+  const completedOrders = useMemo(() => orders.filter((o) => o.status === "completed"), [orders]);
+  const todayRevenue = useMemo(() => verifiedOrders.reduce((s, o) => s + o.totalPrice, 0), [verifiedOrders]);
+  const avgOrder = verifiedOrders.length > 0 ? todayRevenue / verifiedOrders.length : 0;
+  const cashCollected = useMemo(() => verifiedOrders.filter((o) => o.paymentMethod === "Cash").reduce((s, o) => s + o.totalPrice, 0), [verifiedOrders]);
   const shiftDuration = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
   const shiftStr = shiftDuration < 60 ? `${shiftDuration}m` : `${Math.floor(shiftDuration / 60)}h ${shiftDuration % 60}m`;
 
@@ -358,10 +364,10 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
           ? <div className="cd-kpi-grid">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="cd-skeleton cd-skeleton-kpi" />)}</div>
           : <div className="cd-kpi-grid">
               <KpiCard label="Today's Revenue" value={fmtMoney(todayRevenue)} icon="💰" iconClass="blue" change="Live data" />
-              <KpiCard label="Orders Today" value={`${orders.length}`} icon="📋" iconClass="green" change={`${paid.length} paid`} />
+              <KpiCard label="Orders Today" value={`${orders.length}`} icon="📋" iconClass="green" change={`${verifiedOrders.length} verified`} />
               <KpiCard label="Pending Payments" value={`${pending.length}`} icon="⏳" iconClass="yellow" change="Needs action" warning={pending.length > 0} />
               <KpiCard label="Avg Order Value" value={fmtMoney(Math.round(avgOrder))} icon="📊" iconClass="purple" />
-              <KpiCard label="Completed" value={`${paid.length}`} icon="✅" iconClass="green" change="Transactions" />
+              <KpiCard label="Completed" value={`${completedOrders.length}`} icon="✅" iconClass="green" change={`${verifiedOrders.length} paid`} />
               <KpiCard label="Cash Collected" value={fmtMoney(cashCollected)} icon="💵" iconClass="blue" />
             </div>
         }
@@ -393,9 +399,9 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                 <div className="cd-card-title">Live Order Activity</div>
               </div>
               <div className="cd-activity-list">
-                {paid.slice(0, 6).length === 0
+                {verifiedOrders.slice(0, 6).length === 0
                   ? <div className="cd-empty"><div className="cd-empty-icon">💳</div><div className="cd-empty-title">No approved payments yet</div></div>
-                  : paid.slice(0, 6).map((o) => (
+                  : verifiedOrders.slice(0, 6).map((o) => (
                       <div key={o.id} className="cd-activity-item">
                         <div className="cd-activity-dot" />
                         <div className="cd-activity-content">
@@ -403,7 +409,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                             Table {o.tableNumber || "—"} · {fmtOrderId(o.id)} approved
                           </div>
                           <div className="cd-activity-sub">
-                            {o.customerName || "Guest"} · {o.paymentMethod || "—"}
+                            {o.customerName || "Guest"} · {o.paymentMethod || "—"} · <span style={{textTransform:"capitalize"}}>{o.status}</span>
                           </div>
                         </div>
                         <div>
@@ -421,7 +427,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                 <div className="cd-card-subtitle">{cashierName || "Cashier"}</div>
               </div>
               <div className="cd-shift-grid">
-                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Approved Today</div><div className="cd-shift-stat-value">{paid.length}</div></div>
+                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Approved Today</div><div className="cd-shift-stat-value">{verifiedOrders.length}</div></div>
                 <div className="cd-shift-stat"><div className="cd-shift-stat-label">Revenue Processed</div><div className="cd-shift-stat-value">{fmtMoney(todayRevenue)}</div></div>
                 <div className="cd-shift-stat"><div className="cd-shift-stat-label">Pending</div><div className="cd-shift-stat-value" style={{ color: pending.length > 0 ? "var(--cd-warning)" : "inherit" }}>{pending.length}</div></div>
                 <div className="cd-shift-stat"><div className="cd-shift-stat-label">Shift Duration</div><div className="cd-shift-stat-value">{shiftStr}</div></div>
@@ -458,12 +464,12 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                       <tbody>
                         {pending.map((o) => (
                           <tr key={o.id} onClick={() => setDrawerOrder(o)}>
-                            <td><span className="cd-order-id">{fmtOrderId(o.id)}</span></td>
                             <td>
-                              <span className="cd-table-name" style={{ fontWeight: 800, color: "var(--cd-accent)" }}>
-                                Table {o.tableNumber || "—"}
-                              </span>
-                              {o.customerName && <span className="cd-table-muted" style={{ display: "block" }}>{o.customerName}</span>}
+                              <span className="cd-order-id">{fmtOrderId(o.id)}</span>
+                              <span className="cd-table-badge">TABLE {o.tableNumber || "—"}</span>
+                            </td>
+                            <td>
+                              <span className="cd-table-name">{o.customerName || "Guest"}</span>
                             </td>
                             <td>{o.tableNumber || "—"}</td>
                             <td>{o.items.length}</td>
@@ -493,21 +499,22 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                       <thead>
                         <tr>
                           <th>Order</th><th>Customer</th><th>Table</th>
-                          <th>Payment</th><th>Amount</th><th>Approved</th>
+                          <th>Payment</th><th>Amount</th><th>Approved</th><th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {paid.map((o) => (
                           <tr key={o.id} onClick={() => setDrawerOrder(o)}>
-                            <td><span className="cd-order-id">{fmtOrderId(o.id)}</span></td>
                             <td>
-                              <span style={{ fontWeight: 800, color: "var(--cd-accent)" }}>Table {o.tableNumber || "—"}</span>
-                              {o.customerName && <span className="cd-table-muted" style={{ display: "block" }}>{o.customerName}</span>}
+                              <span className="cd-order-id">{fmtOrderId(o.id)}</span>
+                              <span className="cd-table-badge">TABLE {o.tableNumber || "—"}</span>
                             </td>
+                            <td><span className="cd-table-name">{o.customerName || "Guest"}</span></td>
                             <td>{o.tableNumber || "—"}</td>
                             <td><span className="cd-badge paid">{o.paymentMethod || "—"}</span></td>
                             <td><strong>{fmtMoney(o.totalPrice)}</strong></td>
                             <td><span className="cd-table-muted">{o.paymentVerifiedAt ? fmtDateTime(o.paymentVerifiedAt) : "—"}</span></td>
+                            <td><span className={`cd-badge ${o.status === "completed" ? "paid" : o.status === "ready" ? "telebirr" : o.status === "preparing" ? "cbe" : "paid"}`}>{o.status}</span></td>
                           </tr>
                         ))}
                       </tbody>

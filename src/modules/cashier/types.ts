@@ -1,4 +1,4 @@
-export type CashierOrderStatus = "pending_payment" | "paid";
+export type CashierOrderStatus = "pending_payment" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
 
 export type CashierOrderItem = {
   id: string;
