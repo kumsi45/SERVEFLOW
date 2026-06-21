@@ -1,26 +1,43 @@
 import { QRMenuPage } from "../../modules/qr-menu/pages/QRMenuPage";
 import { OrderingPage } from "../../modules/ordering/pages/OrderingPage";
-import { KitchenPlaceholderPage } from "../../modules/staff-auth/pages/KitchenPlaceholderPage";
 import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedCashierRoute";
+import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
+import { LandingPage } from "../../modules/landing/pages/LandingPage";
+import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
 
 function resolveRoute(pathname: string) {
+  if (pathname === "/" || pathname === "") {
+    return { name: "home" as const };
+  }
+
+  const signupMatch = pathname.match(/^\/sign-up\/?$/);
+  if (signupMatch) {
+    return { name: "sign-up" as const };
+  }
+
   const staffLoginMatch = pathname.match(/^\/staff-login\/?$/);
 
   if (staffLoginMatch) {
     return { name: "staff-login" as const };
   }
 
-  const cashierMatch = pathname.match(/^\/cashier\/?$/);
+  const cashierMatch = pathname.match(/^\/cashier\/([^/]+)\/?$/);
 
   if (cashierMatch) {
-    return { name: "cashier" as const };
+    return {
+      name: "cashier" as const,
+      restaurantId: decodeURIComponent(cashierMatch[1]),
+    };
   }
 
-  const kitchenMatch = pathname.match(/^\/kitchen\/?$/);
+  const kitchenMatch = pathname.match(/^\/kitchen\/([^/]+)\/?$/);
 
   if (kitchenMatch) {
-    return { name: "kitchen" as const };
+    return {
+      name: "kitchen" as const,
+      restaurantId: decodeURIComponent(kitchenMatch[1]),
+    };
   }
 
   const orderingMatch = pathname.match(/^\/r\/([^/]+)\/order\/?$/);
@@ -47,12 +64,20 @@ function resolveRoute(pathname: string) {
 export function AppRouter() {
   const route = resolveRoute(window.location.pathname);
 
+  if (route.name === "home") {
+    return <LandingPage />;
+  }
+
+  if (route.name === "sign-up") {
+    return <OwnerSignupPage />;
+  }
+
   if (route.name === "ordering") {
     return <OrderingPage restaurantSlug={route.restaurantSlug} />;
   }
 
   if (route.name === "cashier") {
-    return <ProtectedCashierRoute />;
+    return <ProtectedCashierRoute restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "staff-login") {
@@ -60,7 +85,7 @@ export function AppRouter() {
   }
 
   if (route.name === "kitchen") {
-    return <KitchenPlaceholderPage />;
+    return <ProtectedKitchenRoute restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "qr-menu") {

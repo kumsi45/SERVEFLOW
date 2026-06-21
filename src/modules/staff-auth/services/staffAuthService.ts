@@ -1,9 +1,10 @@
 import { supabase } from "../../../core/database";
-import type { StaffRestaurant, StaffRole, StaffSession } from "../types";
+import type { StaffDestination, StaffRestaurant, StaffRole, StaffSession } from "../types";
 
 type StaffRoleRow = {
   role?: StaffRole | null;
   restaurant_id?: string | null;
+  active?: boolean | null;
   restaurants?: { id?: string | null; name?: string | null } | { id?: string | null; name?: string | null }[] | null;
 };
 
@@ -35,58 +36,38 @@ function normalizeStaffRestaurant(row: StaffRoleRow): StaffRestaurant | null {
   };
 }
 
-function getSelectedRestaurantStorageKey(userId: string) {
-  return `serveflow:cashier:selectedRestaurantId:${userId}`;
+function getStaffRolePriority(role: StaffRole) {
+  if (role === "owner") {
+    return 0;
+  }
+
+  if (role === "cashier") {
+    return 1;
+  }
+
+  return 2;
 }
 
-function getPrimaryStaffRole(restaurants: StaffRestaurant[]): StaffRole | null {
-  return (
-    restaurants.find((restaurant) => restaurant.role === "owner" || restaurant.role === "cashier")?.role ??
-    restaurants[0]?.role ??
-    null
-  );
+function sortStaffRestaurants(restaurants: StaffRestaurant[]) {
+  return [...restaurants].sort((left, right) => {
+    const roleDifference = getStaffRolePriority(left.role) - getStaffRolePriority(right.role);
+
+    if (roleDifference !== 0) {
+      return roleDifference;
+    }
+
+    const nameDifference = left.name.localeCompare(right.name);
+
+    if (nameDifference !== 0) {
+      return nameDifference;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
 }
 
 function isMissingAuthSessionError(error: { message?: string; name?: string }) {
   return error.name === "AuthSessionMissingError" || error.message === "Auth session missing!";
-}
-
-function clearStoredCashierRestaurantIds() {
-  try {
-    for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
-      const key = window.sessionStorage.key(index);
-
-      if (key?.startsWith("serveflow:cashier:selectedRestaurantId:")) {
-        window.sessionStorage.removeItem(key);
-      }
-    }
-  } catch {
-    // Session storage may be unavailable in private browsing or embedded webviews.
-  }
-}
-
-export function getStoredCashierRestaurantId(userId: string): string | null {
-  try {
-    return window.sessionStorage.getItem(getSelectedRestaurantStorageKey(userId));
-  } catch {
-    return null;
-  }
-}
-
-export function storeCashierRestaurantId(userId: string, restaurantId: string) {
-  try {
-    window.sessionStorage.setItem(getSelectedRestaurantStorageKey(userId), restaurantId);
-  } catch {
-    // Session storage may be unavailable in private browsing or embedded webviews.
-  }
-}
-
-export function clearStoredCashierRestaurantId(userId: string) {
-  try {
-    window.sessionStorage.removeItem(getSelectedRestaurantStorageKey(userId));
-  } catch {
-    // Session storage may be unavailable in private browsing or embedded webviews.
-  }
 }
 
 async function clearSupabaseAuthSession() {
@@ -107,18 +88,10 @@ async function clearSupabaseAuthSession() {
   }
 }
 
-function redirectForStaffSession(staffSession: StaffSession) {
-  const hasCashierAccess = staffSession.restaurants.some(
-    (restaurant) => restaurant.role === "owner" || restaurant.role === "cashier"
-  );
-
-  return hasCashierAccess ? "/cashier" : "/kitchen";
-}
-
 async function getStaffSessionForUser(userId: string): Promise<StaffSession | null> {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("role,restaurant_id,restaurants(id,name)")
+    .select("role,active,restaurant_id,restaurants(id,name)")
     .eq("user_id", userId)
     .eq("active", true)
     .in("role", ["owner", "cashier", "kitchen"]);
@@ -127,42 +100,41 @@ async function getStaffSessionForUser(userId: string): Promise<StaffSession | nu
     throw new Error(error.message);
   }
 
-  const restaurants = ((data ?? []) as StaffRoleRow[])
-    .map(normalizeStaffRestaurant)
-    .filter((restaurant): restaurant is StaffRestaurant => restaurant !== null);
-  const role = getPrimaryStaffRole(restaurants);
+  const restaurants = sortStaffRestaurants(
+    ((data ?? []) as StaffRoleRow[])
+      .map(normalizeStaffRestaurant)
+      .filter((restaurant): restaurant is StaffRestaurant => restaurant !== null)
+  );
 
-  if (!role) {
+  if (restaurants.length === 0) {
     return null;
   }
 
   return {
     userId,
-    role,
     restaurants,
   };
 }
 
 export async function getCurrentStaffSession(): Promise<StaffSession | null> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
-  if (userError) {
-    if (isMissingAuthSessionError(userError)) {
+  if (sessionError) {
+    if (isMissingAuthSessionError(sessionError)) {
       return null;
     }
 
-    throw new Error(userError.message);
+    throw new Error(sessionError.message);
   }
 
-  if (!userData.user) {
+  if (!sessionData.session?.user) {
     return null;
   }
 
-  return getStaffSessionForUser(userData.user.id);
+  return getStaffSessionForUser(sessionData.session.user.id);
 }
 
 export async function signInStaff(email: string, password: string): Promise<StaffSession> {
-  clearStoredCashierRestaurantIds();
   await clearSupabaseAuthSession();
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -190,10 +162,35 @@ export async function signInStaff(email: string, password: string): Promise<Staf
 }
 
 export async function signOutStaff() {
-  clearStoredCashierRestaurantIds();
   await clearSupabaseAuthSession();
 }
 
-export function redirectToStaffDestination(staffSession: StaffSession) {
-  window.location.assign(redirectForStaffSession(staffSession));
+export function getStaffDestinations(staffSession: StaffSession): StaffDestination[] {
+  const destinations: StaffDestination[] = [];
+
+  for (const restaurant of staffSession.restaurants) {
+    if (restaurant.role === "owner" || restaurant.role === "cashier") {
+      destinations.push({
+        dashboard: "cashier",
+        restaurant,
+      });
+    }
+
+    if (restaurant.role === "owner" || restaurant.role === "kitchen") {
+      destinations.push({
+        dashboard: "kitchen",
+        restaurant,
+      });
+    }
+  }
+
+  return destinations;
+}
+
+export function getStaffDestinationPath(destination: StaffDestination) {
+  return `/${destination.dashboard}/${encodeURIComponent(destination.restaurant.id)}`;
+}
+
+export function redirectToStaffDestination(destination: StaffDestination) {
+  window.location.assign(getStaffDestinationPath(destination));
 }

@@ -41,11 +41,7 @@ create table if not exists public.restaurant_staff (
   unique (restaurant_id, id),
   unique (restaurant_id, user_id),
   constraint restaurant_staff_display_name_required
-    check (length(trim(display_name)) > 0),
-  constraint restaurant_staff_user_same_restaurant
-    foreign key (restaurant_id, user_id)
-    references public.users (restaurant_id, id)
-    on delete cascade
+    check (length(trim(display_name)) > 0)
 );
 
 create unique index if not exists restaurant_staff_one_active_owner_per_restaurant
@@ -119,7 +115,10 @@ on public.orders (payment_verified_by);
 create index if not exists orders_completed_by_idx
 on public.orders (completed_by);
 
-create or replace function public.current_restaurant_staff_role()
+alter table public.restaurant_staff
+  drop constraint if exists restaurant_staff_user_same_restaurant;
+
+create or replace function public.current_restaurant_staff_role(target_restaurant_id uuid)
 returns public.restaurant_staff_role
 language sql
 stable
@@ -129,19 +128,22 @@ as $$
   select role
   from public.restaurant_staff
   where user_id = auth.uid()
-    and restaurant_id = public.current_user_restaurant_id()
+    and restaurant_id = target_restaurant_id
     and active = true
   limit 1
 $$;
 
-create or replace function public.has_staff_role(allowed_roles public.restaurant_staff_role[])
+create or replace function public.has_staff_role(
+  target_restaurant_id uuid,
+  allowed_roles public.restaurant_staff_role[]
+)
 returns boolean
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  select public.current_restaurant_staff_role() = any(allowed_roles)
+  select public.current_restaurant_staff_role(target_restaurant_id) = any(allowed_roles)
 $$;
 
 create or replace function public.is_active_restaurant_staff_member(target_restaurant_id uuid)
@@ -160,8 +162,8 @@ as $$
   )
 $$;
 
-grant execute on function public.current_restaurant_staff_role() to authenticated;
-grant execute on function public.has_staff_role(public.restaurant_staff_role[]) to authenticated;
+grant execute on function public.current_restaurant_staff_role(uuid) to authenticated;
+grant execute on function public.has_staff_role(uuid, public.restaurant_staff_role[]) to authenticated;
 grant execute on function public.is_active_restaurant_staff_member(uuid) to authenticated;
 
 alter table public.restaurant_staff enable row level security;
@@ -177,8 +179,7 @@ to authenticated
 using (
   user_id = auth.uid()
   or (
-    restaurant_id = public.current_user_restaurant_id()
-    and public.has_staff_role(array['owner']::public.restaurant_staff_role[])
+    public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
   )
 );
 
@@ -189,8 +190,7 @@ on public.restaurant_staff
 for insert
 to authenticated
 with check (
-  restaurant_id = public.current_user_restaurant_id()
-  and public.has_staff_role(array['owner']::public.restaurant_staff_role[])
+  public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
 );
 
 drop policy if exists restaurant_staff_update_owner_same_restaurant on public.restaurant_staff;
@@ -200,12 +200,10 @@ on public.restaurant_staff
 for update
 to authenticated
 using (
-  restaurant_id = public.current_user_restaurant_id()
-  and public.has_staff_role(array['owner']::public.restaurant_staff_role[])
+  public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
 )
 with check (
-  restaurant_id = public.current_user_restaurant_id()
-  and public.has_staff_role(array['owner']::public.restaurant_staff_role[])
+  public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
 );
 
 drop policy if exists orders_select_by_role_same_restaurant on public.orders;
@@ -215,28 +213,28 @@ on public.orders
 for select
 to authenticated
 using (
-  public.is_restaurant_member(restaurant_id)
-  and (
+  (
     public.has_any_role(array['admin', 'kitchen']::public.user_role[])
-    or customer_user_id = auth.uid()
-    or public.has_staff_role(array['owner']::public.restaurant_staff_role[])
-    or (
-      public.has_staff_role(array['cashier']::public.restaurant_staff_role[])
-      and status::text in (
-        'pending_payment',
-        'paid',
-        'ready',
-        'completed',
-        'cancelled'
-      )
+    and public.is_restaurant_member(restaurant_id)
+  )
+  or customer_user_id = auth.uid()
+  or public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
+  or (
+    public.has_staff_role(restaurant_id, array['cashier']::public.restaurant_staff_role[])
+    and status::text in (
+      'pending_payment',
+      'paid',
+      'ready',
+      'completed',
+      'cancelled'
     )
-    or (
-      public.has_staff_role(array['kitchen']::public.restaurant_staff_role[])
-      and status::text in (
-        'paid',
-        'preparing',
-        'ready'
-      )
+  )
+  or (
+    public.has_staff_role(restaurant_id, array['kitchen']::public.restaurant_staff_role[])
+    and status::text in (
+      'paid',
+      'preparing',
+      'ready'
     )
   )
 );
@@ -248,18 +246,20 @@ on public.order_items
 for select
 to authenticated
 using (
-  public.is_restaurant_member(restaurant_id)
-  and exists (
+  exists (
     select 1
     from public.orders
     where orders.id = order_items.order_id
       and orders.restaurant_id = order_items.restaurant_id
       and (
-        public.has_any_role(array['admin', 'kitchen']::public.user_role[])
+        (
+          public.has_any_role(array['admin', 'kitchen']::public.user_role[])
+          and public.is_restaurant_member(order_items.restaurant_id)
+        )
         or orders.customer_user_id = auth.uid()
-        or public.has_staff_role(array['owner']::public.restaurant_staff_role[])
+        or public.has_staff_role(order_items.restaurant_id, array['owner']::public.restaurant_staff_role[])
         or (
-          public.has_staff_role(array['cashier']::public.restaurant_staff_role[])
+          public.has_staff_role(order_items.restaurant_id, array['cashier']::public.restaurant_staff_role[])
           and orders.status::text in (
             'pending_payment',
             'paid',
@@ -269,7 +269,7 @@ using (
           )
         )
         or (
-          public.has_staff_role(array['kitchen']::public.restaurant_staff_role[])
+          public.has_staff_role(order_items.restaurant_id, array['kitchen']::public.restaurant_staff_role[])
           and orders.status::text in (
             'paid',
             'preparing',
@@ -279,3 +279,6 @@ using (
       )
   )
 );
+
+drop function if exists public.has_staff_role(public.restaurant_staff_role[]);
+drop function if exists public.current_restaurant_staff_role();

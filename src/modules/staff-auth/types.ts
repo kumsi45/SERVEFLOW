@@ -8,6 +8,12 @@ export type StaffRestaurant = {
 
 export type StaffSession = {
   userId: string;
-  role: StaffRole;
   restaurants: StaffRestaurant[];
+};
+
+export type StaffDashboard = "cashier" | "kitchen";
+
+export type StaffDestination = {
+  dashboard: StaffDashboard;
+  restaurant: StaffRestaurant;
 };

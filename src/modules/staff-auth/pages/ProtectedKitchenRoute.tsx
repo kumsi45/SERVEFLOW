@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
-import { CashierDashboardPage } from "../../cashier/pages/CashierDashboardPage";
+import { KitchenDashboardPage } from "../../kitchen/pages/KitchenDashboardPage";
 import { useStaffAuthSession } from "../hooks/useStaffAuthSession";
 import { supabase } from "../../../core/database";
-import type { CashierRestaurant } from "../../cashier/types";
+import type { KitchenRestaurant } from "../../kitchen/types";
 
-type ProtectedCashierRouteProps = {
+type ProtectedKitchenRouteProps = {
   restaurantId: string;
 };
 
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
-  | { status: "authorized"; restaurant: CashierRestaurant };
+  | { status: "authorized"; restaurant: KitchenRestaurant };
 
-export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRouteProps) {
+export function ProtectedKitchenRoute({ restaurantId }: ProtectedKitchenRouteProps) {
   const authSession = useStaffAuthSession();
   const [accessState, setAccessState] = useState<AccessState>({ status: "loading" });
 
@@ -38,7 +38,7 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
           .eq("user_id", authSession.userId!)
           .eq("restaurant_id", restaurantId)
           .eq("active", true)
-          .in("role", ["cashier", "owner"])
+          .in("role", ["kitchen", "owner"])
           .limit(1)
           .maybeSingle();
 
@@ -63,7 +63,6 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
           restaurant: {
             id: restaurantData.id,
             name: restaurantData.name,
-            logoUrl: null,
           },
         });
       } catch {
@@ -83,7 +82,7 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
   if (accessState.status === "loading") {
     return (
       <main className="route-message">
-        <p>Checking staff access...</p>
+        <p>Checking kitchen access...</p>
       </main>
     );
   }
@@ -95,13 +94,13 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
     }
     return (
       <main className="route-message">
-        <p>Cashier access is not available for this restaurant.</p>
+        <p>Kitchen access is not available for this restaurant.</p>
       </main>
     );
   }
 
   return (
-    <CashierDashboardPage
+    <KitchenDashboardPage
       restaurantId={restaurantId}
       restaurant={accessState.restaurant}
     />

@@ -129,12 +129,13 @@ function OrderSection({
 }
 
 type CashierDashboardPageProps = {
+  restaurantId: string;
   restaurant: CashierRestaurant;
 };
 
-export function CashierDashboardPage({ restaurant: selectedRestaurant }: CashierDashboardPageProps) {
+export function CashierDashboardPage({ restaurantId, restaurant: initialRestaurant }: CashierDashboardPageProps) {
   const [orders, setOrders] = useState<CashierOrder[]>([]);
-  const [restaurant, setRestaurant] = useState<CashierRestaurant | null>(selectedRestaurant);
+  const [restaurant, setRestaurant] = useState<CashierRestaurant | null>(initialRestaurant);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(() => new Set());
   const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,8 +149,8 @@ export function CashierDashboardPage({ restaurant: selectedRestaurant }: Cashier
         setIsLoading(true);
         setError(null);
         const [fetchedRestaurant, fetchedOrders] = await Promise.all([
-          fetchCashierRestaurant(selectedRestaurant.id),
-          fetchCashierOrders(selectedRestaurant.id),
+          fetchCashierRestaurant(restaurantId),
+          fetchCashierOrders(restaurantId),
         ]);
 
         if (isMounted) {
@@ -172,7 +173,7 @@ export function CashierDashboardPage({ restaurant: selectedRestaurant }: Cashier
     return () => {
       isMounted = false;
     };
-  }, [selectedRestaurant.id]);
+  }, [restaurantId]);
 
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.status === "pending_payment"),
