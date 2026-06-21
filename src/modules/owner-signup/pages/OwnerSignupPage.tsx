@@ -18,6 +18,7 @@ export function OwnerSignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
+  const [tableCount, setTableCount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -44,9 +45,10 @@ export function OwnerSignupPage() {
 
       // Step 2 — create restaurant
       const slug = toSlug(restaurantName);
+      const tables = tableCount ? parseInt(tableCount, 10) : null;
       const { data: restaurantData, error: restaurantError } = await supabase
         .from("restaurants")
-        .insert({ name: restaurantName.trim(), slug })
+        .insert({ name: restaurantName.trim(), slug, ...(tables ? { table_count: tables } : {}) })
         .select("id")
         .single();
 
@@ -138,6 +140,19 @@ export function OwnerSignupPage() {
               maxLength={80}
               disabled={isSubmitting}
               autoComplete="organization"
+            />
+          </label>
+
+          <label className="sf-signup-field">
+            <span>Number of Tables <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 400 }}>(Optional)</span></span>
+            <input
+              type="number"
+              placeholder="e.g. 20"
+              value={tableCount}
+              onChange={(e) => setTableCount(e.target.value)}
+              min={1}
+              max={500}
+              disabled={isSubmitting}
             />
           </label>
 

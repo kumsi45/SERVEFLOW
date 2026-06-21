@@ -51,10 +51,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   }
 
   async function submitOrder() {
+    const tableNum = checkout.tableNumber.trim();
     const customerName = checkout.customerName.trim();
 
-    if (customerName.length < 2 || customerName.length > 30) {
-      checkout.setCustomerName(customerName);
+    // Table number is required
+    if (!tableNum) {
       return;
     }
 
@@ -68,8 +69,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     try {
       const order = await submitPublicQrOrder({
         restaurantSlug,
-        tableNumber: checkout.tableNumber,
-        customerName,
+        tableNumber: tableNum,
+        customerName: customerName || undefined,
         paymentMethod: checkout.paymentMethod,
         items: cart.items,
       });
@@ -149,8 +150,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               submitting={submitting}
               submitError={submitError}
               tableNumber={checkout.tableNumber}
+              tableNumberFromQr={checkout.tableNumberFromQr}
               onClose={() => checkout.setCheckoutVisible(false)}
               onCustomerNameChange={checkout.setCustomerName}
+              onTableNumberChange={checkout.setTableNumber}
               onPaymentMethodChange={checkout.setPaymentMethod}
               onSubmit={submitOrder}
             />

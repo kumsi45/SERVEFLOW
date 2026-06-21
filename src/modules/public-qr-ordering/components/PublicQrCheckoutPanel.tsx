@@ -12,31 +12,21 @@ type PublicQrCheckoutPanelProps = {
   paymentMethod: PublicQrPaymentMethod | "";
   submitting: boolean;
   submitError?: string;
-  tableNumber?: string;
+  tableNumber: string;
+  tableNumberFromQr: boolean;
   onClose?: () => void;
   onCustomerNameChange: (customerName: string) => void;
+  onTableNumberChange: (tableNumber: string) => void;
   onPaymentMethodChange: (paymentMethod: PublicQrPaymentMethod | "") => void;
   onSubmit: () => void;
 };
 
-const MIN_CUSTOMER_NAME_LENGTH = 2;
 const MAX_CUSTOMER_NAME_LENGTH = 30;
 
-function getCustomerNameValidationMessage(customerName: string) {
-  const trimmedName = customerName.trim();
-
-  if (trimmedName.length === 0) {
-    return "Please enter your name before placing the order.";
+function getTableNumberValidationMessage(tableNumber: string) {
+  if (!tableNumber.trim()) {
+    return "Table number is required to place your order.";
   }
-
-  if (trimmedName.length < MIN_CUSTOMER_NAME_LENGTH) {
-    return "Name must be at least 2 characters.";
-  }
-
-  if (trimmedName.length > MAX_CUSTOMER_NAME_LENGTH) {
-    return "Name must be 30 characters or fewer.";
-  }
-
   return undefined;
 }
 
@@ -44,7 +34,6 @@ function getPaymentMethodValidationMessage(paymentMethod: PublicQrPaymentMethod 
   if (!paymentMethod) {
     return "Please select a payment method before placing the order.";
   }
-
   return undefined;
 }
 
@@ -56,15 +45,20 @@ export function PublicQrCheckoutPanel({
   submitting,
   submitError,
   tableNumber,
+  tableNumberFromQr,
   onClose,
   onCustomerNameChange,
+  onTableNumberChange,
   onPaymentMethodChange,
   onSubmit,
 }: PublicQrCheckoutPanelProps) {
-  const customerNameValidationMessage = getCustomerNameValidationMessage(customerName);
+  const tableNumberValidationMessage = getTableNumberValidationMessage(tableNumber);
   const paymentMethodValidationMessage = getPaymentMethodValidationMessage(paymentMethod);
   const canSubmit =
-    items.length > 0 && !submitting && !customerNameValidationMessage && !paymentMethodValidationMessage;
+    items.length > 0 &&
+    !submitting &&
+    !tableNumberValidationMessage &&
+    !paymentMethodValidationMessage;
 
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
@@ -74,7 +68,10 @@ export function PublicQrCheckoutPanel({
           <h2>Checkout</h2>
         </div>
         <div className="checkout-heading-actions">
-          {tableNumber ? <span>Table {tableNumber}</span> : <span>QR table order</span>}
+          {tableNumber
+            ? <span style={{ fontWeight: 700, color: "var(--cd-accent, #1e5b4c)" }}>Table {tableNumber}</span>
+            : <span>Select table</span>
+          }
           {onClose ? (
             <button className="panel-close-button" type="button" onClick={onClose} aria-label="Close checkout">
               Close
@@ -83,31 +80,54 @@ export function PublicQrCheckoutPanel({
         </div>
       </div>
 
+      {/* Table Number — primary required field */}
       <label className="public-checkout-field">
-        <span>Customer Name *</span>
-        <input
-          type="text"
-          value={customerName}
-          placeholder="Abebe"
-          autoComplete="name"
-          maxLength={MAX_CUSTOMER_NAME_LENGTH + 1}
-          aria-invalid={customerNameValidationMessage ? "true" : "false"}
-          aria-describedby="public-checkout-name-error"
-          onChange={(event) => onCustomerNameChange(event.target.value)}
-          onBlur={() => onCustomerNameChange(customerName.trim())}
-        />
-        {customerNameValidationMessage ? (
-          <p className="public-checkout-field-error" id="public-checkout-name-error">
-            {customerNameValidationMessage}
+        <span>Table Number *</span>
+        {tableNumberFromQr ? (
+          <input
+            type="text"
+            value={tableNumber}
+            readOnly
+            aria-label="Table number (pre-filled from QR code)"
+            style={{ background: "#f0fdf4", borderColor: "#bbf7d0", color: "#15803d", fontWeight: 700 }}
+          />
+        ) : (
+          <input
+            type="text"
+            value={tableNumber}
+            placeholder="Enter your table number"
+            aria-invalid={tableNumberValidationMessage ? "true" : "false"}
+            aria-describedby="public-checkout-table-error"
+            onChange={(event) => onTableNumberChange(event.target.value)}
+            onBlur={() => onTableNumberChange(tableNumber.trim())}
+          />
+        )}
+        {tableNumberFromQr ? (
+          <p style={{ fontSize: 12, color: "#15803d", fontWeight: 600, margin: 0 }}>
+            ✓ Auto-detected from your table QR code
+          </p>
+        ) : tableNumberValidationMessage ? (
+          <p className="public-checkout-field-error" id="public-checkout-table-error">
+            {tableNumberValidationMessage}
           </p>
         ) : null}
       </label>
 
-      <div className="public-checkout-detail-row">
-        <span>Table Number</span>
-        <strong>{tableNumber || "QR table order"}</strong>
-      </div>
+      {/* Customer Name — optional */}
+      <label className="public-checkout-field">
+        <span>Customer Name <span style={{ fontSize: 11, color: "var(--lp-muted, #94a3b8)", fontWeight: 400 }}>(Optional)</span></span>
+        <input
+          type="text"
+          value={customerName}
+          placeholder="Enter your name if you'd like staff to identify you"
+          autoComplete="name"
+          maxLength={MAX_CUSTOMER_NAME_LENGTH + 1}
+          onChange={(event) => onCustomerNameChange(event.target.value)}
+          onBlur={() => onCustomerNameChange(customerName.trim())}
+        />
+      </label>
 
+      {/* Payment Method */}
       <label className="public-checkout-field">
         <span>Payment Method *</span>
         <select
@@ -132,6 +152,7 @@ export function PublicQrCheckoutPanel({
         ) : null}
       </label>
 
+      {/* Order summary */}
       <div className="public-checkout-summary" aria-label="Order summary">
         <h3>Order summary</h3>
         <div className="public-checkout-lines">
@@ -159,7 +180,6 @@ export function PublicQrCheckoutPanel({
 
       <div className="public-checkout-footer">
         {submitError ? <p className="public-checkout-error">{submitError}</p> : null}
-
         <button
           className="public-checkout-submit-button"
           type="button"

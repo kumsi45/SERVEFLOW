@@ -59,14 +59,18 @@ function readStoredCheckoutState(restaurantSlug: string): StoredCheckoutState {
 
 function readTableNumber() {
   if (typeof window === "undefined") {
-    return undefined;
+    return "";
   }
 
-  return new URLSearchParams(window.location.search).get("t")?.trim() || undefined;
+  return new URLSearchParams(window.location.search).get("t")?.trim() ?? "";
 }
 
 export function usePublicQrCheckoutState(restaurantSlug: string) {
   const initialCheckoutState = useMemo(() => readStoredCheckoutState(restaurantSlug), [restaurantSlug]);
+  const tableNumberFromQr = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return !!new URLSearchParams(window.location.search).get("t")?.trim();
+  }, []);
   const [checkoutVisible, setCheckoutVisible] = useState(
     () => initialCheckoutState.checkoutVisible
   );
@@ -76,7 +80,8 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
   const [paymentMethod, setPaymentMethod] = useState<PublicQrPaymentMethod | "">(
     () => initialCheckoutState.paymentMethod
   );
-  const tableNumber = useMemo(() => readTableNumber(), []);
+  // tableNumber: seed from URL ?t= param, then allow manual entry if not from QR
+  const [tableNumber, setTableNumber] = useState(() => readTableNumber());
 
   useEffect(() => {
     try {
@@ -99,13 +104,17 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
     customerName,
     paymentMethod,
     tableNumber,
+    tableNumberFromQr,
     setCheckoutVisible,
     setCustomerName,
     setPaymentMethod,
+    setTableNumber,
     resetCheckoutState: () => {
       setCheckoutVisible(false);
       setCustomerName("");
       setPaymentMethod("");
+      // Only reset tableNumber if it wasn't from QR (preserve QR-provided table)
+      if (!tableNumberFromQr) setTableNumber("");
       try {
         window.localStorage.removeItem(getCheckoutStorageKey(restaurantSlug));
       } catch {

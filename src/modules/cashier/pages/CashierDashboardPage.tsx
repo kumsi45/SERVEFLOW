@@ -1,294 +1,532 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  approveOrderPayment,
-  fetchCashierOrders,
-  fetchCashierRestaurant,
-} from "../services/cashierOrderService";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
-import type { CashierOrder, CashierRestaurant } from "../types";
+import type { CashierOrder, CashierOrderItem, CashierRestaurant } from "../types";
+import "../styles/cashierDashboard.css";
 
-function formatMoney(value: number) {
-  return `${value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} ETB`;
+// ─── helpers ────────────────────────────────────────────────────────────────
+function fmtMoney(v: number) {
+  return `ETB ${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+function fmtOrderId(id: string) { return `#${id.slice(0, 6).toUpperCase()}`; }
+function fmtTime(iso: string) {
+  return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+}
+function fmtDateTime(iso: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+}
+function timeAgo(iso: string) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diff < 1) return "just now";
+  if (diff < 60) return `${diff}m ago`;
+  return `${Math.floor(diff / 60)}h ago`;
+}
+function useNow() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
+  return now;
 }
 
-function formatCreatedTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatOrderNumber(orderId: string) {
-  return `#${orderId.slice(0, 8).toUpperCase()}`;
-}
-
-function getRestaurantInitial(restaurantName: string) {
-  return restaurantName.trim().charAt(0).toUpperCase() || "S";
-}
-
-type OrderSectionProps = {
-  title: string;
-  emptyMessage: string;
-  orders: CashierOrder[];
-  expandedOrderIds: Set<string>;
-  approvingOrderId: string | null;
-  onToggleItems: (orderId: string) => void;
-  onApprovePayment?: (orderId: string) => void;
-};
-
-function OrderSection({
-  title,
-  emptyMessage,
-  orders,
-  expandedOrderIds,
-  approvingOrderId,
-  onToggleItems,
-  onApprovePayment,
-}: OrderSectionProps) {
-  return (
-    <section className="cashier-section" aria-labelledby={`${title.replace(/\s+/g, "-")}-heading`}>
-      <div className="cashier-section-heading">
-        <h2 id={`${title.replace(/\s+/g, "-")}-heading`}>{title}</h2>
-        <span>{orders.length}</span>
-      </div>
-
-      {orders.length === 0 ? (
-        <p className="cashier-empty">{emptyMessage}</p>
-      ) : (
-        <div className="cashier-order-list">
-          {orders.map((order) => {
-            const itemsAreVisible = expandedOrderIds.has(order.id);
-            const isApproving = approvingOrderId === order.id;
-
-            return (
-              <article className="cashier-order" key={order.id}>
-                <div className="cashier-order-topline">
-                  <div>
-                    <h3>{formatOrderNumber(order.id)}</h3>
-                    <p>Created {formatCreatedTime(order.createdAt)}</p>
-                  </div>
-                  <strong>{formatMoney(order.totalPrice)}</strong>
-                </div>
-
-                <dl className="cashier-order-details">
-                  <div>
-                    <dt>Customer</dt>
-                    <dd>{order.customerName || "Guest"}</dd>
-                  </div>
-                  <div>
-                    <dt>Table</dt>
-                    <dd>{order.tableNumber || "Not provided"}</dd>
-                  </div>
-                  <div>
-                    <dt>Payment</dt>
-                    <dd>{order.paymentMethod || "Not provided"}</dd>
-                  </div>
-                </dl>
-
-                <div className="cashier-order-actions">
-                  <button type="button" onClick={() => onToggleItems(order.id)}>
-                    {itemsAreVisible ? "Hide Items" : "View Items"}
-                  </button>
-
-                  {onApprovePayment ? (
-                    <button type="button" disabled={isApproving} onClick={() => onApprovePayment(order.id)}>
-                      {isApproving ? "Approving..." : "Approve Payment"}
-                    </button>
-                  ) : null}
-                </div>
-
-                {itemsAreVisible ? (
-                  <div className="cashier-order-items">
-                    {order.items.length === 0 ? (
-                      <p>Items are unavailable for this order.</p>
-                    ) : (
-                      order.items.map((item) => (
-                        <div className="cashier-order-item" key={item.id}>
-                          <div>
-                            <strong>{item.name}</strong>
-                            <span>Qty {item.quantity}</span>
-                          </div>
-                          <span>{formatMoney(item.price * item.quantity)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
+// ─── types ───────────────────────────────────────────────────────────────────
 type CashierDashboardPageProps = {
   restaurantId: string;
   restaurant: CashierRestaurant;
+  cashierName?: string;
 };
 
-export function CashierDashboardPage({ restaurantId, restaurant: initialRestaurant }: CashierDashboardPageProps) {
-  const [orders, setOrders] = useState<CashierOrder[]>([]);
-  const [restaurant, setRestaurant] = useState<CashierRestaurant | null>(initialRestaurant);
-  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(() => new Set());
-  const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type OrderRow = {
+  id: string; status: string; customer_name: string | null;
+  table_number: string | null; payment_method: string | null;
+  total_price: number | string; created_at: string; payment_verified_at: string | null;
+};
+type ItemRow = {
+  id: string; order_id: string; quantity: number; price: number | string;
+  menu_items?: { name?: string | null } | { name?: string | null }[] | null;
+};
 
-  useEffect(() => {
-    let isMounted = true;
+function normalizeOrder(row: OrderRow, items: CashierOrderItem[] = []): CashierOrder {
+  return {
+    id: row.id,
+    status: row.status as CashierOrder["status"],
+    customerName: row.customer_name,
+    tableNumber: row.table_number,
+    paymentMethod: row.payment_method,
+    totalPrice: Number(row.total_price),
+    createdAt: row.created_at,
+    paymentVerifiedAt: row.payment_verified_at,
+    items,
+  };
+}
+function normalizeItem(row: ItemRow): CashierOrderItem {
+  const mi = row.menu_items;
+  const name = Array.isArray(mi) ? (mi[0]?.name ?? "Item") : (mi?.name ?? "Item");
+  return { id: row.id, orderId: row.order_id, name, quantity: row.quantity, price: Number(row.price) };
+}
 
-    async function loadOrders() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const [fetchedRestaurant, fetchedOrders] = await Promise.all([
-          fetchCashierRestaurant(restaurantId),
-          fetchCashierOrders(restaurantId),
-        ]);
-
-        if (isMounted) {
-          setRestaurant(fetchedRestaurant);
-          setOrders(fetchedOrders);
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          setError(loadError instanceof Error ? loadError.message : "Cashier orders could not be loaded.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadOrders();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [restaurantId]);
-
-  const pendingOrders = useMemo(
-    () => orders.filter((order) => order.status === "pending_payment"),
-    [orders]
+// ─── KPI card ────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, icon, iconClass, change, warning }: {
+  label: string; value: string; icon: string; iconClass: string;
+  change?: string; warning?: boolean;
+}) {
+  return (
+    <div className={`cd-kpi-card${warning ? " warning" : ""}`}>
+      <div className="cd-kpi-header">
+        <div className="cd-kpi-label">{label}</div>
+        <div className={`cd-kpi-icon ${iconClass}`}>{icon}</div>
+      </div>
+      <div className={`cd-kpi-value${warning ? " warning-text" : ""}`}>{value}</div>
+      {change && <div className={`cd-kpi-change ${warning ? "neutral" : "up"}`}>{change}</div>}
+    </div>
   );
-  const paidOrders = useMemo(() => orders.filter((order) => order.status === "paid"), [orders]);
+}
 
-  function toggleItems(orderId: string) {
-    setExpandedOrderIds((current) => {
-      const next = new Set(current);
+// ─── Bar chart ───────────────────────────────────────────────────────────────
+function RevenueChart({ orders }: { orders: CashierOrder[] }) {
+  const labels = ["6AM","8AM","10AM","12PM","2PM","4PM","6PM","8PM","10PM"];
+  const hours =  [6,    8,    10,    12,    14,   16,   18,   20,   22  ];
+  const buckets = hours.map((h) => {
+    const total = orders
+      .filter((o) => o.status === "paid" && new Date(o.paymentVerifiedAt ?? o.createdAt).getHours() === h)
+      .reduce((s, o) => s + o.totalPrice, 0);
+    return total;
+  });
+  const max = Math.max(...buckets, 1);
+  return (
+    <div className="cd-chart-wrap">
+      <div className="cd-bar-chart">
+        {buckets.map((v, i) => (
+          <div key={i} className="cd-bar-col">
+            {v > 0 && <div className="cd-bar-value">{v > 999 ? `${(v/1000).toFixed(1)}k` : v}</div>}
+            <div className="cd-bar" style={{ height: `${Math.max(4, (v / max) * 140)}px` }} title={`${labels[i]}: ETB ${v}`} />
+            <div className="cd-bar-label">{labels[i]}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      if (next.has(orderId)) {
-        next.delete(orderId);
-      } else {
-        next.add(orderId);
-      }
+// ─── Donut chart ─────────────────────────────────────────────────────────────
+function PaymentDonut({ orders }: { orders: CashierOrder[] }) {
+  const paid = orders.filter((o) => o.status === "paid");
+  const methods = ["Cash","Telebirr","CBE Birr","Mobile Banking","Chapa","Credit/Debit Card"];
+  const colors = ["#2563eb","#7c3aed","#f59e0b","#10b981","#ef4444","#0ea5e9"];
+  const counts = methods.map((m) => paid.filter((o) => o.paymentMethod === m).length);
+  const total = counts.reduce((s, c) => s + c, 1);
+  const data = methods.map((m, i) => ({ label: m, count: counts[i], pct: Math.round((counts[i] / total) * 100), color: colors[i] })).filter((d) => d.count > 0);
+  if (data.length === 0) data.push({ label: "No data", count: 1, pct: 100, color: "#e2e8f0" });
 
-      return next;
-    });
-  }
-
-  async function handleApprovePayment(orderId: string) {
-    const existingOrder = orders.find((order) => order.id === orderId);
-
-    if (!existingOrder) {
-      return;
-    }
-
-    try {
-      setApprovingOrderId(orderId);
-      setError(null);
-      const approvedOrder = await approveOrderPayment(orderId);
-
-      setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          order.id === orderId
-            ? {
-                ...order,
-                status: approvedOrder.status,
-                paymentVerifiedAt: approvedOrder.paymentVerifiedAt,
-              }
-            : order
-        )
-      );
-    } catch (approvalError) {
-      setError(
-        approvalError instanceof Error ? approvalError.message : "Payment could not be approved."
-      );
-    } finally {
-      setApprovingOrderId(null);
-    }
-  }
-
-  async function handleSignOut() {
-    try {
-      await signOutStaff();
-    } finally {
-      window.location.replace("/staff-login");
-    }
-  }
+  let offset = 0;
+  const r = 54; const cx = 70; const cy = 70; const circ = 2 * Math.PI * r;
+  const slices = data.map((d) => {
+    const dash = (d.pct / 100) * circ;
+    const gap = circ - dash;
+    const slice = { ...d, dash, gap, offset };
+    offset += dash;
+    return slice;
+  });
 
   return (
-    <main className="cashier-page">
-      <header className="cashier-header">
-        <div className="cashier-brand">
-          <div className="cashier-logo" aria-hidden="true">
-            {restaurant?.logoUrl ? (
-              <img src={restaurant.logoUrl} alt="" />
-            ) : (
-              <span>{restaurant ? getRestaurantInitial(restaurant.name) : "S"}</span>
-            )}
+    <div className="cd-donut-wrap">
+      <svg width="140" height="140" viewBox="0 0 140 140" className="cd-donut-svg">
+        {slices.map((s, i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth="20"
+            strokeDasharray={`${s.dash} ${s.gap}`} strokeDashoffset={-s.offset}
+            style={{ transition: "stroke-dashoffset 0.4s" }} transform={`rotate(-90 ${cx} ${cy})`} />
+        ))}
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="11" fill="#64748b" fontWeight="600">TOTAL</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="18" fill="#0f172a" fontWeight="800">{paid.length}</text>
+      </svg>
+      <div className="cd-donut-legend">
+        {data.map((d) => (
+          <div key={d.label} className="cd-legend-row">
+            <div className="cd-legend-dot-label">
+              <div className="cd-legend-dot" style={{ background: d.color }} />
+              <span className="cd-legend-name">{d.label}</span>
+            </div>
+            <span className="cd-legend-pct">{d.pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Order drawer ─────────────────────────────────────────────────────────────
+function OrderDrawer({ order, onClose, onApprove, approving }: {
+  order: CashierOrder; onClose: () => void;
+  onApprove?: () => void; approving: boolean;
+}) {
+  return (
+    <>
+      <div className="cd-drawer-overlay" onClick={onClose} />
+      <aside className="cd-drawer" role="dialog" aria-modal="true" aria-label="Order details">
+        <div className="cd-drawer-header">
+          <div className="cd-drawer-title">{fmtOrderId(order.id)}</div>
+          <button className="cd-drawer-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="cd-drawer-body">
+          <div>
+            <div className="cd-drawer-section-title">Order Info</div>
+            <div className="cd-drawer-detail-grid">
+              <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Table</div><div className="cd-drawer-detail-value" style={{ fontWeight: 800, fontSize: 18, color: "var(--cd-accent)" }}>{order.tableNumber || "—"}</div></div>
+              <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Customer</div><div className="cd-drawer-detail-value">{order.customerName || "Guest"}</div></div>
+              <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Payment</div><div className="cd-drawer-detail-value">{order.paymentMethod || "—"}</div></div>
+              <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Created</div><div className="cd-drawer-detail-value">{fmtDateTime(order.createdAt)}</div></div>
+            </div>
           </div>
           <div>
-            <p className="cashier-restaurant-name">{restaurant?.name || "Restaurant"}</p>
-            <h1>Cashier Dashboard</h1>
+            <div className="cd-drawer-section-title">Items ({order.items.length})</div>
+            {order.items.length === 0
+              ? <p style={{ fontSize: 13, color: "var(--cd-muted)" }}>No item data available.</p>
+              : <div className="cd-drawer-items">
+                  {order.items.map((item) => (
+                    <div key={item.id} className="cd-drawer-item">
+                      <div><div className="cd-drawer-item-name">{item.name}</div><div className="cd-drawer-item-qty">Qty {item.quantity}</div></div>
+                      <div className="cd-drawer-item-price">{fmtMoney(item.price * item.quantity)}</div>
+                    </div>
+                  ))}
+                </div>
+            }
+          </div>
+          <div className="cd-drawer-total">
+            <span className="cd-drawer-total-label">Total</span>
+            <span className="cd-drawer-total-value">{fmtMoney(order.totalPrice)}</span>
           </div>
         </div>
-        <div className="cashier-header-actions">
-          <button type="button" onClick={() => window.location.reload()}>
-            Refresh
+        {order.status === "pending_payment" && onApprove && (
+          <div className="cd-drawer-footer">
+            <button className="cd-drawer-approve-btn" onClick={onApprove} disabled={approving}>
+              {approving ? "Approving..." : "Confirm Payment"}
+            </button>
+          </div>
+        )}
+      </aside>
+    </>
+  );
+}
+
+// ─── Main dashboard ───────────────────────────────────────────────────────────
+export function CashierDashboardPage({ restaurantId, restaurant: initialRestaurant, cashierName }: CashierDashboardPageProps) {
+  const now = useNow();
+  const [orders, setOrders] = useState<CashierOrder[]>([]);
+  const [restaurant, setRestaurant] = useState<CashierRestaurant>(initialRestaurant);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"pending" | "paid">("pending");
+  const [drawerOrder, setDrawerOrder] = useState<CashierOrder | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [shiftStart] = useState(() => new Date());
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // ── initial load ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const [{ data: staffData }, { data: orderRows, error: oErr }, ] = await Promise.all([
+          supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
+          supabase.from("orders").select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at")
+            .eq("restaurant_id", restaurantId).in("status", ["pending_payment","paid"])
+            .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString())
+            .order("created_at", { ascending: false }),
+        ]);
+        if (!mounted) return;
+        if (oErr) throw new Error(oErr.message);
+        const rest = Array.isArray(staffData?.restaurants) ? staffData.restaurants[0] : staffData?.restaurants;
+        if (rest?.name) setRestaurant({ id: rest.id, name: rest.name, logoUrl: null });
+        const rows = (orderRows ?? []) as OrderRow[];
+        const ids = rows.map((r) => r.id);
+        let itemMap = new Map<string, CashierOrderItem[]>();
+        if (ids.length > 0) {
+          const { data: itemRows } = await supabase.from("order_items")
+            .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .eq("restaurant_id", restaurantId).in("order_id", ids);
+          for (const row of (itemRows ?? []) as ItemRow[]) {
+            const item = normalizeItem(row);
+            const arr = itemMap.get(item.orderId) ?? [];
+            arr.push(item); itemMap.set(item.orderId, arr);
+          }
+        }
+        if (mounted) setOrders(rows.map((r) => normalizeOrder(r, itemMap.get(r.id))));
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : "Could not load orders.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    void load();
+    return () => { mounted = false; };
+  }, [restaurantId]);
+
+  // ── real-time subscription ─────────────────────────────────────────────────
+  useEffect(() => {
+    const ch = supabase.channel(`cashier-orders-${restaurantId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
+        async (payload) => {
+          const row = payload.new as OrderRow;
+          if (!["pending_payment","paid"].includes(row.status)) {
+            setOrders((prev) => prev.filter((o) => o.id !== row.id));
+            return;
+          }
+          const { data: itemRows } = await supabase.from("order_items")
+            .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .eq("restaurant_id", restaurantId).eq("order_id", row.id);
+          const items = (itemRows ?? []).map(normalizeItem as (r: unknown) => CashierOrderItem);
+          const updated = normalizeOrder(row, items);
+          setOrders((prev) => {
+            const idx = prev.findIndex((o) => o.id === updated.id);
+            if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
+            return [updated, ...prev];
+          });
+        })
+      .subscribe();
+    channelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [restaurantId]);
+
+  // ── approve payment ────────────────────────────────────────────────────────
+  async function handleApprove(orderId: string) {
+    try {
+      setApprovingId(orderId);
+      const { data, error: rpcErr } = await supabase.rpc("approve_order_payment", { target_order_id: orderId });
+      if (rpcErr) throw new Error(rpcErr.message);
+      const updated = normalizeOrder(data as OrderRow);
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, ...updated, items: o.items } : o));
+      if (drawerOrder?.id === orderId) setDrawerOrder((d) => d ? { ...d, ...updated, items: d.items } : null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Approval failed.");
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
+  // ── sign out ───────────────────────────────────────────────────────────────
+  async function handleSignOut() {
+    try { await signOutStaff(); } finally { window.location.replace("/staff-login"); }
+  }
+
+  // ── derived ────────────────────────────────────────────────────────────────
+  const pending = useMemo(() => orders.filter((o) => o.status === "pending_payment"), [orders]);
+  const paid = useMemo(() => orders.filter((o) => o.status === "paid"), [orders]);
+  const todayRevenue = useMemo(() => paid.reduce((s, o) => s + o.totalPrice, 0), [paid]);
+  const avgOrder = paid.length > 0 ? todayRevenue / paid.length : 0;
+  const cashCollected = useMemo(() => paid.filter((o) => o.paymentMethod === "Cash").reduce((s, o) => s + o.totalPrice, 0), [paid]);
+  const shiftDuration = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
+  const shiftStr = shiftDuration < 60 ? `${shiftDuration}m` : `${Math.floor(shiftDuration / 60)}h ${shiftDuration % 60}m`;
+
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div className="cd-root">
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      <header className="cd-header">
+        <div className="cd-header-left">
+          <div className="cd-logo" aria-hidden="true">
+            {restaurant.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="cd-header-info">
+            <div className="cd-restaurant-name">{restaurant.name}</div>
+            <div className="cd-shift-badge">
+              <span className="cd-shift-dot" />
+              Cashier · Active Shift
+            </div>
+          </div>
+        </div>
+        <div className="cd-header-right">
+          <div className="cd-header-datetime">
+            <div className="cd-header-date">{dateStr}</div>
+            <div className="cd-header-time">{timeStr}</div>
+          </div>
+          <button className="cd-icon-btn" aria-label="Notifications">
+            🔔<span className="cd-notif-dot" aria-hidden="true" />
           </button>
-          <button type="button" onClick={handleSignOut}>
-            Sign Out
+          <button className="cd-signout-btn" onClick={handleSignOut}>
+            ⎋ Sign Out
           </button>
         </div>
       </header>
 
-      {error ? <p className="cashier-alert">{error}</p> : null}
+      <div className="cd-body">
+        {error && <div className="cd-error-banner">⚠️ {error}</div>}
 
-      {isLoading ? (
-        <section className="cashier-loading">
-          <p>Loading cashier orders...</p>
-        </section>
-      ) : (
-        <div className="cashier-layout">
-          <OrderSection
-            title="Pending Payment"
-            emptyMessage="No pending payment orders."
-            orders={pendingOrders}
-            expandedOrderIds={expandedOrderIds}
-            approvingOrderId={approvingOrderId}
-            onToggleItems={toggleItems}
-            onApprovePayment={handleApprovePayment}
-          />
+        {/* ── KPI CARDS ──────────────────────────────────────────────────── */}
+        {loading
+          ? <div className="cd-kpi-grid">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="cd-skeleton cd-skeleton-kpi" />)}</div>
+          : <div className="cd-kpi-grid">
+              <KpiCard label="Today's Revenue" value={fmtMoney(todayRevenue)} icon="💰" iconClass="blue" change="Live data" />
+              <KpiCard label="Orders Today" value={`${orders.length}`} icon="📋" iconClass="green" change={`${paid.length} paid`} />
+              <KpiCard label="Pending Payments" value={`${pending.length}`} icon="⏳" iconClass="yellow" change="Needs action" warning={pending.length > 0} />
+              <KpiCard label="Avg Order Value" value={fmtMoney(Math.round(avgOrder))} icon="📊" iconClass="purple" />
+              <KpiCard label="Completed" value={`${paid.length}`} icon="✅" iconClass="green" change="Transactions" />
+              <KpiCard label="Cash Collected" value={fmtMoney(cashCollected)} icon="💵" iconClass="blue" />
+            </div>
+        }
 
-          <OrderSection
-            title="Paid Orders"
-            emptyMessage="No paid orders yet."
-            orders={paidOrders}
-            expandedOrderIds={expandedOrderIds}
-            approvingOrderId={approvingOrderId}
-            onToggleItems={toggleItems}
-          />
-        </div>
+        {/* ── ANALYTICS ROW ──────────────────────────────────────────────── */}
+        {!loading && (
+          <div className="cd-analytics-row">
+            <div className="cd-card">
+              <div className="cd-card-header">
+                <div><div className="cd-card-title">Revenue Analytics</div><div className="cd-card-subtitle">Today's hourly revenue</div></div>
+                <span style={{ fontSize: 12, color: "var(--cd-muted)" }}>6AM – 10PM</span>
+              </div>
+              <RevenueChart orders={orders} />
+            </div>
+            <div className="cd-card">
+              <div className="cd-card-header">
+                <div><div className="cd-card-title">Payment Methods</div><div className="cd-card-subtitle">Today's breakdown</div></div>
+              </div>
+              <PaymentDonut orders={orders} />
+            </div>
+          </div>
+        )}
+
+        {/* ── LIVE ACTIVITY + SHIFT PANEL ────────────────────────────────── */}
+        {!loading && (
+          <div className="cd-analytics-row">
+            <div className="cd-card">
+              <div className="cd-card-header">
+                <div className="cd-card-title">Live Order Activity</div>
+              </div>
+              <div className="cd-activity-list">
+                {paid.slice(0, 6).length === 0
+                  ? <div className="cd-empty"><div className="cd-empty-icon">💳</div><div className="cd-empty-title">No approved payments yet</div></div>
+                  : paid.slice(0, 6).map((o) => (
+                      <div key={o.id} className="cd-activity-item">
+                        <div className="cd-activity-dot" />
+                        <div className="cd-activity-content">
+                          <div className="cd-activity-main">
+                            Table {o.tableNumber || "—"} · {fmtOrderId(o.id)} approved
+                          </div>
+                          <div className="cd-activity-sub">
+                            {o.customerName || "Guest"} · {o.paymentMethod || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="cd-activity-amount">{fmtMoney(o.totalPrice)}</div>
+                          <div className="cd-activity-time">{timeAgo(o.paymentVerifiedAt ?? o.createdAt)}</div>
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
+            <div className="cd-card">
+              <div className="cd-card-header">
+                <div className="cd-card-title">Shift Performance</div>
+                <div className="cd-card-subtitle">{cashierName || "Cashier"}</div>
+              </div>
+              <div className="cd-shift-grid">
+                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Approved Today</div><div className="cd-shift-stat-value">{paid.length}</div></div>
+                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Revenue Processed</div><div className="cd-shift-stat-value">{fmtMoney(todayRevenue)}</div></div>
+                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Pending</div><div className="cd-shift-stat-value" style={{ color: pending.length > 0 ? "var(--cd-warning)" : "inherit" }}>{pending.length}</div></div>
+                <div className="cd-shift-stat"><div className="cd-shift-stat-label">Shift Duration</div><div className="cd-shift-stat-value">{shiftStr}</div></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── ORDERS TABS ────────────────────────────────────────────────── */}
+        {!loading && (
+          <div className="cd-card">
+            <div className="cd-card-header">
+              <div className="cd-tabs">
+                <button className={`cd-tab${tab === "pending" ? " active" : ""}`} onClick={() => setTab("pending")}>
+                  Pending <span className="cd-tab-badge">{pending.length}</span>
+                </button>
+                <button className={`cd-tab${tab === "paid" ? " active" : ""}`} onClick={() => setTab("paid")}>
+                  Paid <span className="cd-tab-badge" style={{ background: tab === "paid" ? "var(--cd-success)" : "var(--cd-muted)" }}>{paid.length}</span>
+                </button>
+              </div>
+            </div>
+
+            {tab === "pending" && (
+              pending.length === 0
+                ? <div className="cd-empty"><div className="cd-empty-icon">🎉</div><div className="cd-empty-title">No pending payments</div><div className="cd-empty-sub">All orders are up to date.</div></div>
+                : <div className="cd-table-wrap">
+                    <table className="cd-table">
+                      <thead>
+                        <tr>
+                          <th>Order</th><th>Customer</th><th>Table</th><th>Items</th>
+                          <th>Payment</th><th>Total</th><th>Created</th><th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pending.map((o) => (
+                          <tr key={o.id} onClick={() => setDrawerOrder(o)}>
+                            <td><span className="cd-order-id">{fmtOrderId(o.id)}</span></td>
+                            <td>
+                              <span className="cd-table-name" style={{ fontWeight: 800, color: "var(--cd-accent)" }}>
+                                Table {o.tableNumber || "—"}
+                              </span>
+                              {o.customerName && <span className="cd-table-muted" style={{ display: "block" }}>{o.customerName}</span>}
+                            </td>
+                            <td>{o.tableNumber || "—"}</td>
+                            <td>{o.items.length}</td>
+                            <td><span className={`cd-badge ${(o.paymentMethod ?? "").toLowerCase().replace(/\s+/g,"") === "cash" ? "cash" : (o.paymentMethod ?? "").toLowerCase().includes("telebirr") ? "telebirr" : "cbe"}`}>{o.paymentMethod || "—"}</span></td>
+                            <td><strong>{fmtMoney(o.totalPrice)}</strong></td>
+                            <td><span className="cd-table-muted">{fmtDateTime(o.createdAt)}</span></td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <div className="cd-action-group">
+                                <button className="cd-approve-btn" disabled={approvingId === o.id} onClick={() => handleApprove(o.id)}>
+                                  {approvingId === o.id ? "..." : "Approve"}
+                                </button>
+                                <button className="cd-view-btn" onClick={() => setDrawerOrder(o)}>Details</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+            )}
+
+            {tab === "paid" && (
+              paid.length === 0
+                ? <div className="cd-empty"><div className="cd-empty-icon">📭</div><div className="cd-empty-title">No paid orders yet</div><div className="cd-empty-sub">Approved orders will appear here.</div></div>
+                : <div className="cd-table-wrap">
+                    <table className="cd-table">
+                      <thead>
+                        <tr>
+                          <th>Order</th><th>Customer</th><th>Table</th>
+                          <th>Payment</th><th>Amount</th><th>Approved</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paid.map((o) => (
+                          <tr key={o.id} onClick={() => setDrawerOrder(o)}>
+                            <td><span className="cd-order-id">{fmtOrderId(o.id)}</span></td>
+                            <td>
+                              <span style={{ fontWeight: 800, color: "var(--cd-accent)" }}>Table {o.tableNumber || "—"}</span>
+                              {o.customerName && <span className="cd-table-muted" style={{ display: "block" }}>{o.customerName}</span>}
+                            </td>
+                            <td>{o.tableNumber || "—"}</td>
+                            <td><span className="cd-badge paid">{o.paymentMethod || "—"}</span></td>
+                            <td><strong>{fmtMoney(o.totalPrice)}</strong></td>
+                            <td><span className="cd-table-muted">{o.paymentVerifiedAt ? fmtDateTime(o.paymentVerifiedAt) : "—"}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── DRAWER ─────────────────────────────────────────────────────────── */}
+      {drawerOrder && (
+        <OrderDrawer
+          order={drawerOrder}
+          onClose={() => setDrawerOrder(null)}
+          onApprove={drawerOrder.status === "pending_payment" ? () => handleApprove(drawerOrder.id) : undefined}
+          approving={approvingId === drawerOrder.id}
+        />
       )}
-    </main>
+    </div>
   );
 }
