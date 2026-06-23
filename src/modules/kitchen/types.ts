@@ -1,4 +1,4 @@
-export type KitchenOrderStatus = "paid" | "preparing" | "ready";
+export type KitchenOrderStatus = "paid" | "preparing" | "ready" | "completed";
 
 export type KitchenOrderItem = {
   id: string;

@@ -4,6 +4,12 @@ import "../styles/staffLogin.css";
 
 type PageState = "form" | "sent";
 
+function getResetRedirectUrl() {
+  const configuredAppUrl = import.meta.env.VITE_APP_URL?.trim().replace(/\/+$/, "");
+  const appUrl = configuredAppUrl || window.location.origin;
+  return `${appUrl}/reset-password`;
+}
+
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<PageState>("form");
@@ -19,7 +25,7 @@ export function ForgotPasswordPage() {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: getResetRedirectUrl(),
         }
       );
 

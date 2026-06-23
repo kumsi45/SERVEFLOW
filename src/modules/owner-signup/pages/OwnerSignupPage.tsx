@@ -12,6 +12,26 @@ function toSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+async function getFunctionErrorMessage(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const context = (error as { context?: unknown }).context;
+  if (context instanceof Response) {
+    try {
+      const body = (await context.clone().json()) as { error?: unknown };
+      if (typeof body.error === "string" && body.error.trim()) {
+        return body.error;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 export function OwnerSignupPage() {
   const [step, setStep] = useState<Step>("form");
   const [ownerName, setOwnerName] = useState("");
@@ -21,52 +41,39 @@ export function OwnerSignupPage() {
   const [tableCount, setTableCount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setError(null);
     setIsSubmitting(true);
 
     try {
-      // Step 1 — create auth account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { display_name: ownerName.trim() },
+      const trimmedOwnerName = ownerName.trim();
+      const trimmedRestaurantName = restaurantName.trim();
+      const trimmedEmail = email.trim().toLowerCase();
+      const slug = toSlug(trimmedRestaurantName);
+      const trimmedTableCount = tableCount.trim();
+      const parsedTables = trimmedTableCount ? Number(trimmedTableCount) : null;
+      if (parsedTables !== null && (!Number.isInteger(parsedTables) || parsedTables < 1 || parsedTables > 500)) {
+        throw new Error("Table count must be a whole number from 1 to 500.");
+      }
+      const tables = parsedTables;
+
+      const { data, error: signupError } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>("owner-signup", {
+        body: {
+          ownerName: trimmedOwnerName,
+          email: trimmedEmail,
+          password,
+          restaurantName: trimmedRestaurantName,
+          restaurantSlug: slug,
+          tableCount: tables,
         },
       });
 
-      if (authError) throw new Error(authError.message);
-      if (!authData.user) throw new Error("Account could not be created. Please try again.");
-
-      const userId = authData.user.id;
-
-      // Step 2 — create restaurant
-      const slug = toSlug(restaurantName);
-      const tables = tableCount ? parseInt(tableCount, 10) : null;
-      const { data: restaurantData, error: restaurantError } = await supabase
-        .from("restaurants")
-        .insert({ name: restaurantName.trim(), slug, ...(tables ? { table_count: tables } : {}) })
-        .select("id")
-        .single();
-
-      if (restaurantError) throw new Error(restaurantError.message);
-
-      const newRestaurantId = restaurantData.id as string;
-      setRestaurantId(newRestaurantId);
-
-      // Step 3 — add owner to restaurant_staff
-      const { error: staffError } = await supabase.from("restaurant_staff").insert({
-        restaurant_id: newRestaurantId,
-        user_id: userId,
-        role: "owner",
-        display_name: ownerName.trim(),
-        active: true,
-      });
-
-      if (staffError) throw new Error(staffError.message);
+      if (signupError) throw new Error((await getFunctionErrorMessage(signupError)) || signupError.message);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok) throw new Error("Account could not be created. Please try again.");
 
       setStep("success");
     } catch (err) {
@@ -80,14 +87,14 @@ export function OwnerSignupPage() {
     return (
       <main className="sf-signup-page">
         <div className="sf-signup-card sf-signup-success">
-          <div className="sf-signup-success-icon">🎉</div>
+          <div className="sf-signup-success-icon">OK</div>
           <h1>Welcome to ServeFlow!</h1>
           <p>
             Your restaurant <strong>{restaurantName}</strong> has been created.
-            Check your email to confirm your account, then sign in to access your owner dashboard.
+            Sign in with your email and password to access your owner dashboard.
           </p>
           <a href="/staff-login" className="sf-signup-btn-primary">
-            Sign In to Dashboard →
+            Sign In to Dashboard
           </a>
           <p className="sf-signup-note">
             After signing in, you can create cashier and kitchen staff accounts from your dashboard.
@@ -119,7 +126,7 @@ export function OwnerSignupPage() {
               type="text"
               placeholder="Abdulhayi Alo"
               value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
+              onChange={(event) => setOwnerName(event.target.value)}
               required
               minLength={2}
               maxLength={60}
@@ -134,7 +141,7 @@ export function OwnerSignupPage() {
               type="text"
               placeholder="Habesha Restaurant"
               value={restaurantName}
-              onChange={(e) => setRestaurantName(e.target.value)}
+              onChange={(event) => setRestaurantName(event.target.value)}
               required
               minLength={2}
               maxLength={80}
@@ -144,12 +151,14 @@ export function OwnerSignupPage() {
           </label>
 
           <label className="sf-signup-field">
-            <span>Number of Tables <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 400 }}>(Optional)</span></span>
+            <span>
+              Number of Tables <span className="sf-signup-optional">(Optional)</span>
+            </span>
             <input
               type="number"
               placeholder="e.g. 20"
               value={tableCount}
-              onChange={(e) => setTableCount(e.target.value)}
+              onChange={(event) => setTableCount(event.target.value)}
               min={1}
               max={500}
               disabled={isSubmitting}
@@ -162,7 +171,7 @@ export function OwnerSignupPage() {
               type="email"
               placeholder="owner@restaurant.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               required
               disabled={isSubmitting}
               autoComplete="email"
@@ -176,7 +185,7 @@ export function OwnerSignupPage() {
               type="password"
               placeholder="Min. 8 characters"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               required
               minLength={8}
               disabled={isSubmitting}
@@ -190,8 +199,7 @@ export function OwnerSignupPage() {
         </form>
 
         <p className="sf-signup-login-link">
-          Already have an account?{" "}
-          <a href="/staff-login">Sign in</a>
+          Already have an account? <a href="/staff-login">Sign in</a>
         </p>
       </div>
     </main>

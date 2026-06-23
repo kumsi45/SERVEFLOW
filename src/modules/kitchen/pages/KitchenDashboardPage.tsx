@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { markOrderCompleted } from "../services/kitchenOrderService";
 import type { KitchenOrder, KitchenOrderItem, KitchenRestaurant } from "../types";
 import "../styles/kitchenDashboard.css";
 
@@ -45,9 +46,9 @@ function TimerLabel({ iso, _now }: { iso: string | null; _now: Date }) {
 }
 
 // ─── Order Ticket ─────────────────────────────────────────────────────────────
-function OrderTicket({ order, actionId, onStart, onReady, now }: {
+function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
   order: KitchenOrder; actionId: string | null;
-  onStart?: () => void; onReady?: () => void; now: Date;
+  onStart?: () => void; onReady?: () => void; onComplete?: () => void; now: Date;
 }) {
   const elapsed = elapsedMin(order.preparationStartedAt ?? order.paymentVerifiedAt ?? order.createdAt);
   const isUrgent = elapsed >= 25;
@@ -103,7 +104,7 @@ function OrderTicket({ order, actionId, onStart, onReady, now }: {
         <span className="kd-ticket-payment">{order.paymentMethod || "—"}</span>
       </div>
 
-      {(onStart || onReady) && (
+      {(onStart || onReady || onComplete) && (
         <div className="kd-ticket-actions">
           {onStart && (
             <button className="kd-action-primary start" onClick={onStart} disabled={isBusy}>
@@ -115,6 +116,11 @@ function OrderTicket({ order, actionId, onStart, onReady, now }: {
               {isBusy ? "Marking..." : "✓ Mark Ready"}
             </button>
           )}
+          {onComplete && (
+            <button className="kd-action-primary ready" onClick={onComplete} disabled={isBusy}>
+              {isBusy ? "Completing..." : "Complete"}
+            </button>
+          )}
           <button className="kd-action-secondary" title="Details">👁</button>
         </div>
       )}
@@ -123,10 +129,10 @@ function OrderTicket({ order, actionId, onStart, onReady, now }: {
 }
 
 // ─── Kanban Column ─────────────────────────────────────────────────────────────
-function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, now }: {
+function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, onComplete, now }: {
   colKey: "new" | "preparing" | "ready";
   title: string; orders: KitchenOrder[]; actionId: string | null;
-  onStart?: (id: string) => void; onReady?: (id: string) => void; now: Date;
+  onStart?: (id: string) => void; onReady?: (id: string) => void; onComplete?: (id: string) => void; now: Date;
 }) {
   // urgent orders first
   const sorted = [...orders].sort((a, b) => {
@@ -152,6 +158,7 @@ function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, now }: {
                 key={o.id} order={o} actionId={actionId} now={now}
                 onStart={onStart ? () => onStart(o.id) : undefined}
                 onReady={onReady ? () => onReady(o.id) : undefined}
+                onComplete={onComplete ? () => onComplete(o.id) : undefined}
               />
             ))
         }
@@ -248,6 +255,14 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     } catch (e) { setError(e instanceof Error ? e.message : "Failed."); }
     finally { setActionId(null); }
   }
+  async function handleComplete(orderId: string) {
+    try {
+      setActionId(orderId);
+      const updated = await markOrderCompleted(orderId);
+      setOrders((p) => p.filter((o) => o.id !== updated.id));
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed."); }
+    finally { setActionId(null); }
+  }
   async function handleSignOut() { try { await signOutStaff(); } finally { window.location.replace("/staff-login"); } }
 
   // ── derived ────────────────────────────────────────────────────────────────
@@ -325,7 +340,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
           <div className="kd-kanban">
             <KanbanCol colKey="new" title="New Orders" orders={byStatus.paid} actionId={actionId} onStart={handleStart} now={now} />
             <KanbanCol colKey="preparing" title="Preparing" orders={byStatus.preparing} actionId={actionId} onReady={handleReady} now={now} />
-            <KanbanCol colKey="ready" title="Ready for Pickup" orders={byStatus.ready} actionId={actionId} now={now} />
+            <KanbanCol colKey="ready" title="Ready for Pickup" orders={byStatus.ready} actionId={actionId} onComplete={handleComplete} now={now} />
           </div>
 
           {/* ── SIDEBAR ────────────────────────────────────────────────── */}

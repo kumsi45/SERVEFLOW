@@ -31,7 +31,14 @@ type StaffRestaurantRow = {
 };
 
 function isCashierOrderStatus(value: unknown): value is CashierOrderStatus {
-  return value === "pending_payment" || value === "paid";
+  return (
+    value === "pending_payment" ||
+    value === "paid" ||
+    value === "preparing" ||
+    value === "ready" ||
+    value === "completed" ||
+    value === "cancelled"
+  );
 }
 
 function isOrderRow(value: unknown): value is OrderRow {
@@ -137,7 +144,7 @@ export async function fetchCashierOrders(activeRestaurantId: string): Promise<Ca
       "id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at"
     )
     .eq("restaurant_id", activeRestaurantId)
-    .in("status", ["pending_payment", "paid"])
+    .in("status", ["pending_payment", "paid", "preparing", "ready", "completed", "cancelled"])
     .order("created_at", { ascending: true });
 
   if (ordersError) {

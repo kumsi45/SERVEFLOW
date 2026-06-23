@@ -2,6 +2,7 @@ export type Restaurant = {
   id: string;
   name: string;
   slug: string;
+  table_count?: number | null;
   logo_url?: string | null;
 };
 

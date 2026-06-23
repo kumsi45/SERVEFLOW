@@ -320,6 +320,9 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const todayRevenue = useMemo(() => verifiedOrders.reduce((s, o) => s + o.totalPrice, 0), [verifiedOrders]);
   const avgOrder = verifiedOrders.length > 0 ? todayRevenue / verifiedOrders.length : 0;
   const cashCollected = useMemo(() => verifiedOrders.filter((o) => o.paymentMethod === "Cash").reduce((s, o) => s + o.totalPrice, 0), [verifiedOrders]);
+  const digitalPayments = useMemo(() => verifiedOrders.filter((o) => o.paymentMethod !== "Cash").reduce((s, o) => s + o.totalPrice, 0), [verifiedOrders]);
+  const preparingOrders = useMemo(() => orders.filter((o) => o.status === "preparing"), [orders]);
+  const readyOrders = useMemo(() => orders.filter((o) => o.status === "ready"), [orders]);
   const shiftDuration = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
   const shiftStr = shiftDuration < 60 ? `${shiftDuration}m` : `${Math.floor(shiftDuration / 60)}h ${shiftDuration % 60}m`;
 
@@ -361,14 +364,17 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
 
         {/* ── KPI CARDS ──────────────────────────────────────────────────── */}
         {loading
-          ? <div className="cd-kpi-grid">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="cd-skeleton cd-skeleton-kpi" />)}</div>
+          ? <div className="cd-kpi-grid">{Array.from({ length: 9 }).map((_, i) => <div key={i} className="cd-skeleton cd-skeleton-kpi" />)}</div>
           : <div className="cd-kpi-grid">
               <KpiCard label="Today's Revenue" value={fmtMoney(todayRevenue)} icon="💰" iconClass="blue" change="Live data" />
               <KpiCard label="Orders Today" value={`${orders.length}`} icon="📋" iconClass="green" change={`${verifiedOrders.length} verified`} />
               <KpiCard label="Pending Payments" value={`${pending.length}`} icon="⏳" iconClass="yellow" change="Needs action" warning={pending.length > 0} />
               <KpiCard label="Avg Order Value" value={fmtMoney(Math.round(avgOrder))} icon="📊" iconClass="purple" />
-              <KpiCard label="Completed" value={`${completedOrders.length}`} icon="✅" iconClass="green" change={`${verifiedOrders.length} paid`} />
+              <KpiCard label="Completed Today" value={`${completedOrders.length}`} icon="✅" iconClass="green" change={`${verifiedOrders.length} paid`} />
               <KpiCard label="Cash Collected" value={fmtMoney(cashCollected)} icon="💵" iconClass="blue" />
+              <KpiCard label="Digital Payments" value={fmtMoney(digitalPayments)} icon="D" iconClass="purple" />
+              <KpiCard label="Preparing Orders" value={`${preparingOrders.length}`} icon="P" iconClass="yellow" />
+              <KpiCard label="Ready Orders" value={`${readyOrders.length}`} icon="R" iconClass="green" />
             </div>
         }
 

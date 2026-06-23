@@ -12,28 +12,34 @@ export function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Supabase sends the recovery token via URL hash (#access_token=...&type=recovery)
-  // onAuthStateChange fires with PASSWORD_RECOVERY event when the token is valid
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setPageState("form");
-      } else if (event === "SIGNED_IN" && pageState === "loading") {
-        // Token already exchanged — still allow password change
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setPageState("form");
       }
     });
 
-    // Fallback: if no auth event fires within 3s, the link is invalid/expired
+    async function verifyRecoverySession() {
+      const { data } = await supabase.auth.getSession();
+      if (mounted && data.session) {
+        setPageState("form");
+      }
+    }
+
+    void verifyRecoverySession();
+
     const timer = setTimeout(() => {
-      setPageState((current) => current === "loading" ? "invalid" : current);
-    }, 3000);
+      setPageState((current) => (current === "loading" ? "invalid" : current));
+    }, 5000);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearTimeout(timer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

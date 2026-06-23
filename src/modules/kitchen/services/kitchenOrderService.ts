@@ -28,7 +28,7 @@ type StaffRestaurantRow = {
 };
 
 function isKitchenOrderStatus(value: unknown): value is KitchenOrderStatus {
-  return value === "paid" || value === "preparing" || value === "ready";
+  return value === "paid" || value === "preparing" || value === "ready" || value === "completed";
 }
 
 function isOrderRow(value: unknown): value is OrderRow {
@@ -187,6 +187,22 @@ export async function startOrderPreparation(orderId: string): Promise<KitchenOrd
 
 export async function markOrderReady(orderId: string): Promise<KitchenOrder> {
   const { data, error } = await supabase.rpc("mark_order_ready", {
+    target_order_id: orderId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!isOrderRow(data)) {
+    throw new Error("Kitchen transition did not return an order.");
+  }
+
+  return normalizeOrder(data);
+}
+
+export async function markOrderCompleted(orderId: string): Promise<KitchenOrder> {
+  const { data, error } = await supabase.rpc("mark_order_completed", {
     target_order_id: orderId,
   });
 

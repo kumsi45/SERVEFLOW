@@ -7,10 +7,12 @@ type ProtectedOwnerRouteProps = {
   restaurantId: string;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
-  | { status: "authorized"; restaurantName: string; ownerName: string };
+  | { status: "authorized"; restaurantId: string; restaurantName: string; ownerName: string };
 
 export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) {
   const authSession = useStaffAuthSession();
@@ -29,11 +31,29 @@ export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) 
 
     async function checkAccess() {
       try {
+        let resolvedRestaurantId = restaurantId;
+
+        if (!UUID_PATTERN.test(restaurantId)) {
+          const { data: restaurantRow, error: restaurantError } = await supabase
+            .from("restaurants")
+            .select("id")
+            .eq("slug", restaurantId)
+            .limit(1)
+            .maybeSingle();
+
+          if (restaurantError || !restaurantRow?.id) {
+            if (isMounted) setAccessState({ status: "unauthorized", reason: "access" });
+            return;
+          }
+
+          resolvedRestaurantId = restaurantRow.id;
+        }
+
         const { data, error } = await supabase
           .from("restaurant_staff")
           .select("role, display_name, restaurants(id, name)")
           .eq("user_id", authSession.userId!)
-          .eq("restaurant_id", restaurantId)
+          .eq("restaurant_id", resolvedRestaurantId)
           .eq("active", true)
           .eq("role", "owner")
           .limit(1)
@@ -47,6 +67,7 @@ export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) 
 
         setAccessState({
           status: "authorized",
+          restaurantId: resolvedRestaurantId,
           restaurantName: restaurantData.name,
           ownerName: (data as { display_name?: string | null }).display_name || "Owner",
         });
@@ -73,7 +94,7 @@ export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) 
 
   return (
     <OwnerDashboardPage
-      restaurantId={restaurantId}
+      restaurantId={accessState.restaurantId}
       restaurantName={accessState.restaurantName}
       ownerName={accessState.ownerName}
     />

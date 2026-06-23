@@ -24,7 +24,7 @@ AS $$
 DECLARE
   caller_user_id uuid := auth.uid();
   target_restaurant_id uuid;
-  caller_role text;
+  acting_staff public.restaurant_staff;
   updated_order public.orders;
 BEGIN
   -- Verify caller is authenticated
@@ -42,7 +42,7 @@ BEGIN
   END IF;
 
   -- Verify caller has cashier or owner role for this restaurant
-  SELECT role INTO caller_role
+  SELECT * INTO acting_staff
   FROM public.restaurant_staff
   WHERE user_id = caller_user_id
     AND restaurant_id = target_restaurant_id
@@ -50,7 +50,7 @@ BEGIN
     AND role IN ('cashier', 'owner')
   LIMIT 1;
 
-  IF caller_role IS NULL THEN
+  IF acting_staff.id IS NULL THEN
     RAISE EXCEPTION 'Only cashiers and owners can complete orders.';
   END IF;
 
@@ -59,7 +59,7 @@ BEGIN
   SET
     status = 'completed',
     completed_at = now(),
-    completed_by = caller_user_id
+    completed_by = acting_staff.id
   WHERE id = target_order_id
     AND restaurant_id = target_restaurant_id
     AND status = 'ready'

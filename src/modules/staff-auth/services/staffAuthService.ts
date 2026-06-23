@@ -112,6 +112,17 @@ async function getStaffSessionForUser(userId: string): Promise<StaffSession | nu
     return null;
   }
 
+  const loginUpdates = await Promise.all(
+    restaurants.map((restaurant) =>
+      supabase.rpc("record_staff_login", { target_restaurant_id: restaurant.id })
+    )
+  );
+
+  const loginUpdateError = loginUpdates.find((result) => result.error)?.error;
+  if (loginUpdateError) {
+    throw new Error(loginUpdateError.message);
+  }
+
   return {
     userId,
     restaurants,
@@ -160,14 +171,6 @@ export async function signInStaff(email: string, password: string): Promise<Staf
   }
 
   return staffSession;
-} const staffSession = await getStaffSessionForUser(data.user.id);
-
-  if (!staffSession) {
-    await signOutStaff();{
-    throw new Error("No active staff role was found for this account.");
-  }
-
-  return staffSession;
 }
 
 export async function signOutStaff() {
@@ -183,14 +186,22 @@ export function getStaffDestinations(staffSession: StaffSession): StaffDestinati
   const destinations: StaffDestination[] = [];
 
   for (const restaurant of staffSession.restaurants) {
-    if (restaurant.role === "owner" || restaurant.role === "cashier") {
+    if (restaurant.role === "owner") {
+      destinations.push({
+        dashboard: "owner",
+        restaurant,
+      });
+      continue;
+    }
+
+    if (restaurant.role === "cashier") {
       destinations.push({
         dashboard: "cashier",
         restaurant,
       });
     }
 
-    if (restaurant.role === "owner" || restaurant.role === "kitchen") {
+    if (restaurant.role === "kitchen") {
       destinations.push({
         dashboard: "kitchen",
         restaurant,

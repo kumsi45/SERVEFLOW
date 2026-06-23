@@ -1,0 +1,328 @@
+[2m9:26:00 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:00 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:02 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:02 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:02 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:05 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:05 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:06 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:06 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:06 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:06 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:08 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:08 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:08 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:09 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:10 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:12 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:12 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:13 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:14 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:20 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:20 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:20 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:20 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:21 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:21 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:21 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:21 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:21 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:26
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13274:5
+    at new Promise (<anonymous>)
+    at retryable (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13260:9)
+    at SupabaseAuthClient._refreshAccessToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19525:17)
+    at SupabaseAuthClient._callRefreshToken (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19646:39)
+[2m9:26:22 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:22 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:22 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:22 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:23 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:23 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:24 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:24 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:24 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:25 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20
+[2m9:26:26 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mTypeError: Failed to fetch
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13198:22
+    at _handleRequest (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13472:18)
+    at _request (http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13459:21)
+    at http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:19528:18
+    at async http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js?v=2634b5d1:13263:20

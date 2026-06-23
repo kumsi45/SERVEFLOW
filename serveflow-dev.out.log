@@ -1,0 +1,33 @@
+
+> serveflow@0.0.0 dev
+> vite --host 0.0.0.0 --port 5173 --strictPort
+
+
+  [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m341[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.203.250.181:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m1:39:23 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/staff-auth/pages/StaffLoginPage.tsx, /src/modules/cashier/pages/CashierDashboardPage.tsx, /src/modules/owner/pages/OwnerDashboardPage.tsx, /src/modules/kitchen/pages/KitchenDashboardPage.tsx[22m
+[2m1:39:30 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/staff-auth/pages/StaffLoginPage.tsx, /src/modules/cashier/pages/CashierDashboardPage.tsx, /src/modules/owner/pages/OwnerDashboardPage.tsx, /src/modules/kitchen/pages/KitchenDashboardPage.tsx[22m
+[2m1:39:48 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m1:40:16 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m1:40:25 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m1:42:04 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m9:53:21 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/landing/sections/PricingSection.tsx[22m
+[2m9:53:58 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/landing/sections/PricingSection.tsx[22m
+[2m12:29:35 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/staff-auth/pages/StaffLoginPage.tsx, /src/modules/cashier/pages/CashierDashboardPage.tsx, /src/modules/owner/pages/OwnerDashboardPage.tsx, /src/modules/kitchen/pages/KitchenDashboardPage.tsx[22m
+[2m12:30:33 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/staff-auth/pages/StaffLoginPage.tsx[22m
+[2m12:31:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/styles/ownerDashboard.css[22m
+[2m12:39:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m12:40:43 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m1:55:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m1:55:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/styles/ownerSignup.css[22m
+[2m3:55:06 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m3:55:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m4:26:34 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m
+[2m7:03:15 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/staff-auth/pages/ProtectedOwnerRoute.tsx[22m
+[2m11:06:17 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m11:07:18 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m5:11:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner/pages/OwnerDashboardPage.tsx[22m
+[2m5:34:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/modules/owner-signup/pages/OwnerSignupPage.tsx[22m

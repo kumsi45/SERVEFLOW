@@ -83,6 +83,12 @@ function LeftPanel() {
 
 // ─── Dashboard selector (after login with multiple destinations) ───────────────
 function DestinationPicker({ destinations }: { destinations: StaffDestination[] }) {
+  function getDashboardLabel(destination: StaffDestination) {
+    if (destination.dashboard === "owner") return "Owner Dashboard";
+    if (destination.dashboard === "cashier") return "Cashier Dashboard";
+    return "Kitchen Dashboard";
+  }
+
   return (
     <div className="sl-right">
       <div className="sl-card">
@@ -105,7 +111,7 @@ function DestinationPicker({ destinations }: { destinations: StaffDestination[] 
               </div>
               <div>
                 <div className="sl-dest-info-name">
-                  {dest.dashboard === "cashier" ? "Cashier Dashboard" : "Kitchen Dashboard"}
+                  {getDashboardLabel(dest)}
                 </div>
                 <div className="sl-dest-info-rest">{dest.restaurant.name}</div>
               </div>
@@ -229,7 +235,7 @@ export function StaffLoginPage() {
                 />
                 Remember me
               </label>
-              <a href="#" className="sl-forgot" onClick={(e) => e.preventDefault()}>
+              <a href="/forgot-password" className="sl-forgot">
                 Forgot password?
               </a>
             </div>

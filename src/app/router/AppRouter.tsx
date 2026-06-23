@@ -4,6 +4,8 @@ import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedC
 import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
 import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwnerRoute";
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
+import { ForgotPasswordPage } from "../../modules/staff-auth/pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "../../modules/staff-auth/pages/ResetPasswordPage";
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
 
@@ -21,6 +23,18 @@ function resolveRoute(pathname: string) {
 
   if (staffLoginMatch) {
     return { name: "staff-login" as const };
+  }
+
+  const forgotPasswordMatch = pathname.match(/^\/forgot-password\/?$/);
+
+  if (forgotPasswordMatch) {
+    return { name: "forgot-password" as const };
+  }
+
+  const resetPasswordMatch = pathname.match(/^\/reset-password\/?$/);
+
+  if (resetPasswordMatch) {
+    return { name: "reset-password" as const };
   }
 
   const cashierMatch = pathname.match(/^\/cashier\/([^/]+)\/?$/);
@@ -80,6 +94,14 @@ export function AppRouter() {
 
   if (route.name === "staff-login") {
     return <StaffLoginPage />;
+  }
+
+  if (route.name === "forgot-password") {
+    return <ForgotPasswordPage />;
+  }
+
+  if (route.name === "reset-password") {
+    return <ResetPasswordPage />;
   }
 
   if (route.name === "kitchen") {
