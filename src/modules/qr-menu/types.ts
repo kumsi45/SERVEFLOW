@@ -3,6 +3,7 @@ export type Restaurant = {
   name: string;
   slug: string;
   table_count?: number | null;
+  total_tables?: number | null;
   logo_url?: string | null;
 };
 

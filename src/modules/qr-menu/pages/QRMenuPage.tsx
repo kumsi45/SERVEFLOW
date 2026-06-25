@@ -41,6 +41,27 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
 
+  function getTableNumberValidationMessage(tableNumber: string) {
+    const normalizedTableNumber = tableNumber.trim();
+
+    if (!normalizedTableNumber) {
+      return "Table number is required to place your order.";
+    }
+
+    if (!/^[0-9]+$/.test(normalizedTableNumber)) {
+      return "Table number must be a whole number.";
+    }
+
+    const tableLimit = restaurant?.total_tables ?? restaurant?.table_count ?? 20;
+    const numericTableNumber = Number(normalizedTableNumber);
+
+    if (numericTableNumber < 1 || numericTableNumber > tableLimit) {
+      return `Invalid table number. Please enter a table number between 1 and ${tableLimit}.`;
+    }
+
+    return undefined;
+  }
+
   function addItemToCart(item: MenuItem) {
     setSubmittedOrder(undefined);
     cart.addItem({
@@ -53,9 +74,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   async function submitOrder() {
     const tableNum = checkout.tableNumber.trim();
     const customerName = checkout.customerName.trim();
+    const tableNumberValidationMessage = getTableNumberValidationMessage(tableNum);
 
-    // Table number is required
-    if (!tableNum) {
+    if (tableNumberValidationMessage) {
+      setSubmitError(tableNumberValidationMessage);
       return;
     }
 
@@ -150,6 +172,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               submitting={submitting}
               submitError={submitError}
               tableNumber={checkout.tableNumber}
+              tableCount={restaurant.total_tables ?? restaurant.table_count ?? 20}
               tableNumberFromQr={checkout.tableNumberFromQr}
               onClose={() => checkout.setCheckoutVisible(false)}
               onCustomerNameChange={checkout.setCustomerName}

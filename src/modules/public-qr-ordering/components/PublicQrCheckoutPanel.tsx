@@ -13,6 +13,7 @@ type PublicQrCheckoutPanelProps = {
   submitting: boolean;
   submitError?: string;
   tableNumber: string;
+  tableCount?: number | null;
   tableNumberFromQr: boolean;
   onClose?: () => void;
   onCustomerNameChange: (customerName: string) => void;
@@ -23,10 +24,25 @@ type PublicQrCheckoutPanelProps = {
 
 const MAX_CUSTOMER_NAME_LENGTH = 30;
 
-function getTableNumberValidationMessage(tableNumber: string) {
-  if (!tableNumber.trim()) {
+function getTableNumberValidationMessage(tableNumber: string, tableCount?: number | null) {
+  const normalizedTableNumber = tableNumber.trim();
+
+  if (!normalizedTableNumber) {
     return "Table number is required to place your order.";
   }
+
+  if (!/^[0-9]+$/.test(normalizedTableNumber)) {
+    return "Table number must be a whole number.";
+  }
+
+  const numericTableNumber = Number(normalizedTableNumber);
+
+  const tableLimit = tableCount ?? 20;
+
+  if (numericTableNumber < 1 || numericTableNumber > tableLimit) {
+    return `Invalid table number. Please enter a table number between 1 and ${tableLimit}.`;
+  }
+
   return undefined;
 }
 
@@ -45,6 +61,7 @@ export function PublicQrCheckoutPanel({
   submitting,
   submitError,
   tableNumber,
+  tableCount,
   tableNumberFromQr,
   onClose,
   onCustomerNameChange,
@@ -52,7 +69,7 @@ export function PublicQrCheckoutPanel({
   onPaymentMethodChange,
   onSubmit,
 }: PublicQrCheckoutPanelProps) {
-  const tableNumberValidationMessage = getTableNumberValidationMessage(tableNumber);
+  const tableNumberValidationMessage = getTableNumberValidationMessage(tableNumber, tableCount);
   const paymentMethodValidationMessage = getPaymentMethodValidationMessage(paymentMethod);
   const canSubmit =
     items.length > 0 &&
@@ -89,7 +106,13 @@ export function PublicQrCheckoutPanel({
             value={tableNumber}
             readOnly
             aria-label="Table number (pre-filled from QR code)"
-            style={{ background: "#f0fdf4", borderColor: "#bbf7d0", color: "#15803d", fontWeight: 700 }}
+            aria-invalid={tableNumberValidationMessage ? "true" : "false"}
+            aria-describedby="public-checkout-table-error"
+            style={
+              tableNumberValidationMessage
+                ? { background: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c", fontWeight: 700 }
+                : { background: "#f0fdf4", borderColor: "#bbf7d0", color: "#15803d", fontWeight: 700 }
+            }
           />
         ) : (
           <input
@@ -102,11 +125,12 @@ export function PublicQrCheckoutPanel({
             onBlur={() => onTableNumberChange(tableNumber.trim())}
           />
         )}
-        {tableNumberFromQr ? (
+        {tableNumberFromQr && !tableNumberValidationMessage ? (
           <p style={{ fontSize: 12, color: "#15803d", fontWeight: 600, margin: 0 }}>
-            ✓ Auto-detected from your table QR code
+            Auto-detected from your table QR code
           </p>
-        ) : tableNumberValidationMessage ? (
+        ) : null}
+        {tableNumberValidationMessage ? (
           <p className="public-checkout-field-error" id="public-checkout-table-error">
             {tableNumberValidationMessage}
           </p>

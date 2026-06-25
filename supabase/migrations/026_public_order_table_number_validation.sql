@@ -25,10 +25,6 @@ begin
 
   normalized_table_number := trim(new.table_number)::integer;
 
-  if normalized_table_number < 1 then
-    raise exception 'Invalid table number. Please enter a table number between 1 and %.', 0;
-  end if;
-
   select restaurants.table_count
   into configured_table_count
   from public.restaurants
@@ -36,11 +32,14 @@ begin
   limit 1;
 
   if configured_table_count is null then
-    raise exception 'Restaurant table count is not configured.';
+    configured_table_count := 20;
+    update public.restaurants
+    set table_count = configured_table_count
+    where restaurants.id = new.restaurant_id;
   end if;
 
-  if normalized_table_number > configured_table_count then
-    raise exception 'Invalid table number. Please enter a table number between 1 and %.', configured_table_count;
+  if normalized_table_number < 1 or normalized_table_number > configured_table_count then
+    raise exception 'Invalid table number. Please select a table between 1 and %.', configured_table_count;
   end if;
 
   new.table_number := normalized_table_number::text;
@@ -110,10 +109,6 @@ begin
 
   normalized_table_number := normalized_table_number_text::integer;
 
-  if normalized_customer_name is null then
-    raise exception 'Customer name is required.';
-  end if;
-
   if normalized_payment_method is null then
     raise exception 'Payment method is required.';
   end if;
@@ -154,11 +149,14 @@ begin
   end if;
 
   if target_table_count is null then
-    raise exception 'Restaurant table count is not configured.';
+    target_table_count := 20;
+    update public.restaurants
+    set table_count = target_table_count
+    where id = target_restaurant_id;
   end if;
 
   if normalized_table_number < 1 or normalized_table_number > target_table_count then
-    raise exception 'Invalid table number. Please enter a table number between 1 and %.', target_table_count;
+    raise exception 'Invalid table number. Please select a table between 1 and %.', target_table_count;
   end if;
 
   with normalized_items as (

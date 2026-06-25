@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
@@ -85,6 +86,16 @@ type OdCategory = {
   name: string;
 };
 
+type OdMenuUpload = {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_url: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+};
+
 type OdOrderItem = {
   id: string;
   order_id: string;
@@ -92,6 +103,63 @@ type OdOrderItem = {
   price: number;
   menu_item_id: string | null;
   name: string;
+};
+
+type JsonRecord = Record<string, unknown>;
+
+type RestaurantConfig = {
+  id: string;
+  name: string;
+  slug: string;
+  total_tables: number;
+  profile: JsonRecord;
+  business_hours: JsonRecord;
+  ordering_settings: JsonRecord;
+  branding: JsonRecord;
+  notification_settings: JsonRecord;
+  security_settings: JsonRecord;
+  subscription_plan: string;
+  billing_status: string;
+};
+
+type RestaurantTable = {
+  id: string;
+  restaurant_id: string;
+  table_number: number;
+  label: string;
+  qr_path: string;
+  active: boolean;
+};
+
+type OwnerActiveShift = {
+  id: string;
+  restaurant_id: string;
+  opened_by: string;
+  opened_at: string;
+  opening_cash: number;
+};
+
+type OwnerShiftHistory = {
+  id: string;
+  cashier_name: string;
+  opened_at: string;
+  closed_at: string | null;
+  opening_cash: number;
+  expected_cash: number | null;
+  actual_cash: number | null;
+  variance: number | null;
+  variance_reason: string | null;
+};
+
+type OwnerCashVariance = {
+  id: string;
+  shift_id: string;
+  cashier_name: string;
+  closed_at: string;
+  expected_cash: number;
+  actual_cash: number;
+  variance: number;
+  variance_reason: string | null;
 };
 
 type NavId = "overview" | "orders" | "analytics" | "menu" | "staff" | "qr" | "customers" | "reports" | "settings";
@@ -159,6 +227,77 @@ function isRevenueOrder(order: OdOrder) {
   return Boolean(order.payment_verified_at) || REVENUE_STATUSES.includes(order.status);
 }
 
+function toJsonRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
+function jsonString(value: JsonRecord, key: string, fallback = "") {
+  const raw = value[key];
+  return typeof raw === "string" ? raw : fallback;
+}
+
+function jsonBool(value: JsonRecord, key: string, fallback = false) {
+  const raw = value[key];
+  return typeof raw === "boolean" ? raw : fallback;
+}
+
+function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: string): RestaurantConfig {
+  return {
+    id: String(row.id),
+    name: typeof row.name === "string" ? row.name : fallbackName,
+    slug: typeof row.slug === "string" ? row.slug : "",
+    total_tables: Number(row.total_tables ?? row.table_count ?? 20),
+    profile: toJsonRecord(row.profile),
+    business_hours: toJsonRecord(row.business_hours),
+    ordering_settings: toJsonRecord(row.ordering_settings),
+    branding: toJsonRecord(row.branding),
+    notification_settings: toJsonRecord(row.notification_settings),
+    security_settings: toJsonRecord(row.security_settings),
+    subscription_plan: typeof row.subscription_plan === "string" ? row.subscription_plan : "starter",
+    billing_status: typeof row.billing_status === "string" ? row.billing_status : "trial",
+  };
+}
+
+function toDateInputValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function downloadText(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(value: string | number | null | undefined) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportRowsAsCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  downloadText(
+    filename,
+    [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n"),
+    "text/csv;charset=utf-8"
+  );
+}
+
+function exportRowsAsExcel(filename: string, title: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  const tableRows = [headers, ...rows]
+    .map((row, index) => `<tr>${row.map((cell) => `<${index === 0 ? "th" : "td"}>${String(cell ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</${index === 0 ? "th" : "td"}>`).join("")}</tr>`)
+    .join("");
+  downloadText(
+    filename,
+    `<html><head><meta charset="utf-8" /></head><body><h1>${title}</h1><table>${tableRows}</table></body></html>`,
+    "application/vnd.ms-excel;charset=utf-8"
+  );
+}
+
 export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: OwnerDashboardPageProps) {
   const now = useNow();
   const [nav, setNav] = useState<NavId>("overview");
@@ -167,6 +306,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
   const [orderItems, setOrderItems] = useState<OdOrderItem[]>([]);
+  const [activeShifts, setActiveShifts] = useState<OwnerActiveShift[]>([]);
+  const [restaurantConfig, setRestaurantConfig] = useState<RestaurantConfig | null>(null);
+  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -183,6 +325,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           { data: staffData, error: staffError },
           { data: menuData, error: menuError },
           { data: categoryData, error: categoryError },
+          { data: restaurantData, error: restaurantError },
+          { data: tableData, error: tableError },
+          { data: shiftData, error: shiftError },
         ] =
           await Promise.all([
             supabase
@@ -206,12 +351,32 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .select("id,name")
               .eq("restaurant_id", restaurantId)
               .order("name", { ascending: true }),
+            supabase
+              .from("restaurants")
+              .select("id,name,slug,total_tables,table_count,profile,business_hours,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+              .eq("id", restaurantId)
+              .maybeSingle(),
+            supabase
+              .from("restaurant_tables")
+              .select("id,restaurant_id,table_number,label,qr_path,active")
+              .eq("restaurant_id", restaurantId)
+              .eq("active", true)
+              .order("table_number", { ascending: true }),
+            supabase
+              .from("cashier_shifts")
+              .select("id,restaurant_id,opened_by,opened_at,opening_cash")
+              .eq("restaurant_id", restaurantId)
+              .is("closed_at", null)
+              .order("opened_at", { ascending: false }),
           ]);
 
         if (orderError) throw new Error(orderError.message);
         if (staffError) throw new Error(staffError.message);
         if (menuError) throw new Error(menuError.message);
         if (categoryError) throw new Error(categoryError.message);
+        if (restaurantError) throw new Error(restaurantError.message);
+        if (tableError) throw new Error(tableError.message);
+        if (shiftError) throw new Error(shiftError.message);
         if (!mounted) return;
 
         const normalizedOrders = (orderData ?? []).map((row) => ({
@@ -259,6 +424,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         setStaff((staffData ?? []) as OdStaff[]);
         setMenuItems((menuData ?? []).map((row) => ({ ...row, price: Number(row.price) })) as OdMenuItem[]);
         setCategories((categoryData ?? []) as OdCategory[]);
+        setActiveShifts((shiftData ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
+        if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
+        setRestaurantTables((tableData ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
       } catch (loadError) {
         if (mounted) setError(loadError instanceof Error ? loadError.message : "Failed to load owner dashboard.");
       } finally {
@@ -306,6 +474,21 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           }
           return [order, ...previous];
         });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, () => {
+        void supabase
+          .from("cashier_shifts")
+          .select("id,restaurant_id,opened_by,opened_at,opening_cash")
+          .eq("restaurant_id", restaurantId)
+          .is("closed_at", null)
+          .order("opened_at", { ascending: false })
+          .then(({ data, error: shiftError }) => {
+            if (shiftError) {
+              setError(shiftError.message);
+              return;
+            }
+            setActiveShifts((data ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
+          });
       })
       .subscribe();
 
@@ -425,6 +608,27 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     setCategories((categoryData ?? []) as OdCategory[]);
   }
 
+  async function refreshRestaurantConfig() {
+    const [{ data: restaurantData, error: restaurantError }, { data: tableData, error: tableError }] = await Promise.all([
+      supabase
+        .from("restaurants")
+        .select("id,name,slug,total_tables,table_count,profile,business_hours,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+        .eq("id", restaurantId)
+        .maybeSingle(),
+      supabase
+        .from("restaurant_tables")
+        .select("id,restaurant_id,table_number,label,qr_path,active")
+        .eq("restaurant_id", restaurantId)
+        .eq("active", true)
+        .order("table_number", { ascending: true }),
+    ]);
+
+    if (restaurantError) throw new Error(restaurantError.message);
+    if (tableError) throw new Error(tableError.message);
+    if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
+    setRestaurantTables((tableData ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
+  }
+
   const dashboardData = {
     restaurantName,
     orders,
@@ -439,6 +643,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     activeStaff,
     kitchenStaff,
     cashierStaff,
+    activeShifts,
     menuItems,
     orderItems,
     sparkData,
@@ -517,7 +722,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
 
         {error && <div className="od-error">Warning: {error}</div>}
 
-        {nav === "overview" && <OverviewPage data={dashboardData} />}
+        {nav === "overview" && <OverviewPage data={dashboardData} staff={staff} />}
         {nav === "orders" && <OrdersPage orders={orders} activeOrders={activeOrders} loading={loading} restaurantName={restaurantName} />}
         {nav === "analytics" && <AnalyticsPage data={dashboardData} />}
         {nav === "staff" && (
@@ -537,8 +742,18 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             onMenuChanged={refreshMenu}
           />
         )}
-        {nav === "qr" && <QrTablesPage restaurantName={restaurantName} orders={activeOrders} />}
-        {(nav === "customers" || nav === "reports" || nav === "settings") && <ComingSoonPage nav={nav} />}
+        {nav === "qr" && <QrTablesPage restaurantName={restaurantName} restaurantSlug={restaurantConfig?.slug ?? ""} orders={activeOrders} tables={restaurantTables} />}
+        {nav === "customers" && <CustomersPage orders={orders} />}
+        {nav === "reports" && <ReportsPage restaurantId={restaurantId} restaurantName={restaurantName} />}
+        {nav === "settings" && (
+          <SettingsPage
+            restaurantId={restaurantId}
+            fallbackRestaurantName={restaurantName}
+            config={restaurantConfig}
+            tables={restaurantTables}
+            onSettingsChanged={refreshRestaurantConfig}
+          />
+        )}
       </div>
     </div>
   );
@@ -558,6 +773,7 @@ type DashboardData = {
   activeStaff: number;
   kitchenStaff: OdStaff[];
   cashierStaff: OdStaff[];
+  activeShifts: OwnerActiveShift[];
   menuItems: OdMenuItem[];
   orderItems: OdOrderItem[];
   sparkData: number[];
@@ -576,7 +792,8 @@ type DashboardData = {
   loading: boolean;
 };
 
-function OverviewPage({ data }: { data: DashboardData }) {
+function OverviewPage({ data, staff }: { data: DashboardData; staff: OdStaff[] }) {
+  const staffById = new Map(staff.map((member) => [member.id, member]));
   const kpis = [
     { label: "Revenue Today", value: fmtMoney(data.todayRevenue), badge: "Live", tone: "up" },
     { label: "Total Orders", value: `${data.todayOrders.length}`, badge: `${data.activeOrders.length} active`, tone: "neutral" },
@@ -641,6 +858,37 @@ function OverviewPage({ data }: { data: DashboardData }) {
         <div className="od-side-stack">
           <QuickActions />
           <KitchenStatus data={data} />
+        </div>
+      </div>
+
+      <div className="od-card">
+        <div className="od-card-header">
+          <div>
+            <div className="od-card-title">Active Cashier Shifts</div>
+            <div className="od-card-subtitle">Open drawers currently visible to owner access.</div>
+          </div>
+        </div>
+        <div className="od-table-wrap">
+          <table className="od-table">
+            <thead>
+              <tr><th>Cashier</th><th>Opened</th><th>Opening Cash</th><th>Duration</th></tr>
+            </thead>
+            <tbody>
+              {data.activeShifts.length === 0 ? (
+                <tr><td colSpan={4}><div className="od-empty compact">No active cashier shifts</div></td></tr>
+              ) : data.activeShifts.map((shift) => {
+                const cashier = staffById.get(shift.opened_by);
+                return (
+                  <tr key={shift.id}>
+                    <td>{cashier?.display_name ?? "Cashier"}</td>
+                    <td>{fmtDateTime(shift.opened_at)}</td>
+                    <td>{fmtMoney(shift.opening_cash)}</td>
+                    <td>{fmtTimeAgo(shift.opened_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -1482,7 +1730,20 @@ function buildMenuPhotoPath(restaurantId: string, file: File) {
   return `${restaurantId}/${token}.${extension}`;
 }
 
+function buildMenuFilePath(restaurantId: string, file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || (file.type === "application/pdf" ? "pdf" : "jpg");
+  const token = crypto.randomUUID();
+  return `${restaurantId}/${token}.${extension}`;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
 function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: MenuPageProps) {
+  const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [modal, setModal] = useState<MenuModalState>(null);
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -1492,9 +1753,49 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
   const [formAvailable, setFormAvailable] = useState(true);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
   const [formImageUrl, setFormImageUrl] = useState("");
+  const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>([]);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadMenuUploads() {
+      const { data, error } = await supabase
+        .from("menu_uploads")
+        .select("id,file_name,file_path,file_url,mime_type,size_bytes,created_at")
+        .eq("restaurant_id", restaurantId)
+        .order("created_at", { ascending: false });
+
+      if (!mounted) return;
+      if (error) {
+        setMenuError(error.message);
+        return;
+      }
+
+      setMenuUploads((data ?? []).map((row) => ({
+        ...row,
+        size_bytes: Number(row.size_bytes),
+      })) as OdMenuUpload[]);
+    }
+
+    void loadMenuUploads();
+    return () => {
+      mounted = false;
+    };
+  }, [restaurantId]);
+
+  async function refreshMenuUploads() {
+    const { data, error } = await supabase
+      .from("menu_uploads")
+      .select("id,file_name,file_path,file_url,mime_type,size_bytes,created_at")
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+    setMenuUploads((data ?? []).map((row) => ({ ...row, size_bytes: Number(row.size_bytes) })) as OdMenuUpload[]);
+  }
 
   function openCreateModal() {
     setMenuError(null);
@@ -1569,6 +1870,85 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
 
     const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
     return data.publicUrl;
+  }
+
+  async function handleUploadMenuFile(file: File | null) {
+    if (!file) return;
+
+    try {
+      setIsWorking(true);
+      setMenuError(null);
+      setNotice(null);
+
+      const isAllowedType = file.type.startsWith("image/") || file.type === "application/pdf";
+      if (!isAllowedType) throw new Error("Upload a menu image or PDF file.");
+      if (file.size > 10 * 1024 * 1024) throw new Error("Menu file must be 10 MB or smaller.");
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error(userError?.message || "You must be signed in as the owner to upload a menu.");
+      }
+
+      const path = buildMenuFilePath(restaurantId, file);
+      const { error: uploadError } = await supabase.storage.from("menu-files").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { data: publicUrlData } = supabase.storage.from("menu-files").getPublicUrl(path);
+      const { error: insertError } = await supabase.from("menu_uploads").insert({
+        restaurant_id: restaurantId,
+        uploaded_by: userData.user.id,
+        file_name: file.name,
+        file_path: path,
+        file_url: publicUrlData.publicUrl,
+        mime_type: file.type,
+        size_bytes: file.size,
+      });
+
+      if (insertError) {
+        await supabase.storage.from("menu-files").remove([path]);
+        throw new Error(insertError.message);
+      }
+
+      setNotice("Menu file uploaded.");
+      await refreshMenuUploads();
+    } catch (actionError) {
+      setMenuError(actionError instanceof Error ? actionError.message : "Could not upload menu file.");
+    } finally {
+      if (menuUploadInputRef.current) menuUploadInputRef.current.value = "";
+      setIsWorking(false);
+    }
+  }
+
+  async function handleDeleteMenuUpload(upload: OdMenuUpload) {
+    if (!window.confirm(`Delete ${upload.file_name}? This cannot be undone.`)) return;
+
+    try {
+      setIsWorking(true);
+      setMenuError(null);
+      setNotice(null);
+
+      const { error: deleteError } = await supabase
+        .from("menu_uploads")
+        .delete()
+        .eq("id", upload.id)
+        .eq("restaurant_id", restaurantId);
+      if (deleteError) throw new Error(deleteError.message);
+
+      const { error: storageError } = await supabase.storage.from("menu-files").remove([upload.file_path]);
+      if (storageError) throw new Error(storageError.message);
+
+      setNotice("Menu file deleted.");
+      await refreshMenuUploads();
+    } catch (actionError) {
+      setMenuError(actionError instanceof Error ? actionError.message : "Could not delete menu file.");
+    } finally {
+      setIsWorking(false);
+    }
   }
 
   async function handleSubmitMenuItem(event: React.FormEvent<HTMLFormElement>) {
@@ -1646,6 +2026,17 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
           <p className="od-page-subtitle">Manage your restaurant menu, categories, and pricing.</p>
         </div>
         <div className="od-header-actions">
+          <input
+            ref={menuUploadInputRef}
+            className="od-hidden-file-input"
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={(event) => void handleUploadMenuFile(event.target.files?.[0] ?? null)}
+            disabled={isWorking}
+          />
+          <button className="od-btn-ghost" type="button" onClick={() => menuUploadInputRef.current?.click()} disabled={isWorking}>
+            Upload Menu
+          </button>
           <button className="od-btn-primary" onClick={openCreateModal}>Add Item</button>
         </div>
       </div>
@@ -1657,6 +2048,37 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
       )}
 
       <TopItemsTable topItems={topItems} menuItems={items} />
+
+      <div className="od-card">
+        <div className="od-card-header">
+          <div>
+            <div className="od-card-title">Uploaded Menu Files</div>
+            <div className="od-card-subtitle">Image and PDF menus saved to owner-managed storage.</div>
+          </div>
+        </div>
+        <div className="od-menu-upload-list">
+          {menuUploads.length === 0 ? (
+            <div className="od-empty compact">
+              <div className="od-empty-msg">No menu files uploaded</div>
+              <div className="od-empty-sub">Upload a menu image or PDF from the button above.</div>
+            </div>
+          ) : (
+            menuUploads.map((upload) => (
+              <div className="od-menu-upload-row" key={upload.id}>
+                <div className="od-menu-upload-icon">{upload.mime_type === "application/pdf" ? "PDF" : "IMG"}</div>
+                <div className="od-menu-upload-info">
+                  <strong>{upload.file_name}</strong>
+                  <span>{formatFileSize(upload.size_bytes)} - {fmtDateTime(upload.created_at)}</span>
+                </div>
+                <div className="od-row-actions">
+                  <a className="od-btn-ghost" href={upload.file_url} target="_blank" rel="noreferrer">View</a>
+                  <button className="od-btn-ghost danger" type="button" onClick={() => void handleDeleteMenuUpload(upload)} disabled={isWorking}>Delete</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       <div className="od-card">
         <div className="od-card-header">
@@ -1775,13 +2197,351 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
   );
 }
 
-function QrTablesPage({ restaurantName, orders }: { restaurantName: string; orders: OdOrder[] }) {
+type ReportRow = Record<string, string | number | null | undefined>;
+
+type OwnerReportData = {
+  summary: {
+    revenue: number;
+    orders: number;
+    average_order_value: number;
+    completed_orders: number;
+    cancelled_orders: number;
+    unique_customers: number;
+  };
+  sales_by_day: { date: string; revenue: number; orders: number }[];
+  orders_by_status: { status: string; orders: number }[];
+  menu_performance: { name: string; category: string; quantity: number; revenue: number }[];
+  staff_performance: { name: string; role: string; orders_completed: number; payments_verified: number }[];
+  table_usage: { table_number: number; orders: number; revenue: number }[];
+  customers: { customer_name: string; orders: number; revenue: number; last_order_at: string | null }[];
+  shift_history: OwnerShiftHistory[];
+  cash_variances: OwnerCashVariance[];
+  ai_insights: { title: string; detail: string }[];
+};
+
+function emptyReportData(): OwnerReportData {
+  return {
+    summary: { revenue: 0, orders: 0, average_order_value: 0, completed_orders: 0, cancelled_orders: 0, unique_customers: 0 },
+    sales_by_day: [],
+    orders_by_status: [],
+    menu_performance: [],
+    staff_performance: [],
+    table_usage: [],
+    customers: [],
+    shift_history: [],
+    cash_variances: [],
+    ai_insights: [],
+  };
+}
+
+function normalizeReportData(value: unknown): OwnerReportData {
+  const data = value && typeof value === "object" ? (value as Partial<OwnerReportData>) : {};
+  const summary = data.summary ?? emptyReportData().summary;
+  return {
+    summary: {
+      revenue: Number(summary.revenue ?? 0),
+      orders: Number(summary.orders ?? 0),
+      average_order_value: Number(summary.average_order_value ?? 0),
+      completed_orders: Number(summary.completed_orders ?? 0),
+      cancelled_orders: Number(summary.cancelled_orders ?? 0),
+      unique_customers: Number(summary.unique_customers ?? 0),
+    },
+    sales_by_day: (data.sales_by_day ?? []).map((row) => ({ date: String(row.date), revenue: Number(row.revenue), orders: Number(row.orders) })),
+    orders_by_status: (data.orders_by_status ?? []).map((row) => ({ status: String(row.status), orders: Number(row.orders) })),
+    menu_performance: (data.menu_performance ?? []).map((row) => ({ name: String(row.name), category: String(row.category), quantity: Number(row.quantity), revenue: Number(row.revenue) })),
+    staff_performance: (data.staff_performance ?? []).map((row) => ({ name: String(row.name), role: String(row.role), orders_completed: Number(row.orders_completed), payments_verified: Number(row.payments_verified) })),
+    table_usage: (data.table_usage ?? []).map((row) => ({ table_number: Number(row.table_number), orders: Number(row.orders), revenue: Number(row.revenue) })),
+    customers: (data.customers ?? []).map((row) => ({ customer_name: String(row.customer_name), orders: Number(row.orders), revenue: Number(row.revenue), last_order_at: row.last_order_at ? String(row.last_order_at) : null })),
+    shift_history: (data.shift_history ?? []).map((row) => ({
+      id: String(row.id),
+      cashier_name: String(row.cashier_name ?? "Cashier"),
+      opened_at: String(row.opened_at),
+      closed_at: row.closed_at ? String(row.closed_at) : null,
+      opening_cash: Number(row.opening_cash),
+      expected_cash: row.expected_cash === null ? null : Number(row.expected_cash),
+      actual_cash: row.actual_cash === null ? null : Number(row.actual_cash),
+      variance: row.variance === null ? null : Number(row.variance),
+      variance_reason: row.variance_reason ? String(row.variance_reason) : null,
+    })),
+    cash_variances: (data.cash_variances ?? []).map((row) => ({
+      id: String(row.id),
+      shift_id: String(row.shift_id),
+      cashier_name: String(row.cashier_name ?? "Cashier"),
+      closed_at: String(row.closed_at),
+      expected_cash: Number(row.expected_cash),
+      actual_cash: Number(row.actual_cash),
+      variance: Number(row.variance),
+      variance_reason: row.variance_reason ? String(row.variance_reason) : null,
+    })),
+    ai_insights: (data.ai_insights ?? []).map((row) => ({ title: String(row.title), detail: String(row.detail) })),
+  };
+}
+
+function MiniLineChart({ rows }: { rows: { date: string; revenue: number; orders: number }[] }) {
+  const values = rows.length > 0 ? rows : [{ date: "No data", revenue: 0, orders: 0 }];
+  const max = Math.max(...values.map((row) => row.revenue), 1);
+  const points = values
+    .map((row, index) => {
+      const x = values.length === 1 ? 280 : (index / (values.length - 1)) * 560;
+      const y = 180 - (row.revenue / max) * 150;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="od-report-chart">
+      <svg viewBox="0 0 560 190" role="img" aria-label="Sales trend">
+        <polyline points={points} fill="none" stroke="var(--od-primary)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {values.map((row, index) => {
+          const x = values.length === 1 ? 280 : (index / (values.length - 1)) * 560;
+          const y = 180 - (row.revenue / max) * 150;
+          return <circle key={`${row.date}-${index}`} cx={x} cy={y} r="5" fill="var(--od-primary)" />;
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function ReportTable({ title, subtitle, headers, rows }: { title: string; subtitle: string; headers: string[]; rows: ReportRow[] }) {
+  return (
+    <div className="od-card">
+      <div className="od-card-header">
+        <div>
+          <div className="od-card-title">{title}</div>
+          <div className="od-card-subtitle">{subtitle}</div>
+        </div>
+      </div>
+      <div className="od-table-wrap">
+        <table className="od-table">
+          <thead>
+            <tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={headers.length}><div className="od-empty compact">No report data in this range</div></td></tr>
+            ) : rows.map((row, index) => (
+              <tr key={index}>
+                {headers.map((header) => <td key={header}>{row[header]}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
+  const defaultEnd = toDateInputValue(new Date());
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+  const [startDate, setStartDate] = useState(toDateInputValue(defaultStartDate));
+  const [endDate, setEndDate] = useState(defaultEnd);
+  const [reportData, setReportData] = useState<OwnerReportData>(emptyReportData());
+  const [loadingReport, setLoadingReport] = useState(true);
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadReport() {
+      try {
+        setLoadingReport(true);
+        setReportError(null);
+        const endExclusive = new Date(`${endDate}T00:00:00`);
+        endExclusive.setDate(endExclusive.getDate() + 1);
+        const rangeStart = new Date(`${startDate}T00:00:00`).toISOString();
+        const rangeEnd = endExclusive.toISOString();
+        const [{ data, error }, { data: shiftData, error: shiftError }] = await Promise.all([
+          supabase.rpc("get_owner_reporting_center", {
+            target_restaurant_id: restaurantId,
+            range_start: rangeStart,
+            range_end: rangeEnd,
+          }),
+          supabase.rpc("get_owner_shift_visibility", {
+            target_restaurant_id: restaurantId,
+            range_start: rangeStart,
+            range_end: rangeEnd,
+          }),
+        ]);
+        if (error) throw new Error(error.message);
+        if (shiftError) throw new Error(shiftError.message);
+        const reportPayload = data && typeof data === "object" ? data as object : {};
+        const shiftPayload = shiftData && typeof shiftData === "object" ? shiftData as object : {};
+        if (mounted) setReportData(normalizeReportData({ ...reportPayload, ...shiftPayload }));
+      } catch (loadError) {
+        if (mounted) setReportError(loadError instanceof Error ? loadError.message : "Could not load reports.");
+      } finally {
+        if (mounted) setLoadingReport(false);
+      }
+    }
+    void loadReport();
+    return () => { mounted = false; };
+  }, [restaurantId, startDate, endDate]);
+
+  const salesRows = reportData.sales_by_day.map((row) => ({ Date: row.date.slice(0, 10), Revenue: fmtMoney(row.revenue), Orders: row.orders }));
+  const orderRows = reportData.orders_by_status.map((row) => ({ Status: statusLabel(row.status), Orders: row.orders }));
+  const menuRows = reportData.menu_performance.map((row) => ({ Item: row.name, Category: row.category, Quantity: row.quantity, Revenue: fmtMoney(row.revenue) }));
+  const staffRows = reportData.staff_performance.map((row) => ({ Staff: row.name, Role: row.role, Completed: row.orders_completed, Payments: row.payments_verified }));
+  const tableRows = reportData.table_usage.map((row) => ({ Table: row.table_number, Orders: row.orders, Revenue: fmtMoney(row.revenue) }));
+  const customerRows = reportData.customers.map((row) => ({ Customer: row.customer_name, Orders: row.orders, Revenue: fmtMoney(row.revenue), "Last Order": row.last_order_at ? fmtDateTime(row.last_order_at) : "-" }));
+  const shiftRows = reportData.shift_history.map((row) => ({
+    Cashier: row.cashier_name,
+    Opened: fmtDateTime(row.opened_at),
+    Closed: row.closed_at ? fmtDateTime(row.closed_at) : "Active",
+    Expected: row.expected_cash === null ? "-" : fmtMoney(row.expected_cash),
+    Actual: row.actual_cash === null ? "-" : fmtMoney(row.actual_cash),
+    Variance: row.variance === null ? "-" : fmtMoney(row.variance),
+  }));
+  const varianceRows = reportData.cash_variances.map((row) => ({
+    Cashier: row.cashier_name,
+    Closed: fmtDateTime(row.closed_at),
+    Expected: fmtMoney(row.expected_cash),
+    Actual: fmtMoney(row.actual_cash),
+    Variance: fmtMoney(row.variance),
+    Reason: row.variance_reason ?? "-",
+  }));
+  const exportHeaders = ["Report", "Metric", "Value"];
+  const exportRows = [
+    ["Sales", "Revenue", reportData.summary.revenue],
+    ["Orders", "Total orders", reportData.summary.orders],
+    ["Orders", "Completed orders", reportData.summary.completed_orders],
+    ["Orders", "Cancelled orders", reportData.summary.cancelled_orders],
+    ["Sales", "Average order value", Math.round(reportData.summary.average_order_value)],
+    ["Customers", "Unique customers", reportData.summary.unique_customers],
+  ];
+
+  function handleCsvExport() {
+    exportRowsAsCsv(`serveflow-report-${startDate}-${endDate}.csv`, exportHeaders, exportRows);
+  }
+
+  function handleExcelExport() {
+    exportRowsAsExcel(`serveflow-report-${startDate}-${endDate}.xls`, `${restaurantName} Reporting Center`, exportHeaders, exportRows);
+  }
+
+  function handlePrint() {
+    window.print();
+  }
+
+  return (
+    <div className="od-page od-print-area">
+      <div className="od-page-header">
+        <div>
+          <h1 className="od-page-title">Reporting Center</h1>
+          <p className="od-page-subtitle">Sales, operations, menu, staff, table, customer, and AI business reports.</p>
+        </div>
+        <div className="od-header-actions od-no-print">
+          <button className="od-btn-ghost" type="button" onClick={handleCsvExport}>CSV Export</button>
+          <button className="od-btn-ghost" type="button" onClick={handleExcelExport}>Excel Export</button>
+          <button className="od-btn-ghost" type="button" onClick={handlePrint}>PDF / Print</button>
+        </div>
+      </div>
+
+      <div className="od-card od-no-print">
+        <div className="od-settings-grid compact">
+          <label>Start Date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
+          <label>End Date<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>
+        </div>
+      </div>
+
+      {reportError && <div className="od-error-inline">{reportError}</div>}
+
+      <div className="od-kpi-grid analytics">
+        <div className="od-kpi-card"><div className="od-kpi-label">Revenue</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoneyK(reportData.summary.revenue)}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Orders</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.orders}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Average Order</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(Math.round(reportData.summary.average_order_value))}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Customers</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.unique_customers}</div></div>
+      </div>
+
+      <div className="od-card">
+        <div className="od-card-header">
+          <div>
+            <div className="od-card-title">Sales Reports</div>
+            <div className="od-card-subtitle">Revenue and order trend for the selected date range.</div>
+          </div>
+        </div>
+        <MiniLineChart rows={reportData.sales_by_day} />
+      </div>
+
+      <ReportTable title="Order Reports" subtitle="Order volume by workflow status." headers={["Status", "Orders"]} rows={orderRows} />
+      <ReportTable title="Menu Performance Reports" subtitle="Top menu items by persisted order item revenue." headers={["Item", "Category", "Quantity", "Revenue"]} rows={menuRows} />
+      <ReportTable title="Staff Performance Reports" subtitle="Payment verification and completion activity by staff member." headers={["Staff", "Role", "Completed", "Payments"]} rows={staffRows} />
+      <ReportTable title="Cashier Shift History" subtitle="Read-only shift openings, closings, and reconciliation totals." headers={["Cashier", "Opened", "Closed", "Expected", "Actual", "Variance"]} rows={shiftRows} />
+      <ReportTable title="Cash Variance Reports" subtitle="Permanent reconciliation variances recorded at shift close." headers={["Cashier", "Closed", "Expected", "Actual", "Variance", "Reason"]} rows={varianceRows} />
+      <ReportTable title="Table Usage Reports" subtitle="Revenue and order volume by managed table." headers={["Table", "Orders", "Revenue"]} rows={tableRows} />
+      <ReportTable title="Customer Reports" subtitle="Repeat and high-value customers based on captured customer names." headers={["Customer", "Orders", "Revenue", "Last Order"]} rows={customerRows} />
+
+      <div className="od-card">
+        <div className="od-card-header">
+          <div>
+            <div className="od-card-title">AI Business Reports</div>
+            <div className="od-card-subtitle">Operational recommendations derived from current report data.</div>
+          </div>
+        </div>
+        <div className="od-insight-grid">
+          {reportData.ai_insights.map((insight) => (
+            <div className="od-insight-card" key={insight.title}>
+              <strong>{insight.title}</strong>
+              <span>{insight.detail}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomersPage({ orders }: { orders: OdOrder[] }) {
+  const customers = [...orders.reduce((map, order) => {
+    const key = order.customer_name?.trim() || "Guest";
+    const current = map.get(key) ?? { name: key, orders: 0, revenue: 0, last: order.created_at };
+    current.orders += 1;
+    current.revenue += isRevenueOrder(order) ? order.total_price : 0;
+    if (order.created_at > current.last) current.last = order.created_at;
+    map.set(key, current);
+    return map;
+  }, new Map<string, { name: string; orders: number; revenue: number; last: string }>()).values()]
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return (
+    <div className="od-page">
+      <div className="od-page-header">
+        <div>
+          <h1 className="od-page-title">Customer Insights</h1>
+          <p className="od-page-subtitle">Customer frequency and value from captured order names.</p>
+        </div>
+      </div>
+      <ReportTable
+        title="Customer Reports"
+        subtitle="Visible customer history from real orders."
+        headers={["Customer", "Orders", "Revenue", "Last Order"]}
+        rows={customers.map((customer) => ({
+          Customer: customer.name,
+          Orders: customer.orders,
+          Revenue: fmtMoney(customer.revenue),
+          "Last Order": fmtDateTime(customer.last),
+        }))}
+      />
+    </div>
+  );
+}
+
+function QrTablesPage({ restaurantName, restaurantSlug, orders, tables }: { restaurantName: string; restaurantSlug: string; orders: OdOrder[]; tables: RestaurantTable[] }) {
   const activeTables = new Set(orders.map((order) => order.table_number).filter(Boolean));
-  const tables = Array.from({ length: 20 }, (_, index) => {
-    const number = String(index + 1).padStart(2, "0");
-    const activeOrder = orders.find((order) => order.table_number === number || order.table_number === String(index + 1));
+  const visibleTables = tables.length > 0 ? tables : Array.from({ length: 20 }, (_, index) => ({
+    id: `fallback-${index + 1}`,
+    restaurant_id: "",
+    table_number: index + 1,
+    label: `Table ${index + 1}`,
+    qr_path: restaurantSlug ? `/r/${restaurantSlug}/order?table=${index + 1}` : "",
+    active: true,
+  }));
+  const floorTables = visibleTables.map((restaurantTable) => {
+    const number = String(restaurantTable.table_number);
+    const activeOrder = orders.find((order) => order.table_number === number);
     return {
-      number,
+      number: restaurantTable.table_number,
+      label: restaurantTable.label,
+      qrPath: restaurantTable.qr_path,
       status: activeOrder?.status ?? "available",
     };
   });
@@ -1793,7 +2553,7 @@ function QrTablesPage({ restaurantName, orders }: { restaurantName: string; orde
           <h1 className="od-page-title">QR & Table Management</h1>
           <p className="od-page-subtitle">Restaurant floor management for {restaurantName}</p>
         </div>
-        <button className="od-btn-primary">Bulk QR Export</button>
+        <button className="od-btn-primary" onClick={() => window.print()}>Bulk QR Export</button>
       </div>
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
@@ -1802,7 +2562,7 @@ function QrTablesPage({ restaurantName, orders }: { restaurantName: string; orde
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">Total Tables</div>
-          <div className="od-kpi-value">20</div>
+          <div className="od-kpi-value">{visibleTables.length}</div>
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">QR Coverage</div>
@@ -1814,11 +2574,11 @@ function QrTablesPage({ restaurantName, orders }: { restaurantName: string; orde
           <div className="od-card-title">Restaurant Floor</div>
         </div>
         <div className="od-table-grid">
-          {tables.map((table) => (
+          {floorTables.map((table) => (
             <div key={table.number} className={`od-table-tile ${statusClass(table.status)}`}>
-              <div className="od-table-num">Table {table.number}</div>
+              <div className="od-table-num">{table.label}</div>
               <div className="od-table-state">{statusLabel(table.status)}</div>
-              <button className="od-btn-ghost">QR Code</button>
+              <a className="od-btn-ghost" href={table.qrPath} target="_blank" rel="noreferrer">QR Link</a>
             </div>
           ))}
         </div>
@@ -1827,20 +2587,262 @@ function QrTablesPage({ restaurantName, orders }: { restaurantName: string; orde
   );
 }
 
-function ComingSoonPage({ nav }: { nav: string }) {
-  const labels: Record<string, string> = {
-    customers: "Customer Insights",
-    reports: "Reports & Exports",
-    settings: "Restaurant Settings",
+type SettingsFormState = {
+  name: string;
+  totalTables: string;
+  phone: string;
+  email: string;
+  address: string;
+  timezone: string;
+  currency: string;
+  opensAt: string;
+  closesAt: string;
+  acceptsQrOrders: boolean;
+  autoAcceptOrders: boolean;
+  serviceCharge: string;
+  primaryColor: string;
+  logoUrl: string;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  requireStrongPasswords: boolean;
+  sessionTimeoutMinutes: string;
+};
+
+function configToSettingsForm(config: RestaurantConfig | null, fallbackName: string): SettingsFormState {
+  return {
+    name: config?.name ?? fallbackName,
+    totalTables: String(config?.total_tables ?? 20),
+    phone: jsonString(config?.profile ?? {}, "phone"),
+    email: jsonString(config?.profile ?? {}, "email"),
+    address: jsonString(config?.profile ?? {}, "address"),
+    timezone: jsonString(config?.profile ?? {}, "timezone", "Africa/Nairobi"),
+    currency: jsonString(config?.profile ?? {}, "currency", "ETB"),
+    opensAt: jsonString(config?.business_hours ?? {}, "opens_at", "08:00"),
+    closesAt: jsonString(config?.business_hours ?? {}, "closes_at", "22:00"),
+    acceptsQrOrders: jsonBool(config?.ordering_settings ?? {}, "accepts_qr_orders", true),
+    autoAcceptOrders: jsonBool(config?.ordering_settings ?? {}, "auto_accept_orders", false),
+    serviceCharge: String((config?.ordering_settings?.service_charge_percent as number | undefined) ?? 0),
+    primaryColor: jsonString(config?.branding ?? {}, "primary_color", "#0f766e"),
+    logoUrl: jsonString(config?.branding ?? {}, "logo_url"),
+    emailNotifications: jsonBool(config?.notification_settings ?? {}, "email_notifications", true),
+    smsNotifications: jsonBool(config?.notification_settings ?? {}, "sms_notifications", false),
+    requireStrongPasswords: jsonBool(config?.security_settings ?? {}, "require_strong_passwords", true),
+    sessionTimeoutMinutes: String((config?.security_settings?.session_timeout_minutes as number | undefined) ?? 480),
   };
+}
+
+function SettingsPage({
+  restaurantId,
+  fallbackRestaurantName,
+  config,
+  tables,
+  onSettingsChanged,
+}: {
+  restaurantId: string;
+  fallbackRestaurantName: string;
+  config: RestaurantConfig | null;
+  tables: RestaurantTable[];
+  onSettingsChanged: () => Promise<void>;
+}) {
+  const [form, setForm] = useState<SettingsFormState>(() => configToSettingsForm(config, fallbackRestaurantName));
+  const [working, setWorking] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    setForm(configToSettingsForm(config, fallbackRestaurantName));
+  }, [config, fallbackRestaurantName]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function generateQrCodes() {
+      const pairs = await Promise.all(
+        tables.slice(0, 80).map(async (table) => {
+          const url = `${window.location.origin}${table.qr_path}`;
+          const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
+          return [table.table_number, dataUrl] as const;
+        })
+      );
+      if (mounted) setQrCodes(Object.fromEntries(pairs));
+    }
+    void generateQrCodes();
+    return () => { mounted = false; };
+  }, [tables]);
+
+  function updateField<K extends keyof SettingsFormState>(key: K, value: SettingsFormState[K]) {
+    setForm((previous) => ({ ...previous, [key]: value }));
+  }
+
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setWorking(true);
+      setSettingsError(null);
+      setNotice(null);
+      const totalTables = Number(form.totalTables);
+      const serviceCharge = Number(form.serviceCharge);
+      const sessionTimeout = Number(form.sessionTimeoutMinutes);
+      if (!Number.isInteger(totalTables) || totalTables < 1 || totalTables > 500) throw new Error("Total tables must be a whole number from 1 to 500.");
+      if (!Number.isFinite(serviceCharge) || serviceCharge < 0 || serviceCharge > 30) throw new Error("Service charge must be between 0 and 30 percent.");
+      if (!Number.isInteger(sessionTimeout) || sessionTimeout < 15 || sessionTimeout > 1440) throw new Error("Session timeout must be between 15 and 1440 minutes.");
+
+      const { error } = await supabase.rpc("update_restaurant_configuration", {
+        target_restaurant_id: restaurantId,
+        restaurant_name: form.name,
+        requested_total_tables: totalTables,
+        profile_payload: {
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          address: form.address.trim(),
+          timezone: form.timezone.trim(),
+          currency: form.currency.trim(),
+        },
+        business_hours_payload: {
+          opens_at: form.opensAt,
+          closes_at: form.closesAt,
+        },
+        ordering_settings_payload: {
+          accepts_qr_orders: form.acceptsQrOrders,
+          auto_accept_orders: form.autoAcceptOrders,
+          service_charge_percent: serviceCharge,
+        },
+        branding_payload: {
+          primary_color: form.primaryColor,
+          logo_url: form.logoUrl.trim(),
+        },
+        notification_settings_payload: {
+          email_notifications: form.emailNotifications,
+          sms_notifications: form.smsNotifications,
+        },
+        security_settings_payload: {
+          require_strong_passwords: form.requireStrongPasswords,
+          session_timeout_minutes: sessionTimeout,
+        },
+      });
+      if (error) throw new Error(error.message);
+      await onSettingsChanged();
+      setNotice("Settings saved and table QR records synchronized.");
+    } catch (saveError) {
+      setSettingsError(saveError instanceof Error ? saveError.message : "Could not save settings.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  function handleCancel() {
+    setForm(configToSettingsForm(config, fallbackRestaurantName));
+    setSettingsError(null);
+    setNotice(null);
+  }
 
   return (
     <div className="od-page">
-      <div className="od-coming-soon">
-        <div className="od-empty-icon">--</div>
-        <h2>{labels[nav] || nav}</h2>
-        <p>This section is ready for the next owner-dashboard phase.</p>
+      <div className="od-page-header">
+        <div>
+          <h1 className="od-page-title">Business Configuration</h1>
+          <p className="od-page-subtitle">Restaurant profile, tables, QR codes, ordering, branding, notifications, billing, and security.</p>
+        </div>
       </div>
+
+      {!config && <div className="od-card"><div className="od-empty compact">Loading settings...</div></div>}
+      {(settingsError || notice) && <div className={settingsError ? "od-error-inline" : "od-success-inline"}>{settingsError || notice}</div>}
+
+      <form className="od-settings-form" onSubmit={handleSave}>
+        <div className="od-settings-actions">
+          <button className="od-btn-ghost" type="button" onClick={handleCancel} disabled={working}>Cancel</button>
+          <button className="od-btn-primary" type="submit" disabled={working}>{working ? "Saving..." : "Save Changes"}</button>
+        </div>
+
+        <div className="od-settings-layout">
+          <div className="od-settings-main">
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Restaurant Profile</div><div className="od-card-subtitle">Core information used across owner and public experiences.</div></div></div>
+              <div className="od-settings-grid">
+                <label>Restaurant Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} disabled={working} /></label>
+                <label>Phone<input value={form.phone} onChange={(event) => updateField("phone", event.target.value)} disabled={working} /></label>
+                <label>Email<input type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} disabled={working} /></label>
+                <label>Currency<input value={form.currency} onChange={(event) => updateField("currency", event.target.value)} disabled={working} /></label>
+                <label className="wide">Address<input value={form.address} onChange={(event) => updateField("address", event.target.value)} disabled={working} /></label>
+                <label>Timezone<input value={form.timezone} onChange={(event) => updateField("timezone", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Table Management</div><div className="od-card-subtitle">Controls restaurant_tables records and table validation during ordering.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label>Total Tables<input type="number" min="1" max="500" value={form.totalTables} onChange={(event) => updateField("totalTables", event.target.value)} disabled={working} /></label>
+                <div className="od-setting-stat"><strong>{tables.length}</strong><span>Active table records</span></div>
+                <div className="od-setting-stat"><strong>100%</strong><span>QR coverage after save</span></div>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Business Hours</div><div className="od-card-subtitle">Default operating window for ordering and reports.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label>Opens At<input type="time" value={form.opensAt} onChange={(event) => updateField("opensAt", event.target.value)} disabled={working} /></label>
+                <label>Closes At<input type="time" value={form.closesAt} onChange={(event) => updateField("closesAt", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Ordering Settings</div><div className="od-card-subtitle">Customer ordering behavior and payment workflow defaults.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label className="od-toggle-row"><input type="checkbox" checked={form.acceptsQrOrders} onChange={(event) => updateField("acceptsQrOrders", event.target.checked)} disabled={working} />QR orders enabled</label>
+                <label className="od-toggle-row"><input type="checkbox" checked={form.autoAcceptOrders} onChange={(event) => updateField("autoAcceptOrders", event.target.checked)} disabled={working} />Auto-accept paid orders</label>
+                <label>Service Charge %<input type="number" min="0" max="30" step="0.1" value={form.serviceCharge} onChange={(event) => updateField("serviceCharge", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Branding</div><div className="od-card-subtitle">Public menu visual identity.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label>Primary Color<input type="color" value={form.primaryColor} onChange={(event) => updateField("primaryColor", event.target.value)} disabled={working} /></label>
+                <label className="wide">Logo URL<input value={form.logoUrl} onChange={(event) => updateField("logoUrl", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+          </div>
+
+          <div className="od-settings-side">
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Every active table has a generated public ordering code.</div></div></div>
+              <div className="od-qr-list">
+                {tables.length === 0 ? <div className="od-empty compact">Save table settings to generate QR codes.</div> : tables.slice(0, 12).map((table) => (
+                  <div className="od-qr-row" key={table.id}>
+                    {qrCodes[table.table_number] ? <img src={qrCodes[table.table_number]} alt="" /> : <div className="od-qr-placeholder">QR</div>}
+                    <div><strong>{table.label}</strong><span>{table.qr_path}</span></div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Notification Settings</div></div></div>
+              <div className="od-settings-stack">
+                <label className="od-toggle-row"><input type="checkbox" checked={form.emailNotifications} onChange={(event) => updateField("emailNotifications", event.target.checked)} disabled={working} />Email notifications</label>
+                <label className="od-toggle-row"><input type="checkbox" checked={form.smsNotifications} onChange={(event) => updateField("smsNotifications", event.target.checked)} disabled={working} />SMS notifications</label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Subscription & Billing</div></div></div>
+              <div className="od-billing-box">
+                <strong>{config?.subscription_plan ?? "starter"}</strong>
+                <span>{config?.billing_status ?? "trial"}</span>
+                <button className="od-btn-ghost" type="button" disabled>Manage Billing</button>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Security</div></div></div>
+              <div className="od-settings-stack">
+                <label className="od-toggle-row"><input type="checkbox" checked={form.requireStrongPasswords} onChange={(event) => updateField("requireStrongPasswords", event.target.checked)} disabled={working} />Strong passwords</label>
+                <label>Session Timeout<input type="number" min="15" max="1440" value={form.sessionTimeoutMinutes} onChange={(event) => updateField("sessionTimeoutMinutes", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

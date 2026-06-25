@@ -13,6 +13,7 @@
     "@vitejs/plugin-react": "latest",
     "framer-motion": "^11.18.2",
     "pg": "^8.22.0",
+    "qrcode": "^1.5.4",
     "react": "latest",
     "react-dom": "latest",
     "react-select": "^5.10.2",
@@ -20,6 +21,7 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@types/react": "latest",
     "@types/react-dom": "latest"
   }
