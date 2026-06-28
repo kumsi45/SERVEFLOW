@@ -6,6 +6,8 @@ export type CashierOrderItem = {
   name: string;
   quantity: number;
   price: number;
+  notes?: string | null;
+  appendedAt?: string | null;
 };
 
 export type CashierOrder = {

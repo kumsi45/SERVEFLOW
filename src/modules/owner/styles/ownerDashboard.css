@@ -544,6 +544,96 @@
 .od-table-num { font-weight: 950; }
 .od-table-state { color: var(--od-muted); font-size: 12px; font-weight: 850; }
 
+.od-qr-table {
+  min-width: 1040px;
+}
+
+.od-qr-thumb,
+.od-qr-placeholder.compact {
+  width: 54px;
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid var(--od-border);
+  background: #fff;
+}
+
+.od-qr-placeholder.compact {
+  display: grid;
+  place-items: center;
+  color: var(--od-muted);
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.od-qr-modal {
+  width: min(440px, 100%);
+}
+
+.od-qr-preview {
+  padding: 22px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.od-qr-logo {
+  width: 68px;
+  height: 68px;
+  border-radius: 8px;
+  border: 1px solid var(--od-border);
+  object-fit: cover;
+  background: #fff;
+}
+
+.od-qr-logo.fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--od-primary), #0891b2);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.od-qr-restaurant {
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.od-qr-table-number {
+  color: var(--od-muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.od-qr-large {
+  width: 220px;
+  height: 220px;
+  border-radius: 8px;
+  border: 1px solid var(--od-border);
+  background: #fff;
+}
+
+.od-qr-url {
+  width: 100%;
+  color: var(--od-primary);
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.od-qr-export-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
 .od-report-chart {
   padding: 18px;
   min-height: 230px;

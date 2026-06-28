@@ -6,6 +6,8 @@ export type KitchenOrderItem = {
   name: string;
   quantity: number;
   price: number;
+  notes?: string | null;
+  appendedAt?: string | null;
 };
 
 export type KitchenOrder = {

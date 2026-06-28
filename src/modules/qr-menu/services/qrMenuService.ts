@@ -39,3 +39,25 @@ export async function fetchQRMenuData(restaurantSlug: string): Promise<QRMenuDat
 
   return data;
 }
+
+export async function logPublicQrScan({
+  restaurantSlug,
+  tableNumber,
+  qrToken,
+}: {
+  restaurantSlug: string;
+  tableNumber: string;
+  qrToken: string;
+}) {
+  if (!tableNumber.trim() || !qrToken.trim()) return;
+
+  const { error } = await supabase.rpc("log_public_qr_scan", {
+    target_restaurant_slug: restaurantSlug,
+    table_number: tableNumber,
+    qr_token: qrToken,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}

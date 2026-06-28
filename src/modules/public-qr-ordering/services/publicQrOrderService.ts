@@ -4,6 +4,7 @@ import type { PublicQrCartItem, PublicQrPaymentMethod, SubmittedPublicQrOrder } 
 type SubmitPublicQrOrderInput = {
   restaurantSlug: string;
   tableNumber?: string;
+  qrToken?: string;
   customerName?: string;
   paymentMethod: PublicQrPaymentMethod;
   items: PublicQrCartItem[];
@@ -30,6 +31,7 @@ function isSubmittedPublicQrOrder(value: unknown): value is SubmittedPublicQrOrd
 export async function submitPublicQrOrder({
   restaurantSlug,
   tableNumber,
+  qrToken,
   customerName,
   paymentMethod,
   items,
@@ -42,6 +44,7 @@ export async function submitPublicQrOrder({
   const { data, error } = await supabase.rpc("create_public_qr_order", {
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber ?? "",
+    qr_token: qrToken ?? "",
     customer_name: customerName ?? "",
     selected_payment_method: paymentMethod,
     requested_items: requestedItems,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import type { CashierOrder, CashierOrderItem, CashierRestaurant } from "../types";
@@ -69,6 +69,8 @@ type ItemRow = {
   order_id: string;
   quantity: number;
   price: number | string;
+  notes?: string | null;
+  appended_at?: string | null;
   menu_items?: { name?: string | null } | { name?: string | null }[] | null;
 };
 
@@ -79,6 +81,56 @@ type RestaurantTable = {
   label: string;
   active: boolean;
 };
+
+type MenuCategoryRow = {
+  id: string;
+  restaurant_id: string;
+  name: string;
+};
+
+type CashierMenuItem = {
+  id: string;
+  restaurant_id: string;
+  category_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  available: boolean;
+  categoryName: string;
+};
+
+type CashierCartItem = {
+  menuItemId: string;
+  name: string;
+  categoryName: string;
+  price: number;
+  quantity: number;
+  notes: string;
+};
+
+type SubmittedCashierOrder = {
+  order_id: string;
+  status: CashierOrder["status"];
+  total_price: number | string;
+  table_number: string | null;
+  payment_method: string | null;
+  created_at: string;
+};
+
+type CashierOrderPayload = {
+  order_id: string;
+  status: CashierOrder["status"];
+  total_price: number | string;
+  table_number: string | null;
+  payment_method: string | null;
+  created_at: string;
+};
+
+type ContinuationChoice = {
+  tableNumber: string;
+  activeOrder: CashierOrder;
+} | null;
 
 type ActiveShift = {
   id: string;
@@ -110,6 +162,10 @@ type ShiftActivity = {
 type QueueTab = "active" | "pending" | "completed";
 type ReconcileStep = 1 | 2 | 3 | 4 | 5;
 
+const PAYMENT_METHODS = ["Cash", "Telebirr", "CBE Birr", "Mobile Banking", "Chapa", "Credit/Debit Card"];
+const ALL_CATEGORIES = "all";
+const ACTIVE_ORDER_STATUSES: CashierOrder["status"][] = ["pending_payment", "paid", "preparing", "ready"];
+
 function normalizeOrder(row: OrderRow, items: CashierOrderItem[] = []): CashierOrder {
   return {
     id: row.id,
@@ -127,7 +183,31 @@ function normalizeOrder(row: OrderRow, items: CashierOrderItem[] = []): CashierO
 function normalizeItem(row: ItemRow): CashierOrderItem {
   const menuItem = row.menu_items;
   const name = Array.isArray(menuItem) ? menuItem[0]?.name ?? "Menu item" : menuItem?.name ?? "Menu item";
-  return { id: row.id, orderId: row.order_id, name, quantity: Number(row.quantity), price: Number(row.price) };
+  return { id: row.id, orderId: row.order_id, name, quantity: Number(row.quantity), price: Number(row.price), notes: row.notes ?? null, appendedAt: row.appended_at ?? null };
+}
+
+function normalizeSubmittedOrder(row: SubmittedCashierOrder): CashierOrder {
+  return {
+    id: row.order_id,
+    status: row.status,
+    customerName: null,
+    tableNumber: row.table_number,
+    paymentMethod: row.payment_method,
+    totalPrice: Number(row.total_price),
+    createdAt: row.created_at,
+    paymentVerifiedAt: null,
+    items: [],
+  };
+}
+
+function getOrderItemPreview(items: CashierOrderItem[]) {
+  const visible = items.slice(0, 3);
+  const hiddenCount = Math.max(0, items.length - visible.length);
+  return { visible, hiddenCount };
+}
+
+function isContinuableOrder(order: CashierOrder) {
+  return ACTIVE_ORDER_STATUSES.includes(order.status);
 }
 
 function isDigitalPayment(order: CashierOrder) {
@@ -215,6 +295,15 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const now = useNow();
   const [orders, setOrders] = useState<CashierOrder[]>([]);
   const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [categories, setCategories] = useState<MenuCategoryRow[]>([]);
+  const [menuItems, setMenuItems] = useState<CashierMenuItem[]>([]);
+  const [selectedTable, setSelectedTable] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [menuSearch, setMenuSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+  const [cartItems, setCartItems] = useState<CashierCartItem[]>([]);
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [continuationChoice, setContinuationChoice] = useState<ContinuationChoice>(null);
   const [activity, setActivity] = useState<ShiftActivity[]>([]);
   const [activeShift, setActiveShift] = useState<ActiveShift | null>(null);
   const [restaurant, setRestaurant] = useState<CashierRestaurant>(initialRestaurant);
@@ -237,7 +326,15 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [{ data: staffData }, { data: orderRows, error: ordersError }, { data: tableRows }, { data: shiftSummary, error: shiftError }, { data: activityRows }] = await Promise.all([
+    const [
+      { data: staffData },
+      { data: orderRows, error: ordersError },
+      { data: tableRows },
+      { data: categoryRows, error: categoriesError },
+      { data: menuRows, error: menuError },
+      { data: shiftSummary, error: shiftError },
+      { data: activityRows },
+    ] = await Promise.all([
       supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
       supabase.from("orders").select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at")
         .eq("restaurant_id", restaurantId)
@@ -245,11 +342,15 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
         .gte("created_at", todayStart.toISOString())
         .order("created_at", { ascending: false }),
       supabase.from("restaurant_tables").select("id,restaurant_id,table_number,label,active").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
+      supabase.from("categories").select("id,restaurant_id,name").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
+      supabase.from("menu_items").select("id,restaurant_id,category_id,name,description,price,image_url,available,categories!menu_items_category_same_restaurant(name)").eq("restaurant_id", restaurantId).eq("available", true).order("name", { ascending: true }),
       supabase.rpc("get_cashier_shift_summary", { target_restaurant_id: restaurantId }),
       supabase.from("shift_activity_logs").select("id,restaurant_id,shift_id,order_id,actor_staff_id,action,message,amount,metadata,created_at").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(30),
     ]);
 
     if (ordersError) throw new Error(ordersError.message);
+    if (categoriesError) throw new Error(categoriesError.message);
+    if (menuError) throw new Error(menuError.message);
     if (shiftError) throw new Error(shiftError.message);
 
     const rest = Array.isArray(staffData?.restaurants) ? staffData.restaurants[0] : staffData?.restaurants;
@@ -260,7 +361,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     const itemMap = new Map<string, CashierOrderItem[]>();
     if (orderIds.length > 0) {
       const { data: itemRows, error: itemsError } = await supabase.from("order_items")
-        .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+        .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
         .eq("restaurant_id", restaurantId)
         .in("order_id", orderIds);
       if (itemsError) throw new Error(itemsError.message);
@@ -276,6 +377,21 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     setActiveShift(summary?.active_shift ?? null);
     setOrders(rows.map((row) => normalizeOrder(row, itemMap.get(row.id) ?? [])));
     setTables((tableRows ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
+    setCategories((categoryRows ?? []) as MenuCategoryRow[]);
+    setMenuItems((menuRows ?? []).map((row) => {
+      const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
+      return {
+        id: String(row.id),
+        restaurant_id: String(row.restaurant_id),
+        category_id: String(row.category_id),
+        name: String(row.name),
+        description: row.description ?? null,
+        price: Number(row.price),
+        image_url: row.image_url ?? null,
+        available: Boolean(row.available),
+        categoryName: category?.name ?? "Menu",
+      };
+    }) as CashierMenuItem[]);
     setActivity((activityRows ?? []).map((row) => ({ ...row, amount: row.amount === null ? null : Number(row.amount) })) as ShiftActivity[]);
   }
 
@@ -302,6 +418,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     };
     const channel = supabase.channel(`cashier-operations-${restaurantId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "cash_reconciliations", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "shift_activity_logs", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
@@ -371,6 +488,90 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     }
   }
 
+  function addMenuItemToCart(item: CashierMenuItem) {
+    setCartItems((previous) => {
+      const existing = previous.find((cartItem) => cartItem.menuItemId === item.id);
+      if (existing) {
+        return previous.map((cartItem) => cartItem.menuItemId === item.id ? { ...cartItem, quantity: Math.min(99, cartItem.quantity + 1) } : cartItem);
+      }
+      return [...previous, { menuItemId: item.id, name: item.name, categoryName: item.categoryName, price: item.price, quantity: 1, notes: "" }];
+    });
+  }
+
+  function updateCartQuantity(menuItemId: string, quantity: number) {
+    if (quantity < 1) {
+      setCartItems((previous) => previous.filter((item) => item.menuItemId !== menuItemId));
+      return;
+    }
+    setCartItems((previous) => previous.map((item) => item.menuItemId === menuItemId ? { ...item, quantity: Math.min(99, quantity) } : item));
+  }
+
+  function updateCartNotes(menuItemId: string, notes: string) {
+    setCartItems((previous) => previous.map((item) => item.menuItemId === menuItemId ? { ...item, notes } : item));
+  }
+
+  async function submitPosOrder(mode: "append" | "create") {
+    try {
+      setSubmittingOrder(true);
+      setError(null);
+      const payload = cartItems.map((item) => ({
+        menu_item_id: item.menuItemId,
+        quantity: item.quantity,
+        notes: item.notes.trim() || null,
+      }));
+
+      if (mode === "append") {
+        const activeOrder = orders.find((order) => order.tableNumber === selectedTable && isContinuableOrder(order));
+        if (!activeOrder) throw new Error("No active order found for this table.");
+        const { data, error: rpcError } = await supabase.rpc("append_items_to_order", {
+          target_order_id: activeOrder.id,
+          requested_items: payload,
+        });
+        if (rpcError) throw new Error(rpcError.message);
+        const updated = normalizeSubmittedOrder(data as CashierOrderPayload);
+        setOrders((previous) => previous.map((order) => order.id === activeOrder.id ? { ...order, ...updated, items: order.items } : order));
+      } else {
+        const { data, error: rpcError } = await supabase.rpc("create_cashier_order", {
+          target_restaurant_id: restaurantId,
+          table_number: selectedTable,
+          selected_payment_method: selectedPaymentMethod,
+          requested_items: payload,
+        });
+        if (rpcError) throw new Error(rpcError.message);
+        const created = normalizeSubmittedOrder(data as SubmittedCashierOrder);
+        setOrders((previous) => [created, ...previous]);
+      }
+
+      setCartItems([]);
+      setSelectedTable("");
+      setSelectedPaymentMethod(PAYMENT_METHODS[0]);
+      setContinuationChoice(null);
+      await loadDashboard();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Could not submit order.");
+    } finally {
+      setSubmittingOrder(false);
+    }
+  }
+
+  function handleSubmitPosOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTable) {
+      setError("Select a table before submitting the order.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setError("Add at least one menu item before submitting the order.");
+      return;
+    }
+    const activeOrder = orders.find((order) => order.tableNumber === selectedTable && isContinuableOrder(order));
+    if (activeOrder) {
+      setContinuationChoice({ tableNumber: selectedTable, activeOrder });
+      return;
+    }
+    void submitPosOrder("create");
+  }
+
   async function handleSignOut() {
     try { await signOutStaff(); } finally { window.location.replace("/staff-login"); }
   }
@@ -384,6 +585,16 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const digitalCollectedToday = useMemo(() => verifiedOrders.filter(isDigitalPayment).reduce((sum, order) => sum + order.totalPrice, 0), [verifiedOrders]);
   const occupiedTableNumbers = useMemo(() => new Set(activeOrders.map((order) => order.tableNumber).filter(Boolean)), [activeOrders]);
   const awaitingPaymentTableNumbers = useMemo(() => new Set(pendingPayments.map((order) => order.tableNumber).filter(Boolean)), [pendingPayments]);
+  const cartTotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);
+  const selectedTableActiveOrder = useMemo(() => orders.find((order) => order.tableNumber === selectedTable && isContinuableOrder(order)) ?? null, [orders, selectedTable]);
+  const filteredMenuItems = useMemo(() => {
+    const search = menuSearch.trim().toLowerCase();
+    return menuItems.filter((item) => {
+      const matchesCategory = selectedCategory === ALL_CATEGORIES || item.category_id === selectedCategory;
+      const matchesSearch = !search || item.name.toLowerCase().includes(search) || item.categoryName.toLowerCase().includes(search) || (item.description ?? "").toLowerCase().includes(search);
+      return item.available && matchesCategory && matchesSearch;
+    });
+  }, [menuItems, menuSearch, selectedCategory]);
   const availableTables = Math.max(0, tables.length - occupiedTableNumbers.size);
   const queueOrders = queueTab === "active" ? activeOrders : queueTab === "pending" ? pendingPayments : completedOrders;
   const expectedCash = activeShift?.expected_cash ?? 0;
@@ -465,26 +676,35 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                 <div className="cd-order-list">
                   {queueOrders.length === 0 ? (
                     <div className="cd-empty"><div className="cd-empty-title">No orders in this queue</div><div className="cd-empty-sub">Realtime orders will appear here.</div></div>
-                  ) : queueOrders.map((order) => (
-                    <article key={order.id} className={`cd-order-card ${order.status}`} onClick={() => setDrawerOrder(order)}>
-                      <div className="cd-order-table-tile">Tbl<strong>{order.tableNumber || "-"}</strong></div>
-                      <div className="cd-order-card-main">
-                        <div className="cd-order-card-title">
-                          <strong>{fmtOrderId(order.id)}</strong>
-                          <span className={`cd-badge ${order.paymentVerifiedAt ? "paid" : "pending"}`}>{order.paymentVerifiedAt ? "Payment Verified" : "Payment Pending"}</span>
-                          <span className="cd-badge cbe">{statusLabel(order.status)}</span>
+                  ) : queueOrders.map((order) => {
+                    const preview = getOrderItemPreview(order.items);
+                    return (
+                      <article key={order.id} className={`cd-order-card ${order.status}`} onClick={() => setDrawerOrder(order)}>
+                        <div className="cd-order-table-tile">Tbl<strong>{order.tableNumber || "-"}</strong></div>
+                        <div className="cd-order-card-main">
+                          <div className="cd-order-card-title">
+                            <strong>{fmtOrderId(order.id)}</strong>
+                            <span className={`cd-badge ${order.paymentVerifiedAt ? "paid" : "pending"}`}>{order.paymentVerifiedAt ? "Payment Verified" : "Payment Pending"}</span>
+                            <span className="cd-badge cbe">{statusLabel(order.status)}</span>
+                          </div>
+                          <div className="cd-order-card-meta">
+                            {timeAgo(order.createdAt)} · {order.items.length} items · {order.paymentMethod || "No method"} · {fmtMoney(order.totalPrice)}
+                          </div>
+                          {preview.visible.length > 0 && (
+                            <div className="cd-order-item-preview" aria-label="Order item preview">
+                              {preview.visible.map((item) => <div key={item.id}>{item.name} x{item.quantity}</div>)}
+                              {preview.hiddenCount > 0 && <div className="cd-order-item-more">+{preview.hiddenCount} more item{preview.hiddenCount === 1 ? "" : "s"}</div>}
+                            </div>
+                          )}
                         </div>
-                        <div className="cd-order-card-meta">
-                          {timeAgo(order.createdAt)} · {order.items.length} items · {order.paymentMethod || "No method"} · {fmtMoney(order.totalPrice)}
+                        <div className="cd-order-card-actions" onClick={(event) => event.stopPropagation()}>
+                          <button className="cd-view-btn" onClick={() => setDrawerOrder(order)}>View</button>
+                          {order.status === "pending_payment" && <button className="cd-approve-btn" disabled={approvingId === order.id} onClick={() => handleApprove(order.id)}>{approvingId === order.id ? "..." : "Verify Payment"}</button>}
+                          <button className="cd-view-btn" onClick={() => window.print()}>Print Receipt</button>
                         </div>
-                      </div>
-                      <div className="cd-order-card-actions" onClick={(event) => event.stopPropagation()}>
-                        <button className="cd-view-btn" onClick={() => setDrawerOrder(order)}>View</button>
-                        {order.status === "pending_payment" && <button className="cd-approve-btn" disabled={approvingId === order.id} onClick={() => handleApprove(order.id)}>{approvingId === order.id ? "..." : "Verify Payment"}</button>}
-                        <button className="cd-view-btn" onClick={() => window.print()}>Print Receipt</button>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -534,6 +754,113 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                 </div>
               </aside>
             </section>
+
+            <section className="cd-pos-panel">
+              <form className="cd-pos-form" onSubmit={handleSubmitPosOrder}>
+                <div className="cd-card-header">
+                  <div>
+                    <div className="cd-card-title">POS Order Entry</div>
+                    <div className="cd-card-subtitle">Create cashier orders or add items to active table orders.</div>
+                  </div>
+                  <button className="cd-approve-btn" type="submit" disabled={submittingOrder || cartItems.length === 0 || !selectedTable}>
+                    {submittingOrder ? "Submitting..." : selectedTableActiveOrder ? "Add to Order" : "Submit Order"}
+                  </button>
+                </div>
+
+                <div className="cd-pos-layout">
+                  <div className="cd-pos-menu">
+                    <div className="cd-pos-controls">
+                      <label className="cd-pos-field">
+                        <span>Table</span>
+                        <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)}>
+                          <option value="">Select table</option>
+                          {tables.map((table) => (
+                            <option key={table.id} value={String(table.table_number)}>
+                              {table.label || `Table ${table.table_number}`}{occupiedTableNumbers.has(String(table.table_number)) ? " - occupied" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="cd-pos-field">
+                        <span>Payment</span>
+                        <select value={selectedPaymentMethod} onChange={(event) => setSelectedPaymentMethod(event.target.value)}>
+                          {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                        </select>
+                      </label>
+                      <label className="cd-pos-field wide">
+                        <span>Search Menu</span>
+                        <input value={menuSearch} onChange={(event) => setMenuSearch(event.target.value)} placeholder="Search items or categories" />
+                      </label>
+                    </div>
+
+                    {selectedTableActiveOrder && (
+                      <div className="cd-pos-active-note">
+                        Active order {fmtOrderId(selectedTableActiveOrder.id)} found for Table {selectedTable}. Submitting will ask whether to add to it or create a new order.
+                      </div>
+                    )}
+
+                    <div className="cd-category-strip">
+                      <button type="button" className={`cd-category-chip${selectedCategory === ALL_CATEGORIES ? " active" : ""}`} onClick={() => setSelectedCategory(ALL_CATEGORIES)}>All</button>
+                      {categories.map((category) => (
+                        <button key={category.id} type="button" className={`cd-category-chip${selectedCategory === category.id ? " active" : ""}`} onClick={() => setSelectedCategory(category.id)}>
+                          {category.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="cd-menu-grid">
+                      {filteredMenuItems.length === 0 ? (
+                        <div className="cd-empty compact"><div className="cd-empty-title">No menu items found</div></div>
+                      ) : filteredMenuItems.map((item) => (
+                        <button key={item.id} type="button" className="cd-menu-item-btn" onClick={() => addMenuItemToCart(item)}>
+                          <span className="cd-menu-item-name">{item.name}</span>
+                          <span className="cd-menu-item-meta">{item.categoryName}</span>
+                          <strong>{fmtMoney(item.price)}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <aside className="cd-pos-cart">
+                    <div className="cd-pos-cart-header">
+                      <div>
+                        <div className="cd-card-title">Current Ticket</div>
+                        <div className="cd-card-subtitle">{cartItems.length} unique item(s)</div>
+                      </div>
+                      {cartItems.length > 0 && <button className="cd-view-btn" type="button" onClick={() => setCartItems([])}>Clear</button>}
+                    </div>
+
+                    <div className="cd-cart-list">
+                      {cartItems.length === 0 ? (
+                        <div className="cd-empty compact"><div className="cd-empty-title">Cart is empty</div><div className="cd-empty-sub">Select menu items to begin.</div></div>
+                      ) : cartItems.map((item) => (
+                        <div key={item.menuItemId} className="cd-cart-item">
+                          <div className="cd-cart-item-top">
+                            <div>
+                              <div className="cd-cart-item-name">{item.name}</div>
+                              <div className="cd-cart-item-meta">{fmtMoney(item.price)} each</div>
+                            </div>
+                            <button type="button" className="cd-cart-remove" onClick={() => updateCartQuantity(item.menuItemId, 0)} aria-label={`Remove ${item.name}`}>x</button>
+                          </div>
+                          <div className="cd-cart-qty-row">
+                            <button type="button" onClick={() => updateCartQuantity(item.menuItemId, item.quantity - 1)}>-</button>
+                            <input type="number" min="1" max="99" value={item.quantity} onChange={(event) => updateCartQuantity(item.menuItemId, Number(event.target.value || 1))} />
+                            <button type="button" onClick={() => updateCartQuantity(item.menuItemId, item.quantity + 1)}>+</button>
+                            <strong>{fmtMoney(item.price * item.quantity)}</strong>
+                          </div>
+                          <textarea value={item.notes} onChange={(event) => updateCartNotes(item.menuItemId, event.target.value)} placeholder="Item notes" maxLength={500} />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="cd-pos-total">
+                      <span>Total</span>
+                      <strong>{fmtMoney(cartTotal)}</strong>
+                    </div>
+                  </aside>
+                </div>
+              </form>
+            </section>
           </>
         )}
       </main>
@@ -545,6 +872,28 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
           onApprove={drawerOrder.status === "pending_payment" ? () => handleApprove(drawerOrder.id) : undefined}
           approving={approvingId === drawerOrder.id}
         />
+      )}
+
+      {continuationChoice && (
+        <div className="cd-modal-overlay">
+          <div className="cd-modal" role="dialog" aria-modal="true" aria-label="Active order found">
+            <div className="cd-modal-header">
+              <div>
+                <h2>Active order found for Table {continuationChoice.tableNumber}</h2>
+                <p>{fmtOrderId(continuationChoice.activeOrder.id)} is {statusLabel(continuationChoice.activeOrder.status)} with a current total of {fmtMoney(continuationChoice.activeOrder.totalPrice)}.</p>
+              </div>
+              <button onClick={() => setContinuationChoice(null)}>x</button>
+            </div>
+            <div className="cd-modal-actions split">
+              <button className="cd-approve-btn" onClick={() => void submitPosOrder("append")} disabled={submittingOrder}>
+                {submittingOrder ? "Adding..." : "Add To Existing Order"}
+              </button>
+              <button className="cd-view-btn" onClick={() => void submitPosOrder("create")} disabled={submittingOrder}>
+                Create New Order
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {openShiftModal && (

@@ -55,6 +55,7 @@ function useNow() {
 }
 
 type OwnerOrderStatus = "pending_payment" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
+type AnalyticsPeriod = "today" | "week" | "month";
 
 type OdOrder = {
   id: string;
@@ -79,6 +80,7 @@ type OdMenuItem = {
   available: boolean;
   category_id: string;
   image_url: string | null;
+  archived_at?: string | null;
 };
 
 type OdCategory = {
@@ -128,7 +130,19 @@ type RestaurantTable = {
   table_number: number;
   label: string;
   qr_path: string;
+  qr_url: string | null;
+  qr_created_at: string;
+  qr_regenerated_at: string;
   active: boolean;
+  created_at: string;
+};
+
+type RestaurantTableQrStats = {
+  table_id: string;
+  orders_today: number;
+  last_scan_at: string | null;
+  last_order_at: string | null;
+  scan_count: number | null;
 };
 
 type OwnerActiveShift = {
@@ -161,6 +175,8 @@ type OwnerCashVariance = {
   variance: number;
   variance_reason: string | null;
 };
+
+type OwnerReportSummary = OwnerReportData["summary"];
 
 type NavId = "overview" | "orders" | "analytics" | "menu" | "staff" | "qr" | "customers" | "reports" | "settings";
 
@@ -219,6 +235,25 @@ function startOfTodayIso() {
   return today.toISOString();
 }
 
+function getAnalyticsDateRange(period: AnalyticsPeriod) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+
+  if (period === "week") {
+    const daysSinceMonday = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - daysSinceMonday);
+    end.setDate(start.getDate() + 7);
+  } else if (period === "month") {
+    start.setDate(1);
+    end.setMonth(start.getMonth() + 1, 1);
+  } else {
+    end.setDate(start.getDate() + 1);
+  }
+
+  return { rangeStart: start.toISOString(), rangeEnd: end.toISOString() };
+}
+
 function sameHour(iso: string, hour: number) {
   return new Date(iso).getHours() === hour;
 }
@@ -255,6 +290,21 @@ function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: strin
     security_settings: toJsonRecord(row.security_settings),
     subscription_plan: typeof row.subscription_plan === "string" ? row.subscription_plan : "starter",
     billing_status: typeof row.billing_status === "string" ? row.billing_status : "trial",
+  };
+}
+
+function normalizeRestaurantTable(row: Record<string, unknown>): RestaurantTable {
+  return {
+    id: String(row.id),
+    restaurant_id: String(row.restaurant_id),
+    table_number: Number(row.table_number),
+    label: typeof row.label === "string" ? row.label : `Table ${Number(row.table_number)}`,
+    qr_path: typeof row.qr_path === "string" ? row.qr_path : "",
+    qr_url: typeof row.qr_url === "string" ? row.qr_url : null,
+    qr_created_at: typeof row.qr_created_at === "string" ? row.qr_created_at : String(row.created_at ?? ""),
+    qr_regenerated_at: typeof row.qr_regenerated_at === "string" ? row.qr_regenerated_at : String(row.updated_at ?? row.created_at ?? ""),
+    active: Boolean(row.active),
+    created_at: typeof row.created_at === "string" ? row.created_at : "",
   };
 }
 
@@ -311,6 +361,12 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dashboardReports, setDashboardReports] = useState<Record<AnalyticsPeriod, OwnerReportSummary>>({
+    today: emptyReportData().summary,
+    week: emptyReportData().summary,
+    month: emptyReportData().summary,
+  });
+  const [dashboardReportsLoading, setDashboardReportsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -343,8 +399,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .order("created_at", { ascending: true }),
             supabase
               .from("menu_items")
-              .select("id,name,description,price,available,category_id,image_url")
+              .select("id,name,description,price,available,category_id,image_url,archived_at")
               .eq("restaurant_id", restaurantId)
+              .is("archived_at", null)
               .order("name", { ascending: true }),
             supabase
               .from("categories")
@@ -358,9 +415,8 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .maybeSingle(),
             supabase
               .from("restaurant_tables")
-              .select("id,restaurant_id,table_number,label,qr_path,active")
+              .select("id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at")
               .eq("restaurant_id", restaurantId)
-              .eq("active", true)
               .order("table_number", { ascending: true }),
             supabase
               .from("cashier_shifts")
@@ -426,7 +482,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         setCategories((categoryData ?? []) as OdCategory[]);
         setActiveShifts((shiftData ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
         if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
-        setRestaurantTables((tableData ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
+        setRestaurantTables((tableData ?? []).map((row) => normalizeRestaurantTable(row as Record<string, unknown>)));
       } catch (loadError) {
         if (mounted) setError(loadError instanceof Error ? loadError.message : "Failed to load owner dashboard.");
       } finally {
@@ -439,6 +495,36 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
       mounted = false;
     };
   }, [restaurantId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDashboardReports() {
+      try {
+        setDashboardReportsLoading(true);
+        const reports = await Promise.all(
+          (["today", "week", "month"] as AnalyticsPeriod[]).map(async (reportPeriod) => {
+            const { rangeStart, rangeEnd } = getAnalyticsDateRange(reportPeriod);
+            const { data: reportPayload, error: reportError } = await supabase.rpc("get_owner_reporting_center", {
+              target_restaurant_id: restaurantId,
+              range_start: rangeStart,
+              range_end: rangeEnd,
+            });
+            if (reportError) throw new Error(reportError.message);
+            return [reportPeriod, normalizeReportData(reportPayload && typeof reportPayload === "object" ? reportPayload as object : {}).summary] as const;
+          })
+        );
+        if (mounted) setDashboardReports(Object.fromEntries(reports) as Record<AnalyticsPeriod, OwnerReportSummary>);
+      } catch (reportError) {
+        if (mounted) setError(reportError instanceof Error ? reportError.message : "Failed to load revenue summaries.");
+      } finally {
+        if (mounted) setDashboardReportsLoading(false);
+      }
+    }
+
+    void loadDashboardReports();
+    return () => { mounted = false; };
+  }, [restaurantId, orders]);
 
   useEffect(() => {
     const channel = supabase
@@ -475,6 +561,33 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           return [order, ...previous];
         });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, async (payload) => {
+        const oldRow = payload.old as Partial<OdOrderItem> & { order_id?: string; quantity?: number | string } | null;
+        const newRow = payload.new as Partial<OdOrderItem> & { order_id?: string; quantity?: number | string; menu_item_id?: string | null } | null;
+        const orderId = String(newRow?.order_id ?? oldRow?.order_id ?? "");
+        if (!orderId) return;
+
+        if (payload.eventType === "INSERT" && newRow?.id) {
+          const menuItem = newRow.menu_item_id ? menuItems.find((item) => item.id === newRow.menu_item_id) : null;
+          setOrderItems((previous) => [
+            ...previous,
+            {
+              id: String(newRow.id),
+              order_id: orderId,
+              menu_item_id: newRow.menu_item_id ? String(newRow.menu_item_id) : null,
+              quantity: Number(newRow.quantity ?? 0),
+              price: Number(newRow.price ?? 0),
+              name: menuItem?.name ?? "Menu item",
+            },
+          ]);
+          setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, item_count: order.item_count + Number(newRow.quantity ?? 0) } : order));
+        }
+
+        if (payload.eventType === "DELETE" && oldRow?.id) {
+          setOrderItems((previous) => previous.filter((item) => item.id !== oldRow.id));
+          setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, item_count: Math.max(0, order.item_count - Number(oldRow.quantity ?? 0)) } : order));
+        }
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, () => {
         void supabase
           .from("cashier_shifts")
@@ -495,18 +608,20 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [restaurantId]);
+  }, [restaurantId, menuItems]);
 
   const todayStart = startOfTodayIso();
   const todayOrders = useMemo(() => orders.filter((order) => order.created_at >= todayStart), [orders, todayStart]);
   const revenueOrders = useMemo(() => todayOrders.filter(isRevenueOrder), [todayOrders]);
   const allRevenueOrders = useMemo(() => orders.filter(isRevenueOrder), [orders]);
-  const todayRevenue = useMemo(() => revenueOrders.reduce((sum, order) => sum + order.total_price, 0), [revenueOrders]);
-  const allRevenue = useMemo(() => allRevenueOrders.reduce((sum, order) => sum + order.total_price, 0), [allRevenueOrders]);
+  const todayRevenue = dashboardReports.today.revenue;
+  const weekRevenue = dashboardReports.week.revenue;
+  const monthRevenue = dashboardReports.month.revenue;
+  const allRevenue = monthRevenue;
   const activeOrders = useMemo(() => orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status)), [orders]);
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "pending_payment"), [orders]);
   const completedToday = useMemo(() => orders.filter((order) => order.status === "completed" && (order.completed_at ?? order.created_at) >= todayStart), [orders, todayStart]);
-  const avgOrderValue = revenueOrders.length > 0 ? Math.round(todayRevenue / revenueOrders.length) : 0;
+  const avgOrderValue = Math.round(dashboardReports.today.average_order_value);
   const activeStaff = staff.filter((member) => member.active).length;
   const kitchenStaff = staff.filter((member) => member.role === "kitchen" && member.active);
   const cashierStaff = staff.filter((member) => member.role === "cashier" && member.active);
@@ -591,8 +706,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     const [{ data: menuData, error: menuError }, { data: categoryData, error: categoryError }] = await Promise.all([
       supabase
         .from("menu_items")
-        .select("id,name,description,price,available,category_id,image_url")
+        .select("id,name,description,price,available,category_id,image_url,archived_at")
         .eq("restaurant_id", restaurantId)
+        .is("archived_at", null)
         .order("name", { ascending: true }),
       supabase
         .from("categories")
@@ -617,16 +733,15 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         .maybeSingle(),
       supabase
         .from("restaurant_tables")
-        .select("id,restaurant_id,table_number,label,qr_path,active")
+        .select("id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at")
         .eq("restaurant_id", restaurantId)
-        .eq("active", true)
         .order("table_number", { ascending: true }),
     ]);
 
     if (restaurantError) throw new Error(restaurantError.message);
     if (tableError) throw new Error(tableError.message);
     if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
-    setRestaurantTables((tableData ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
+    setRestaurantTables((tableData ?? []).map((row) => normalizeRestaurantTable(row as Record<string, unknown>)));
   }
 
   const dashboardData = {
@@ -638,6 +753,8 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     pendingOrders,
     completedToday,
     todayRevenue,
+    weekRevenue,
+    monthRevenue,
     allRevenue,
     avgOrderValue,
     activeStaff,
@@ -660,6 +777,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     cx,
     cy,
     loading,
+    dashboardReportsLoading,
   };
 
   return (
@@ -724,7 +842,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
 
         {nav === "overview" && <OverviewPage data={dashboardData} staff={staff} />}
         {nav === "orders" && <OrdersPage orders={orders} activeOrders={activeOrders} loading={loading} restaurantName={restaurantName} />}
-        {nav === "analytics" && <AnalyticsPage data={dashboardData} />}
+        {nav === "analytics" && <AnalyticsPage data={dashboardData} restaurantId={restaurantId} />}
         {nav === "staff" && (
           <StaffPage
             staff={staff}
@@ -742,7 +860,21 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             onMenuChanged={refreshMenu}
           />
         )}
-        {nav === "qr" && <QrTablesPage restaurantName={restaurantName} restaurantSlug={restaurantConfig?.slug ?? ""} orders={activeOrders} tables={restaurantTables} />}
+        {nav === "qr" && (
+          <QrTablesPage
+            restaurantId={restaurantId}
+            restaurantName={restaurantConfig?.name ?? restaurantName}
+            restaurantSlug={restaurantConfig?.slug ?? ""}
+            logoUrl={jsonString(restaurantConfig?.branding ?? {}, "logo_url")}
+            orders={orders}
+            tables={restaurantTables}
+            onTableChanged={(updatedTable) => {
+              setRestaurantTables((previous) => previous
+                .map((table) => table.id === updatedTable.id ? updatedTable : table)
+                .sort((left, right) => left.table_number - right.table_number));
+            }}
+          />
+        )}
         {nav === "customers" && <CustomersPage orders={orders} />}
         {nav === "reports" && <ReportsPage restaurantId={restaurantId} restaurantName={restaurantName} />}
         {nav === "settings" && (
@@ -768,6 +900,8 @@ type DashboardData = {
   pendingOrders: OdOrder[];
   completedToday: OdOrder[];
   todayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
   allRevenue: number;
   avgOrderValue: number;
   activeStaff: number;
@@ -790,14 +924,15 @@ type DashboardData = {
   cx: number;
   cy: number;
   loading: boolean;
+  dashboardReportsLoading: boolean;
 };
 
 function OverviewPage({ data, staff }: { data: DashboardData; staff: OdStaff[] }) {
   const staffById = new Map(staff.map((member) => [member.id, member]));
   const kpis = [
-    { label: "Revenue Today", value: fmtMoney(data.todayRevenue), badge: "Live", tone: "up" },
-    { label: "Total Orders", value: `${data.todayOrders.length}`, badge: `${data.activeOrders.length} active`, tone: "neutral" },
-    { label: "Active Tables", value: `${new Set(data.activeOrders.map((order) => order.table_number).filter(Boolean)).size}`, badge: "Now", tone: "neutral" },
+    { label: "Revenue Today", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayRevenue), badge: "Today", tone: "up" },
+    { label: "Current Week", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.weekRevenue), badge: "Week", tone: "up" },
+    { label: "Current Month", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.monthRevenue), badge: "Month", tone: "up" },
     { label: "Avg Order Value", value: fmtMoney(data.avgOrderValue), badge: "Paid", tone: "up" },
     { label: "Pending Payment", value: `${data.pendingOrders.length}`, badge: "Action", tone: data.pendingOrders.length > 0 ? "down" : "neutral" },
     { label: "Active Staff", value: `${data.activeStaff}`, badge: `${data.kitchenStaff.length} kitchen`, tone: "neutral" },
@@ -1150,7 +1285,40 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
   );
 }
 
-function AnalyticsPage({ data }: { data: DashboardData }) {
+function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurantId: string }) {
+  const [period, setPeriod] = useState<AnalyticsPeriod>("today");
+  const [periodReport, setPeriodReport] = useState<OwnerReportData>(emptyReportData());
+  const [loadingPeriodReport, setLoadingPeriodReport] = useState(true);
+  const [periodReportError, setPeriodReportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadPeriodReport() {
+      try {
+        setLoadingPeriodReport(true);
+        setPeriodReportError(null);
+        const { rangeStart, rangeEnd } = getAnalyticsDateRange(period);
+        const { data: reportPayload, error } = await supabase.rpc("get_owner_reporting_center", {
+          target_restaurant_id: restaurantId,
+          range_start: rangeStart,
+          range_end: rangeEnd,
+        });
+        if (error) throw new Error(error.message);
+        if (mounted) setPeriodReport(normalizeReportData(reportPayload && typeof reportPayload === "object" ? reportPayload as object : {}));
+      } catch (loadError) {
+        if (mounted) setPeriodReportError(loadError instanceof Error ? loadError.message : "Could not load revenue report.");
+      } finally {
+        if (mounted) setLoadingPeriodReport(false);
+      }
+    }
+
+    void loadPeriodReport();
+    return () => { mounted = false; };
+  }, [restaurantId, period]);
+
+  const periodSummary = periodReport.summary;
+  const periodLabel = period === "today" ? "Today" : period === "week" ? "Week" : "Month";
+
   return (
     <div className="od-page">
       <div className="od-page-header">
@@ -1159,33 +1327,37 @@ function AnalyticsPage({ data }: { data: DashboardData }) {
           <p className="od-page-subtitle">Real-time financial tracking for your restaurant branch.</p>
         </div>
         <div className="od-tabs">
-          <button className="od-tab active">Today</button>
-          <button className="od-tab">Week</button>
-          <button className="od-tab">Month</button>
+          {(["today", "week", "month"] as AnalyticsPeriod[]).map((option) => (
+            <button key={option} type="button" className={`od-tab${period === option ? " active" : ""}`} onClick={() => setPeriod(option)}>
+              {option === "today" ? "Today" : option === "week" ? "Week" : "Month"}
+            </button>
+          ))}
         </div>
       </div>
+
+      {periodReportError && <div className="od-error-inline">{periodReportError}</div>}
 
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
           <div className="od-kpi-top">
             <div className="od-kpi-label">Net Revenue</div>
-            <span className="od-kpi-badge up">Live</span>
+            <span className="od-kpi-badge up">{periodLabel}</span>
           </div>
-          <div className="od-kpi-value">{fmtMoneyK(data.todayRevenue)}</div>
+          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : fmtMoneyK(periodSummary.revenue)}</div>
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-top">
             <div className="od-kpi-label">Avg Ticket</div>
-            <span className="od-kpi-badge neutral">{data.revenueOrders.length} paid</span>
+            <span className="od-kpi-badge neutral">{periodSummary.orders} orders</span>
           </div>
-          <div className="od-kpi-value">{fmtMoney(data.avgOrderValue)}</div>
+          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(periodSummary.average_order_value))}</div>
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-top">
-            <div className="od-kpi-label">All-Time Visible Revenue</div>
-            <span className="od-kpi-badge up">Saved</span>
+            <div className="od-kpi-label">Completed Orders</div>
+            <span className="od-kpi-badge up">{periodLabel}</span>
           </div>
-          <div className="od-kpi-value">{fmtMoneyK(data.allRevenue)}</div>
+          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : periodSummary.completed_orders}</div>
         </div>
       </div>
 
@@ -2007,9 +2179,13 @@ function MenuPage({ restaurantId, items, categories, topItems, onMenuChanged }: 
       setIsWorking(true);
       setMenuError(null);
       setNotice(null);
-      const { error } = await supabase.from("menu_items").delete().eq("id", item.id).eq("restaurant_id", restaurantId);
+      const { data, error } = await supabase.rpc("archive_or_delete_menu_item", {
+        target_restaurant_id: restaurantId,
+        target_menu_item_id: item.id,
+      });
       if (error) throw new Error(error.message);
-      setNotice("Menu item deleted.");
+      const action = data && typeof data === "object" && "action" in data ? String((data as { action?: unknown }).action) : "deleted";
+      setNotice(action === "archived" ? "Menu item archived because it has order history." : "Menu item deleted.");
       await onMenuChanged();
     } catch (actionError) {
       setMenuError(actionError instanceof Error ? actionError.message : "Could not delete menu item.");
@@ -2525,26 +2701,401 @@ function CustomersPage({ orders }: { orders: OdOrder[] }) {
   );
 }
 
-function QrTablesPage({ restaurantName, restaurantSlug, orders, tables }: { restaurantName: string; restaurantSlug: string; orders: OdOrder[]; tables: RestaurantTable[] }) {
-  const activeTables = new Set(orders.map((order) => order.table_number).filter(Boolean));
-  const visibleTables = tables.length > 0 ? tables : Array.from({ length: 20 }, (_, index) => ({
-    id: `fallback-${index + 1}`,
-    restaurant_id: "",
-    table_number: index + 1,
-    label: `Table ${index + 1}`,
-    qr_path: restaurantSlug ? `/r/${restaurantSlug}/order?table=${index + 1}` : "",
-    active: true,
-  }));
-  const floorTables = visibleTables.map((restaurantTable) => {
+function getOrderingUrl(qrPath: string) {
+  if (!qrPath) return "";
+  if (/^https?:\/\//i.test(qrPath)) return qrPath;
+  return `${window.location.origin}${qrPath}`;
+}
+
+type PrintableQrTable = {
+  table: RestaurantTable;
+  orderingUrl: string;
+};
+
+function safeFilename(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "qr-code";
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function dataUrlToBytes(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function downloadBlob(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function drawRoundRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+}
+
+async function loadImage(src: string): Promise<HTMLImageElement | null> {
+  if (!src) return null;
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+async function createQrCardCanvas({
+  restaurantName,
+  logoUrl,
+  table,
+  orderingUrl,
+}: {
+  restaurantName: string;
+  logoUrl: string;
+  table: RestaurantTable;
+  orderingUrl: string;
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 900;
+  canvas.height = 1200;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas is not available.");
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#d8dee8";
+  context.lineWidth = 6;
+  drawRoundRect(context, 48, 48, 804, 1104, 28);
+  context.stroke();
+
+  const logo = await loadImage(logoUrl);
+  context.save();
+  drawRoundRect(context, 370, 96, 160, 160, 22);
+  context.clip();
+  if (logo) {
+    context.drawImage(logo, 370, 96, 160, 160);
+  } else {
+    context.fillStyle = "#0f766e";
+    context.fillRect(370, 96, 160, 160);
+    context.fillStyle = "#ffffff";
+    context.font = "800 46px Arial";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(restaurantName.slice(0, 2).toUpperCase(), 450, 176);
+  }
+  context.restore();
+
+  context.fillStyle = "#0f172a";
+  context.font = "800 46px Arial";
+  context.textAlign = "center";
+  context.textBaseline = "alphabetic";
+  context.fillText(restaurantName, 450, 330, 760);
+  context.fillStyle = "#64748b";
+  context.font = "800 30px Arial";
+  context.fillText(`Table ${table.table_number}`, 450, 388);
+
+  const qrDataUrl = await QRCode.toDataURL(orderingUrl, { width: 560, margin: 1 });
+  const qrImage = await loadImage(qrDataUrl);
+  if (!qrImage) throw new Error("QR image could not be generated.");
+  context.drawImage(qrImage, 170, 450, 560, 560);
+
+  context.fillStyle = "#0f172a";
+  context.font = "800 38px Arial";
+  context.fillText("Scan to Order", 450, 1080);
+  context.fillStyle = "#64748b";
+  context.font = "600 22px Arial";
+  context.fillText(orderingUrl, 450, 1124, 760);
+
+  return canvas;
+}
+
+function buildPdfFromJpegs(images: { bytes: Uint8Array; width: number; height: number }[]) {
+  const objects: (string | Uint8Array)[] = [];
+  const addObject = (content: string | Uint8Array) => {
+    objects.push(content);
+    return objects.length;
+  };
+  const pageIds: number[] = [];
+  const pagesId = 2;
+  addObject("<< /Type /Catalog /Pages 2 0 R >>");
+  addObject("");
+
+  images.forEach((image) => {
+    const imageId = objects.length + 2;
+    const contentId = objects.length + 3;
+    const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im${imageId} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+    pageIds.push(pageId);
+    const imageHeader = `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`;
+    const imageFooter = "\nendstream";
+    const imageObject = new Uint8Array(imageHeader.length + image.bytes.length + imageFooter.length);
+    imageObject.set(new TextEncoder().encode(imageHeader), 0);
+    imageObject.set(image.bytes, imageHeader.length);
+    imageObject.set(new TextEncoder().encode(imageFooter), imageHeader.length + image.bytes.length);
+    addObject(imageObject);
+    const contentStream = `q\n540 0 0 720 36 36 cm\n/Im${imageId} Do\nQ`;
+    addObject(`<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`);
+  });
+
+  objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
+
+  const chunks: Uint8Array[] = [new TextEncoder().encode("%PDF-1.4\n")];
+  const offsets: number[] = [0];
+  let length = chunks[0].length;
+  objects.forEach((object, index) => {
+    offsets.push(length);
+    const header = new TextEncoder().encode(`${index + 1} 0 obj\n`);
+    const body = typeof object === "string" ? new TextEncoder().encode(object) : object;
+    const footer = new TextEncoder().encode("\nendobj\n");
+    chunks.push(header, body, footer);
+    length += header.length + body.length + footer.length;
+  });
+  const xrefOffset = length;
+  const xref = [
+    `xref\n0 ${objects.length + 1}`,
+    "0000000000 65535 f ",
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
+    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>`,
+    `startxref\n${xrefOffset}`,
+    "%%EOF",
+  ].join("\n");
+  chunks.push(new TextEncoder().encode(xref));
+  const blobParts = chunks.map((chunk) => chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength) as ArrayBuffer);
+  return new Blob(blobParts, { type: "application/pdf" });
+}
+
+function QrTablesPage({
+  restaurantId,
+  restaurantName,
+  restaurantSlug,
+  logoUrl,
+  orders,
+  tables,
+  onTableChanged,
+}: {
+  restaurantId: string;
+  restaurantName: string;
+  restaurantSlug: string;
+  logoUrl: string;
+  orders: OdOrder[];
+  tables: RestaurantTable[];
+  onTableChanged: (table: RestaurantTable) => void;
+}) {
+  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
+  const [qrStats, setQrStats] = useState<Record<string, RestaurantTableQrStats>>({});
+  const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(null);
+  const [selectedTableIds, setSelectedTableIds] = useState<string[]>([]);
+  const [workingTableId, setWorkingTableId] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const activeTableOrders = orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status));
+  const activeTables = new Set(activeTableOrders.map((order) => order.table_number).filter(Boolean));
+  const todayStart = startOfTodayIso();
+  const rows = tables.map((restaurantTable) => {
     const number = String(restaurantTable.table_number);
-    const activeOrder = orders.find((order) => order.table_number === number);
+    const activeOrder = activeTableOrders.find((order) => order.table_number === number);
     return {
-      number: restaurantTable.table_number,
-      label: restaurantTable.label,
-      qrPath: restaurantTable.qr_path,
-      status: activeOrder?.status ?? "available",
+      table: restaurantTable,
+      occupied: Boolean(activeOrder),
+      ordersToday: qrStats[restaurantTable.id]?.orders_today ?? orders.filter((order) => order.table_number === number && order.created_at >= todayStart).length,
+      lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
+      lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? orders.find((order) => order.table_number === number)?.created_at ?? null,
+      scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
+      orderingUrl: getOrderingUrl(restaurantTable.qr_url || restaurantTable.qr_path),
     };
   });
+
+  const selectedRows = rows.filter((row) => selectedTableIds.includes(row.table.id));
+
+  useEffect(() => {
+    let mounted = true;
+    async function generateQrCodes() {
+      const pairs = await Promise.all(
+        tables.map(async (table) => {
+          const url = getOrderingUrl(table.qr_url || table.qr_path);
+          if (!url) return [table.id, ""] as const;
+          const dataUrl = await QRCode.toDataURL(url, { width: 96, margin: 1 });
+          return [table.id, dataUrl] as const;
+        })
+      );
+      if (mounted) setQrCodes(Object.fromEntries(pairs));
+    }
+    void generateQrCodes();
+    return () => { mounted = false; };
+  }, [tables]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadQrStats() {
+      try {
+        const { data, error } = await supabase.rpc("get_owner_table_qr_stats", {
+          target_restaurant_id: restaurantId,
+        });
+        if (error) throw new Error(error.message);
+        const statRows = Array.isArray(data) ? data : [];
+        const normalizedStats = statRows.reduce<Record<string, RestaurantTableQrStats>>((accumulator, row) => {
+          if (!row || typeof row !== "object") return accumulator;
+          const payload = row as Record<string, unknown>;
+          const tableId = typeof payload.table_id === "string" ? payload.table_id : "";
+          if (!tableId) return accumulator;
+          accumulator[tableId] = {
+            table_id: tableId,
+            orders_today: Number(payload.orders_today ?? 0),
+            last_scan_at: typeof payload.last_scan_at === "string" ? payload.last_scan_at : null,
+            last_order_at: typeof payload.last_order_at === "string" ? payload.last_order_at : null,
+            scan_count: payload.scan_count === null || typeof payload.scan_count === "undefined" ? null : Number(payload.scan_count),
+          };
+          return accumulator;
+        }, {});
+        if (mounted) setQrStats(normalizedStats);
+      } catch (statsError) {
+        if (mounted) setQrError(statsError instanceof Error ? statsError.message : "Could not load QR statistics.");
+      }
+    }
+    void loadQrStats();
+    return () => { mounted = false; };
+  }, [restaurantId, tables, orders]);
+
+  async function regenerateQr(table: RestaurantTable) {
+    try {
+      setWorkingTableId(table.id);
+      setQrError(null);
+      setNotice(null);
+      const { data, error } = await supabase.rpc("regenerate_restaurant_table_qr", {
+        target_restaurant_id: restaurantId,
+        target_table_id: table.id,
+      });
+      if (error) throw new Error(error.message);
+      const updatedTable = normalizeRestaurantTable(data as Record<string, unknown>);
+      onTableChanged(updatedTable);
+      setPreviewTable((current) => current?.id === updatedTable.id ? updatedTable : current);
+      setNotice(`QR regenerated for ${updatedTable.label}.`);
+    } catch (regenerateError) {
+      setQrError(regenerateError instanceof Error ? regenerateError.message : "Could not regenerate QR code.");
+    } finally {
+      setWorkingTableId(null);
+    }
+  }
+
+  async function setTableActive(table: RestaurantTable, active: boolean) {
+    try {
+      setWorkingTableId(table.id);
+      setQrError(null);
+      setNotice(null);
+      const { data, error } = await supabase.rpc("set_restaurant_table_active", {
+        target_restaurant_id: restaurantId,
+        target_table_id: table.id,
+        requested_active: active,
+      });
+      if (error) throw new Error(error.message);
+      const updatedTable = normalizeRestaurantTable(data as Record<string, unknown>);
+      onTableChanged(updatedTable);
+      setPreviewTable((current) => current?.id === updatedTable.id ? updatedTable : current);
+      setNotice(`${updatedTable.label} ${active ? "enabled" : "disabled"}.`);
+    } catch (activeError) {
+      setQrError(activeError instanceof Error ? activeError.message : "Could not update table status.");
+    } finally {
+      setWorkingTableId(null);
+    }
+  }
+
+  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url || previewTable.qr_path) : "";
+  const previewPrintable = previewTable && previewUrl ? { table: previewTable, orderingUrl: previewUrl } : null;
+  const allSelected = rows.length > 0 && rows.every((row) => selectedTableIds.includes(row.table.id));
+
+  function toggleSelectedTable(tableId: string) {
+    setSelectedTableIds((previous) => previous.includes(tableId) ? previous.filter((id) => id !== tableId) : [...previous, tableId]);
+  }
+
+  function toggleAllSelected() {
+    setSelectedTableIds(allSelected ? [] : rows.map((row) => row.table.id));
+  }
+
+  async function downloadQrPng(printable: PrintableQrTable) {
+    const canvas = await createQrCardCanvas({ restaurantName, logoUrl, table: printable.table, orderingUrl: printable.orderingUrl });
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(`${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.png`, blob);
+    }, "image/png");
+  }
+
+  async function downloadQrSvg(printable: PrintableQrTable) {
+    const qrSvg = await QRCode.toString(printable.orderingUrl, { type: "svg", width: 360, margin: 1 });
+    const escapedName = escapeHtml(restaurantName);
+    const escapedUrl = escapeHtml(printable.orderingUrl);
+    const logoMarkup = logoUrl
+      ? `<image href="${escapeHtml(logoUrl)}" x="210" y="34" width="80" height="80" preserveAspectRatio="xMidYMid slice" />`
+      : `<rect x="210" y="34" width="80" height="80" rx="12" fill="#0f766e" /><text x="250" y="84" text-anchor="middle" font-family="Arial" font-size="22" font-weight="800" fill="#fff">${escapeHtml(restaurantName.slice(0, 2).toUpperCase())}</text>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="700" viewBox="0 0 500 700">
+<rect width="500" height="700" rx="18" fill="#fff"/>
+<rect x="20" y="20" width="460" height="660" rx="18" fill="none" stroke="#d8dee8" stroke-width="3"/>
+${logoMarkup}
+<text x="250" y="158" text-anchor="middle" font-family="Arial" font-size="28" font-weight="800" fill="#0f172a">${escapedName}</text>
+<text x="250" y="196" text-anchor="middle" font-family="Arial" font-size="18" font-weight="800" fill="#64748b">Table ${printable.table.table_number}</text>
+<g transform="translate(70 230)">${qrSvg.replace(/<\?xml[^>]*>/, "").replace(/<svg[^>]*>/, "").replace("</svg>", "")}</g>
+<text x="250" y="626" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#0f172a">Scan to Order</text>
+<text x="250" y="658" text-anchor="middle" font-family="Arial" font-size="11" font-weight="600" fill="#64748b">${escapedUrl}</text>
+</svg>`;
+    downloadBlob(`${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.svg`, new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  }
+
+  async function downloadQrPdf(printables: PrintableQrTable[], filename: string) {
+    if (printables.length === 0) return;
+    const images = await Promise.all(printables.map(async (printable) => {
+      const canvas = await createQrCardCanvas({ restaurantName, logoUrl, table: printable.table, orderingUrl: printable.orderingUrl });
+      return { bytes: dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)), width: canvas.width, height: canvas.height };
+    }));
+    downloadBlob(filename, buildPdfFromJpegs(images));
+  }
+
+  async function printQrCards(printables: PrintableQrTable[]) {
+    if (printables.length === 0) return;
+    const cards = await Promise.all(printables.map(async (printable) => {
+      const qrDataUrl = await QRCode.toDataURL(printable.orderingUrl, { width: 320, margin: 1 });
+      const logo = logoUrl
+        ? `<img class="qr-logo" src="${escapeHtml(logoUrl)}" alt="" />`
+        : `<div class="qr-logo fallback">${escapeHtml(restaurantName.slice(0, 2).toUpperCase())}</div>`;
+      return `<section class="qr-print-card">
+${logo}
+<h1>${escapeHtml(restaurantName)}</h1>
+<h2>Table ${printable.table.table_number}</h2>
+<img class="qr-code" src="${qrDataUrl}" alt="" />
+<p class="scan">Scan to Order</p>
+</section>`;
+    }));
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      setQrError("Could not open the print window. Please allow pop-ups for this site.");
+      return;
+    }
+    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(restaurantName)} QR Codes</title><style>
+body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-print-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:24px}.qr-print-card{break-inside:avoid;page-break-inside:avoid;background:#fff;border:1px solid #d8dee8;border-radius:14px;padding:28px;text-align:center;display:grid;justify-items:center;gap:10px}.qr-logo{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid #d8dee8}.qr-logo.fallback{display:grid;place-items:center;background:#0f766e;color:#fff;font-size:22px;font-weight:800}.qr-code{width:280px;height:280px}h1{font-size:24px;line-height:1.15;margin:0}h2{font-size:18px;color:#64748b;margin:0}.scan{font-size:24px;font-weight:800;margin:0}@media print{body{background:#fff}.qr-print-grid{padding:0;grid-template-columns:repeat(2,1fr)}.qr-print-card{border:0;min-height:46vh;page-break-inside:avoid}}@page{size:A4;margin:12mm}
+</style></head><body><main class="qr-print-grid">${cards.join("")}</main><script>window.addEventListener('load',()=>{const images=[...document.images];Promise.all(images.map((image)=>image.complete?Promise.resolve():new Promise((resolve)=>{image.onload=resolve;image.onerror=resolve;}))).then(()=>setTimeout(()=>window.print(),100));});<\/script></body></html>`);
+    printWindow.document.close();
+  }
 
   return (
     <div className="od-page">
@@ -2553,36 +3104,113 @@ function QrTablesPage({ restaurantName, restaurantSlug, orders, tables }: { rest
           <h1 className="od-page-title">QR & Table Management</h1>
           <p className="od-page-subtitle">Restaurant floor management for {restaurantName}</p>
         </div>
-        <button className="od-btn-primary" onClick={() => window.print()}>Bulk QR Export</button>
+        <div className="od-header-actions">
+          <button className="od-btn-ghost" type="button" onClick={() => void printQrCards(selectedRows)} disabled={selectedRows.length === 0}>Print Selected</button>
+          <button className="od-btn-primary" type="button" onClick={() => void printQrCards(rows)}>Print Entire Restaurant</button>
+        </div>
       </div>
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
-          <div className="od-kpi-label">Active Tables</div>
+          <div className="od-kpi-label">Occupied Tables</div>
           <div className="od-kpi-value">{activeTables.size}</div>
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">Total Tables</div>
-          <div className="od-kpi-value">{visibleTables.length}</div>
+          <div className="od-kpi-value">{tables.length}</div>
         </div>
         <div className="od-kpi-card">
-          <div className="od-kpi-label">QR Coverage</div>
-          <div className="od-kpi-value">100%</div>
+          <div className="od-kpi-label">Disabled Tables</div>
+          <div className="od-kpi-value">{tables.filter((table) => !table.active).length}</div>
         </div>
       </div>
+      {(qrError || notice) && <div className={qrError ? "od-error-inline" : "od-success-inline"}>{qrError || notice}</div>}
       <div className="od-card">
         <div className="od-card-header">
-          <div className="od-card-title">Restaurant Floor</div>
+          <div>
+            <div className="od-card-title">Restaurant Tables</div>
+            <div className="od-card-subtitle">Owner QR controls for the existing /r/{restaurantSlug || ":slug"}/order route.</div>
+          </div>
         </div>
-        <div className="od-table-grid">
-          {floorTables.map((table) => (
-            <div key={table.number} className={`od-table-tile ${statusClass(table.status)}`}>
-              <div className="od-table-num">{table.label}</div>
-              <div className="od-table-state">{statusLabel(table.status)}</div>
-              <a className="od-btn-ghost" href={table.qrPath} target="_blank" rel="noreferrer">QR Link</a>
-            </div>
-          ))}
+        <div className="od-table-wrap">
+          <table className="od-table od-qr-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" checked={allSelected} onChange={toggleAllSelected} aria-label="Select all table QR codes" /></th>
+                <th>Table Number</th>
+                <th>Status</th>
+                <th>Occupancy</th>
+                <th>QR Preview</th>
+                <th>Created Date</th>
+                <th>Last Regenerated</th>
+                <th>Orders Today</th>
+                <th>Last Scan</th>
+                <th>Last Order</th>
+                <th>Scan Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ table, occupied, ordersToday, lastScanAt, lastOrderAt, scanCount, orderingUrl }) => (
+                <tr key={table.id}>
+                  <td><input type="checkbox" checked={selectedTableIds.includes(table.id)} onChange={() => toggleSelectedTable(table.id)} aria-label={`Select ${table.label}`} /></td>
+                  <td><strong>{table.label || `Table ${table.table_number}`}</strong></td>
+                  <td><span className={table.active ? "od-active-pill" : "od-offline-pill"}>{table.active ? "Active" : "Disabled"}</span></td>
+                  <td><span className={`od-status-badge ${occupied ? "paid" : "pending"}`}>{occupied ? "Occupied" : "Available"}</span></td>
+                  <td>
+                    {qrCodes[table.id] ? <img className="od-qr-thumb" src={qrCodes[table.id]} alt={`QR for ${table.label}`} /> : <div className="od-qr-placeholder compact">QR</div>}
+                  </td>
+                  <td>{table.created_at ? fmtDateTime(table.created_at) : "Not recorded"}</td>
+                  <td>{table.qr_regenerated_at ? fmtDateTime(table.qr_regenerated_at) : "Not recorded"}</td>
+                  <td><strong>{ordersToday}</strong></td>
+                  <td>{lastScanAt ? fmtTimeAgo(lastScanAt) : "No scans"}</td>
+                  <td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : "No orders"}</td>
+                  <td>{scanCount ?? "N/A"}</td>
+                  <td>
+                    <div className="od-row-actions">
+                      <button className="od-btn-ghost compact" type="button" onClick={() => setPreviewTable(table)} disabled={!orderingUrl}>View QR</button>
+                      <button className="od-btn-ghost compact" type="button" onClick={() => void regenerateQr(table)} disabled={workingTableId === table.id}>Regenerate QR</button>
+                      {table.active ? (
+                        <button className="od-btn-ghost compact danger" type="button" onClick={() => void setTableActive(table, false)} disabled={workingTableId === table.id}>Disable</button>
+                      ) : (
+                        <button className="od-btn-ghost compact" type="button" onClick={() => void setTableActive(table, true)} disabled={workingTableId === table.id}>Enable</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length === 0 && <div className="od-empty compact">No restaurant tables found. Save table settings to synchronize QR records.</div>}
         </div>
       </div>
+      {previewTable && (
+        <div className="od-modal-backdrop" role="presentation" onClick={() => setPreviewTable(null)}>
+          <div className="od-modal od-qr-modal" role="dialog" aria-modal="true" aria-labelledby="od-qr-modal-title" onClick={(event) => event.stopPropagation()}>
+            <div className="od-modal-header">
+              <div>
+                <div className="od-card-title" id="od-qr-modal-title">Table QR Code</div>
+                <div className="od-card-subtitle">{restaurantName}</div>
+              </div>
+              <button className="od-icon-btn" type="button" aria-label="Close QR preview" onClick={() => setPreviewTable(null)}>X</button>
+            </div>
+            <div className="od-qr-preview">
+              {logoUrl ? <img className="od-qr-logo" src={logoUrl} alt={`${restaurantName} logo`} /> : <div className="od-qr-logo fallback">{restaurantName.slice(0, 2).toUpperCase()}</div>}
+              <div className="od-qr-restaurant">{restaurantName}</div>
+              <div className="od-qr-table-number">Table {previewTable.table_number}</div>
+              {qrCodes[previewTable.id] ? <img className="od-qr-large" src={qrCodes[previewTable.id]} alt={`QR code for table ${previewTable.table_number}`} /> : <div className="od-qr-large od-qr-placeholder">QR</div>}
+              <a className="od-qr-url" href={previewUrl} target="_blank" rel="noreferrer">{previewUrl}</a>
+              {previewPrintable && (
+                <div className="od-qr-export-actions">
+                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrPng(previewPrintable)}>Download PNG</button>
+                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrSvg(previewPrintable)}>Download SVG</button>
+                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrPdf([previewPrintable], `${safeFilename(restaurantName)}-table-${previewTable.table_number}-qr.pdf`)}>Download PDF</button>
+                  <button className="od-btn-primary" type="button" onClick={() => void printQrCards([previewPrintable])}>Print</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2649,6 +3277,7 @@ function SettingsPage({
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
+  const activeTables = useMemo(() => tables.filter((table) => table.active), [tables]);
 
   useEffect(() => {
     setForm(configToSettingsForm(config, fallbackRestaurantName));
@@ -2658,7 +3287,7 @@ function SettingsPage({
     let mounted = true;
     async function generateQrCodes() {
       const pairs = await Promise.all(
-        tables.slice(0, 80).map(async (table) => {
+        activeTables.slice(0, 80).map(async (table) => {
           const url = `${window.location.origin}${table.qr_path}`;
           const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
           return [table.table_number, dataUrl] as const;
@@ -2668,7 +3297,7 @@ function SettingsPage({
     }
     void generateQrCodes();
     return () => { mounted = false; };
-  }, [tables]);
+  }, [activeTables]);
 
   function updateField<K extends keyof SettingsFormState>(key: K, value: SettingsFormState[K]) {
     setForm((previous) => ({ ...previous, [key]: value }));
@@ -2772,7 +3401,7 @@ function SettingsPage({
               <div className="od-card-header"><div><div className="od-card-title">Table Management</div><div className="od-card-subtitle">Controls restaurant_tables records and table validation during ordering.</div></div></div>
               <div className="od-settings-grid compact">
                 <label>Total Tables<input type="number" min="1" max="500" value={form.totalTables} onChange={(event) => updateField("totalTables", event.target.value)} disabled={working} /></label>
-                <div className="od-setting-stat"><strong>{tables.length}</strong><span>Active table records</span></div>
+                <div className="od-setting-stat"><strong>{activeTables.length}</strong><span>Active table records</span></div>
                 <div className="od-setting-stat"><strong>100%</strong><span>QR coverage after save</span></div>
               </div>
             </section>
@@ -2807,7 +3436,7 @@ function SettingsPage({
             <section className="od-card">
               <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Every active table has a generated public ordering code.</div></div></div>
               <div className="od-qr-list">
-                {tables.length === 0 ? <div className="od-empty compact">Save table settings to generate QR codes.</div> : tables.slice(0, 12).map((table) => (
+                {activeTables.length === 0 ? <div className="od-empty compact">Save table settings to generate QR codes.</div> : activeTables.slice(0, 12).map((table) => (
                   <div className="od-qr-row" key={table.id}>
                     {qrCodes[table.table_number] ? <img src={qrCodes[table.table_number]} alt="" /> : <div className="od-qr-placeholder">QR</div>}
                     <div><strong>{table.label}</strong><span>{table.qr_path}</span></div>

@@ -65,8 +65,17 @@ function readTableNumber() {
   return new URLSearchParams(window.location.search).get("t")?.trim() ?? "";
 }
 
+function readQrToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("qr")?.trim() ?? "";
+}
+
 export function usePublicQrCheckoutState(restaurantSlug: string) {
   const initialCheckoutState = useMemo(() => readStoredCheckoutState(restaurantSlug), [restaurantSlug]);
+  const qrToken = useMemo(() => readQrToken(), []);
   const tableNumberFromQr = useMemo(() => {
     if (typeof window === "undefined") return false;
     return !!new URLSearchParams(window.location.search).get("t")?.trim();
@@ -104,6 +113,7 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
     customerName,
     paymentMethod,
     tableNumber,
+    qrToken,
     tableNumberFromQr,
     setCheckoutVisible,
     setCustomerName,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CategoryFilter } from "../components/CategoryFilter";
 import { FeaturedDishes } from "../components/FeaturedDishes";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
@@ -7,6 +7,7 @@ import { MenuSearch } from "../components/MenuSearch";
 import { RestaurantHeader } from "../components/RestaurantHeader";
 import { formatETBPrice } from "../components/menuPresentation";
 import { useQRMenu } from "../hooks/useQRMenu";
+import { logPublicQrScan } from "../services/qrMenuService";
 import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/PublicQrCheckoutPanel";
 import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrCartPanel";
 import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart";
@@ -41,6 +42,17 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
 
+  useEffect(() => {
+    if (!checkout.tableNumberFromQr || !checkout.tableNumber || !checkout.qrToken) return;
+    void logPublicQrScan({
+      restaurantSlug,
+      tableNumber: checkout.tableNumber,
+      qrToken: checkout.qrToken,
+    }).catch(() => {
+      // Scan analytics must never block public ordering.
+    });
+  }, [checkout.qrToken, checkout.tableNumber, checkout.tableNumberFromQr, restaurantSlug]);
+
   function getTableNumberValidationMessage(tableNumber: string) {
     const normalizedTableNumber = tableNumber.trim();
 
@@ -57,6 +69,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
     if (numericTableNumber < 1 || numericTableNumber > tableLimit) {
       return `Invalid table number. Please enter a table number between 1 and ${tableLimit}.`;
+    }
+
+    if (checkout.tableNumberFromQr && !checkout.qrToken) {
+      return "A valid table QR code is required to place this order.";
     }
 
     return undefined;
@@ -92,6 +108,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       const order = await submitPublicQrOrder({
         restaurantSlug,
         tableNumber: tableNum,
+        qrToken: checkout.qrToken,
         customerName: customerName || undefined,
         paymentMethod: checkout.paymentMethod,
         items: cart.items,

@@ -129,6 +129,11 @@
 .kd-item-name { font-size: 13px; font-weight: 600; color: var(--kd-text); flex: 1; }
 .kd-item-price { font-size: 12px; color: var(--kd-muted); white-space: nowrap; }
 .kd-item-urgent-qty { background: var(--kd-urgent-bg); color: var(--kd-urgent); }
+.kd-added-items { margin-top: 8px; padding: 10px; border: 1px solid rgba(217,119,6,0.35); border-radius: 8px; background: #fffbeb; }
+.kd-added-header { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; }
+.kd-added-header strong { color: #92400e; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; }
+.kd-added-header span { color: #a16207; font-size: 11px; font-weight: 700; }
+.kd-item-row.kd-item-added { padding: 6px; border: 1px solid rgba(217,119,6,0.24); border-radius: 7px; background: #fff7ed; }
 
 .kd-ticket-footer { padding: 10px 12px; border-top: 1px solid var(--kd-border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .kd-ticket-total { font-size: 13px; font-weight: 800; color: var(--kd-text); }

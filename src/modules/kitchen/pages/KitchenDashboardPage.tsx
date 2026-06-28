@@ -14,6 +14,9 @@ function elapsedMin(iso: string | null) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 }
 function fmtElapsed(min: number) { return min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${min % 60}m`; }
+function timeValue(iso: string | null) {
+  return iso ? new Date(iso).getTime() : 0;
+}
 
 function useNow() {
   const [t, setT] = useState(new Date());
@@ -27,14 +30,22 @@ type OrderRow = {
   payment_method: string | null; total_price: number | string; created_at: string;
   payment_verified_at: string | null; preparation_started_at: string | null; ready_marked_at: string | null;
 };
-type ItemRow = { id: string; order_id: string; quantity: number; price: number | string; menu_items?: {name?: string|null}|{name?: string|null}[]|null; };
+type ItemRow = {
+  id: string;
+  order_id: string;
+  quantity: number;
+  price: number | string;
+  notes?: string | null;
+  appended_at?: string | null;
+  menu_items?: {name?: string|null}|{name?: string|null}[]|null;
+};
 
 function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = []): KitchenOrder {
   return { id: row.id, status: row.status as KitchenOrder["status"], customerName: row.customer_name, tableNumber: row.table_number, paymentMethod: row.payment_method, totalPrice: Number(row.total_price), createdAt: row.created_at, paymentVerifiedAt: row.payment_verified_at, preparationStartedAt: row.preparation_started_at, readyMarkedAt: row.ready_marked_at, items };
 }
 function normalizeItem(row: ItemRow): KitchenOrderItem {
   const mi = row.menu_items; const name = Array.isArray(mi) ? (mi[0]?.name ?? "Item") : (mi?.name ?? "Item");
-  return { id: row.id, orderId: row.order_id, name, quantity: row.quantity, price: Number(row.price) };
+  return { id: row.id, orderId: row.order_id, name, quantity: row.quantity, price: Number(row.price), notes: row.notes ?? null, appendedAt: row.appended_at ?? null };
 }
 
 // ─── Timer label ─────────────────────────────────────────────────────────────
@@ -54,6 +65,13 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
   const isUrgent = elapsed >= 25;
   const isWarning = elapsed >= 15 && !isUrgent;
   const isBusy = actionId === order.id;
+  const originalItems = order.items.filter((item) => !item.appendedAt);
+  const appendedItems = order.items.filter((item) => item.appendedAt);
+  const latestAppendTime = appendedItems.reduce<string | null>((latest, item) => {
+    if (!item.appendedAt) return latest;
+    if (!latest || item.appendedAt > latest) return item.appendedAt;
+    return latest;
+  }, null);
 
   return (
     <div className={`kd-ticket${isUrgent ? " urgent" : isWarning ? " warning-age" : ""}`}>
@@ -89,7 +107,7 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
       <div className="kd-ticket-items">
         {order.items.length === 0
           ? <div style={{ fontSize: 12, color: "var(--kd-muted)" }}>No item data</div>
-          : order.items.map((item) => (
+          : originalItems.map((item) => (
               <div key={item.id} className="kd-item-row">
                 <div className={`kd-item-qty${isUrgent ? " kd-item-urgent-qty" : ""}`}>{item.quantity}</div>
                 <div className="kd-item-name">{item.name}</div>
@@ -97,6 +115,21 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
               </div>
             ))
         }
+        {appendedItems.length > 0 && (
+          <div className="kd-added-items">
+            <div className="kd-added-header">
+              <strong>NEW ITEMS ADDED</strong>
+              {latestAppendTime && <span>Added at {fmtTime(latestAppendTime)}</span>}
+            </div>
+            {appendedItems.map((item) => (
+              <div key={item.id} className="kd-item-row kd-item-added">
+                <div className={`kd-item-qty${isUrgent ? " kd-item-urgent-qty" : ""}`}>{item.quantity}</div>
+                <div className="kd-item-name">{item.name}</div>
+                <div className="kd-item-price">{fmtMoney(item.price * item.quantity)}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="kd-ticket-footer">
@@ -134,11 +167,16 @@ function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, onComple
   title: string; orders: KitchenOrder[]; actionId: string | null;
   onStart?: (id: string) => void; onReady?: (id: string) => void; onComplete?: (id: string) => void; now: Date;
 }) {
-  // urgent orders first
   const sorted = [...orders].sort((a, b) => {
-    const ae = elapsedMin(a.preparationStartedAt ?? a.paymentVerifiedAt ?? a.createdAt);
-    const be = elapsedMin(b.preparationStartedAt ?? b.paymentVerifiedAt ?? b.createdAt);
-    return be - ae;
+    if (colKey === "new") {
+      return timeValue(b.createdAt) - timeValue(a.createdAt);
+    }
+
+    if (colKey === "preparing") {
+      return timeValue(a.preparationStartedAt ?? a.createdAt) - timeValue(b.preparationStartedAt ?? b.createdAt);
+    }
+
+    return timeValue(a.readyMarkedAt ?? a.createdAt) - timeValue(b.readyMarkedAt ?? b.createdAt);
   });
 
   return (
@@ -201,7 +239,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
         const itemMap = new Map<string, KitchenOrderItem[]>();
         if (ids.length > 0) {
           const { data: ir } = await supabase.from("order_items")
-            .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
             .eq("restaurant_id", restaurantId).in("order_id", ids);
           for (const row of (ir ?? []) as ItemRow[]) {
             const item = normalizeItem(row);
@@ -224,11 +262,15 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
           const row = payload.new as OrderRow;
           if (!["paid","preparing","ready"].includes(row.status)) { setOrders((p) => p.filter((o) => o.id !== row.id)); return; }
           const { data: ir } = await supabase.from("order_items")
-            .select("id,order_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
             .eq("restaurant_id", restaurantId).eq("order_id", row.id);
           const items = (ir ?? []).map((r) => normalizeItem(r as ItemRow));
           const updated = normalizeOrder(row, items);
-          setOrders((p) => { const i = p.findIndex((o) => o.id === updated.id); if (i >= 0) { const n = [...p]; n[i] = updated; return n; } return [...p, updated]; });
+          setOrders((p) => {
+            const i = p.findIndex((o) => o.id === updated.id);
+            if (i >= 0) { const n = [...p]; n[i] = updated; return n; }
+            return updated.status === "paid" ? [updated, ...p] : [...p, updated];
+          });
         }).subscribe();
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
