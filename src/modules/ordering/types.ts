@@ -3,6 +3,7 @@ export type OrderingRestaurant = {
   name: string;
   slug: string;
   logo_url?: string | null;
+  cover_url?: string | null;
 };
 
 export type OrderingCategory = {

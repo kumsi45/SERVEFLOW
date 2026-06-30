@@ -5,6 +5,7 @@ export type Restaurant = {
   table_count?: number | null;
   total_tables?: number | null;
   logo_url?: string | null;
+  cover_url?: string | null;
 };
 
 export type MenuCategory = {

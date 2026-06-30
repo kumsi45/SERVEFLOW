@@ -1,6 +1,13 @@
 import { supabase } from "../../../core/database";
 import type { CartLine, OrderingMenuData, SubmittedOrder } from "../types";
 
+type SubmitPublicOrderInput = {
+  restaurantSlug: string;
+  tableNumber: string;
+  qrToken: string;
+  cartLines: CartLine[];
+};
+
 function isOrderingMenuData(value: unknown): value is OrderingMenuData {
   if (!value || typeof value !== "object") {
     return false;
@@ -70,6 +77,40 @@ export async function submitCustomerOrder(
 
   const { data, error } = await supabase.rpc("create_customer_order", {
     target_restaurant_slug: restaurantSlug,
+    requested_items: requestedItems,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!isSubmittedOrder(data)) {
+    throw new Error("Order could not be confirmed.");
+  }
+
+  return {
+    ...data,
+    total_price: Number(data.total_price),
+  };
+}
+
+export async function submitPublicQrCustomerOrder({
+  restaurantSlug,
+  tableNumber,
+  qrToken,
+  cartLines,
+}: SubmitPublicOrderInput): Promise<SubmittedOrder> {
+  const requestedItems = cartLines.map((line) => ({
+    menu_item_id: line.menuItemId,
+    quantity: line.quantity,
+  }));
+
+  const { data, error } = await supabase.rpc("create_public_qr_order", {
+    target_restaurant_slug: restaurantSlug,
+    table_number: tableNumber,
+    qr_token: qrToken,
+    customer_name: "",
+    selected_payment_method: "Cash",
     requested_items: requestedItems,
   });
 

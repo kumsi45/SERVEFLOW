@@ -1,44 +1,53 @@
 import type { MenuItem } from "../types";
-import { formatETBPrice, formatUSDApproximation, getMenuItemBadge, getMenuItemRating } from "./menuPresentation";
+import { formatETBPrice } from "./menuPresentation";
 
 type MenuItemCardProps = {
   item: MenuItem;
+  categoryName?: string;
   onAddToCart?: (item: MenuItem) => void;
   onOpenFoodInfo?: (item: MenuItem) => void;
 };
 
-export function MenuItemCard({ item, onAddToCart, onOpenFoodInfo }: MenuItemCardProps) {
-  const badge = getMenuItemBadge(item.name);
-
+export function MenuItemCard({
+  item,
+  categoryName = "House menu",
+  onAddToCart,
+  onOpenFoodInfo,
+}: MenuItemCardProps) {
   return (
-    <article className={item.available ? "menu-item" : "menu-item unavailable"}>
+    <article
+      className={item.available ? "menu-item" : "menu-item unavailable"}
+      role={onOpenFoodInfo ? "button" : undefined}
+      tabIndex={onOpenFoodInfo ? 0 : undefined}
+      onClick={() => onOpenFoodInfo?.(item)}
+      onKeyDown={(event) => {
+        if (!onOpenFoodInfo || (event.key !== "Enter" && event.key !== " ")) return;
+        event.preventDefault();
+        onOpenFoodInfo(item);
+      }}
+    >
       <div className="menu-item-image-wrap">
         {item.image_url ? (
-          <img className="menu-item-image" src={item.image_url} alt="" loading="lazy" />
+          <img className="menu-item-image" src={item.image_url} alt={item.name} loading="lazy" />
         ) : (
           <div className="menu-item-image placeholder" aria-hidden="true" />
         )}
-        {badge ? <span className="dish-badge">{badge}</span> : null}
       </div>
       <div className="menu-item-copy">
         <div className="menu-item-heading">
           <div>
             <h3>{item.name}</h3>
-            <div className="menu-item-rating">
-              <span aria-hidden="true">⭐</span> {getMenuItemRating(item.name)}
-            </div>
           </div>
           <div className="menu-item-price">
             <strong>{formatETBPrice(Number(item.price))}</strong>
-            <span>{formatUSDApproximation(Number(item.price))}</span>
           </div>
         </div>
-        <p>{item.description || "Freshly prepared by the restaurant."}</p>
+        {item.description ? <p>{item.description}</p> : null}
         <div className="menu-item-footer">
           <span className={item.available ? "availability available" : "availability"}>
             {item.available ? "Available today" : "Unavailable"}
           </span>
-          <span className="restaurant-chip">House menu</span>
+          <span className="restaurant-chip">{categoryName}</span>
         </div>
         {onAddToCart ? (
           <div className="menu-item-actions">
@@ -46,7 +55,10 @@ export function MenuItemCard({ item, onAddToCart, onOpenFoodInfo }: MenuItemCard
               <button
                 className="food-info-icon-button"
                 type="button"
-                onClick={() => onOpenFoodInfo(item)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenFoodInfo(item);
+                }}
                 aria-label={`Open food information for ${item.name}`}
               >
                 i
@@ -55,7 +67,10 @@ export function MenuItemCard({ item, onAddToCart, onOpenFoodInfo }: MenuItemCard
             <button
               className="menu-item-cart-button"
               type="button"
-              onClick={() => onAddToCart(item)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddToCart(item);
+              }}
               disabled={!item.available}
             >
               Add

@@ -1,17 +1,25 @@
+import { useEffect, useState } from "react";
 import type { MenuItem } from "../types";
-import { getFoodInfo } from "./foodInfoPresentation";
+import { formatETBPrice } from "./menuPresentation";
 
 type FoodInfoPanelProps = {
   item?: MenuItem;
   onClose: () => void;
+  onAddToCart?: (item: MenuItem, quantity: number, notes?: string) => void;
 };
 
-export function FoodInfoPanel({ item, onClose }: FoodInfoPanelProps) {
+export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps) {
+  const [quantity, setQuantity] = useState(1);
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setQuantity(1);
+    setNotes("");
+  }, [item?.id]);
+
   if (!item) {
     return null;
   }
-
-  const foodInfo = getFoodInfo(item);
 
   return (
     <div className="food-info-layer" role="presentation">
@@ -22,61 +30,64 @@ export function FoodInfoPanel({ item, onClose }: FoodInfoPanelProps) {
         onClick={onClose}
       />
       <aside className="food-info-panel" aria-label={`${item.name} food information`}>
-        <div className="food-info-heading">
-          <div>
-            <p className="eyebrow">Food Info</p>
-            <h2>{item.name}</h2>
-          </div>
+        <div className="food-info-media">
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} />
+          ) : (
+            <div className="food-info-placeholder" aria-hidden="true" />
+          )}
           <button className="panel-close-button" type="button" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <section className="food-info-section">
-          <h3>Description</h3>
-          <p>{foodInfo.description}</p>
-        </section>
+        <div className="food-info-heading">
+          <div>
+            <p className="eyebrow">Item Details</p>
+            <h2>{item.name}</h2>
+            {item.description ? <p>{item.description}</p> : null}
+          </div>
+          <strong>{formatETBPrice(Number(item.price))}</strong>
+        </div>
 
-        <section className="food-info-section">
-          <h3>Ingredients</h3>
-          {foodInfo.ingredients.length > 0 ? (
-            <ul className="food-info-list">
-              {foodInfo.ingredients.map((ingredient) => (
-                <li key={ingredient}>{ingredient}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>Ingredient information unavailable.</p>
-          )}
-        </section>
+        <label className="food-info-notes">
+          <span>Notes for the kitchen</span>
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="No onions, extra spice, allergy notes..."
+            maxLength={160}
+          />
+        </label>
 
-        <section className="food-info-section">
-          <h3>Allergens</h3>
-          {foodInfo.allergens.length > 0 ? (
-            <div className="food-info-chip-row">
-              {foodInfo.allergens.map((allergen) => (
-                <span className="food-info-chip warning" key={allergen}>
-                  {allergen}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p>No known allergen information.</p>
-          )}
-        </section>
-
-        {foodInfo.dietaryLabels.length > 0 ? (
-          <section className="food-info-section">
-            <h3>Dietary Labels</h3>
-            <div className="food-info-chip-row">
-              {foodInfo.dietaryLabels.map((label) => (
-                <span className="food-info-chip" key={label}>
-                  {label}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <div className="food-info-order-row">
+          <div className="quantity-stepper" aria-label="Quantity">
+            <button
+              type="button"
+              onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+              disabled={quantity <= 1}
+              aria-label="Decrease quantity"
+            >
+              -
+            </button>
+            <span>{quantity}</span>
+            <button
+              type="button"
+              onClick={() => setQuantity((current) => Math.min(99, current + 1))}
+              aria-label="Increase quantity"
+            >
+              +
+            </button>
+          </div>
+          <button
+            className="food-info-add-button"
+            type="button"
+            disabled={!item.available}
+            onClick={() => onAddToCart?.(item, quantity, notes)}
+          >
+            {item.available ? "Add To Cart" : "Unavailable"}
+          </button>
+        </div>
       </aside>
     </div>
   );

@@ -115,6 +115,7 @@ type SubmittedCashierOrder = {
   total_price: number | string;
   table_number: string | null;
   payment_method: string | null;
+  payment_verified_at?: string | null;
   created_at: string;
 };
 
@@ -124,6 +125,7 @@ type CashierOrderPayload = {
   total_price: number | string;
   table_number: string | null;
   payment_method: string | null;
+  payment_verified_at?: string | null;
   created_at: string;
 };
 
@@ -195,7 +197,7 @@ function normalizeSubmittedOrder(row: SubmittedCashierOrder): CashierOrder {
     paymentMethod: row.payment_method,
     totalPrice: Number(row.total_price),
     createdAt: row.created_at,
-    paymentVerifiedAt: null,
+    paymentVerifiedAt: row.payment_verified_at ?? null,
     items: [],
   };
 }
@@ -581,8 +583,8 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const activeOrders = useMemo(() => orders.filter(isActiveOrder), [orders]);
   const awaitingCollection = useMemo(() => orders.filter(isAwaitingCollection), [orders]);
   const completedOrders = useMemo(() => orders.filter((order) => order.status === "completed"), [orders]);
-  const cashCollectedToday = useMemo(() => verifiedOrders.filter(isCashPayment).reduce((sum, order) => sum + order.totalPrice, 0), [verifiedOrders]);
-  const digitalCollectedToday = useMemo(() => verifiedOrders.filter(isDigitalPayment).reduce((sum, order) => sum + order.totalPrice, 0), [verifiedOrders]);
+  const cashCollectedToday = activeShift?.cash_collected ?? verifiedOrders.filter(isCashPayment).reduce((sum, order) => sum + order.totalPrice, 0);
+  const digitalCollectedToday = activeShift?.digital_collected ?? verifiedOrders.filter(isDigitalPayment).reduce((sum, order) => sum + order.totalPrice, 0);
   const occupiedTableNumbers = useMemo(() => new Set(activeOrders.map((order) => order.tableNumber).filter(Boolean)), [activeOrders]);
   const awaitingPaymentTableNumbers = useMemo(() => new Set(pendingPayments.map((order) => order.tableNumber).filter(Boolean)), [pendingPayments]);
   const cartTotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);

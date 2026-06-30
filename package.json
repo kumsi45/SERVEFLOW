@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "audit:setup-wizard": "node supabase/setup-wizard-audit.cjs",
+    "audit:owner-table-sync": "node supabase/owner-table-sync-audit.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

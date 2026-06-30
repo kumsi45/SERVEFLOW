@@ -72,6 +72,10 @@ type OdOrder = {
 
 type OdStaff = ManagedStaffMember;
 
+function isOperationalStaff(member: Pick<OdStaff, "role">) {
+  return member.role !== "owner";
+}
+
 type OdMenuItem = {
   id: string;
   name: string;
@@ -116,6 +120,7 @@ type RestaurantConfig = {
   total_tables: number;
   profile: JsonRecord;
   business_hours: JsonRecord;
+  kitchen_settings: JsonRecord;
   ordering_settings: JsonRecord;
   branding: JsonRecord;
   notification_settings: JsonRecord;
@@ -276,6 +281,15 @@ function jsonBool(value: JsonRecord, key: string, fallback = false) {
   return typeof raw === "boolean" ? raw : fallback;
 }
 
+function jsonStringArray(value: JsonRecord, key: string): string[] {
+  const raw = value[key];
+  return Array.isArray(raw) ? raw.filter((entry): entry is string => typeof entry === "string") : [];
+}
+
+function buildBrandingAssetPath(restaurantId: string, assetType: "logo" | "cover") {
+  return `${restaurantId}/branding/${assetType}`;
+}
+
 function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: string): RestaurantConfig {
   return {
     id: String(row.id),
@@ -284,6 +298,7 @@ function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: strin
     total_tables: Number(row.total_tables ?? row.table_count ?? 20),
     profile: toJsonRecord(row.profile),
     business_hours: toJsonRecord(row.business_hours),
+    kitchen_settings: toJsonRecord(row.kitchen_settings),
     ordering_settings: toJsonRecord(row.ordering_settings),
     branding: toJsonRecord(row.branding),
     notification_settings: toJsonRecord(row.notification_settings),
@@ -396,6 +411,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .from("restaurant_staff")
               .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
               .eq("restaurant_id", restaurantId)
+              .neq("role", "owner")
               .order("created_at", { ascending: true }),
             supabase
               .from("menu_items")
@@ -410,7 +426,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .order("name", { ascending: true }),
             supabase
               .from("restaurants")
-              .select("id,name,slug,total_tables,table_count,profile,business_hours,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+              .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
               .eq("id", restaurantId)
               .maybeSingle(),
             supabase
@@ -603,6 +619,16 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             setActiveShifts((data ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
           });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurantId}` }, () => {
+        void refreshRestaurantConfig().catch((refreshError) => {
+          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh table configuration.");
+        });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "restaurants", filter: `id=eq.${restaurantId}` }, () => {
+        void refreshRestaurantConfig().catch((refreshError) => {
+          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh restaurant configuration.");
+        });
+      })
       .subscribe();
 
     return () => {
@@ -622,7 +648,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "pending_payment"), [orders]);
   const completedToday = useMemo(() => orders.filter((order) => order.status === "completed" && (order.completed_at ?? order.created_at) >= todayStart), [orders, todayStart]);
   const avgOrderValue = Math.round(dashboardReports.today.average_order_value);
-  const activeStaff = staff.filter((member) => member.active).length;
+  const activeStaff = staff.filter((member) => isOperationalStaff(member) && member.active).length;
   const kitchenStaff = staff.filter((member) => member.role === "kitchen" && member.active);
   const cashierStaff = staff.filter((member) => member.role === "cashier" && member.active);
 
@@ -693,6 +719,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
       .from("restaurant_staff")
       .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
       .eq("restaurant_id", restaurantId)
+      .neq("role", "owner")
       .order("created_at", { ascending: true });
 
     if (staffError) {
@@ -728,7 +755,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     const [{ data: restaurantData, error: restaurantError }, { data: tableData, error: tableError }] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id,name,slug,total_tables,table_count,profile,business_hours,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+        .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
         .eq("id", restaurantId)
         .maybeSingle(),
       supabase
@@ -1540,7 +1567,7 @@ type StaffModalState =
 
 function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: StaffPageProps) {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "cashier" | "kitchen">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "cashier" | "kitchen">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [modal, setModal] = useState<StaffModalState>(null);
   const [formName, setFormName] = useState("");
@@ -1630,17 +1657,25 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
     }, modal.mode === "create" ? "Staff account created." : "Staff profile updated.");
   }
 
-  const filtered = staff.filter((member) => {
+  const operationalStaff = staff.filter(isOperationalStaff);
+  const operationalStaffIds = new Set(operationalStaff.map((member) => member.id));
+  const operationalStaffEmails = new Set(operationalStaff.map((member) => member.email).filter((email): email is string => Boolean(email)));
+  const staffActivity = activity.filter((entry) =>
+    (entry.target_staff_id !== null && operationalStaffIds.has(entry.target_staff_id))
+    || (entry.target_staff_email !== null && operationalStaffEmails.has(entry.target_staff_email))
+  );
+
+  const filtered = operationalStaff.filter((member) => {
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? member.active : !member.active);
     const haystack = `${member.display_name} ${member.email ?? ""} ${member.role}`.toLowerCase();
     return matchesRole && matchesStatus && haystack.includes(search.trim().toLowerCase());
   });
 
-  const totalStaff = staff.length;
-  const activeStaff = staff.filter((member) => member.active).length;
-  const cashierCount = staff.filter((member) => member.role === "cashier").length;
-  const kitchenCount = staff.filter((member) => member.role === "kitchen").length;
+  const totalStaff = operationalStaff.length;
+  const activeStaff = operationalStaff.filter((member) => member.active).length;
+  const cashierCount = operationalStaff.filter((member) => member.role === "cashier").length;
+  const kitchenCount = operationalStaff.filter((member) => member.role === "kitchen").length;
 
   return (
     <div className="od-page">
@@ -1684,7 +1719,6 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff" aria-label="Search staff" />
               <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)} aria-label="Filter by role">
                 <option value="all">All roles</option>
-                <option value="owner">Owner</option>
                 <option value="cashier">Cashier</option>
                 <option value="kitchen">Kitchen</option>
               </select>
@@ -1787,7 +1821,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
               </tbody>
             </table>
           </div>
-          <div className="od-table-footer">Showing {filtered.length} of {staff.length} members</div>
+          <div className="od-table-footer">Showing {filtered.length} of {operationalStaff.length} members</div>
         </div>
 
         <div className="od-side-stack">
@@ -1799,10 +1833,10 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
           <div className="od-performance-card">
             <div className="od-performance-label">Recent Activity</div>
             <div className="od-audit-list">
-              {activity.length === 0 ? (
+              {staffActivity.length === 0 ? (
                 <div className="od-empty-sub">No staff activity yet</div>
               ) : (
-                activity.slice(0, 8).map((entry) => (
+                staffActivity.slice(0, 8).map((entry) => (
                   <div key={entry.id} className="od-audit-row">
                     <div className="od-audit-action">{staffActionLabel(entry.action)}</div>
                     <div className="od-audit-meta">
@@ -3221,37 +3255,53 @@ type SettingsFormState = {
   phone: string;
   email: string;
   address: string;
+  description: string;
   timezone: string;
   currency: string;
   opensAt: string;
   closesAt: string;
+  closedDays: string[];
+  kitchenMode: "single" | "advanced" | "skipped";
   acceptsQrOrders: boolean;
   autoAcceptOrders: boolean;
   serviceCharge: string;
   primaryColor: string;
   logoUrl: string;
+  coverUrl: string;
   emailNotifications: boolean;
   smsNotifications: boolean;
   requireStrongPasswords: boolean;
   sessionTimeoutMinutes: string;
 };
 
+const BUSINESS_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 function configToSettingsForm(config: RestaurantConfig | null, fallbackName: string): SettingsFormState {
+  const kitchenMode = jsonBool(config?.kitchen_settings ?? {}, "skipped", false)
+    ? "skipped"
+    : jsonString(config?.kitchen_settings ?? {}, "mode", "single") === "advanced"
+      ? "advanced"
+      : "single";
+
   return {
     name: config?.name ?? fallbackName,
     totalTables: String(config?.total_tables ?? 20),
     phone: jsonString(config?.profile ?? {}, "phone"),
     email: jsonString(config?.profile ?? {}, "email"),
     address: jsonString(config?.profile ?? {}, "address"),
+    description: jsonString(config?.profile ?? {}, "description"),
     timezone: jsonString(config?.profile ?? {}, "timezone", "Africa/Nairobi"),
     currency: jsonString(config?.profile ?? {}, "currency", "ETB"),
     opensAt: jsonString(config?.business_hours ?? {}, "opens_at", "08:00"),
     closesAt: jsonString(config?.business_hours ?? {}, "closes_at", "22:00"),
+    closedDays: jsonStringArray(config?.business_hours ?? {}, "closed_days"),
+    kitchenMode,
     acceptsQrOrders: jsonBool(config?.ordering_settings ?? {}, "accepts_qr_orders", true),
     autoAcceptOrders: jsonBool(config?.ordering_settings ?? {}, "auto_accept_orders", false),
     serviceCharge: String((config?.ordering_settings?.service_charge_percent as number | undefined) ?? 0),
     primaryColor: jsonString(config?.branding ?? {}, "primary_color", "#0f766e"),
     logoUrl: jsonString(config?.branding ?? {}, "logo_url"),
+    coverUrl: jsonString(config?.branding ?? {}, "cover_url"),
     emailNotifications: jsonBool(config?.notification_settings ?? {}, "email_notifications", true),
     smsNotifications: jsonBool(config?.notification_settings ?? {}, "sms_notifications", false),
     requireStrongPasswords: jsonBool(config?.security_settings ?? {}, "require_strong_passwords", true),
@@ -3274,6 +3324,7 @@ function SettingsPage({
 }) {
   const [form, setForm] = useState<SettingsFormState>(() => configToSettingsForm(config, fallbackRestaurantName));
   const [working, setWorking] = useState(false);
+  const [assetUploading, setAssetUploading] = useState<"logo" | "cover" | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
@@ -3303,6 +3354,44 @@ function SettingsPage({
     setForm((previous) => ({ ...previous, [key]: value }));
   }
 
+  function toggleClosedDay(day: string) {
+    setForm((previous) => ({
+      ...previous,
+      closedDays: previous.closedDays.includes(day)
+        ? previous.closedDays.filter((entry) => entry !== day)
+        : [...previous.closedDays, day],
+    }));
+  }
+
+  async function uploadBrandingAsset(assetType: "logo" | "cover", file: File | null) {
+    if (!file) return;
+
+    try {
+      setAssetUploading(assetType);
+      setSettingsError(null);
+      setNotice(null);
+
+      if (!file.type.startsWith("image/")) throw new Error("Branding asset must be an image file.");
+      if (file.size > 5 * 1024 * 1024) throw new Error("Branding asset must be 5 MB or smaller.");
+
+      const path = buildBrandingAssetPath(restaurantId, assetType);
+      const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, file, {
+        cacheControl: "0",
+        upsert: true,
+        contentType: file.type,
+      });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
+      if (assetType === "logo") updateField("logoUrl", data.publicUrl);
+      if (assetType === "cover") updateField("coverUrl", data.publicUrl);
+    } catch (uploadError) {
+      setSettingsError(uploadError instanceof Error ? uploadError.message : "Could not upload branding asset.");
+    } finally {
+      setAssetUploading(null);
+    }
+  }
+
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
@@ -3324,12 +3413,25 @@ function SettingsPage({
           phone: form.phone.trim(),
           email: form.email.trim(),
           address: form.address.trim(),
+          description: form.description.trim(),
           timezone: form.timezone.trim(),
           currency: form.currency.trim(),
         },
         business_hours_payload: {
+          version: 1,
           opens_at: form.opensAt,
           closes_at: form.closesAt,
+          closed_days: form.closedDays,
+          schedules: [{
+            name: "Default",
+            opens_at: form.opensAt,
+            closes_at: form.closesAt,
+            closed_days: form.closedDays,
+          }],
+        },
+        kitchen_settings_payload: {
+          mode: form.kitchenMode === "advanced" ? "advanced" : "single",
+          skipped: form.kitchenMode === "skipped",
         },
         ordering_settings_payload: {
           accepts_qr_orders: form.acceptsQrOrders,
@@ -3339,6 +3441,7 @@ function SettingsPage({
         branding_payload: {
           primary_color: form.primaryColor,
           logo_url: form.logoUrl.trim(),
+          cover_url: form.coverUrl.trim(),
         },
         notification_settings_payload: {
           email_notifications: form.emailNotifications,
@@ -3351,7 +3454,7 @@ function SettingsPage({
       });
       if (error) throw new Error(error.message);
       await onSettingsChanged();
-      setNotice("Settings saved and table QR records synchronized.");
+      setNotice("Settings saved.");
     } catch (saveError) {
       setSettingsError(saveError instanceof Error ? saveError.message : "Could not save settings.");
     } finally {
@@ -3393,16 +3496,17 @@ function SettingsPage({
                 <label>Email<input type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} disabled={working} /></label>
                 <label>Currency<input value={form.currency} onChange={(event) => updateField("currency", event.target.value)} disabled={working} /></label>
                 <label className="wide">Address<input value={form.address} onChange={(event) => updateField("address", event.target.value)} disabled={working} /></label>
+                <label className="wide">Description<textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} disabled={working} /></label>
                 <label>Timezone<input value={form.timezone} onChange={(event) => updateField("timezone", event.target.value)} disabled={working} /></label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Table Management</div><div className="od-card-subtitle">Controls restaurant_tables records and table validation during ordering.</div></div></div>
+              <div className="od-card-header"><div><div className="od-card-title">Table Management</div><div className="od-card-subtitle">Updates the configured table count used for table validation.</div></div></div>
               <div className="od-settings-grid compact">
                 <label>Total Tables<input type="number" min="1" max="500" value={form.totalTables} onChange={(event) => updateField("totalTables", event.target.value)} disabled={working} /></label>
                 <div className="od-setting-stat"><strong>{activeTables.length}</strong><span>Active table records</span></div>
-                <div className="od-setting-stat"><strong>100%</strong><span>QR coverage after save</span></div>
+                <div className="od-setting-stat"><strong>{config?.total_tables ?? form.totalTables}</strong><span>Configured tables</span></div>
               </div>
             </section>
 
@@ -3411,6 +3515,25 @@ function SettingsPage({
               <div className="od-settings-grid compact">
                 <label>Opens At<input type="time" value={form.opensAt} onChange={(event) => updateField("opensAt", event.target.value)} disabled={working} /></label>
                 <label>Closes At<input type="time" value={form.closesAt} onChange={(event) => updateField("closesAt", event.target.value)} disabled={working} /></label>
+                <div className="od-settings-day-group">
+                  {BUSINESS_DAYS.map((day) => (
+                    <label className="od-toggle-row" key={day}>
+                      <input type="checkbox" checked={form.closedDays.includes(day)} onChange={() => toggleClosedDay(day)} disabled={working} />
+                      {day} closed
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Kitchen Configuration</div><div className="od-card-subtitle">Stores the onboarding kitchen preference only.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label>Kitchen Setup<select value={form.kitchenMode} onChange={(event) => updateField("kitchenMode", event.target.value as SettingsFormState["kitchenMode"])} disabled={working}>
+                  <option value="single">Single Kitchen</option>
+                  <option value="advanced">Multiple Kitchen Stations Preference</option>
+                  <option value="skipped">Skipped</option>
+                </select></label>
               </div>
             </section>
 
@@ -3427,16 +3550,19 @@ function SettingsPage({
               <div className="od-card-header"><div><div className="od-card-title">Branding</div><div className="od-card-subtitle">Public menu visual identity.</div></div></div>
               <div className="od-settings-grid compact">
                 <label>Primary Color<input type="color" value={form.primaryColor} onChange={(event) => updateField("primaryColor", event.target.value)} disabled={working} /></label>
+                <label>Logo Image<input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
+                <label>Cover Image<input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
                 <label className="wide">Logo URL<input value={form.logoUrl} onChange={(event) => updateField("logoUrl", event.target.value)} disabled={working} /></label>
+                <label className="wide">Cover URL<input value={form.coverUrl} onChange={(event) => updateField("coverUrl", event.target.value)} disabled={working} /></label>
               </div>
             </section>
           </div>
 
           <div className="od-settings-side">
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Every active table has a generated public ordering code.</div></div></div>
+              <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Shows existing active table ordering codes.</div></div></div>
               <div className="od-qr-list">
-                {activeTables.length === 0 ? <div className="od-empty compact">Save table settings to generate QR codes.</div> : activeTables.slice(0, 12).map((table) => (
+                {activeTables.length === 0 ? <div className="od-empty compact">No active table QR codes yet.</div> : activeTables.slice(0, 12).map((table) => (
                   <div className="od-qr-row" key={table.id}>
                     {qrCodes[table.table_number] ? <img src={qrCodes[table.table_number]} alt="" /> : <div className="od-qr-placeholder">QR</div>}
                     <div><strong>{table.label}</strong><span>{table.qr_path}</span></div>

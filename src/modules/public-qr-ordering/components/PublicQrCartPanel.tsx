@@ -92,7 +92,11 @@ export function PublicQrCartPanel({
           </button>
         </>
       ) : (
-        <p className="public-cart-empty">No cart items yet. Start adding your favorite dishes.</p>
+        <div className="public-cart-empty">
+          <div className="empty-state-icon" aria-hidden="true">+</div>
+          <h3>Your cart is empty</h3>
+          <p>Start with a favorite dish, then review everything here before placing your order.</p>
+        </div>
       )}
     </aside>
   );

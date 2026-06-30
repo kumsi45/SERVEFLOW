@@ -12,6 +12,7 @@ type PublicQrCheckoutPanelProps = {
   paymentMethod: PublicQrPaymentMethod | "";
   submitting: boolean;
   submitError?: string;
+  restaurantName?: string;
   tableNumber: string;
   tableCount?: number | null;
   tableNumberFromQr: boolean;
@@ -60,6 +61,7 @@ export function PublicQrCheckoutPanel({
   paymentMethod,
   submitting,
   submitError,
+  restaurantName,
   tableNumber,
   tableCount,
   tableNumberFromQr,
@@ -83,6 +85,7 @@ export function PublicQrCheckoutPanel({
         <div>
           <p className="eyebrow">Review Order</p>
           <h2>Checkout</h2>
+          {restaurantName ? <p>{restaurantName}</p> : null}
         </div>
         <div className="checkout-heading-actions">
           {tableNumber
@@ -210,7 +213,14 @@ export function PublicQrCheckoutPanel({
           disabled={!canSubmit}
           onClick={onSubmit}
         >
-          {submitting ? "Placing order..." : "Place order"}
+          {submitting ? (
+            <span className="submit-progress">
+              <span className="status-pulse" aria-hidden="true" />
+              Sending order...
+            </span>
+          ) : (
+            "Place Order"
+          )}
         </button>
       </div>
     </section>

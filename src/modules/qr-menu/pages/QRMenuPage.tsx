@@ -44,6 +44,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
   useEffect(() => {
     if (!checkout.tableNumberFromQr || !checkout.tableNumber || !checkout.qrToken) return;
+
     void logPublicQrScan({
       restaurantSlug,
       tableNumber: checkout.tableNumber,
@@ -78,12 +79,14 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     return undefined;
   }
 
-  function addItemToCart(item: MenuItem) {
+  function addItemToCart(item: MenuItem, quantity = 1, notes?: string) {
     setSubmittedOrder(undefined);
     cart.addItem({
       menuItemId: item.id,
       name: item.name,
       price: Number(item.price),
+      quantity,
+      notes,
     });
   }
 
@@ -127,7 +130,15 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   if (loading) {
     return (
       <main className="qr-menu-page">
-        <section className="menu-state">Loading menu...</section>
+        <section className="menu-loading" aria-label="Loading menu">
+          <div className="skeleton-hero" />
+          <div className="skeleton-controls" />
+          <div className="skeleton-grid">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className="skeleton-card" key={index} />
+            ))}
+          </div>
+        </section>
       </main>
     );
   }
@@ -145,14 +156,13 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
   return (
     <main className="qr-menu-page">
-      <RestaurantHeader restaurant={restaurant} />
+      <RestaurantHeader
+        restaurant={restaurant}
+        tableNumber={checkout.tableNumber}
+        tableNumberFromQr={checkout.tableNumberFromQr}
+      />
       <div className="qr-menu-shell">
         <div className="qr-menu-main">
-          <FeaturedDishes
-            items={items}
-            onAddToCart={addItemToCart}
-            onOpenFoodInfo={setFoodInfoItem}
-          />
           <section className="menu-controls">
             <MenuSearch value={searchTerm} onChange={setSearchTerm} />
             <CategoryFilter
@@ -161,6 +171,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               onChange={setActiveCategoryId}
             />
           </section>
+          <FeaturedDishes
+            items={items}
+            onAddToCart={addItemToCart}
+            onOpenFoodInfo={setFoodInfoItem}
+          />
           <section className="menu-content">
             {groups.length > 0 ? (
               groups.map((group) => (
@@ -173,8 +188,13 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               ))
             ) : (
               <div className="menu-state">
-                <h2>No menu items available</h2>
-                <p>Ask staff for today's specials.</p>
+                <div className="empty-state-icon" aria-hidden="true">SF</div>
+                <h2>{searchTerm ? "No matching dishes" : "No menu items available"}</h2>
+                <p>
+                  {searchTerm
+                    ? "Try another search or browse the categories above."
+                    : "Ask staff for today's specials."}
+                </p>
               </div>
             )}
           </section>
@@ -186,6 +206,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               displaySubtotal={cart.displaySubtotal}
               items={cart.items}
               paymentMethod={checkout.paymentMethod}
+              restaurantName={restaurant.name}
               submitting={submitting}
               submitError={submitError}
               tableNumber={checkout.tableNumber}
@@ -237,20 +258,41 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           }}
           aria-label="Open cart"
         >
-          <span aria-hidden="true">🛒</span>
+          <span aria-hidden="true">Cart</span>
           <strong>
-            {cart.itemCount} {cart.itemCount === 1 ? "Item" : "Items"} •{" "}
+            {cart.itemCount} {cart.itemCount === 1 ? "Item" : "Items"} -{" "}
             {formatETBPrice(cart.displaySubtotal)}
           </strong>
         </button>
       ) : null}
       {submittedOrder ? (
         <section className="public-order-confirmation" aria-label="Order confirmation">
-          <h2>Order placed</h2>
-          <p>Your order is {submittedOrder.status}. Total: {formatETBPrice(submittedOrder.total_price)}</p>
+          <div className="order-success-mark" aria-hidden="true">OK</div>
+          <p className="eyebrow">Order sent</p>
+          <h2>Order #{submittedOrder.order_id.slice(0, 8)}</h2>
+          <p>Your order has been sent. Please wait while the cashier confirms your order.</p>
+          <div className="order-waiting-card" aria-live="polite">
+            <span className="status-pulse" aria-hidden="true" />
+            <div>
+              <strong>Waiting for cashier approval...</strong>
+              <span>Status: {submittedOrder.status}</span>
+            </div>
+          </div>
+          <button className="track-order-button" type="button">
+            Track Order
+          </button>
+          <p className="order-total-note">Total: {formatETBPrice(submittedOrder.total_price)}</p>
         </section>
       ) : null}
-      <FoodInfoPanel item={foodInfoItem} onClose={() => setFoodInfoItem(undefined)} />
+      <FoodInfoPanel
+        item={foodInfoItem}
+        onClose={() => setFoodInfoItem(undefined)}
+        onAddToCart={(item, quantity, notes) => {
+          addItemToCart(item, quantity, notes);
+          setFoodInfoItem(undefined);
+          setCartVisible(true);
+        }}
+      />
     </main>
   );
 }

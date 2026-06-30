@@ -18,7 +18,7 @@ export function CategoryFilter({
         type="button"
         onClick={() => onChange("all")}
       >
-        All
+        <span>All</span>
       </button>
       {categories.map((category) => (
         <button
@@ -27,7 +27,7 @@ export function CategoryFilter({
           type="button"
           onClick={() => onChange(category.id)}
         >
-          {category.name}
+          <span>{category.name}</span>
         </button>
       ))}
     </nav>

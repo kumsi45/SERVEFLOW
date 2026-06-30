@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useCart } from "../hooks/useCart";
 import { useOrderingMenu } from "../hooks/useOrderingMenu";
-import { submitCustomerOrder } from "../services/orderingService";
+import { submitPublicQrCustomerOrder } from "../services/orderingService";
 import type { SubmittedOrder } from "../types";
 
 type OrderingPageProps = {
@@ -14,6 +14,13 @@ const currencyFormatter = new Intl.NumberFormat("en", {
 });
 
 export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
+  const qrParams = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      tableNumber: params.get("t") || params.get("table") || "",
+      qrToken: params.get("qr") || "",
+    };
+  }, []);
   const {
     restaurant,
     categories,
@@ -40,7 +47,16 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
     setCheckoutError(null);
 
     try {
-      const order = await submitCustomerOrder(restaurantSlug, cartLines);
+      if (!qrParams.tableNumber.trim() || !qrParams.qrToken.trim()) {
+        throw new Error("A valid table QR code is required to place this order.");
+      }
+
+      const order = await submitPublicQrCustomerOrder({
+        restaurantSlug,
+        tableNumber: qrParams.tableNumber,
+        qrToken: qrParams.qrToken,
+        cartLines,
+      });
       setSubmittedOrder(order);
       clearCart();
     } catch (orderError) {

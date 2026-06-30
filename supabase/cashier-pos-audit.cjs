@@ -82,6 +82,7 @@ async function main() {
 
   try {
     await client.query(fs.readFileSync(path.join(__dirname, "migrations", "031_cashier_pos_order_entry.sql"), "utf8"));
+    await client.query(fs.readFileSync(path.join(__dirname, "migrations", "038_cashier_dashboard_shift_statistics_fix.sql"), "utf8"));
     await cleanup(client, ids);
 
     for (const [id, email] of [
@@ -109,11 +110,11 @@ async function main() {
         ($4, $6, $10, 'cashier', 'Other Cashier', 'cashier-pos-other@example.test', true)
     `, [ids.ownerStaff, ids.cashierStaff, ids.kitchenStaff, ids.otherCashierStaff, ids.restaurantA, ids.restaurantB, ids.ownerUser, ids.cashierUser, ids.kitchenUser, ids.otherCashierUser]);
     await client.query(`
-      insert into public.restaurant_tables (restaurant_id, table_number, label, qr_path, active)
+      insert into public.restaurant_tables (restaurant_id, table_number, label, qr_path, qr_url, active)
       values
-        ($1, 1, 'Table 1', '/r/cashier-pos-audit-a/order?table=1', true),
-        ($1, 2, 'Table 2', '/r/cashier-pos-audit-a/order?table=2', true),
-        ($2, 1, 'Table 1', '/r/cashier-pos-audit-b/order?table=1', true)
+        ($1, 1, 'Table 1', '/r/cashier-pos-audit-a/order?table=1', '/r/cashier-pos-audit-a/order?t=1', true),
+        ($1, 2, 'Table 2', '/r/cashier-pos-audit-a/order?table=2', '/r/cashier-pos-audit-a/order?t=2', true),
+        ($2, 1, 'Table 1', '/r/cashier-pos-audit-b/order?table=1', '/r/cashier-pos-audit-b/order?t=1', true)
       on conflict (restaurant_id, table_number) do update set active = excluded.active
     `, [ids.restaurantA, ids.restaurantB]);
     await client.query("insert into public.categories (id, restaurant_id, name) values ($1, $3, 'Food'), ($2, $4, 'Other')", [ids.categoryA, ids.categoryB, ids.restaurantA, ids.restaurantB]);
@@ -139,7 +140,11 @@ async function main() {
       ]),
     ]);
     const order = created.rows[0].order;
-    results.push({ label: "1. Cashier POS order creation works", ok: order.status === "paid" && Number(order.total_price) === 235, detail: JSON.stringify(order) });
+    results.push({
+      label: "1. Cashier POS order creation works",
+      ok: order.status === "paid" && Number(order.total_price) === 235 && Boolean(order.payment_verified_at),
+      detail: JSON.stringify(order),
+    });
 
     const kitchenRows = await asRole(client, "authenticated", ids.kitchenUser, `
       select o.id, o.status, count(oi.id) as item_rows
@@ -177,13 +182,26 @@ async function main() {
     const ownerTotal = await asRole(client, "authenticated", ids.ownerUser, "select total_price from public.orders where id = $1", [order.order_id]);
     results.push({ label: "8. Owner sees updated totals", ok: ownerTotal.rowCount === 1 && Number(ownerTotal.rows[0].total_price) === 280, detail: JSON.stringify(ownerTotal.rows[0]) });
 
-    const qr = await asRole(client, "anon", null, "select public.create_public_qr_order('cashier-pos-audit-a', '2', 'QR Guest', 'Cash', $1::jsonb) as order", [
+    const qrToken = (await client.query(
+      "select qr_token from public.restaurant_tables where restaurant_id = $1 and table_number = 2",
+      [ids.restaurantA]
+    )).rows[0].qr_token;
+    const qr = await asRole(client, "anon", null, "select public.create_public_qr_order('cashier-pos-audit-a', '2', $1, 'QR Guest', 'Cash', $2::jsonb) as order", [
+      qrToken,
       JSON.stringify([{ menu_item_id: ids.pizza, quantity: 1 }]),
     ]);
     results.push({ label: "9. QR ordering still works", ok: qr.rows[0].order.status === "pending_payment" && Number(qr.rows[0].order.total_price) === 150, detail: JSON.stringify(qr.rows[0].order) });
 
     const shiftSummary = await asRole(client, "authenticated", ids.cashierUser, "select public.get_cashier_shift_summary($1) as summary", [ids.restaurantA]);
-    results.push({ label: "10. Shift management still works", ok: Boolean(shiftSummary.rows[0].summary.active_shift), detail: JSON.stringify({ active_shift: Boolean(shiftSummary.rows[0].summary.active_shift) }) });
+    const activeShift = shiftSummary.rows[0].summary.active_shift;
+    results.push({
+      label: "10. Shift management still works",
+      ok: Boolean(activeShift)
+        && Number(activeShift.cash_collected) === 280
+        && Number(activeShift.orders_processed) === 1
+        && Number(activeShift.payments_processed) === 1,
+      detail: JSON.stringify(activeShift),
+    });
 
     results.push(await expectReject(
       "11. Multi-tenant isolation still works",

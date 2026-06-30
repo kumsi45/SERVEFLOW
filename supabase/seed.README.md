@@ -1,13 +1,9 @@
 # Seed Data
 
-Apply `supabase/seed.sql` after the Phase 1 and Phase 2 migrations to create a
-deterministic public demo menu at `/r/demo`.
+`supabase/seed.sql` is intentionally empty for production.
 
-The seed refreshes only the restaurant with slug `demo`, then inserts:
+Real restaurants should be created through the owner onboarding flow. Do not add
+demo, test, sample, mock, or presentation restaurants to the production seed.
 
-- 1 restaurant
-- 4 categories
-- 8 menu items
-
-It is safe to run repeatedly when you want the demo QR menu reset to its known
-state.
+Use `supabase/production-demo-data-cleanup.sql` once to remove legacy demo and
+presentation restaurants from an environment that was previously seeded.

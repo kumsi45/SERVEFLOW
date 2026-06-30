@@ -94,6 +94,7 @@ export async function loadManagedStaff(restaurantId: string) {
     .from("restaurant_staff")
     .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
     .eq("restaurant_id", restaurantId)
+    .neq("role", "owner")
     .order("created_at", { ascending: true });
 
   if (error) {

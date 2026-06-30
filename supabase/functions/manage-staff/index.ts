@@ -101,9 +101,36 @@ function normalizeDisplayName(name: unknown) {
   return normalized;
 }
 
-function getResetRedirectUrl() {
-  const appUrl = (Deno.env.get("APP_URL") || Deno.env.get("VITE_APP_URL") || "").trim().replace(/\/+$/, "");
-  return appUrl ? `${appUrl}/reset-password` : undefined;
+function normalizeResetBaseUrl(value: string | null) {
+  const rawUrl = value?.trim();
+
+  if (!rawUrl || rawUrl.toLowerCase() === "null") {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function getResetRedirectUrl(request: Request) {
+  const origin = request.headers.get("Origin");
+  const originUrl = normalizeResetBaseUrl(origin);
+  const configuredUrl = normalizeResetBaseUrl(Deno.env.get("APP_URL"));
+  const baseUrl = origin ? originUrl : configuredUrl;
+
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/reset-password`;
 }
 
 function generateTemporaryPassword() {
@@ -432,13 +459,23 @@ Deno.serve(async (request) => {
 
     if (action === "send-password-reset") {
       const email = requireString(targetStaff.email, "Target staff email");
+      const redirectTo = getResetRedirectUrl(request);
+
+      if (!redirectTo) {
+        logError(requestId, "password reset redirect unavailable", {
+          origin: request.headers.get("Origin"),
+          hasConfiguredAppUrl: Boolean(Deno.env.get("APP_URL")?.trim()),
+        });
+        return jsonResponse(400, { error: "Password reset redirect URL is not configured for this request." });
+      }
+
       const { error } = await userClient.auth.resetPasswordForEmail(email, {
-        redirectTo: getResetRedirectUrl(),
+        redirectTo,
       });
 
       if (error) throw new Error(error.message);
 
-      await audit("password_reset_sent", staffId, email, {});
+      await audit("password_reset_sent", staffId, email, { redirect_to_origin: new URL(redirectTo).origin });
       return jsonResponse(200, { ok: true });
     }
 

@@ -19,6 +19,7 @@ export function MenuGroup({ group, onAddToCart, onOpenFoodInfo }: MenuGroupProps
         {group.items.map((item) => (
           <MenuItemCard
             item={item}
+            categoryName={group.category.name}
             key={item.id}
             onAddToCart={onAddToCart}
             onOpenFoodInfo={onOpenFoodInfo}

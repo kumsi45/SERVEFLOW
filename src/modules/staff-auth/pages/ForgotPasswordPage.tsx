@@ -5,9 +5,7 @@ import "../styles/staffLogin.css";
 type PageState = "form" | "sent";
 
 function getResetRedirectUrl() {
-  const configuredAppUrl = import.meta.env.VITE_APP_URL?.trim().replace(/\/+$/, "");
-  const appUrl = configuredAppUrl || window.location.origin;
-  return `${appUrl}/reset-password`;
+  return `${window.location.origin}/reset-password`;
 }
 
 export function ForgotPasswordPage() {

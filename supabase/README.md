@@ -23,10 +23,14 @@ https://your-project-ref.supabase.co
 
 Do not use the REST endpoint suffix `/rest/v1/` as the client URL.
 
-## Demo Seed
+## Production Seed
 
-Apply `supabase/seed.sql` after migrations to create the public demo QR menu
-expected by `/r/demo`.
+`supabase/seed.sql` is intentionally empty. Production restaurant data should be
+created through onboarding, not seeded demo fixtures.
+
+To remove legacy presentation data from an environment, run:
+
+- `supabase/production-demo-data-cleanup.sql`
 
 ## Phase 3 Migration
 
