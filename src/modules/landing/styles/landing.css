@@ -40,8 +40,7 @@
 .lp-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .lp-logo-icon {
   width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg,#00c896,#3b82f6);
-  display: grid; place-items: center; font-size: 17px; font-weight: 900; color: #fff;
+  object-fit: contain; display: block;
 }
 .lp-logo-text { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
 .lp-nav-links { display: flex; gap: 32px; list-style: none; }

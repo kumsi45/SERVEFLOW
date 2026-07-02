@@ -12,7 +12,7 @@ export function RestaurantHeader({
   tableNumberFromQr = false,
 }: RestaurantHeaderProps) {
   const initial = restaurant.name.charAt(0).toUpperCase();
-  const displayTable = tableNumber?.trim() || (tableNumberFromQr ? "your table" : "1");
+  const displayTable = tableNumber?.trim();
   const coverStyle = restaurant.cover_url
     ? {
         backgroundImage: `linear-gradient(180deg, rgba(13, 11, 10, 0.12), rgba(13, 11, 10, 0.68)), url("${restaurant.cover_url}")`,
@@ -36,9 +36,11 @@ export function RestaurantHeader({
         <div className="restaurant-title-block">
           <p className="eyebrow">Welcome to</p>
           <h1>{restaurant.name}</h1>
-          <div className="restaurant-meta-row" aria-label="Restaurant details">
-            <span className="restaurant-table">Table {displayTable}</span>
-          </div>
+          {displayTable ? (
+            <div className="restaurant-meta-row" aria-label="Restaurant details">
+              <span className="restaurant-table">Table {displayTable}</span>
+            </div>
+          ) : null}
           <p className="restaurant-location">
             Order from your table. Freshly prepared and sent straight to the cashier.
           </p>

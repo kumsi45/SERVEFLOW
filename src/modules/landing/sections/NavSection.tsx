@@ -12,7 +12,7 @@ export function NavSection() {
     <nav className="lp-nav" aria-label="Main navigation">
       <div className="lp-container lp-nav-inner">
         <a href="/" className="lp-logo" aria-label="ServeFlow home">
-          <div className="lp-logo-icon">S</div>
+          <img className="lp-logo-icon" src="/serveflowlogo.png" alt="" />
           <span className="lp-logo-text">ServeFlow</span>
         </a>
 

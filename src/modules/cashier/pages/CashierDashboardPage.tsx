@@ -238,6 +238,27 @@ function KpiCard({ label, value, detail, tone = "default" }: { label: string; va
   );
 }
 
+function CashierMenuItemImage({ item }: { item: CashierMenuItem }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(item.image_url) && !imageFailed;
+
+  return (
+    <span className="cd-menu-item-image-wrap">
+      {showImage ? (
+        <img
+          className="cd-menu-item-image"
+          src={item.image_url ?? ""}
+          alt={item.name}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="cd-menu-item-image placeholder" aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
 function OrderDrawer({ order, onClose, onApprove, approving }: {
   order: CashierOrder;
   onClose: () => void;
@@ -345,7 +366,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
         .order("created_at", { ascending: false }),
       supabase.from("restaurant_tables").select("id,restaurant_id,table_number,label,active").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
       supabase.from("categories").select("id,restaurant_id,name").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
-      supabase.from("menu_items").select("id,restaurant_id,category_id,name,description,price,image_url,available,categories!menu_items_category_same_restaurant(name)").eq("restaurant_id", restaurantId).eq("available", true).order("name", { ascending: true }),
+      supabase.from("menu_items").select("id,restaurant_id,category_id,name,description,price,image_url,available,categories!menu_items_category_same_restaurant(name)").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
       supabase.rpc("get_cashier_shift_summary", { target_restaurant_id: restaurantId }),
       supabase.from("shift_activity_logs").select("id,restaurant_id,shift_id,order_id,actor_staff_id,action,message,amount,metadata,created_at").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(30),
     ]);
@@ -491,6 +512,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   }
 
   function addMenuItemToCart(item: CashierMenuItem) {
+    if (!item.available) return;
     setCartItems((previous) => {
       const existing = previous.find((cartItem) => cartItem.menuItemId === item.id);
       if (existing) {
@@ -594,7 +616,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     return menuItems.filter((item) => {
       const matchesCategory = selectedCategory === ALL_CATEGORIES || item.category_id === selectedCategory;
       const matchesSearch = !search || item.name.toLowerCase().includes(search) || item.categoryName.toLowerCase().includes(search) || (item.description ?? "").toLowerCase().includes(search);
-      return item.available && matchesCategory && matchesSearch;
+      return matchesCategory && matchesSearch;
     });
   }, [menuItems, menuSearch, selectedCategory]);
   const availableTables = Math.max(0, tables.length - occupiedTableNumbers.size);
@@ -814,10 +836,25 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                       {filteredMenuItems.length === 0 ? (
                         <div className="cd-empty compact"><div className="cd-empty-title">No menu items found</div></div>
                       ) : filteredMenuItems.map((item) => (
-                        <button key={item.id} type="button" className="cd-menu-item-btn" onClick={() => addMenuItemToCart(item)}>
-                          <span className="cd-menu-item-name">{item.name}</span>
-                          <span className="cd-menu-item-meta">{item.categoryName}</span>
-                          <strong>{fmtMoney(item.price)}</strong>
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`cd-menu-item-btn${item.available ? "" : " unavailable"}`}
+                          onClick={() => addMenuItemToCart(item)}
+                          disabled={!item.available}
+                        >
+                          <CashierMenuItemImage item={item} />
+                          <span className="cd-menu-item-copy">
+                            <span className="cd-menu-item-topline">
+                              <span className="cd-menu-item-category">{item.categoryName}</span>
+                              <span className={`cd-menu-item-availability ${item.available ? "available" : "unavailable"}`}>
+                                {item.available ? "Available" : "Unavailable"}
+                              </span>
+                            </span>
+                            <span className="cd-menu-item-name">{item.name}</span>
+                            {item.description ? <span className="cd-menu-item-description">{item.description}</span> : null}
+                            <strong>{fmtMoney(item.price)}</strong>
+                          </span>
                         </button>
                       ))}
                     </div>

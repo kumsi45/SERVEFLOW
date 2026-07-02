@@ -19,6 +19,11 @@ function getRecoveryParams() {
   };
 }
 
+function hasRecoveryHint() {
+  const rawUrl = `${window.location.search}${window.location.hash}`.toLowerCase();
+  return rawUrl.includes("type=recovery") || rawUrl.includes("access_token=") || rawUrl.includes("token_hash=") || rawUrl.includes("code=");
+}
+
 function getTokenErrorState(message: string | null): Extract<PageState, "expired" | "invalid"> {
   return message && /expir|stale|timeout/i.test(message) ? "expired" : "invalid";
 }
@@ -120,7 +125,7 @@ export function ResetPasswordPage() {
         }
 
         const { data } = await supabase.auth.getSession();
-        if (mounted && data.session && params.type === "recovery") {
+        if (mounted && data.session && (params.type === "recovery" || hasRecoveryHint())) {
           clearRecoveryUrl();
           setPageState("form");
           return;
@@ -202,7 +207,7 @@ export function ResetPasswordPage() {
     <div className="sl-root">
       <div className="sl-left">
         <div className="sl-brand">
-          <div className="sl-brand-icon">S</div>
+          <img className="sl-brand-icon" src="/serveflowlogo.png" alt="" />
           <span className="sl-brand-name">ServeFlow</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -227,7 +232,7 @@ export function ResetPasswordPage() {
       <div className="sl-right">
         <div className="sl-card">
           <div className="sl-card-brand">
-            <div className="sl-card-brand-icon">S</div>
+            <img className="sl-card-brand-icon" src="/serveflowlogo.png" alt="" />
             <span className="sl-card-brand-name">ServeFlow</span>
           </div>
 

@@ -27,9 +27,7 @@
 }
 .sf-signup-logo-icon {
   width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg,#00c896,#3b82f6);
-  display: grid; place-items: center;
-  font-size: 16px; font-weight: 900; color: #fff;
+  object-fit: contain; display: block;
 }
 .sf-signup-logo span { font-size: 18px; font-weight: 800; color: #fff; }
 

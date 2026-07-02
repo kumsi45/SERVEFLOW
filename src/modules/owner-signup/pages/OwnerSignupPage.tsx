@@ -108,7 +108,7 @@ export function OwnerSignupPage() {
     <main className="sf-signup-page">
       <div className="sf-signup-card">
         <a href="/" className="sf-signup-logo" aria-label="ServeFlow home">
-          <div className="sf-signup-logo-icon">S</div>
+          <img className="sf-signup-logo-icon" src="/serveflowlogo.png" alt="" />
           <span>ServeFlow</span>
         </a>
 

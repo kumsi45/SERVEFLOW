@@ -1,12 +1,9 @@
 import { FormEvent, useState } from "react";
+import { getPasswordResetRedirectUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import "../styles/staffLogin.css";
 
 type PageState = "form" | "sent";
-
-function getResetRedirectUrl() {
-  return `${window.location.origin}/reset-password`;
-}
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -23,7 +20,7 @@ export function ForgotPasswordPage() {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: getResetRedirectUrl(),
+          redirectTo: getPasswordResetRedirectUrl(),
         }
       );
 
@@ -44,7 +41,7 @@ export function ForgotPasswordPage() {
       {/* ── left panel ── */}
       <div className="sl-left">
         <div className="sl-brand">
-          <div className="sl-brand-icon">S</div>
+          <img className="sl-brand-icon" src="/serveflowlogo.png" alt="" />
           <span className="sl-brand-name">ServeFlow</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -70,7 +67,7 @@ export function ForgotPasswordPage() {
       <div className="sl-right">
         <div className="sl-card">
           <div className="sl-card-brand">
-            <div className="sl-card-brand-icon">S</div>
+            <img className="sl-card-brand-icon" src="/serveflowlogo.png" alt="" />
             <span className="sl-card-brand-name">ServeFlow</span>
           </div>
 

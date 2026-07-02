@@ -16,7 +16,7 @@ function LeftPanel() {
     <div className="sl-left">
       {/* brand */}
       <div className="sl-brand">
-        <div className="sl-brand-icon">S</div>
+        <img className="sl-brand-icon" src="/serveflowlogo.png" alt="" />
         <span className="sl-brand-name">ServeFlow</span>
       </div>
 
@@ -93,7 +93,7 @@ function DestinationPicker({ destinations }: { destinations: StaffDestination[] 
     <div className="sl-right">
       <div className="sl-card">
         <div className="sl-card-brand">
-          <div className="sl-card-brand-icon">S</div>
+          <img className="sl-card-brand-icon" src="/serveflowlogo.png" alt="" />
           <span className="sl-card-brand-name">ServeFlow</span>
         </div>
         <h1 className="sl-heading">Select Dashboard</h1>
@@ -170,7 +170,7 @@ export function StaffLoginPage() {
         <div className="sl-card">
           {/* brand */}
           <div className="sl-card-brand">
-            <div className="sl-card-brand-icon">S</div>
+            <img className="sl-card-brand-icon" src="/serveflowlogo.png" alt="" />
             <span className="sl-card-brand-name">ServeFlow</span>
           </div>
 

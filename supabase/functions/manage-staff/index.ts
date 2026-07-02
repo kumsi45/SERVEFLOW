@@ -124,7 +124,7 @@ function getResetRedirectUrl(request: Request) {
   const origin = request.headers.get("Origin");
   const originUrl = normalizeResetBaseUrl(origin);
   const configuredUrl = normalizeResetBaseUrl(Deno.env.get("APP_URL"));
-  const baseUrl = origin ? originUrl : configuredUrl;
+  const baseUrl = configuredUrl ?? originUrl;
 
   if (!baseUrl) {
     return null;

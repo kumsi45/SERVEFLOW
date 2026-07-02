@@ -62,7 +62,8 @@ function readTableNumber() {
     return "";
   }
 
-  return new URLSearchParams(window.location.search).get("t")?.trim() ?? "";
+  const params = new URLSearchParams(window.location.search);
+  return (params.get("t") || params.get("table") || "").trim();
 }
 
 function readQrToken() {
@@ -78,7 +79,7 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
   const qrToken = useMemo(() => readQrToken(), []);
   const tableNumberFromQr = useMemo(() => {
     if (typeof window === "undefined") return false;
-    return !!new URLSearchParams(window.location.search).get("t")?.trim();
+    return !!readTableNumber();
   }, []);
   const [checkoutVisible, setCheckoutVisible] = useState(
     () => initialCheckoutState.checkoutVisible

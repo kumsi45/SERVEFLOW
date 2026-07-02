@@ -5,7 +5,7 @@ export function FooterSection() {
         <div className="lp-footer-top">
           <div className="lp-footer-brand">
             <div className="lp-logo">
-              <div className="lp-logo-icon">S</div>
+              <img className="lp-logo-icon" src="/serveflowlogo.png" alt="" />
               <span className="lp-logo-text">ServeFlow</span>
             </div>
             <p className="lp-footer-tagline">

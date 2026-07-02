@@ -20,7 +20,14 @@ export type StaffActivityAction =
   | "password_reset_sent"
   | "temporary_password_generated"
   | "role_changed"
-  | "staff_updated";
+  | "staff_updated"
+  | "kitchen_station_created"
+  | "kitchen_station_updated"
+  | "kitchen_station_disabled"
+  | "kitchen_station_enabled"
+  | "kitchen_station_deleted"
+  | "menu_station_assigned"
+  | "menu_station_changed";
 
 export type StaffActivityLog = {
   id: string;
