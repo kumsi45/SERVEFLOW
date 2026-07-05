@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import "./restaurantSetupWizard.css";
 
@@ -48,15 +49,14 @@ const STEPS = [
 
 const FINAL_STEP = STEPS.length - 1;
 
-function getOrigin() {
-  return typeof window === "undefined" ? "https://serveflow.app" : window.location.origin;
-}
-
 function getOrderingUrl(table: ExistingTable) {
   const path = table.qr_url || table.qr_path;
   if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${getOrigin()}${path}`;
+  try {
+    return getQrAppUrl(path);
+  } catch {
+    return "";
+  }
 }
 
 function safeFilename(value: string) {
@@ -94,7 +94,11 @@ function downloadBlob(filename: string, blob: Blob) {
 
 async function buildQrPdf(tables: ExistingTable[], restaurantName: string) {
   const cards = await Promise.all(tables.map(async (table) => {
-    const qr = await QRCode.toDataURL(getOrderingUrl(table), { width: 220, margin: 1 });
+    const orderingUrl = getOrderingUrl(table);
+    if (!orderingUrl) {
+      throw new Error("QR base URL is not configured. Set PUBLIC_APP_URL or open ServeFlow from its LAN URL before generating QR codes.");
+    }
+    const qr = await QRCode.toDataURL(orderingUrl, { width: 220, margin: 1 });
     return `<section><h1>${restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
   }));
   const html = `<!doctype html><html><head><meta charset="utf-8" /><style>
@@ -375,10 +379,20 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   async function printQrCodes() {
     const printableTables = activeTables;
     if (printableTables.length === 0) return;
-    const cards = await Promise.all(printableTables.map(async (table) => {
-      const qr = await QRCode.toDataURL(getOrderingUrl(table), { width: 260, margin: 1 });
-      return `<section><h1>${restaurantInfo.restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
-    }));
+    let cards: string[];
+    try {
+      cards = await Promise.all(printableTables.map(async (table) => {
+        const orderingUrl = getOrderingUrl(table);
+        if (!orderingUrl) {
+          throw new Error("QR base URL is not configured. Set PUBLIC_APP_URL or open ServeFlow from its LAN URL before generating QR codes.");
+        }
+        const qr = await QRCode.toDataURL(orderingUrl, { width: 260, margin: 1 });
+        return `<section><h1>${restaurantInfo.restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
+      }));
+    } catch (qrError) {
+      setError(qrError instanceof Error ? qrError.message : "Could not generate QR codes.");
+      return;
+    }
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) {
       setError("Could not open print window. Please allow pop-ups for this site.");
@@ -393,8 +407,12 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
   }
 
   async function downloadQrPdf() {
-    const pdf = await buildQrPdf(activeTables, restaurantInfo.restaurantName);
-    downloadBlob(`${safeFilename(restaurantInfo.restaurantName)}-qr-codes.pdf`, pdf);
+    try {
+      const pdf = await buildQrPdf(activeTables, restaurantInfo.restaurantName);
+      downloadBlob(`${safeFilename(restaurantInfo.restaurantName)}-qr-codes.pdf`, pdf);
+    } catch (qrError) {
+      setError(qrError instanceof Error ? qrError.message : "Could not generate QR PDF.");
+    }
   }
 
   if (loading) {

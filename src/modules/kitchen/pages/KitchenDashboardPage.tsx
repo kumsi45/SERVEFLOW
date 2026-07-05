@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
-import { markOrderCompleted } from "../services/kitchenOrderService";
-import type { KitchenOrder, KitchenOrderItem, KitchenRestaurant } from "../types";
+import { fetchKitchenDashboardContext, fetchStationKitchenOrders, markOrderCompleted, markOrderReady, startOrderPreparation } from "../services/kitchenOrderService";
+import type { KitchenDashboardContext, KitchenOrder, KitchenOrderItem, KitchenRestaurant } from "../types";
 import "../styles/kitchenDashboard.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -17,7 +17,6 @@ function fmtElapsed(min: number) { return min < 60 ? `${min}m` : `${Math.floor(m
 function timeValue(iso: string | null) {
   return iso ? new Date(iso).getTime() : 0;
 }
-
 function useNow() {
   const [t, setT] = useState(new Date());
   useEffect(() => { const id = setInterval(() => setT(new Date()), 30000); return () => clearInterval(id); }, []);
@@ -26,7 +25,7 @@ function useNow() {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 type OrderRow = {
-  id: string; status: string; customer_name: string | null; table_number: string | null;
+  id: string; kitchen_batch_key?: string | null; status: string; customer_name: string | null; table_number: string | null;
   payment_method: string | null; total_price: number | string; created_at: string;
   payment_verified_at: string | null; preparation_started_at: string | null; ready_marked_at: string | null;
 };
@@ -41,7 +40,7 @@ type ItemRow = {
 };
 
 function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = []): KitchenOrder {
-  return { id: row.id, status: row.status as KitchenOrder["status"], customerName: row.customer_name, tableNumber: row.table_number, paymentMethod: row.payment_method, totalPrice: Number(row.total_price), createdAt: row.created_at, paymentVerifiedAt: row.payment_verified_at, preparationStartedAt: row.preparation_started_at, readyMarkedAt: row.ready_marked_at, items };
+  return { id: row.id, kitchenBatchKey: row.kitchen_batch_key ?? null, status: row.status as KitchenOrder["status"], customerName: row.customer_name, tableNumber: row.table_number, paymentMethod: row.payment_method, totalPrice: Number(row.total_price), createdAt: row.created_at, paymentVerifiedAt: row.payment_verified_at, preparationStartedAt: row.preparation_started_at, readyMarkedAt: row.ready_marked_at, items, stationProgress: [] };
 }
 function normalizeItem(row: ItemRow): KitchenOrderItem {
   const mi = row.menu_items; const name = Array.isArray(mi) ? (mi[0]?.name ?? "Item") : (mi?.name ?? "Item");
@@ -57,6 +56,10 @@ function TimerLabel({ iso, _now }: { iso: string | null; _now: Date }) {
 }
 
 // ─── Order Ticket ─────────────────────────────────────────────────────────────
+function kitchenTicketKey(order: KitchenOrder) {
+  return `${order.id}:${order.kitchenBatchKey ?? "initial"}`;
+}
+
 function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
   order: KitchenOrder; actionId: string | null;
   onStart?: () => void; onReady?: () => void; onComplete?: () => void; now: Date;
@@ -64,7 +67,7 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
   const elapsed = elapsedMin(order.preparationStartedAt ?? order.paymentVerifiedAt ?? order.createdAt);
   const isUrgent = elapsed >= 25;
   const isWarning = elapsed >= 15 && !isUrgent;
-  const isBusy = actionId === order.id;
+  const isBusy = actionId === kitchenTicketKey(order);
   const originalItems = order.items.filter((item) => !item.appendedAt);
   const appendedItems = order.items.filter((item) => item.appendedAt);
   const latestAppendTime = appendedItems.reduce<string | null>((latest, item) => {
@@ -118,8 +121,8 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
         {appendedItems.length > 0 && (
           <div className="kd-added-items">
             <div className="kd-added-header">
-              <strong>NEW ITEMS ADDED</strong>
-              {latestAppendTime && <span>Added at {fmtTime(latestAppendTime)}</span>}
+              <strong>NEW ITEMS RECEIVED</strong>
+              {latestAppendTime && <span>Received {fmtTime(latestAppendTime)}</span>}
             </div>
             {appendedItems.map((item) => (
               <div key={item.id} className="kd-item-row kd-item-added">
@@ -151,7 +154,7 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
           )}
           {onComplete && (
             <button className="kd-action-primary ready" onClick={onComplete} disabled={isBusy}>
-              {isBusy ? "Completing..." : "Complete"}
+              {isBusy ? "Completing..." : "Complete Station"}
             </button>
           )}
           <button className="kd-action-secondary" title="Details">👁</button>
@@ -165,7 +168,7 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
 function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, onComplete, now }: {
   colKey: "new" | "preparing" | "ready";
   title: string; orders: KitchenOrder[]; actionId: string | null;
-  onStart?: (id: string) => void; onReady?: (id: string) => void; onComplete?: (id: string) => void; now: Date;
+  onStart?: (order: KitchenOrder) => void; onReady?: (order: KitchenOrder) => void; onComplete?: (order: KitchenOrder) => void; now: Date;
 }) {
   const sorted = [...orders].sort((a, b) => {
     if (colKey === "new") {
@@ -193,10 +196,10 @@ function KanbanCol({ colKey, title, orders, actionId, onStart, onReady, onComple
           ? <div className="kd-empty"><div className="kd-empty-icon">{colKey === "new" ? "📭" : colKey === "preparing" ? "🍳" : "✅"}</div><div className="kd-empty-msg">No orders here</div></div>
           : sorted.map((o) => (
               <OrderTicket
-                key={o.id} order={o} actionId={actionId} now={now}
-                onStart={onStart ? () => onStart(o.id) : undefined}
-                onReady={onReady ? () => onReady(o.id) : undefined}
-                onComplete={onComplete ? () => onComplete(o.id) : undefined}
+                key={kitchenTicketKey(o)} order={o} actionId={actionId} now={now}
+                onStart={onStart ? () => onStart(o) : undefined}
+                onReady={onReady ? () => onReady(o) : undefined}
+                onComplete={onComplete ? () => onComplete(o) : undefined}
               />
             ))
         }
@@ -212,11 +215,35 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
   const now = useNow();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [restaurant, setRestaurant] = useState<KitchenRestaurant>(initialRestaurant);
+  const [dashboardContext, setDashboardContext] = useState<KitchenDashboardContext | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<"all" | string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const contextRef = useRef<KitchenDashboardContext | null>(null);
+  const selectedStationRef = useRef<"all" | string>("all");
+  const skipNextStationLoadRef = useRef(true);
+
+  useEffect(() => {
+    contextRef.current = dashboardContext;
+  }, [dashboardContext]);
+
+  useEffect(() => {
+    selectedStationRef.current = selectedStationId;
+  }, [selectedStationId]);
+
+  async function refreshStationOrders(logQueueView = false) {
+    const context = contextRef.current;
+    if (!context) return;
+
+    const selection = selectedStationRef.current;
+    const includeAllStations = context.role === "owner" && selection === "all";
+    const stationId = includeAllStations ? null : selection;
+    const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, logQueueView);
+    setOrders(rows);
+  }
 
   // ── load ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -224,29 +251,19 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     async function load() {
       try {
         setLoading(true); setError(null);
-        const [{ data: sd }, { data: rows, error: re }] = await Promise.all([
-          supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
-          supabase.from("orders").select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,preparation_started_at,ready_marked_at")
-            .eq("restaurant_id", restaurantId).in("status", ["paid","preparing","ready"])
-            .order("created_at", { ascending: true }),
-        ]);
+        const context = await fetchKitchenDashboardContext(restaurantId);
         if (!mounted) return;
-        if (re) throw new Error(re.message);
-        const rest = Array.isArray(sd?.restaurants) ? sd.restaurants[0] : sd?.restaurants;
-        if (rest?.name) setRestaurant({ id: rest.id, name: rest.name });
-        const orderRows = (rows ?? []) as OrderRow[];
-        const ids = orderRows.map((r) => r.id);
-        const itemMap = new Map<string, KitchenOrderItem[]>();
-        if (ids.length > 0) {
-          const { data: ir } = await supabase.from("order_items")
-            .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
-            .eq("restaurant_id", restaurantId).in("order_id", ids);
-          for (const row of (ir ?? []) as ItemRow[]) {
-            const item = normalizeItem(row);
-            const arr = itemMap.get(item.orderId) ?? []; arr.push(item); itemMap.set(item.orderId, arr);
-          }
-        }
-        if (mounted) setOrders(orderRows.map((r) => normalizeOrder(r, itemMap.get(r.id))));
+        const nextSelection = context.role === "owner" ? selectedStationRef.current : context.assignedStation?.id ?? "all";
+        setRestaurant(context.restaurant);
+        setDashboardContext(context);
+        setSelectedStationId(nextSelection);
+        contextRef.current = context;
+        selectedStationRef.current = nextSelection;
+        skipNextStationLoadRef.current = true;
+        const includeAllStations = context.role === "owner" && nextSelection === "all";
+        const stationId = includeAllStations ? null : nextSelection;
+        const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, true);
+        if (mounted) setOrders(rows);
       } catch (e) { if (mounted) setError(e instanceof Error ? e.message : "Could not load orders."); }
       finally { if (mounted) setLoading(false); }
     }
@@ -254,54 +271,78 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     return () => { mounted = false; };
   }, [restaurantId]);
 
+  useEffect(() => {
+    if (!dashboardContext) return;
+    if (skipNextStationLoadRef.current) {
+      skipNextStationLoadRef.current = false;
+      return;
+    }
+
+    let mounted = true;
+    const context = dashboardContext;
+    async function loadOrdersForStation() {
+      try {
+        setError(null);
+        const includeAllStations = context.role === "owner" && selectedStationId === "all";
+        const stationId = includeAllStations ? null : selectedStationId;
+        const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, true);
+        if (mounted) setOrders(rows);
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : "Could not load orders.");
+      }
+    }
+
+    void loadOrdersForStation();
+    return () => { mounted = false; };
+  }, [dashboardContext, restaurantId, selectedStationId]);
+
   // ── realtime ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const ch = supabase.channel(`kitchen-${restaurantId}`)
+    if (!dashboardContext) return;
+
+    const includeAllStations = dashboardContext.role === "owner" && selectedStationId === "all";
+    const itemFilter = includeAllStations ? `restaurant_id=eq.${restaurantId}` : `kitchen_station_id=eq.${selectedStationId}`;
+    const ch = supabase.channel(`kitchen-${restaurantId}-${selectedStationId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
-        async (payload) => {
-          const row = payload.new as OrderRow;
-          if (!["paid","preparing","ready"].includes(row.status)) { setOrders((p) => p.filter((o) => o.id !== row.id)); return; }
-          const { data: ir } = await supabase.from("order_items")
-            .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
-            .eq("restaurant_id", restaurantId).eq("order_id", row.id);
-          const items = (ir ?? []).map((r) => normalizeItem(r as ItemRow));
-          const updated = normalizeOrder(row, items);
-          setOrders((p) => {
-            const i = p.findIndex((o) => o.id === updated.id);
-            if (i >= 0) { const n = [...p]; n[i] = updated; return n; }
-            return updated.status === "paid" ? [updated, ...p] : [...p, updated];
-          });
-        }).subscribe();
+        async () => { await refreshStationOrders(false); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: itemFilter },
+        async () => { await refreshStationOrders(false); })
+      .subscribe();
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
-  }, [restaurantId]);
+  }, [dashboardContext, restaurantId, selectedStationId]);
 
   // ── actions ────────────────────────────────────────────────────────────────
-  async function handleStart(orderId: string) {
+  async function handleStart(order: KitchenOrder) {
     try {
-      setActionId(orderId);
-      const { data, error: e } = await supabase.rpc("start_order_preparation", { target_order_id: orderId });
-      if (e) throw new Error(e.message);
-      const updated = normalizeOrder(data as OrderRow);
-      setOrders((p) => p.map((o) => o.id === orderId ? { ...o, ...updated, items: o.items } : o));
+      const ticketKey = kitchenTicketKey(order);
+      setActionId(ticketKey);
+      const targetStationId = dashboardContext?.role === "owner" && selectedStationId !== "all" ? selectedStationId : null;
+      const updated = await startOrderPreparation(order.id, targetStationId, order.kitchenBatchKey);
+      setOrders((p) => p.map((o) => kitchenTicketKey(o) === ticketKey ? { ...o, ...updated, kitchenBatchKey: o.kitchenBatchKey, items: o.items } : o));
+      await refreshStationOrders(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Failed."); }
     finally { setActionId(null); }
   }
-  async function handleReady(orderId: string) {
+  async function handleReady(order: KitchenOrder) {
     try {
-      setActionId(orderId);
-      const { data, error: e } = await supabase.rpc("mark_order_ready", { target_order_id: orderId });
-      if (e) throw new Error(e.message);
-      const updated = normalizeOrder(data as OrderRow);
-      setOrders((p) => p.map((o) => o.id === orderId ? { ...o, ...updated, items: o.items } : o));
+      const ticketKey = kitchenTicketKey(order);
+      setActionId(ticketKey);
+      const targetStationId = dashboardContext?.role === "owner" && selectedStationId !== "all" ? selectedStationId : null;
+      const updated = await markOrderReady(order.id, targetStationId, order.kitchenBatchKey);
+      setOrders((p) => p.map((o) => kitchenTicketKey(o) === ticketKey ? { ...o, ...updated, kitchenBatchKey: o.kitchenBatchKey, items: o.items } : o));
+      await refreshStationOrders(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Failed."); }
     finally { setActionId(null); }
   }
-  async function handleComplete(orderId: string) {
+  async function handleComplete(order: KitchenOrder) {
     try {
-      setActionId(orderId);
-      const updated = await markOrderCompleted(orderId);
-      setOrders((p) => p.filter((o) => o.id !== updated.id));
+      const ticketKey = kitchenTicketKey(order);
+      setActionId(ticketKey);
+      const targetStationId = dashboardContext?.role === "owner" && selectedStationId !== "all" ? selectedStationId : null;
+      await markOrderCompleted(order.id, targetStationId, order.kitchenBatchKey);
+      setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey));
+      await refreshStationOrders(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Failed."); }
     finally { setActionId(null); }
   }
@@ -319,6 +360,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     preparing: filtered.filter((o) => o.status === "preparing"),
     ready: filtered.filter((o) => o.status === "ready"),
   }), [filtered]);
+  const canActOnStation = dashboardContext?.role === "kitchen" || selectedStationId !== "all";
 
   const totalActive = orders.length;
   const avgPrep = useMemo(() => {
@@ -329,6 +371,11 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
 
   const dateStr = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const stationLabel = dashboardContext?.role === "kitchen"
+    ? dashboardContext.assignedStation?.name ?? "Main Kitchen"
+    : selectedStationId === "all"
+      ? "All Stations"
+      : dashboardContext?.stations.find((station) => station.id === selectedStationId)?.name ?? "Station";
 
   return (
     <div className="kd-root">
@@ -369,6 +416,22 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
       {error && <div className="kd-error-banner">⚠️ {error}</div>}
 
       {/* ── BODY ───────────────────────────────────────────────────────── */}
+      <div className="kd-station-bar">
+        {dashboardContext?.role === "owner" ? (
+          <label className="kd-station-picker">
+            <span>Station</span>
+            <select value={selectedStationId} onChange={(event) => setSelectedStationId(event.target.value)}>
+              <option value="all">All Stations</option>
+              {dashboardContext.stations.map((station) => (
+                <option key={station.id} value={station.id}>{station.name}</option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div className="kd-station-lock">Station: {stationLabel}</div>
+        )}
+      </div>
+
       {loading ? (
         <div className="kd-loading">
           <div style={{ textAlign: "center" }}>
@@ -380,9 +443,9 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
         <div className="kd-body">
           {/* ── KANBAN ─────────────────────────────────────────────────── */}
           <div className="kd-kanban">
-            <KanbanCol colKey="new" title="New Orders" orders={byStatus.paid} actionId={actionId} onStart={handleStart} now={now} />
-            <KanbanCol colKey="preparing" title="Preparing" orders={byStatus.preparing} actionId={actionId} onReady={handleReady} now={now} />
-            <KanbanCol colKey="ready" title="Ready for Pickup" orders={byStatus.ready} actionId={actionId} onComplete={handleComplete} now={now} />
+            <KanbanCol colKey="new" title="New Orders" orders={byStatus.paid} actionId={actionId} onStart={canActOnStation ? handleStart : undefined} now={now} />
+            <KanbanCol colKey="preparing" title="Preparing" orders={byStatus.preparing} actionId={actionId} onReady={canActOnStation ? handleReady : undefined} now={now} />
+            <KanbanCol colKey="ready" title="Ready for Pickup" orders={byStatus.ready} actionId={actionId} onComplete={canActOnStation ? handleComplete : undefined} now={now} />
           </div>
 
           {/* ── SIDEBAR ────────────────────────────────────────────────── */}

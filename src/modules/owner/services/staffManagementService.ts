@@ -8,6 +8,7 @@ export type ManagedStaffMember = {
   display_name: string;
   email: string | null;
   role: ManagedStaffRole;
+  assigned_kitchen_station_id: string | null;
   active: boolean;
   created_at: string;
   last_login_at: string | null;
@@ -26,6 +27,8 @@ export type StaffActivityAction =
   | "kitchen_station_disabled"
   | "kitchen_station_enabled"
   | "kitchen_station_deleted"
+  | "kitchen_staff_station_assigned"
+  | "kitchen_staff_station_changed"
   | "menu_station_assigned"
   | "menu_station_changed";
 
@@ -44,6 +47,7 @@ export type CreateStaffInput = {
   fullName: string;
   email: string;
   role: Exclude<ManagedStaffRole, "owner">;
+  assignedKitchenStationId?: string | null;
 };
 
 export type UpdateStaffInput = {
@@ -51,6 +55,7 @@ export type UpdateStaffInput = {
   staffId: string;
   fullName?: string;
   role?: Exclude<ManagedStaffRole, "owner">;
+  assignedKitchenStationId?: string | null;
 };
 
 type StaffFunctionResponse = {
@@ -99,7 +104,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 export async function loadManagedStaff(restaurantId: string) {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
+    .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
     .eq("restaurant_id", restaurantId)
     .neq("role", "owner")
     .order("created_at", { ascending: true });
@@ -133,6 +138,7 @@ export async function createStaff(input: CreateStaffInput) {
     fullName: input.fullName,
     email: input.email,
     role: input.role,
+    assignedKitchenStationId: input.assignedKitchenStationId ?? null,
   });
 }
 
@@ -143,6 +149,7 @@ export async function updateStaff(input: UpdateStaffInput) {
     staffId: input.staffId,
     fullName: input.fullName,
     role: input.role,
+    assignedKitchenStationId: input.assignedKitchenStationId ?? null,
   });
 }
 

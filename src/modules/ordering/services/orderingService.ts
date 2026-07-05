@@ -91,6 +91,7 @@ export async function submitCustomerOrder(
   return {
     ...data,
     total_price: Number(data.total_price),
+    session_action: data.session_action === "appended" ? "appended" : "created",
   };
 }
 

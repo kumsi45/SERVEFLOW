@@ -54,6 +54,11 @@ type CashierDashboardPageProps = {
 };
 
 type OrderRow = {
+  invoice_id?: string | null;
+  invoice_number?: number | string | null;
+  invoice_status?: string | null;
+  invoice_paid_at?: string | null;
+  invoice_locked_at?: string | null;
   id: string;
   status: string;
   customer_name: string | null;
@@ -62,15 +67,19 @@ type OrderRow = {
   total_price: number | string;
   created_at: string;
   payment_verified_at: string | null;
+  items?: ItemRow[] | string | null;
 };
 
 type ItemRow = {
   id: string;
   order_id: string;
+  invoice_id?: string | null;
   quantity: number;
   price: number | string;
   notes?: string | null;
   appended_at?: string | null;
+  kitchen_status?: string | null;
+  menu_item_name?: string | null;
   menu_items?: { name?: string | null } | { name?: string | null }[] | null;
 };
 
@@ -171,6 +180,11 @@ const ACTIVE_ORDER_STATUSES: CashierOrder["status"][] = ["pending_payment", "pai
 function normalizeOrder(row: OrderRow, items: CashierOrderItem[] = []): CashierOrder {
   return {
     id: row.id,
+    invoiceId: row.invoice_id ?? null,
+    invoiceNumber: row.invoice_number === null || typeof row.invoice_number === "undefined" ? null : Number(row.invoice_number),
+    invoiceStatus: row.invoice_status ?? null,
+    invoicePaidAt: row.invoice_paid_at ?? null,
+    invoiceLockedAt: row.invoice_locked_at ?? null,
     status: row.status as CashierOrder["status"],
     customerName: row.customer_name,
     tableNumber: row.table_number,
@@ -184,8 +198,14 @@ function normalizeOrder(row: OrderRow, items: CashierOrderItem[] = []): CashierO
 
 function normalizeItem(row: ItemRow): CashierOrderItem {
   const menuItem = row.menu_items;
-  const name = Array.isArray(menuItem) ? menuItem[0]?.name ?? "Menu item" : menuItem?.name ?? "Menu item";
-  return { id: row.id, orderId: row.order_id, name, quantity: Number(row.quantity), price: Number(row.price), notes: row.notes ?? null, appendedAt: row.appended_at ?? null };
+  const name = row.menu_item_name ?? (Array.isArray(menuItem) ? menuItem[0]?.name ?? "Menu item" : menuItem?.name ?? "Menu item");
+  return { id: row.id, orderId: row.order_id, invoiceId: row.invoice_id ?? null, name, quantity: Number(row.quantity), price: Number(row.price), notes: row.notes ?? null, appendedAt: row.appended_at ?? null, kitchenStatus: row.kitchen_status ?? null };
+}
+
+function normalizeInvoiceRow(row: OrderRow): CashierOrder {
+  const rawItems = typeof row.items === "string" ? JSON.parse(row.items) : row.items;
+  const items = Array.isArray(rawItems) ? rawItems.map((item) => normalizeItem(item as ItemRow)) : [];
+  return normalizeOrder(row, items);
 }
 
 function normalizeSubmittedOrder(row: SubmittedCashierOrder): CashierOrder {
@@ -213,15 +233,15 @@ function isContinuableOrder(order: CashierOrder) {
 }
 
 function isDigitalPayment(order: CashierOrder) {
-  return Boolean(order.paymentVerifiedAt) && order.paymentMethod !== "Cash";
+  return order.invoiceStatus === "paid" && order.paymentMethod !== "Cash";
 }
 
 function isCashPayment(order: CashierOrder) {
-  return Boolean(order.paymentVerifiedAt) && order.paymentMethod === "Cash";
+  return order.invoiceStatus === "paid" && order.paymentMethod === "Cash";
 }
 
 function isAwaitingCollection(order: CashierOrder) {
-  return order.status === "ready" || (order.status === "paid" && Boolean(order.paymentVerifiedAt));
+  return order.invoiceStatus === "paid" && (order.status === "ready" || order.status === "paid");
 }
 
 function isActiveOrder(order: CashierOrder) {
@@ -271,14 +291,14 @@ function OrderDrawer({ order, onClose, onApprove, approving }: {
       <aside className="cd-drawer" role="dialog" aria-modal="true" aria-label="Order details">
         <div className="cd-drawer-header">
           <div>
-            <div className="cd-drawer-title">{fmtOrderId(order.id)}</div>
+            <div className="cd-drawer-title">{fmtOrderId(order.id)} · Invoice #{order.invoiceNumber ?? 1}</div>
             <div className="cd-card-subtitle">Table {order.tableNumber || "-"}</div>
           </div>
           <button className="cd-drawer-close" onClick={onClose} aria-label="Close">x</button>
         </div>
         <div className="cd-drawer-body">
           <div className="cd-drawer-detail-grid">
-            <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Payment Status</div><div className="cd-drawer-detail-value">{order.paymentVerifiedAt ? "Verified" : "Pending"}</div></div>
+            <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Invoice Status</div><div className="cd-drawer-detail-value">{order.invoiceStatus === "paid" ? "Paid" : "Pending"}</div></div>
             <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Kitchen Status</div><div className="cd-drawer-detail-value">{statusLabel(order.status)}</div></div>
             <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Payment Method</div><div className="cd-drawer-detail-value">{order.paymentMethod || "-"}</div></div>
             <div className="cd-drawer-detail"><div className="cd-drawer-detail-label">Created</div><div className="cd-drawer-detail-value">{fmtDateTime(order.createdAt)}</div></div>
@@ -346,12 +366,9 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   async function loadDashboard() {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
     const [
       { data: staffData },
-      { data: orderRows, error: ordersError },
+      { data: invoiceRows, error: invoicesError },
       { data: tableRows },
       { data: categoryRows, error: categoriesError },
       { data: menuRows, error: menuError },
@@ -359,11 +376,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
       { data: activityRows },
     ] = await Promise.all([
       supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
-      supabase.from("orders").select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at")
-        .eq("restaurant_id", restaurantId)
-        .in("status", ["pending_payment", "paid", "preparing", "ready", "completed", "cancelled"])
-        .gte("created_at", todayStart.toISOString())
-        .order("created_at", { ascending: false }),
+      supabase.rpc("get_cashier_invoice_queue", { target_restaurant_id: restaurantId }),
       supabase.from("restaurant_tables").select("id,restaurant_id,table_number,label,active").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
       supabase.from("categories").select("id,restaurant_id,name").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
       supabase.from("menu_items").select("id,restaurant_id,category_id,name,description,price,image_url,available,categories!menu_items_category_same_restaurant(name)").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
@@ -371,7 +384,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
       supabase.from("shift_activity_logs").select("id,restaurant_id,shift_id,order_id,actor_staff_id,action,message,amount,metadata,created_at").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(30),
     ]);
 
-    if (ordersError) throw new Error(ordersError.message);
+    if (invoicesError) throw new Error(invoicesError.message);
     if (categoriesError) throw new Error(categoriesError.message);
     if (menuError) throw new Error(menuError.message);
     if (shiftError) throw new Error(shiftError.message);
@@ -379,26 +392,9 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     const rest = Array.isArray(staffData?.restaurants) ? staffData.restaurants[0] : staffData?.restaurants;
     if (rest?.name) setRestaurant({ id: rest.id, name: rest.name, logoUrl: null });
 
-    const rows = (orderRows ?? []) as OrderRow[];
-    const orderIds = rows.map((row) => row.id);
-    const itemMap = new Map<string, CashierOrderItem[]>();
-    if (orderIds.length > 0) {
-      const { data: itemRows, error: itemsError } = await supabase.from("order_items")
-        .select("id,order_id,quantity,price,notes,appended_at,menu_items!order_items_menu_item_same_restaurant(name)")
-        .eq("restaurant_id", restaurantId)
-        .in("order_id", orderIds);
-      if (itemsError) throw new Error(itemsError.message);
-      for (const row of (itemRows ?? []) as ItemRow[]) {
-        const item = normalizeItem(row);
-        const existing = itemMap.get(item.orderId) ?? [];
-        existing.push(item);
-        itemMap.set(item.orderId, existing);
-      }
-    }
-
     const summary = shiftSummary as { active_shift?: ActiveShift | null } | null;
     setActiveShift(summary?.active_shift ?? null);
-    setOrders(rows.map((row) => normalizeOrder(row, itemMap.get(row.id) ?? [])));
+    setOrders(((invoiceRows ?? []) as OrderRow[]).map(normalizeInvoiceRow));
     setTables((tableRows ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
     setCategories((categoryRows ?? []) as MenuCategoryRow[]);
     setMenuItems((menuRows ?? []).map((row) => {
@@ -441,6 +437,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     };
     const channel = supabase.channel(`cashier-operations-${restaurantId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "cash_reconciliations", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
@@ -450,15 +447,16 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     return () => { supabase.removeChannel(channel); };
   }, [restaurantId]);
 
-  async function handleApprove(orderId: string) {
+  async function handleApprove(order: CashierOrder) {
     try {
-      setApprovingId(orderId);
+      const targetActionId = order.invoiceId ?? order.id;
+      setApprovingId(targetActionId);
       setError(null);
-      const { data, error: rpcError } = await supabase.rpc("approve_order_payment", { target_order_id: orderId });
+      const { data, error: rpcError } = await supabase.rpc("approve_order_payment", { target_order_id: order.id });
       if (rpcError) throw new Error(rpcError.message);
       const updated = normalizeOrder(data as OrderRow);
-      setOrders((prev) => prev.map((order) => order.id === orderId ? { ...order, ...updated, items: order.items } : order));
-      if (drawerOrder?.id === orderId) setDrawerOrder((order) => order ? { ...order, ...updated, items: order.items } : null);
+      setOrders((prev) => prev.map((existing) => (existing.invoiceId ?? existing.id) === targetActionId ? { ...existing, ...updated, invoiceId: existing.invoiceId, invoiceNumber: existing.invoiceNumber, invoiceStatus: "paid", invoicePaidAt: new Date().toISOString(), items: existing.items } : existing));
+      if ((drawerOrder?.invoiceId ?? drawerOrder?.id) === targetActionId) setDrawerOrder((current) => current ? { ...current, ...updated, invoiceId: current.invoiceId, invoiceNumber: current.invoiceNumber, invoiceStatus: "paid", invoicePaidAt: new Date().toISOString(), items: current.items } : null);
       await loadDashboard();
     } catch (approveError) {
       setError(approveError instanceof Error ? approveError.message : "Payment verification failed.");
@@ -600,8 +598,8 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     try { await signOutStaff(); } finally { window.location.replace("/staff-login"); }
   }
 
-  const verifiedOrders = useMemo(() => orders.filter((order) => order.paymentVerifiedAt), [orders]);
-  const pendingPayments = useMemo(() => orders.filter((order) => order.status === "pending_payment"), [orders]);
+  const verifiedOrders = useMemo(() => orders.filter((order) => order.invoiceStatus === "paid"), [orders]);
+  const pendingPayments = useMemo(() => orders.filter((order) => order.invoiceStatus === "pending"), [orders]);
   const activeOrders = useMemo(() => orders.filter(isActiveOrder), [orders]);
   const awaitingCollection = useMemo(() => orders.filter(isAwaitingCollection), [orders]);
   const completedOrders = useMemo(() => orders.filter((order) => order.status === "completed"), [orders]);
@@ -703,12 +701,12 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                   ) : queueOrders.map((order) => {
                     const preview = getOrderItemPreview(order.items);
                     return (
-                      <article key={order.id} className={`cd-order-card ${order.status}`} onClick={() => setDrawerOrder(order)}>
+                      <article key={order.invoiceId ?? order.id} className={`cd-order-card ${order.invoiceStatus === "pending" ? "pending_payment" : order.status}`} onClick={() => setDrawerOrder(order)}>
                         <div className="cd-order-table-tile">Tbl<strong>{order.tableNumber || "-"}</strong></div>
                         <div className="cd-order-card-main">
                           <div className="cd-order-card-title">
-                            <strong>{fmtOrderId(order.id)}</strong>
-                            <span className={`cd-badge ${order.paymentVerifiedAt ? "paid" : "pending"}`}>{order.paymentVerifiedAt ? "Payment Verified" : "Payment Pending"}</span>
+                            <strong>{fmtOrderId(order.id)} · Inv #{order.invoiceNumber ?? 1}</strong>
+                            <span className={`cd-badge ${order.invoiceStatus === "paid" ? "paid" : "pending"}`}>{order.invoiceStatus === "paid" ? "Paid" : "Pending"}</span>
                             <span className="cd-badge cbe">{statusLabel(order.status)}</span>
                           </div>
                           <div className="cd-order-card-meta">
@@ -723,7 +721,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
                         </div>
                         <div className="cd-order-card-actions" onClick={(event) => event.stopPropagation()}>
                           <button className="cd-view-btn" onClick={() => setDrawerOrder(order)}>View</button>
-                          {order.status === "pending_payment" && <button className="cd-approve-btn" disabled={approvingId === order.id} onClick={() => handleApprove(order.id)}>{approvingId === order.id ? "..." : "Verify Payment"}</button>}
+                          {order.invoiceStatus === "pending" && <button className="cd-approve-btn" disabled={approvingId === (order.invoiceId ?? order.id)} onClick={() => handleApprove(order)}>{approvingId === (order.invoiceId ?? order.id) ? "..." : "Verify Payment"}</button>}
                           <button className="cd-view-btn" onClick={() => window.print()}>Print Receipt</button>
                         </div>
                       </article>
@@ -908,8 +906,8 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
         <OrderDrawer
           order={drawerOrder}
           onClose={() => setDrawerOrder(null)}
-          onApprove={drawerOrder.status === "pending_payment" ? () => handleApprove(drawerOrder.id) : undefined}
-          approving={approvingId === drawerOrder.id}
+          onApprove={drawerOrder.invoiceStatus === "pending" ? () => handleApprove(drawerOrder) : undefined}
+          approving={approvingId === (drawerOrder.invoiceId ?? drawerOrder.id)}
         />
       )}
 

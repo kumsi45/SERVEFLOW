@@ -16,6 +16,7 @@ type ManageStaffPayload = {
   fullName?: string;
   email?: string;
   role?: StaffRole;
+  assignedKitchenStationId?: string | null;
 };
 
 const STAFF_ACTIONS: StaffAction[] = [
@@ -270,7 +271,7 @@ Deno.serve(async (request) => {
     async function loadTargetStaff(staffId: string) {
       const { data, error } = await serviceClient
         .from("restaurant_staff")
-        .select("id, restaurant_id, user_id, email, display_name, role, active")
+        .select("id, restaurant_id, user_id, email, display_name, role, active, assigned_kitchen_station_id")
         .eq("restaurant_id", restaurantId)
         .eq("id", staffId)
         .limit(1)
@@ -282,6 +283,35 @@ Deno.serve(async (request) => {
         throw new Error("Staff member does not belong to this restaurant.");
       }
       return data;
+    }
+
+    async function requireActiveKitchenStation(stationId: string) {
+      const { data, error } = await serviceClient
+        .from("kitchen_stations")
+        .select("id, name, restaurant_id, active, archived_at")
+        .eq("restaurant_id", restaurantId)
+        .eq("id", stationId)
+        .eq("active", true)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Choose an active kitchen station for kitchen staff.");
+      return data;
+    }
+
+    async function stationName(stationId: string | null | undefined) {
+      if (!stationId) return null;
+      const { data, error } = await serviceClient
+        .from("kitchen_stations")
+        .select("name")
+        .eq("restaurant_id", restaurantId)
+        .eq("id", stationId)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return typeof data?.name === "string" ? data.name : null;
     }
 
     async function audit(
@@ -306,6 +336,10 @@ Deno.serve(async (request) => {
       const fullName = normalizeDisplayName(payload.fullName);
       const email = normalizeEmail(payload.email);
       const role = normalizeRole(payload.role);
+      const assignedKitchenStationId = role === "kitchen"
+        ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
+        : null;
+      const assignedStation = assignedKitchenStationId ? await requireActiveKitchenStation(assignedKitchenStationId) : null;
 
       const { data: existingStaff, error: existingStaffError } = await serviceClient
         .from("restaurant_staff")
@@ -368,6 +402,7 @@ Deno.serve(async (request) => {
           role,
           display_name: fullName,
           email,
+          assigned_kitchen_station_id: assignedKitchenStationId,
           active: true,
         })
         .select("id")
@@ -385,6 +420,15 @@ Deno.serve(async (request) => {
       }
 
       await audit("staff_created", staffData.id, email, { role });
+      if (role === "kitchen" && assignedStation) {
+        await audit("kitchen_staff_station_assigned", staffData.id, email, {
+          staff_name: fullName,
+          old_station: null,
+          old_station_id: null,
+          new_station: assignedStation.name,
+          new_station_id: assignedStation.id,
+        });
+      }
       logInfo(requestId, "staff account created", {
         restaurantId,
         staffId: staffData.id,
@@ -412,6 +456,11 @@ Deno.serve(async (request) => {
     if (action === "update-staff") {
       const updates: Record<string, unknown> = {};
       const details: Record<string, unknown> = {};
+      const previousRole = targetStaff.role as StaffRole;
+      const nextRole = payload.role ? normalizeRole(payload.role) : previousRole;
+      const previousStationId = typeof targetStaff.assigned_kitchen_station_id === "string" ? targetStaff.assigned_kitchen_station_id : null;
+      let nextStationId: string | null = previousStationId;
+      let nextStation: { id: string; name: string } | null = null;
 
       if (typeof payload.fullName === "string" && payload.fullName.trim()) {
         const displayName = normalizeDisplayName(payload.fullName);
@@ -420,10 +469,26 @@ Deno.serve(async (request) => {
       }
 
       if (payload.role) {
-        const nextRole = normalizeRole(payload.role);
         updates.role = nextRole;
         details.previous_role = targetStaff.role;
         details.next_role = nextRole;
+      }
+
+      if (nextRole === "kitchen") {
+        nextStationId = requireUuid(payload.assignedKitchenStationId, "Kitchen station");
+        nextStation = await requireActiveKitchenStation(nextStationId);
+        updates.assigned_kitchen_station_id = nextStationId;
+      } else {
+        nextStationId = null;
+        updates.assigned_kitchen_station_id = null;
+      }
+
+      if (previousStationId !== nextStationId) {
+        const previousStationName = await stationName(previousStationId);
+        details.previous_station = previousStationName;
+        details.previous_station_id = previousStationId;
+        details.next_station = nextStation?.name ?? null;
+        details.next_station_id = nextStationId;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -443,6 +508,17 @@ Deno.serve(async (request) => {
         await audit("role_changed", staffId, targetStaff.email, details);
       } else {
         await audit("staff_updated", staffId, targetStaff.email, details);
+      }
+
+      if (previousStationId !== nextStationId) {
+        const previousStationName = typeof details.previous_station === "string" ? details.previous_station : null;
+        await audit(previousStationId ? "kitchen_staff_station_changed" : "kitchen_staff_station_assigned", staffId, targetStaff.email, {
+          staff_name: typeof updates.display_name === "string" ? updates.display_name : targetStaff.display_name,
+          old_station: previousStationName,
+          old_station_id: previousStationId,
+          new_station: nextStation?.name ?? null,
+          new_station_id: nextStationId,
+        });
       }
 
       return jsonResponse(200, { ok: true });

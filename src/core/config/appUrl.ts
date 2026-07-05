@@ -26,9 +26,25 @@ function isLoopbackOrigin(origin: string) {
   }
 }
 
+function getConfiguredPublicOrigin() {
+  return (
+    normalizeHttpOrigin(import.meta.env.PUBLIC_APP_URL) ??
+    normalizeHttpOrigin(import.meta.env.VITE_PUBLIC_APP_URL) ??
+    normalizeHttpOrigin(import.meta.env.VITE_APP_URL)
+  );
+}
+
+function getBrowserOrigin() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return normalizeHttpOrigin(window.location.origin);
+}
+
 export function getAppOrigin() {
-  const configuredOrigin = normalizeHttpOrigin(import.meta.env.VITE_APP_URL);
-  const browserOrigin = normalizeHttpOrigin(window.location.origin);
+  const configuredOrigin = getConfiguredPublicOrigin();
+  const browserOrigin = getBrowserOrigin();
 
   if (configuredOrigin && (!browserOrigin || isLoopbackOrigin(browserOrigin))) {
     return configuredOrigin;
@@ -37,11 +53,42 @@ export function getAppOrigin() {
   return browserOrigin ?? configuredOrigin;
 }
 
+export function getQrAppOrigin() {
+  const configuredOrigin = getConfiguredPublicOrigin();
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  const browserOrigin = getBrowserOrigin();
+  if (browserOrigin && !isLoopbackOrigin(browserOrigin)) {
+    return browserOrigin;
+  }
+
+  throw new Error("QR base URL is not configured. Set PUBLIC_APP_URL to your production domain, or open ServeFlow from its LAN URL before generating QR codes.");
+}
+
+export function getQrAppUrl(pathOrUrl: string) {
+  const rawValue = pathOrUrl.trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const origin = getQrAppOrigin();
+
+  try {
+    const url = new URL(rawValue);
+    return `${origin}${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    const path = rawValue.startsWith("/") ? rawValue : `/${rawValue}`;
+    return `${origin}${path}`;
+  }
+}
+
 export function getPasswordResetRedirectUrl() {
   const appOrigin = getAppOrigin();
 
   if (!appOrigin) {
-    throw new Error("ServeFlow app URL is not configured. Set VITE_APP_URL to your public app URL.");
+    throw new Error("ServeFlow app URL is not configured. Set PUBLIC_APP_URL to your public app URL.");
   }
 
   return `${appOrigin}/reset-password`;

@@ -471,6 +471,49 @@ h1 {
   font-size: 18px;
 }
 
+.public-cart-total.subtle,
+.public-checkout-total.subtle {
+  border-top-style: dashed;
+  color: #6f5c4b;
+  font-size: 14px;
+}
+
+.public-cart-section-label {
+  margin: 14px 0 8px;
+  color: #6f5c4b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.public-session-summary,
+.public-checkout-lines.readonly {
+  border: 1px solid #ddcfbc;
+  border-radius: 8px;
+  background: #fbf7ef;
+  padding: 12px;
+}
+
+.public-session-lines {
+  display: grid;
+  gap: 10px;
+}
+
+.public-session-line,
+.public-checkout-line.existing {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-session-line span,
+.public-checkout-line.existing span {
+  display: block;
+  color: #6f5c4b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .public-cart-review-button {
   width: 100%;
   min-height: 42px;

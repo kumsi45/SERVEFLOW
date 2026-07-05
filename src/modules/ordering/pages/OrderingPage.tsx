@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../hooks/useCart";
 import { useOrderingMenu } from "../hooks/useOrderingMenu";
 import { submitPublicQrCustomerOrder } from "../services/orderingService";
+import { fetchPublicQrOrderSession } from "../../public-qr-ordering/services/publicQrOrderService";
+import type { PublicQrOrderSession } from "../../public-qr-ordering/types";
 import type { SubmittedOrder } from "../types";
 
 type OrderingPageProps = {
@@ -36,11 +38,28 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [submittedOrder, setSubmittedOrder] = useState<SubmittedOrder | null>(null);
+  const [activeSession, setActiveSession] = useState<PublicQrOrderSession | null>(null);
 
   const cartQuantity = useMemo(
     () => cartLines.reduce((sum, line) => sum + line.quantity, 0),
     [cartLines]
   );
+
+  const existingSubtotal = activeSession?.total_price ?? 0;
+  const grandTotal = existingSubtotal + total;
+
+  async function refreshActiveSession() {
+    const session = await fetchPublicQrOrderSession({
+      restaurantSlug,
+      tableNumber: qrParams.tableNumber,
+      qrToken: qrParams.qrToken,
+    });
+    setActiveSession(session);
+  }
+
+  useEffect(() => {
+    void refreshActiveSession().catch(() => setActiveSession(null));
+  }, [restaurantSlug, qrParams.tableNumber, qrParams.qrToken]);
 
   async function handleSubmitOrder() {
     setSubmitting(true);
@@ -59,6 +78,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
       });
       setSubmittedOrder(order);
       clearCart();
+      await refreshActiveSession();
     } catch (orderError) {
       setCheckoutError(
         orderError instanceof Error ? orderError.message : "Order could not be placed."
@@ -101,6 +121,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
         <section className="order-confirmation">
           <p className="eyebrow">Order received</p>
           <h2>Order #{submittedOrder.order_id.slice(0, 8)}</h2>
+          {submittedOrder.session_action === "appended" ? <p>New items were added to your current order.</p> : null}
           <p>
             Status: <strong>{submittedOrder.status}</strong>
           </p>
@@ -183,9 +204,26 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
             <p className="empty-cart">Add available items to start an order.</p>
           )}
 
+          {activeSession ? (
+            <div className="cart-lines">
+              <h3>Current Order #{activeSession.order_id.slice(0, 8)}</h3>
+              {activeSession.items.map((item) => (
+                <div className="cart-line" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>
+                      {item.quantity} x {currencyFormatter.format(item.unit_price)}
+                    </span>
+                  </div>
+                  <span>{currencyFormatter.format(item.line_total)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           <div className="cart-total">
-            <span>Total</span>
-            <strong>{currencyFormatter.format(total)}</strong>
+            <span>{activeSession ? "Grand total" : "Total"}</span>
+            <strong>{currencyFormatter.format(activeSession ? grandTotal : total)}</strong>
           </div>
 
           {checkoutError ? <p className="checkout-error">{checkoutError}</p> : null}
@@ -196,7 +234,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
             disabled={cartLines.length === 0 || submitting}
             onClick={handleSubmitOrder}
           >
-            {submitting ? "Placing order..." : "Place order"}
+            {submitting ? "Placing order..." : activeSession ? "Add to Current Order" : "Place order"}
           </button>
         </aside>
       </section>

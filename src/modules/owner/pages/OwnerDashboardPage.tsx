@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
@@ -474,7 +475,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .limit(500),
             supabase
               .from("restaurant_staff")
-              .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
+              .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
               .eq("restaurant_id", restaurantId)
               .neq("role", "owner")
               .order("created_at", { ascending: true }),
@@ -704,6 +705,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh kitchen stations.");
         });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => {
+        void refreshStaff().catch((refreshError) => {
+          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh staff.");
+        });
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "restaurants", filter: `id=eq.${restaurantId}` }, () => {
         void refreshRestaurantConfig().catch((refreshError) => {
           setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh restaurant configuration.");
@@ -797,7 +803,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   async function refreshStaff() {
     const { data, error: staffError } = await supabase
       .from("restaurant_staff")
-      .select("id,user_id,display_name,email,role,active,created_at,last_login_at")
+      .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
       .order("created_at", { ascending: true });
@@ -1019,6 +1025,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             staff={staff}
             restaurantId={restaurantId}
             restaurantName={restaurantName}
+            stations={kitchenStations}
             onStaffChanged={refreshStaff}
           />
         )}
@@ -1804,6 +1811,8 @@ function staffActionLabel(action: StaffActivityLog["action"]) {
     kitchen_station_enabled: "Kitchen Station Enabled",
     kitchen_station_disabled: "Kitchen Station Disabled",
     kitchen_station_deleted: "Kitchen Station Deleted",
+    kitchen_staff_station_assigned: "Kitchen Staff Assigned To Station",
+    kitchen_staff_station_changed: "Kitchen Staff Station Changed",
     menu_station_assigned: "Menu Station Assigned",
     menu_station_changed: "Menu Station Changed",
   };
@@ -1814,11 +1823,27 @@ function isKitchenStationAction(action: StaffActivityLog["action"]) {
   return action.startsWith("kitchen_station_");
 }
 
+function isKitchenStaffStationAction(action: StaffActivityLog["action"]) {
+  return action.startsWith("kitchen_staff_station_");
+}
+
 function isMenuStationAction(action: StaffActivityLog["action"]) {
   return action.startsWith("menu_station_");
 }
 
 function staffActivityTargetLabel(entry: StaffActivityLog) {
+  if (isKitchenStaffStationAction(entry.action)) {
+    const staffName = entry.details.staff_name;
+    const oldStation = entry.details.old_station;
+    const newStation = entry.details.new_station;
+    const nameLabel = typeof staffName === "string" && staffName.trim() ? staffName : entry.target_staff_email || "Kitchen staff";
+    const newLabel = typeof newStation === "string" && newStation.trim() ? newStation : "No station";
+    if (typeof oldStation === "string" && oldStation.trim()) {
+      return `${nameLabel}: ${oldStation} to ${newLabel}`;
+    }
+    return `${nameLabel}: ${newLabel}`;
+  }
+
   if (isKitchenStationAction(entry.action)) {
     const stationName = entry.details.station_name;
     return typeof stationName === "string" && stationName.trim() ? stationName : "Kitchen station";
@@ -1838,6 +1863,7 @@ type StaffPageProps = {
   staff: OdStaff[];
   restaurantId: string;
   restaurantName: string;
+  stations: OdKitchenStation[];
   onStaffChanged: () => Promise<void>;
 };
 
@@ -1846,7 +1872,7 @@ type StaffModalState =
   | { mode: "view" | "edit"; member: OdStaff }
   | null;
 
-function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: StaffPageProps) {
+function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChanged }: StaffPageProps) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "cashier" | "kitchen">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -1854,10 +1880,28 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formRole, setFormRole] = useState<"cashier" | "kitchen">("cashier");
+  const [formStationId, setFormStationId] = useState("");
   const [activity, setActivity] = useState<StaffActivityLog[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [staffError, setStaffError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+
+  const activeStations = useMemo(
+    () => [...stations].filter((station) => station.active).sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name)),
+    [stations]
+  );
+  const stationById = useMemo(() => new Map(stations.map((station) => [station.id, station])), [stations]);
+
+  useEffect(() => {
+    if (!modal || modal.mode === "view") return;
+    if (formRole !== "kitchen") {
+      if (formStationId) setFormStationId("");
+      return;
+    }
+    if (!formStationId && activeStations.length === 1) {
+      setFormStationId(activeStations[0].id);
+    }
+  }, [activeStations, formRole, formStationId, modal]);
 
   useEffect(() => {
     let mounted = true;
@@ -1881,6 +1925,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
     setFormName("");
     setFormEmail("");
     setFormRole("cashier");
+    setFormStationId(activeStations.length === 1 ? activeStations[0].id : "");
     setModal({ mode: "create" });
   }
 
@@ -1890,6 +1935,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
     setFormName(member.display_name);
     setFormEmail(member.email ?? "");
     setFormRole(member.role === "kitchen" ? "kitchen" : "cashier");
+    setFormStationId(member.role === "kitchen" ? member.assigned_kitchen_station_id ?? "" : "");
     setModal({ mode, member });
   }
 
@@ -1915,6 +1961,12 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
 
     if (!modal || modal.mode === "view") return;
 
+    const assignedKitchenStationId = formRole === "kitchen" ? formStationId : null;
+    if (formRole === "kitchen" && !assignedKitchenStationId) {
+      setStaffError("Choose a kitchen station for kitchen staff.");
+      return;
+    }
+
     await runStaffAction(async () => {
       if (modal.mode === "create") {
         const result = await createStaff({
@@ -1922,6 +1974,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
           fullName: formName,
           email: formEmail,
           role: formRole,
+          assignedKitchenStationId,
         });
         setModal(null);
         return result;
@@ -1932,6 +1985,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
         staffId: modal.member.id,
         fullName: formName,
         role: formRole,
+        assignedKitchenStationId,
       });
       setModal(null);
       return {};
@@ -1943,6 +1997,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
   const operationalStaffEmails = new Set(operationalStaff.map((member) => member.email).filter((email): email is string => Boolean(email)));
   const staffActivity = activity.filter((entry) =>
     isKitchenStationAction(entry.action)
+    || isKitchenStaffStationAction(entry.action)
     || isMenuStationAction(entry.action)
     ||
     (entry.target_staff_id !== null && operationalStaffIds.has(entry.target_staff_id))
@@ -2020,6 +2075,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
+                  <th>Station</th>
                   <th>Status</th>
                   <th>Created Date</th>
                   <th>Last Login</th>
@@ -2029,7 +2085,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <div className="od-empty">
                         <div className="od-empty-icon">--</div>
                         <div className="od-empty-msg">No staff match these filters</div>
@@ -2050,6 +2106,7 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
                       </td>
                       <td>{member.email || "Not stored"}</td>
                       <td style={{ textTransform: "capitalize" }}>{member.role}</td>
+                      <td>{member.role === "kitchen" && member.assigned_kitchen_station_id ? stationById.get(member.assigned_kitchen_station_id)?.name ?? "Unassigned" : "-"}</td>
                       <td>
                         {member.active ? (
                           <span className="od-active-pill">
@@ -2169,6 +2226,22 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
                   <option value="kitchen">Kitchen</option>
                 </select>
               </label>
+              {formRole === "kitchen" && (
+                <label>
+                  Kitchen Station *
+                  <select
+                    value={formStationId}
+                    onChange={(event) => setFormStationId(event.target.value)}
+                    disabled={modal.mode === "view" || isWorking}
+                    required
+                  >
+                    <option value="">Select station</option>
+                    {activeStations.map((station) => (
+                      <option key={station.id} value={station.id}>{station.name}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               {modal.mode !== "create" && (
                 <div className="od-staff-detail-grid">
@@ -2178,6 +2251,8 @@ function StaffPage({ staff, restaurantId, restaurantName, onStaffChanged }: Staf
                   <strong>{new Date(modal.member.created_at).toLocaleDateString()}</strong>
                   <span>Last Active</span>
                   <strong>{fmtLastActive(modal.member.last_login_at)}</strong>
+                  <span>Station</span>
+                  <strong>{modal.member.role === "kitchen" && modal.member.assigned_kitchen_station_id ? stationById.get(modal.member.assigned_kitchen_station_id)?.name ?? "Unassigned" : "-"}</strong>
                 </div>
               )}
 
@@ -3350,8 +3425,11 @@ function CustomersPage({ orders }: { orders: OdOrder[] }) {
 
 function getOrderingUrl(qrPath: string) {
   if (!qrPath) return "";
-  if (/^https?:\/\//i.test(qrPath)) return qrPath;
-  return `${window.location.origin}${qrPath}`;
+  try {
+    return getQrAppUrl(qrPath);
+  } catch {
+    return "";
+  }
 }
 
 type PrintableQrTable = {
@@ -3950,14 +4028,19 @@ function SettingsPage({
   useEffect(() => {
     let mounted = true;
     async function generateQrCodes() {
-      const pairs = await Promise.all(
-        activeTables.slice(0, 80).map(async (table) => {
-          const url = `${window.location.origin}${table.qr_path}`;
-          const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
-          return [table.table_number, dataUrl] as const;
-        })
-      );
-      if (mounted) setQrCodes(Object.fromEntries(pairs));
+      try {
+        const pairs = await Promise.all(
+          activeTables.slice(0, 80).map(async (table) => {
+            const url = getOrderingUrl(table.qr_url || table.qr_path);
+            if (!url) return [table.table_number, ""] as const;
+            const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
+            return [table.table_number, dataUrl] as const;
+          })
+        );
+        if (mounted) setQrCodes(Object.fromEntries(pairs));
+      } catch (error) {
+        if (mounted) setSettingsError(error instanceof Error ? error.message : "Could not generate QR codes.");
+      }
     }
     void generateQrCodes();
     return () => { mounted = false; };

@@ -22,6 +22,34 @@ export type SubmittedPublicQrOrder = {
   customer_name?: string | null;
   payment_method?: PublicQrPaymentMethod | null;
   created_at: string;
+  session_action?: "created" | "appended";
+  appended_at?: string | null;
+  added_total?: number;
+  items_added?: PublicQrSessionItem[];
+};
+
+export type PublicQrSessionItem = {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  kitchen_status?: string | null;
+  appended_at?: string | null;
+  created_at?: string | null;
+};
+
+export type PublicQrOrderSession = {
+  order_id: string;
+  status: string;
+  total_price: number;
+  table_number?: string | null;
+  customer_name?: string | null;
+  payment_method?: PublicQrPaymentMethod | null;
+  created_at: string;
+  payment_verified_at?: string | null;
+  items: PublicQrSessionItem[];
 };
 
 export const PUBLIC_QR_PAYMENT_METHODS = [

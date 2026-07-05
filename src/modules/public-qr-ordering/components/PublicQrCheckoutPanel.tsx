@@ -2,12 +2,14 @@ import {
   PUBLIC_QR_PAYMENT_METHODS,
   type PublicQrCartItem,
   type PublicQrPaymentMethod,
+  type PublicQrOrderSession,
 } from "../types";
 import { formatETBPrice } from "../../qr-menu/components/menuPresentation";
 
 type PublicQrCheckoutPanelProps = {
   customerName: string;
   displaySubtotal: number;
+  activeSession?: PublicQrOrderSession | null;
   items: PublicQrCartItem[];
   paymentMethod: PublicQrPaymentMethod | "";
   submitting: boolean;
@@ -57,6 +59,7 @@ function getPaymentMethodValidationMessage(paymentMethod: PublicQrPaymentMethod 
 export function PublicQrCheckoutPanel({
   customerName,
   displaySubtotal,
+  activeSession,
   items,
   paymentMethod,
   submitting,
@@ -79,12 +82,16 @@ export function PublicQrCheckoutPanel({
     !tableNumberValidationMessage &&
     !paymentMethodValidationMessage;
 
+  const existingSubtotal = activeSession?.total_price ?? 0;
+  const grandTotal = existingSubtotal + displaySubtotal;
+  const isContinuingOrder = Boolean(activeSession);
+
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
       <div className="public-checkout-heading">
         <div>
-          <p className="eyebrow">Review Order</p>
-          <h2>Checkout</h2>
+          <p className="eyebrow">{isContinuingOrder ? "Continue Ordering" : "Review Order"}</p>
+          <h2>{isContinuingOrder ? `Order #${activeSession?.order_id.slice(0, 8)}` : "Checkout"}</h2>
           {restaurantName ? <p>{restaurantName}</p> : null}
         </div>
         <div className="checkout-heading-actions">
@@ -181,7 +188,29 @@ export function PublicQrCheckoutPanel({
 
       {/* Order summary */}
       <div className="public-checkout-summary" aria-label="Order summary">
-        <h3>Order summary</h3>
+        <h3>{isContinuingOrder ? "Current order" : "Order summary"}</h3>
+        {activeSession ? (
+          <>
+            <div className="public-checkout-lines readonly">
+              {activeSession.items.map((item) => (
+                <div className="public-checkout-line existing" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>
+                      {item.quantity} x {formatETBPrice(item.unit_price)}
+                    </span>
+                  </div>
+                  <strong>{formatETBPrice(item.line_total)}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="public-checkout-total subtle">
+              <span>Current subtotal</span>
+              <strong>{formatETBPrice(existingSubtotal)}</strong>
+            </div>
+          </>
+        ) : null}
+        {activeSession ? <h3>New items</h3> : null}
         <div className="public-checkout-lines">
           {items.map((item) => (
             <div className="public-checkout-line" key={item.menuItemId}>
@@ -200,8 +229,8 @@ export function PublicQrCheckoutPanel({
           <strong>15-20 min</strong>
         </div>
         <div className="public-checkout-total">
-          <span>Subtotal</span>
-          <strong>{formatETBPrice(displaySubtotal)}</strong>
+          <span>{isContinuingOrder ? "Grand total" : "Subtotal"}</span>
+          <strong>{formatETBPrice(isContinuingOrder ? grandTotal : displaySubtotal)}</strong>
         </div>
       </div>
 
@@ -216,10 +245,10 @@ export function PublicQrCheckoutPanel({
           {submitting ? (
             <span className="submit-progress">
               <span className="status-pulse" aria-hidden="true" />
-              Sending order...
+              {isContinuingOrder ? "Adding items..." : "Sending order..."}
             </span>
           ) : (
-            "Place Order"
+            isContinuingOrder ? "Add to Current Order" : "Place Order"
           )}
         </button>
       </div>

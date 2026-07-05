@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "../../../core/database";
 import { CategoryFilter } from "../components/CategoryFilter";
 import { FeaturedDishes } from "../components/FeaturedDishes";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
@@ -12,9 +13,12 @@ import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/Publi
 import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrCartPanel";
 import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart";
 import { usePublicQrCheckoutState } from "../../public-qr-ordering/hooks/usePublicQrCheckoutState";
-import { submitPublicQrOrder } from "../../public-qr-ordering/services/publicQrOrderService";
+import {
+  fetchPublicQrOrderSession,
+  submitPublicQrOrder,
+} from "../../public-qr-ordering/services/publicQrOrderService";
 import { isPaymentMethod } from "../../public-qr-ordering/types";
-import type { SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
+import type { PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
 
 type QRMenuPageProps = {
@@ -26,6 +30,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const [submitError, setSubmitError] = useState<string>();
   const [submittedOrder, setSubmittedOrder] = useState<SubmittedPublicQrOrder>();
+  const [activeSession, setActiveSession] = useState<PublicQrOrderSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [foodInfoItem, setFoodInfoItem] = useState<MenuItem>();
@@ -42,6 +47,20 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
 
+  const refreshActiveSession = useCallback(async () => {
+    if (!checkout.tableNumber || !checkout.qrToken) {
+      setActiveSession(null);
+      return;
+    }
+
+    const session = await fetchPublicQrOrderSession({
+      restaurantSlug,
+      tableNumber: checkout.tableNumber,
+      qrToken: checkout.qrToken,
+    });
+    setActiveSession(session);
+  }, [checkout.qrToken, checkout.tableNumber, restaurantSlug]);
+
   useEffect(() => {
     if (!checkout.tableNumberFromQr || !checkout.tableNumber || !checkout.qrToken) return;
 
@@ -53,6 +72,28 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       // Scan analytics must never block public ordering.
     });
   }, [checkout.qrToken, checkout.tableNumber, checkout.tableNumberFromQr, restaurantSlug]);
+
+  useEffect(() => {
+    void refreshActiveSession().catch(() => {
+      setActiveSession(null);
+    });
+  }, [refreshActiveSession]);
+
+  useEffect(() => {
+    if (!restaurant?.id || !checkout.tableNumber || !checkout.qrToken) return;
+
+    const refresh = () => {
+      void refreshActiveSession().catch(() => undefined);
+    };
+    const channel = supabase.channel(`public-order-session-${restaurant.id}-${checkout.tableNumber}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [checkout.qrToken, checkout.tableNumber, refreshActiveSession, restaurant?.id]);
 
   function getTableNumberValidationMessage(tableNumber: string) {
     const normalizedTableNumber = tableNumber.trim();
@@ -119,6 +160,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
       setSubmittedOrder(order);
       cart.clearCart();
+      await refreshActiveSession();
       checkout.resetCheckoutState();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Order could not be placed.");
@@ -203,6 +245,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           {checkout.checkoutVisible && cart.items.length > 0 ? (
             <PublicQrCheckoutPanel
               customerName={checkout.customerName}
+              activeSession={activeSession}
               displaySubtotal={cart.displaySubtotal}
               items={cart.items}
               paymentMethod={checkout.paymentMethod}
@@ -221,6 +264,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           ) : (
             <PublicQrCartPanel
               items={cart.items}
+              activeSession={activeSession}
               itemCount={cart.itemCount}
               displaySubtotal={cart.displaySubtotal}
               isOpen={cartVisible}
@@ -238,6 +282,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       </div>
       <PublicQrCartPanel
         items={cart.items}
+        activeSession={activeSession}
         itemCount={cart.itemCount}
         displaySubtotal={cart.displaySubtotal}
         isFloatingOnly
@@ -270,7 +315,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           <div className="order-success-mark" aria-hidden="true">OK</div>
           <p className="eyebrow">Order sent</p>
           <h2>Order #{submittedOrder.order_id.slice(0, 8)}</h2>
-          <p>Your order has been sent. Please wait while the cashier confirms your order.</p>
+          <p>{submittedOrder.session_action === "appended" ? "Your new items were added to the current order." : "Your order has been sent. Please wait while the cashier confirms your order."}</p>
           <div className="order-waiting-card" aria-live="polite">
             <span className="status-pulse" aria-hidden="true" />
             <div>

@@ -1,8 +1,17 @@
 import { supabase } from "../../../core/database";
-import type { KitchenOrder, KitchenOrderItem, KitchenOrderStatus, KitchenRestaurant } from "../types";
+import type {
+  KitchenDashboardContext,
+  KitchenOrder,
+  KitchenOrderItem,
+  KitchenOrderStationProgress,
+  KitchenOrderStatus,
+  KitchenRestaurant,
+  KitchenStationStatus,
+} from "../types";
 
 type OrderRow = {
   id: string;
+  kitchen_batch_key?: string | null;
   status: KitchenOrderStatus;
   customer_name: string | null;
   table_number: string | null;
@@ -19,7 +28,25 @@ type OrderItemRow = {
   order_id: string;
   quantity: number;
   price: number | string;
+  notes?: string | null;
+  appended_at?: string | null;
+  kitchen_station_id?: string | null;
+  kitchen_station_name?: string | null;
+  kitchen_status?: KitchenOrderStatus | null;
+  menu_item_name?: string | null;
   menu_items?: { name?: string | null } | { name?: string | null }[] | null;
+};
+
+type StationProgressRow = {
+  station_id: string;
+  station_name: string;
+  station_status: KitchenStationStatus;
+  item_count: number | string;
+  ready_count: number | string;
+  completed_count: number | string;
+  started_at?: string | null;
+  ready_at?: string | null;
+  completed_at?: string | null;
 };
 
 type StaffRestaurantRow = {
@@ -29,6 +56,10 @@ type StaffRestaurantRow = {
 
 function isKitchenOrderStatus(value: unknown): value is KitchenOrderStatus {
   return value === "paid" || value === "preparing" || value === "ready" || value === "completed";
+}
+
+function isKitchenStationStatus(value: unknown): value is KitchenStationStatus {
+  return value === "waiting" || value === "preparing" || value === "ready" || value === "completed";
 }
 
 function isOrderRow(value: unknown): value is OrderRow {
@@ -54,6 +85,10 @@ function getMenuItemName(menuItem: OrderItemRow["menu_items"]): string {
   return menuItem?.name || "Menu item";
 }
 
+function getRpcMenuItemName(row: OrderItemRow): string {
+  return row.menu_item_name || getMenuItemName(row.menu_items);
+}
+
 function getStaffRestaurant(
   restaurant: StaffRestaurantRow["restaurants"]
 ): { id?: string | null; name?: string | null } | null {
@@ -64,9 +99,10 @@ function getStaffRestaurant(
   return restaurant ?? null;
 }
 
-function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = []): KitchenOrder {
+function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = [], stationProgress: KitchenOrderStationProgress[] = []): KitchenOrder {
   return {
     id: row.id,
+    kitchenBatchKey: row.kitchen_batch_key ?? null,
     status: row.status,
     customerName: row.customer_name,
     tableNumber: row.table_number,
@@ -77,6 +113,7 @@ function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = []): KitchenO
     preparationStartedAt: row.preparation_started_at,
     readyMarkedAt: row.ready_marked_at,
     items,
+    stationProgress,
   };
 }
 
@@ -84,10 +121,42 @@ function normalizeOrderItem(row: OrderItemRow): KitchenOrderItem {
   return {
     id: row.id,
     orderId: row.order_id,
-    name: getMenuItemName(row.menu_items),
+    name: getRpcMenuItemName(row),
     quantity: Number(row.quantity),
     price: Number(row.price),
+    notes: row.notes ?? null,
+    appendedAt: row.appended_at ?? null,
+    kitchenStationId: row.kitchen_station_id ?? null,
+    kitchenStationName: row.kitchen_station_name ?? null,
+    kitchenStatus: row.kitchen_status ?? null,
   };
+}
+
+function normalizeStationProgress(row: StationProgressRow): KitchenOrderStationProgress {
+  return {
+    stationId: row.station_id,
+    stationName: row.station_name,
+    stationStatus: isKitchenStationStatus(row.station_status) ? row.station_status : "waiting",
+    itemCount: Number(row.item_count),
+    readyCount: Number(row.ready_count),
+    completedCount: Number(row.completed_count),
+    startedAt: row.started_at ?? null,
+    readyAt: row.ready_at ?? null,
+    completedAt: row.completed_at ?? null,
+  };
+}
+
+function normalizeRpcOrder(row: OrderRow & {
+  items?: OrderItemRow[] | string | null;
+  station_progress?: StationProgressRow[] | string | null;
+}): KitchenOrder {
+  const rawItems = typeof row.items === "string" ? JSON.parse(row.items) : row.items;
+  const rawProgress = typeof row.station_progress === "string" ? JSON.parse(row.station_progress) : row.station_progress;
+  const items = Array.isArray(rawItems) ? rawItems.map((item) => normalizeOrderItem(item as OrderItemRow)) : [];
+  const stationProgress = Array.isArray(rawProgress)
+    ? rawProgress.map((progress) => normalizeStationProgress(progress as StationProgressRow))
+    : [];
+  return normalizeOrder(row, items, stationProgress);
 }
 
 export async function fetchKitchenRestaurant(activeRestaurantId: string): Promise<KitchenRestaurant> {
@@ -169,9 +238,59 @@ export async function fetchKitchenOrders(activeRestaurantId: string): Promise<Ki
   return normalizedOrderRows.map((order) => normalizeOrder(order, itemsByOrder.get(order.id)));
 }
 
-export async function startOrderPreparation(orderId: string): Promise<KitchenOrder> {
+export async function fetchKitchenDashboardContext(activeRestaurantId: string): Promise<KitchenDashboardContext> {
+  const { data, error } = await supabase.rpc("get_kitchen_dashboard_context", {
+    target_restaurant_id: activeRestaurantId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const context = data as KitchenDashboardContext | null;
+
+  if (!context?.restaurant?.id || !context.restaurant.name) {
+    throw new Error("No kitchen restaurant was found for this account.");
+  }
+
+  return {
+    restaurant: context.restaurant,
+    role: context.role,
+    assignedStation: context.assignedStation ?? null,
+    stations: context.stations ?? [],
+  };
+}
+
+export async function fetchStationKitchenOrders(
+  activeRestaurantId: string,
+  stationId: string | null,
+  includeAllStations: boolean,
+  logQueueView = false
+): Promise<KitchenOrder[]> {
+  const { data, error } = await supabase.rpc("get_station_kitchen_orders", {
+    target_restaurant_id: activeRestaurantId,
+    target_station_id: stationId,
+    include_all_stations: includeAllStations,
+    log_queue_view: logQueueView,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as (OrderRow & {
+    items?: OrderItemRow[] | string | null;
+    station_progress?: StationProgressRow[] | string | null;
+  })[])
+    .filter((row) => isKitchenOrderStatus(row.status))
+    .map(normalizeRpcOrder);
+}
+
+export async function startOrderPreparation(orderId: string, stationId: string | null = null, kitchenBatchKey: string | null = null): Promise<KitchenOrder> {
   const { data, error } = await supabase.rpc("start_order_preparation", {
     target_order_id: orderId,
+    target_station_id: stationId,
+    target_batch_key: kitchenBatchKey,
   });
 
   if (error) {
@@ -185,9 +304,11 @@ export async function startOrderPreparation(orderId: string): Promise<KitchenOrd
   return normalizeOrder(data);
 }
 
-export async function markOrderReady(orderId: string): Promise<KitchenOrder> {
+export async function markOrderReady(orderId: string, stationId: string | null = null, kitchenBatchKey: string | null = null): Promise<KitchenOrder> {
   const { data, error } = await supabase.rpc("mark_order_ready", {
     target_order_id: orderId,
+    target_station_id: stationId,
+    target_batch_key: kitchenBatchKey,
   });
 
   if (error) {
@@ -201,9 +322,11 @@ export async function markOrderReady(orderId: string): Promise<KitchenOrder> {
   return normalizeOrder(data);
 }
 
-export async function markOrderCompleted(orderId: string): Promise<KitchenOrder> {
+export async function markOrderCompleted(orderId: string, stationId: string | null = null, kitchenBatchKey: string | null = null): Promise<KitchenOrder> {
   const { data, error } = await supabase.rpc("mark_order_completed", {
     target_order_id: orderId,
+    target_station_id: stationId,
+    target_batch_key: kitchenBatchKey,
   });
 
   if (error) {

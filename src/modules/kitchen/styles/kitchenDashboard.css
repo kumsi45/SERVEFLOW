@@ -71,6 +71,10 @@
 .kd-filter-btn:not(.active):hover { border-color: var(--kd-new); color: var(--kd-new); }
 .kd-filter-sep { width: 1px; height: 20px; background: var(--kd-border); flex: 0 0 1px; margin: 0 4px; }
 .kd-sort-btn { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--kd-border); background: var(--kd-surface); font-size: 12px; font-weight: 600; color: var(--kd-muted); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; margin-left: auto; flex: 0 0 auto; }
+.kd-station-bar { min-height: 42px; padding: 6px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; background: var(--kd-surface); border-bottom: 1px solid var(--kd-border); }
+.kd-station-picker { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--kd-muted); }
+.kd-station-picker select { height: 30px; min-width: 180px; border-radius: 8px; border: 1px solid var(--kd-border); background: var(--kd-surface); color: var(--kd-text); font-size: 12px; font-weight: 700; padding: 0 30px 0 10px; }
+.kd-station-lock { font-size: 12px; font-weight: 800; color: var(--kd-text); padding: 6px 10px; border: 1px solid var(--kd-border); border-radius: 8px; background: var(--kd-bg); }
 
 /* ─── MAIN BODY ─── */
 .kd-body { flex: 1; display: flex; min-height: 0; overflow: hidden; }
