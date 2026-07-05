@@ -1188,6 +1188,58 @@ h1 {
   gap: 10px;
 }
 
+.nutrition-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.nutrition-summary div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #e8dccd;
+  border-radius: 8px;
+  background: #fffaf3;
+}
+
+.nutrition-summary dt {
+  color: #7b6a5b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.nutrition-summary dd {
+  margin: 2px 0 0;
+  color: #211b17;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.nutrition-summary.compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nutrition-summary.compact div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 26px;
+  padding: 4px 8px;
+}
+
+.nutrition-summary.compact dt {
+  font-size: 10px;
+}
+
+.nutrition-summary.compact dd {
+  margin: 0;
+  font-size: 12px;
+}
+
 .featured-dish-footer strong,
 .menu-item-price strong,
 .public-cart-line-main > span,
@@ -1570,6 +1622,36 @@ h1 {
   margin: 0;
   padding-left: 18px;
   color: #4f4137;
+}
+
+.ingredient-check-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ingredient-check-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: #332920;
+  font-weight: 800;
+}
+
+.ingredient-check-list span {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: #1e5b4c;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .food-info-chip-row {

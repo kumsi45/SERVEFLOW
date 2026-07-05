@@ -1,5 +1,6 @@
 import type { MenuItem } from "../types";
 import { formatETBPrice } from "./menuPresentation";
+import { NutritionSummary } from "./NutritionSummary";
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -14,6 +15,8 @@ export function MenuItemCard({
   onAddToCart,
   onOpenFoodInfo,
 }: MenuItemCardProps) {
+  const imageUrl = item.effective_image_url || item.image_url;
+
   return (
     <article
       className={item.available ? "menu-item" : "menu-item unavailable"}
@@ -27,8 +30,8 @@ export function MenuItemCard({
       }}
     >
       <div className="menu-item-image-wrap">
-        {item.image_url ? (
-          <img className="menu-item-image" src={item.image_url} alt={item.name} loading="lazy" />
+        {imageUrl ? (
+          <img className="menu-item-image" src={imageUrl} alt={item.name} loading="lazy" />
         ) : (
           <div className="menu-item-image placeholder" aria-hidden="true" />
         )}
@@ -43,6 +46,7 @@ export function MenuItemCard({
           </div>
         </div>
         {item.description ? <p>{item.description}</p> : null}
+        <NutritionSummary item={item} compact />
         <div className="menu-item-footer">
           <span className={item.available ? "availability available" : "availability"}>
             {item.available ? "Available today" : "Unavailable"}

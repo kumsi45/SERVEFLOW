@@ -10,6 +10,9 @@ export type OrderingCategory = {
   id: string;
   restaurant_id: string;
   name: string;
+  description?: string | null;
+  display_order?: number | null;
+  hero_image_url?: string | null;
 };
 
 export type OrderingMenuItem = {
@@ -32,6 +35,8 @@ export type OrderingMenuItem = {
   sodium_mg?: number | null;
   price: number;
   image_url?: string | null;
+  category_image_url?: string | null;
+  effective_image_url?: string | null;
   available: boolean;
 };
 

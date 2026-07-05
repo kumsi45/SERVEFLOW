@@ -53,6 +53,7 @@ type StarterTemplateItem = {
 type StarterTemplateCategory = {
   name: string;
   description: string;
+  hero_image_url?: string | null;
   items: StarterTemplateItem[];
 };
 

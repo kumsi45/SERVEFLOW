@@ -1,5 +1,6 @@
 import type { MenuItem } from "../types";
 import { formatETBPrice } from "./menuPresentation";
+import { NutritionSummary } from "./NutritionSummary";
 
 type FeaturedDishesProps = {
   items: MenuItem[];
@@ -25,7 +26,10 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
         <h2 id="featured-dishes-title">Fresh from the menu</h2>
       </div>
       <div className="featured-dish-track">
-        {featuredItems.map((item) => (
+        {featuredItems.map((item) => {
+          const imageUrl = item.effective_image_url || item.image_url;
+
+          return (
           <article className="featured-dish-card" key={item.id}>
             <button
               className="featured-dish-open"
@@ -34,8 +38,8 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               aria-label={`Open ${item.name}`}
             >
               <div className="featured-dish-media">
-                {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} loading="lazy" />
+                {imageUrl ? (
+                  <img src={imageUrl} alt={item.name} loading="lazy" />
                 ) : (
                   <div className="featured-dish-placeholder" aria-hidden="true" />
                 )}
@@ -45,6 +49,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               <div>
                 <h3>{item.name}</h3>
                 {item.description ? <p>{item.description}</p> : null}
+                <NutritionSummary item={item} compact />
               </div>
               <div className="featured-dish-footer">
                 <div>
@@ -70,7 +75,8 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

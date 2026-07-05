@@ -2595,6 +2595,40 @@ function formatFileSize(bytes: number) {
   return `${bytes} B`;
 }
 
+function formatOptionalNutritionInput(value: number | null | undefined) {
+  return value === null || typeof value === "undefined" ? "" : String(value);
+}
+
+function parseOptionalNutritionNumber(label: string, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`${label} must be zero or greater.`);
+  return parsed;
+}
+
+function parseOptionalNutritionInteger(label: string, value: string) {
+  const parsed = parseOptionalNutritionNumber(label, value);
+  if (parsed === null) return null;
+  if (!Number.isInteger(parsed)) throw new Error(`${label} must be a whole number.`);
+  return parsed;
+}
+
+function formatIngredientInput(ingredients: string[] | null | undefined) {
+  return (ingredients ?? []).join("\n");
+}
+
+function parseIngredientInput(value: string) {
+  const ingredients = Array.from(new Set(
+    value
+      .split(/\r?\n|,/)
+      .map((ingredient) => ingredient.trim())
+      .filter((ingredient) => ingredient.length > 0)
+  ));
+
+  return ingredients.length > 0 ? ingredients : null;
+}
+
 function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuChanged }: MenuPageProps) {
   const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [modal, setModal] = useState<MenuModalState>(null);
@@ -2611,6 +2645,14 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
   const [formAvailable, setFormAvailable] = useState(true);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
   const [formImageUrl, setFormImageUrl] = useState("");
+  const [formIngredients, setFormIngredients] = useState("");
+  const [formCalories, setFormCalories] = useState("");
+  const [formProteinG, setFormProteinG] = useState("");
+  const [formCarbohydratesG, setFormCarbohydratesG] = useState("");
+  const [formFatG, setFormFatG] = useState("");
+  const [formFiberG, setFormFiberG] = useState("");
+  const [formSugarG, setFormSugarG] = useState("");
+  const [formSodiumMg, setFormSodiumMg] = useState("");
   const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>([]);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -2684,6 +2726,14 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setFormAvailable(true);
     setFormImageFile(null);
     setFormImageUrl("");
+    setFormIngredients("");
+    setFormCalories("");
+    setFormProteinG("");
+    setFormCarbohydratesG("");
+    setFormFatG("");
+    setFormFiberG("");
+    setFormSugarG("");
+    setFormSodiumMg("");
     setModal({ mode: "create" });
   }
 
@@ -2699,6 +2749,14 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setFormAvailable(item.available);
     setFormImageFile(null);
     setFormImageUrl(item.image_url ?? "");
+    setFormIngredients(formatIngredientInput(item.ingredients));
+    setFormCalories(formatOptionalNutritionInput(item.calories));
+    setFormProteinG(formatOptionalNutritionInput(item.protein_g));
+    setFormCarbohydratesG(formatOptionalNutritionInput(item.carbohydrates_g));
+    setFormFatG(formatOptionalNutritionInput(item.fat_g));
+    setFormFiberG(formatOptionalNutritionInput(item.fiber_g));
+    setFormSugarG(formatOptionalNutritionInput(item.sugar_g));
+    setFormSodiumMg(formatOptionalNutritionInput(item.sodium_mg));
     setModal({ mode: "edit", item });
   }
 
@@ -2845,6 +2903,14 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
 
       const categoryId = await ensureCategory();
       const imageUrl = await uploadImageIfNeeded();
+      const ingredients = parseIngredientInput(formIngredients);
+      const calories = parseOptionalNutritionInteger("Calories", formCalories);
+      const proteinG = parseOptionalNutritionNumber("Protein", formProteinG);
+      const carbohydratesG = parseOptionalNutritionNumber("Carbs", formCarbohydratesG);
+      const fatG = parseOptionalNutritionNumber("Fat", formFatG);
+      const fiberG = parseOptionalNutritionNumber("Fiber", formFiberG);
+      const sugarG = parseOptionalNutritionNumber("Sugar", formSugarG);
+      const sodiumMg = parseOptionalNutritionNumber("Sodium", formSodiumMg);
       const payload = {
         restaurant_id: restaurantId,
         name,
@@ -2854,6 +2920,14 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         kitchen_station_id: formStationId,
         available: formAvailable,
         image_url: imageUrl,
+        ingredients,
+        calories,
+        protein_g: proteinG,
+        carbohydrates_g: carbohydratesG,
+        fat_g: fatG,
+        fiber_g: fiberG,
+        sugar_g: sugarG,
+        sodium_mg: sodiumMg,
       };
 
       if (modal.mode === "create") {
@@ -3060,8 +3134,40 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
                 <textarea value={formDescription} onChange={(event) => setFormDescription(event.target.value)} disabled={isWorking} rows={3} />
               </label>
               <label>
+                Ingredients
+                <textarea value={formIngredients} onChange={(event) => setFormIngredients(event.target.value)} disabled={isWorking} rows={4} placeholder={"Mozzarella\nTomato Sauce\nFresh Basil"} />
+              </label>
+              <label>
                 Price
                 <input type="number" min="0" step="0.01" value={formPrice} onChange={(event) => setFormPrice(event.target.value)} disabled={isWorking} required />
+              </label>
+              <label>
+                Calories
+                <input type="number" min="0" step="1" value={formCalories} onChange={(event) => setFormCalories(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Protein (g)
+                <input type="number" min="0" step="0.1" value={formProteinG} onChange={(event) => setFormProteinG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Carbs (g)
+                <input type="number" min="0" step="0.1" value={formCarbohydratesG} onChange={(event) => setFormCarbohydratesG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Fat (g)
+                <input type="number" min="0" step="0.1" value={formFatG} onChange={(event) => setFormFatG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Fiber (g)
+                <input type="number" min="0" step="0.1" value={formFiberG} onChange={(event) => setFormFiberG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Sugar (g)
+                <input type="number" min="0" step="0.1" value={formSugarG} onChange={(event) => setFormSugarG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+              </label>
+              <label>
+                Sodium (mg)
+                <input type="number" min="0" step="0.1" value={formSodiumMg} onChange={(event) => setFormSodiumMg(event.target.value)} disabled={isWorking} placeholder="Optional" />
               </label>
               <label>
                 Category

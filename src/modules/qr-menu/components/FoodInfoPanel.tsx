@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { MenuItem } from "../types";
+import { IngredientList } from "./IngredientList";
 import { formatETBPrice } from "./menuPresentation";
+import { hasPublicNutrition, NutritionSummary } from "./NutritionSummary";
 
 type FoodInfoPanelProps = {
   item?: MenuItem;
@@ -21,6 +23,8 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
     return null;
   }
 
+  const imageUrl = item.effective_image_url || item.image_url;
+
   return (
     <div className="food-info-layer" role="presentation">
       <button
@@ -31,8 +35,8 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
       />
       <aside className="food-info-panel" aria-label={`${item.name} food information`}>
         <div className="food-info-media">
-          {item.image_url ? (
-            <img src={item.image_url} alt={item.name} />
+          {imageUrl ? (
+            <img src={imageUrl} alt={item.name} />
           ) : (
             <div className="food-info-placeholder" aria-hidden="true" />
           )}
@@ -49,6 +53,15 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
           </div>
           <strong>{formatETBPrice(Number(item.price))}</strong>
         </div>
+
+        {hasPublicNutrition(item) ? (
+          <section className="food-info-section" aria-label="Nutrition">
+            <h3>Nutrition</h3>
+            <NutritionSummary item={item} />
+          </section>
+        ) : null}
+
+        <IngredientList ingredients={item.ingredients} />
 
         <label className="food-info-notes">
           <span>Notes for the kitchen</span>
