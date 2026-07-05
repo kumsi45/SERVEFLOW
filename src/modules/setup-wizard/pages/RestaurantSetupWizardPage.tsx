@@ -4,7 +4,16 @@ import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import "./restaurantSetupWizard.css";
 
-type RestaurantType = "Restaurant" | "Cafe" | "Fast Food" | "Bakery" | "Juice House" | "Hotel Restaurant" | "Bar";
+type RestaurantType =
+  | "Ethiopian Restaurant"
+  | "International Restaurant"
+  | "Cafe"
+  | "Hotel Restaurant"
+  | "Fast Food"
+  | "Bakery"
+  | "Juice Bar"
+  | "Fine Dining"
+  | "Mixed Restaurant";
 type KitchenMode = "single" | "advanced" | "skipped";
 type InviteRole = "owner" | "cashier" | "kitchen" | "waiter" | "manager";
 
@@ -23,6 +32,38 @@ type ExistingTable = {
   active: boolean;
 };
 
+type StarterTemplateItem = {
+  name: string;
+  description: string;
+  ingredients?: string[] | null;
+  allergens?: string[] | null;
+  preparation_time_minutes: number;
+  spice_level?: number | null;
+  dietary_tags?: string[] | null;
+  calories?: number | null;
+  protein_g?: number | null;
+  carbohydrates_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
+  suggested_station: "main" | "beverage";
+};
+
+type StarterTemplateCategory = {
+  name: string;
+  description: string;
+  items: StarterTemplateItem[];
+};
+
+type StarterTemplate = {
+  template_key: string;
+  restaurant_type: string;
+  name: string;
+  description: string;
+  categories: StarterTemplateCategory[];
+};
+
 type InviteDraft = {
   name: string;
   email: string;
@@ -31,16 +72,27 @@ type InviteDraft = {
 
 type BrandingAssetType = "logo" | "cover";
 
-const RESTAURANT_TYPES: RestaurantType[] = ["Restaurant", "Cafe", "Fast Food", "Bakery", "Juice House", "Hotel Restaurant", "Bar"];
+const RESTAURANT_TYPES: RestaurantType[] = [
+  "Ethiopian Restaurant",
+  "International Restaurant",
+  "Cafe",
+  "Hotel Restaurant",
+  "Fast Food",
+  "Bakery",
+  "Juice Bar",
+  "Fine Dining",
+  "Mixed Restaurant",
+];
 const TABLE_PRESETS = [10, 20, 30, 40, 50] as const;
 const CUSTOM_TABLES = [75, 120, 150] as const;
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
-const INVITE_ROLES: InviteRole[] = ["owner", "cashier", "kitchen", "waiter", "manager"];
+const INVITE_ROLES: InviteRole[] = ["cashier", "kitchen", "waiter", "manager"];
 
 const STEPS = [
   "Restaurant",
+  "Starter Templates",
   "Branding",
-  "Tables",
+  "Select Tables",
   "Hours",
   "Kitchen",
   "Staff",
@@ -121,11 +173,15 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   const [generatedTables, setGeneratedTables] = useState<ExistingTable[]>([]);
   const [restaurantInfo, setRestaurantInfo] = useState({
     restaurantName,
-    restaurantType: "Restaurant" as RestaurantType,
+    restaurantType: "Mixed Restaurant" as RestaurantType,
     phone: "",
     address: "",
     description: "",
   });
+  const [starterTemplates, setStarterTemplates] = useState<StarterTemplate[]>([]);
+  const [selectedStarterTemplateKeys, setSelectedStarterTemplateKeys] = useState<string[]>([]);
+  const [starterTemplatesLoading, setStarterTemplatesLoading] = useState(false);
+  const [starterTemplateError, setStarterTemplateError] = useState<string | null>(null);
   const [branding, setBranding] = useState({
     logoUrl: "",
     coverUrl: "",
@@ -149,6 +205,18 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   const [inviteDraft, setInviteDraft] = useState<InviteDraft>({ name: "", email: "", role: "cashier" });
 
   const activeTables = useMemo(() => (generatedTables.length > 0 ? generatedTables : tables).filter((table) => table.active), [generatedTables, tables]);
+  const selectedStarterTemplates = useMemo(
+    () => starterTemplates.filter((template) => selectedStarterTemplateKeys.includes(template.template_key)),
+    [selectedStarterTemplateKeys, starterTemplates],
+  );
+  const selectedStarterCategoryCount = useMemo(
+    () => selectedStarterTemplates.reduce((total, template) => total + template.categories.length, 0),
+    [selectedStarterTemplates],
+  );
+  const selectedStarterItemCount = useMemo(
+    () => selectedStarterTemplates.reduce((total, template) => total + template.categories.reduce((subtotal, category) => subtotal + category.items.length, 0), 0),
+    [selectedStarterTemplates],
+  );
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
   const existingTables = tables.length > 0;
 
@@ -178,7 +246,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
         const brand = restaurantData?.branding && typeof restaurantData.branding === "object" ? restaurantData.branding as Record<string, unknown> : {};
         setRestaurantInfo({
           restaurantName: typeof restaurantData?.name === "string" ? restaurantData.name : restaurantName,
-          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as RestaurantType) ? profile.restaurant_type as RestaurantType : "Restaurant",
+          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as RestaurantType) ? profile.restaurant_type as RestaurantType : "Mixed Restaurant",
           phone: typeof profile.phone === "string" ? profile.phone : "",
           address: typeof profile.address === "string" ? profile.address : "",
           description: typeof profile.description === "string" ? profile.description : "",
@@ -210,6 +278,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           const draftKitchenMode = typeof draft.kitchenMode === "string" ? draft.kitchenMode : "";
           const draftTableCount = typeof draft.tableCount === "number" ? draft.tableCount : null;
           const draftInvites = Array.isArray(draft.invites) ? draft.invites as InviteDraft[] : null;
+          const draftStarterTemplateKeys = Array.isArray(draft.selectedStarterTemplateKeys) ? draft.selectedStarterTemplateKeys.filter((key): key is string => typeof key === "string") : null;
 
           if (draftRestaurantInfo) setRestaurantInfo((previous) => ({ ...previous, ...draftRestaurantInfo }));
           if (draftBranding) {
@@ -221,6 +290,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           if (draftKitchenMode === "single" || draftKitchenMode === "advanced" || draftKitchenMode === "skipped") setKitchenMode(draftKitchenMode);
           if (draftTableCount && Number.isInteger(draftTableCount)) setTableCount(draftTableCount);
           if (draftInvites) setInvites(draftInvites);
+          if (draftStarterTemplateKeys) setSelectedStarterTemplateKeys(draftStarterTemplateKeys);
         }
       } catch (loadError) {
         if (mounted) setError(loadError instanceof Error ? loadError.message : "Could not load setup.");
@@ -233,6 +303,39 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   }, [restaurantId, restaurantName]);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadStarterTemplates() {
+      try {
+        setStarterTemplatesLoading(true);
+        setStarterTemplateError(null);
+        const { data, error: templateError } = await supabase.rpc("get_restaurant_starter_templates", {
+          target_restaurant_type: restaurantInfo.restaurantType,
+        });
+        if (templateError) throw new Error(templateError.message);
+        if (!mounted) return;
+
+        const templates = Array.isArray(data) ? data as StarterTemplate[] : [];
+        setStarterTemplates(templates);
+        setSelectedStarterTemplateKeys((current) => {
+          const availableKeys = templates.map((template) => template.template_key);
+          const currentAvailable = current.filter((key) => availableKeys.includes(key));
+          return currentAvailable.length > 0 ? currentAvailable : availableKeys;
+        });
+      } catch (loadError) {
+        if (!mounted) return;
+        setStarterTemplates([]);
+        setStarterTemplateError(loadError instanceof Error ? loadError.message : "Could not load starter templates.");
+      } finally {
+        if (mounted) setStarterTemplatesLoading(false);
+      }
+    }
+
+    void loadStarterTemplates();
+    return () => { mounted = false; };
+  }, [restaurantInfo.restaurantType]);
+
+  useEffect(() => {
     if (loading) return;
 
     window.localStorage.setItem(getDraftStorageKey(restaurantId), JSON.stringify({
@@ -242,13 +345,14 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
       hours,
       kitchenMode,
       invites,
+      selectedStarterTemplateKeys,
     }));
-  }, [branding, hours, invites, kitchenMode, loading, restaurantId, restaurantInfo, tableCount]);
+  }, [branding, hours, invites, kitchenMode, loading, restaurantId, restaurantInfo, selectedStarterTemplateKeys, tableCount]);
 
   function canContinue() {
     if (step === 0) return restaurantInfo.restaurantName.trim().length >= 2;
-    if (step === 2) return Number.isInteger(tableCount) && tableCount >= 1 && tableCount <= 500;
-    if (step === 3) return Boolean(hours.opensAt && hours.closesAt);
+    if (step === 3) return Number.isInteger(tableCount) && tableCount >= 1 && tableCount <= 500;
+    if (step === 4) return Boolean(hours.opensAt && hours.closesAt);
     return true;
   }
 
@@ -273,6 +377,21 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
         ? previous.closedDays.filter((entry) => entry !== day)
         : [...previous.closedDays, day],
     }));
+  }
+
+  function toggleStarterTemplate(templateKey: string) {
+    setSelectedStarterTemplateKeys((current) => current.includes(templateKey)
+      ? current.filter((key) => key !== templateKey)
+      : [...current, templateKey]);
+  }
+
+  function updateCustomTableCount(value: string) {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) {
+      setTableCount(1);
+      return;
+    }
+    setTableCount(Math.max(1, Math.min(500, parsed)));
   }
 
   function addInvite() {
@@ -363,6 +482,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           skipped: kitchenMode === "skipped",
         },
         staff_invitations_payload: invites,
+        starter_template_keys: selectedStarterTemplateKeys,
       });
       if (setupError) throw new Error(setupError.message);
       const payload = data && typeof data === "object" ? data as { tables?: ExistingTable[] } : {};
@@ -449,6 +569,45 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
           )}
 
           {step === 1 && (
+            <div className="setup-template-layout">
+              <div className="setup-template-list">
+                {starterTemplatesLoading && <div className="setup-list">Loading starter templates...</div>}
+                {starterTemplateError && <div className="setup-error">{starterTemplateError}</div>}
+                {!starterTemplatesLoading && !starterTemplateError && starterTemplates.length === 0 && (
+                  <div className="setup-list">No starter templates are available for this restaurant type.</div>
+                )}
+                {starterTemplates.map((template) => {
+                  const selected = selectedStarterTemplateKeys.includes(template.template_key);
+                  const sampleItems = template.categories.flatMap((category) => category.items.map((item) => item.name)).slice(0, 4);
+                  return (
+                    <button type="button" className={`setup-template-card${selected ? " selected" : ""}`} onClick={() => toggleStarterTemplate(template.template_key)} key={template.template_key}>
+                      <span className="setup-template-check">{selected ? "Selected" : ""}</span>
+                      <span>
+                        <strong>{template.name}</strong>
+                        <small>{template.description}</small>
+                        <em>{sampleItems.join(" / ")}</em>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <aside className="setup-template-preview">
+                <strong>Live Preview</strong>
+                <span>{selectedStarterCategoryCount} categories / {selectedStarterItemCount} items</span>
+                <div>
+                  {selectedStarterTemplates.slice(0, 3).flatMap((template) => template.categories.slice(0, 2).map((category) => (
+                    <section key={`${template.template_key}-${category.name}`}>
+                      <h3>{category.name}</h3>
+                      {category.items.slice(0, 3).map((item) => <p key={item.name}>{item.name}<span>ETB 0</span></p>)}
+                    </section>
+                  )))}
+                  {selectedStarterTemplates.length === 0 && <p>No templates selected.</p>}
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {step === 2 && (
             <div className="setup-grid">
               <div className="setup-asset-field wide">
                 <div className="setup-asset-preview logo">
@@ -478,8 +637,12 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="setup-stack">
+              <div className="setup-step-copy">
+                <h2>Select Tables</h2>
+                <p>Choose how many table QR codes ServeFlow should create for this restaurant.</p>
+              </div>
               {existingTables && (
                 <div className="setup-notice">
                   <strong>{tables.length} table records already exist.</strong>
@@ -491,14 +654,22 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
                 <button type="button" className={tablesChoice === "custom" ? "selected" : ""} onClick={() => setTablesChoice("custom")}>Custom</button>
               </div>
               {tablesChoice === "custom" && (
-                <div className="setup-choice-row">
+                <div className="setup-custom-tables">
                   {CUSTOM_TABLES.map((count) => <button type="button" className={tableCount === count ? "selected" : ""} onClick={() => setTableCount(count)} key={count}>{count}</button>)}
+                  <label>
+                    Exact Table Count
+                    <input type="number" min={1} max={500} value={tableCount} onChange={(event) => updateCustomTableCount(event.target.value)} />
+                  </label>
                 </div>
               )}
+              <div className="setup-table-summary">
+                <span>Selected tables</span>
+                <strong>{tableCount}</strong>
+              </div>
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="setup-stack">
               <div className="setup-grid">
                 <label>Opening<input type="time" value={hours.opensAt} onChange={(event) => setHours({ ...hours, opensAt: event.target.value })} /></label>
@@ -510,7 +681,7 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="setup-choice-column">
               <button type="button" className={kitchenMode === "single" ? "selected" : ""} onClick={() => setKitchenMode("single")}><strong>Single Kitchen</strong><span>Simple setup for one preparation area.</span></button>
               <button type="button" className={kitchenMode === "advanced" ? "selected" : ""} onClick={() => setKitchenMode("advanced")}><strong>Multiple Kitchen Stations</strong><span>Stores your preference for a future station workflow.</span></button>
@@ -518,7 +689,7 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="setup-stack">
               <div className="setup-grid">
                 <label>Name<input value={inviteDraft.name} onChange={(event) => setInviteDraft({ ...inviteDraft, name: event.target.value })} /></label>
@@ -530,19 +701,19 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <div className="setup-finish">
               <h2>Ready to launch</h2>
               <div className="setup-summary">
                 <span className="with-image">Logo<strong>{logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : "Not added"}</strong></span>
                 <span>Restaurant Name<strong>{restaurantInfo.restaurantName}</strong></span>
+                <span>Starter Templates<strong>{selectedStarterTemplates.length}</strong></span>
                 <span>Tables<strong>{tableCount}</strong></span>
                 <span>Business Hours<strong>{hours.opensAt} - {hours.closesAt}</strong></span>
                 <span>Kitchen<strong>{kitchenMode === "skipped" ? "Skipped" : kitchenMode === "advanced" ? "Advanced preference saved" : "Single Kitchen"}</strong></span>
               </div>
               <div className="setup-actions">
                 <button className="setup-secondary" type="button">Create Menu Manually</button>
-                <button className="setup-secondary" type="button">Launch AI Menu Generator</button>
                 <button className="setup-primary" type="button" onClick={() => void completeSetup()} disabled={submitting || assetUploading !== null}>{submitting ? "Launching..." : "Launch My Restaurant"}</button>
               </div>
             </div>
@@ -552,7 +723,7 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
         {step < FINAL_STEP && (
           <footer className="setup-actions">
             <button className="setup-secondary" type="button" onClick={back} disabled={step === 0 || submitting || assetUploading !== null}>Back</button>
-            {step === 5 && <button className="setup-secondary" type="button" onClick={next}>Skip</button>}
+            {step === 6 && <button className="setup-secondary" type="button" onClick={next}>Skip</button>}
             <button className="setup-primary" type="button" onClick={next} disabled={submitting || assetUploading !== null}>{assetUploading ? "Uploading..." : "Continue"}</button>
           </footer>
         )}

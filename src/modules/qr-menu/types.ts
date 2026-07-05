@@ -20,6 +20,18 @@ export type MenuItem = {
   category_id: string;
   name: string;
   description?: string | null;
+  ingredients?: string[] | null;
+  allergens?: string[] | null;
+  preparation_time_minutes?: number | null;
+  spice_level?: number | null;
+  dietary_tags?: string[] | null;
+  calories?: number | null;
+  protein_g?: number | null;
+  carbohydrates_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
   price: number;
   image_url?: string | null;
   available: boolean;

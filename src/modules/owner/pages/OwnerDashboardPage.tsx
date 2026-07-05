@@ -95,6 +95,18 @@ type OdMenuItem = {
   id: string;
   name: string;
   description: string | null;
+  ingredients?: string[] | null;
+  allergens?: string[] | null;
+  preparation_time_minutes?: number | null;
+  spice_level?: number | null;
+  dietary_tags?: string[] | null;
+  calories?: number | null;
+  protein_g?: number | null;
+  carbohydrates_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
   price: number;
   available: boolean;
   category_id: string;
@@ -481,7 +493,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .order("created_at", { ascending: true }),
             supabase
               .from("menu_items")
-              .select("id,name,description,price,available,category_id,kitchen_station_id,image_url,archived_at")
+              .select("id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at")
               .eq("restaurant_id", restaurantId)
               .is("archived_at", null)
               .order("name", { ascending: true }),
@@ -819,7 +831,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     const [{ data: menuData, error: menuError }, { data: categoryData, error: categoryError }] = await Promise.all([
       supabase
       .from("menu_items")
-      .select("id,name,description,price,available,category_id,kitchen_station_id,image_url,archived_at")
+      .select("id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at")
       .eq("restaurant_id", restaurantId)
       .is("archived_at", null)
       .order("name", { ascending: true }),

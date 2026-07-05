@@ -231,14 +231,145 @@
   gap: 14px;
 }
 
+.setup-step-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.setup-step-copy h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 950;
+  color: #0f172a;
+}
+
+.setup-step-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.setup-template-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.setup-template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.setup-template-card {
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.setup-template-card.selected {
+  border-color: #0f766e;
+  background: #ecfdf5;
+}
+
+.setup-template-card strong,
+.setup-template-preview strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 950;
+  color: #0f172a;
+}
+
+.setup-template-card small,
+.setup-template-card em,
+.setup-template-preview span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.setup-template-check {
+  min-height: 34px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.setup-template-card.selected .setup-template-check {
+  border-color: #0f766e;
+}
+
+.setup-template-preview {
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.setup-template-preview section {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+  display: grid;
+  gap: 7px;
+}
+
+.setup-template-preview h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.setup-template-preview p {
+  margin: 0;
+  min-height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px 9px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .setup-choice-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.setup-custom-tables {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
 .setup-choice-row button,
-.setup-choice-column button {
+.setup-choice-column button,
+.setup-custom-tables button {
   min-height: 44px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
@@ -252,10 +383,64 @@
 }
 
 .setup-choice-row button.selected,
-.setup-choice-column button.selected {
+.setup-choice-column button.selected,
+.setup-custom-tables button.selected {
   border-color: #0f766e;
   background: #ecfdf5;
   color: #0f766e;
+}
+
+.setup-custom-tables label {
+  display: grid;
+  gap: 7px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.setup-custom-tables input {
+  width: 160px;
+  height: 44px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #0f172a;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.setup-custom-tables input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.setup-table-summary {
+  width: fit-content;
+  min-width: 180px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.setup-table-summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.setup-table-summary strong {
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 950;
 }
 
 .setup-choice-column button {
@@ -401,7 +586,8 @@
   }
 
   .setup-grid,
-  .setup-summary {
+  .setup-summary,
+  .setup-template-layout {
     grid-template-columns: 1fr;
   }
 
@@ -419,5 +605,10 @@
 
   .setup-actions button {
     flex: 1;
+  }
+
+  .setup-custom-tables input,
+  .setup-table-summary {
+    width: 100%;
   }
 }
