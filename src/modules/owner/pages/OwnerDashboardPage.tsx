@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
   createStaff,
@@ -2614,6 +2615,14 @@ function parseOptionalNutritionInteger(label: string, value: string) {
   return parsed;
 }
 
+function parseOptionalPositiveInteger(label: string, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed < 0) throw new Error(`${label} must be a whole number.`);
+  return parsed;
+}
+
 function formatIngredientInput(ingredients: string[] | null | undefined) {
   return (ingredients ?? []).join("\n");
 }
@@ -2638,6 +2647,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
   const [stationFilter, setStationFilter] = useState("all");
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
+  const [formPreparationTime, setFormPreparationTime] = useState("");
   const [formPrice, setFormPrice] = useState("");
   const [formCategoryId, setFormCategoryId] = useState("");
   const [formNewCategory, setFormNewCategory] = useState("");
@@ -2719,6 +2729,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setNotice(null);
     setFormName("");
     setFormDescription("");
+    setFormPreparationTime("");
     setFormPrice("");
     setFormCategoryId(categories[0]?.id ?? "");
     setFormNewCategory(categories.length === 0 ? "Main Menu" : "");
@@ -2742,6 +2753,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setNotice(null);
     setFormName(item.name);
     setFormDescription(item.description ?? "");
+    setFormPreparationTime(item.preparation_time_minutes === null || typeof item.preparation_time_minutes === "undefined" ? "" : String(item.preparation_time_minutes));
     setFormPrice(String(item.price));
     setFormCategoryId(item.category_id);
     setFormNewCategory("");
@@ -2904,6 +2916,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       const categoryId = await ensureCategory();
       const imageUrl = await uploadImageIfNeeded();
       const ingredients = parseIngredientInput(formIngredients);
+      const preparationTimeMinutes = parseOptionalPositiveInteger("Preparation time", formPreparationTime);
       const calories = parseOptionalNutritionInteger("Calories", formCalories);
       const proteinG = parseOptionalNutritionNumber("Protein", formProteinG);
       const carbohydratesG = parseOptionalNutritionNumber("Carbs", formCarbohydratesG);
@@ -2915,6 +2928,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         restaurant_id: restaurantId,
         name,
         description: formDescription.trim() || null,
+        preparation_time_minutes: preparationTimeMinutes,
         price,
         category_id: categoryId,
         kitchen_station_id: formStationId,
@@ -3064,6 +3078,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
                 <th>Item Name</th>
                 <th>Category</th>
                 <th>Station</th>
+                <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
                 <th>Actions</th>
@@ -3072,7 +3087,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="od-empty">
                       <div className="od-empty-icon">--</div>
                       <div className="od-empty-msg">{items.length === 0 ? "No menu items yet" : "No menu items match these filters"}</div>
@@ -3094,6 +3109,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
                     </td>
                     <td>{getCategoryName(categories, item.category_id)}</td>
                     <td><span className="od-station-badge">{getStationName(stations, item.kitchen_station_id)}</span></td>
+                    <td>{formatPreparationEstimate(item.preparation_time_minutes) ?? "Not set"}</td>
                     <td>{fmtMoney(item.price)}</td>
                     <td>
                       <span className={`od-status-badge ${item.available ? "paid" : "pending"}`}>{item.available ? "Available" : "Unavailable"}</span>
@@ -3136,6 +3152,10 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
               <label>
                 Ingredients
                 <textarea value={formIngredients} onChange={(event) => setFormIngredients(event.target.value)} disabled={isWorking} rows={4} placeholder={"Mozzarella\nTomato Sauce\nFresh Basil"} />
+              </label>
+              <label>
+                Preparation Time (minutes)
+                <input type="number" min="0" step="1" value={formPreparationTime} onChange={(event) => setFormPreparationTime(event.target.value)} disabled={isWorking} placeholder="Optional" />
               </label>
               <label>
                 Price

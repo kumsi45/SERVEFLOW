@@ -1,3 +1,4 @@
+import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import type { MenuItem } from "../types";
 import { formatETBPrice } from "./menuPresentation";
 import { NutritionSummary } from "./NutritionSummary";
@@ -16,6 +17,7 @@ export function MenuItemCard({
   onOpenFoodInfo,
 }: MenuItemCardProps) {
   const imageUrl = item.effective_image_url || item.image_url;
+  const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
 
   return (
     <article
@@ -48,8 +50,11 @@ export function MenuItemCard({
         {item.description ? <p>{item.description}</p> : null}
         <NutritionSummary item={item} compact />
         <div className="menu-item-footer">
-          <span className={item.available ? "availability available" : "availability"}>
-            {item.available ? "Available today" : "Unavailable"}
+          <span className="menu-meta-row">
+            <span className={item.available ? "availability available" : "availability"}>
+              {item.available ? "Available today" : "Unavailable"}
+            </span>
+            {preparationEstimate ? <span className="prep-time-chip">{preparationEstimate}</span> : null}
           </span>
           <span className="restaurant-chip">{categoryName}</span>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
 import { formatETBPrice } from "./menuPresentation";
@@ -24,6 +25,7 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
   }
 
   const imageUrl = item.effective_image_url || item.image_url;
+  const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
 
   return (
     <div className="food-info-layer" role="presentation">
@@ -53,6 +55,13 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
           </div>
           <strong>{formatETBPrice(Number(item.price))}</strong>
         </div>
+
+        {preparationEstimate ? (
+          <section className="food-info-section" aria-label="Estimated preparation time">
+            <h3>Estimated Preparation Time</h3>
+            <p className="prep-time-display">{preparationEstimate}</p>
+          </section>
+        ) : null}
 
         {hasPublicNutrition(item) ? (
           <section className="food-info-section" aria-label="Nutrition">

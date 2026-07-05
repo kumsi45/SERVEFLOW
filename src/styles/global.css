@@ -1188,6 +1188,27 @@ h1 {
   gap: 10px;
 }
 
+.menu-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.prep-time-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid #e3d4c2;
+  border-radius: 999px;
+  color: #6f4a2d;
+  background: #fff6e8;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .nutrition-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

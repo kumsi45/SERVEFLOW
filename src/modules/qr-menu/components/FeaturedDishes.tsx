@@ -1,3 +1,4 @@
+import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import type { MenuItem } from "../types";
 import { formatETBPrice } from "./menuPresentation";
 import { NutritionSummary } from "./NutritionSummary";
@@ -28,6 +29,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
       <div className="featured-dish-track">
         {featuredItems.map((item) => {
           const imageUrl = item.effective_image_url || item.image_url;
+          const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
 
           return (
           <article className="featured-dish-card" key={item.id}>
@@ -54,6 +56,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               <div className="featured-dish-footer">
                 <div>
                   <strong>{formatETBPrice(Number(item.price))}</strong>
+                  {preparationEstimate ? <span>{preparationEstimate}</span> : null}
                 </div>
               </div>
               <div className="featured-dish-actions">

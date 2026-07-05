@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { useCart } from "../hooks/useCart";
 import { useOrderingMenu } from "../hooks/useOrderingMenu";
 import { submitPublicQrCustomerOrder } from "../services/orderingService";
@@ -154,7 +155,10 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
           </div>
 
           <div className="ordering-items">
-            {visibleItems.map((item) => (
+            {visibleItems.map((item) => {
+              const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
+
+              return (
               <article className={item.available ? "order-item" : "order-item unavailable"} key={item.id}>
                 <div>
                   <div className="order-item-heading">
@@ -162,12 +166,14 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
                     <strong>{currencyFormatter.format(Number(item.price))}</strong>
                   </div>
                   <p>{item.description || "Freshly prepared by the restaurant."}</p>
+                  {preparationEstimate ? <span className="prep-time-chip">{preparationEstimate}</span> : null}
                 </div>
                 <button type="button" disabled={!item.available} onClick={() => addItem(item.id)}>
                   Add
                 </button>
               </article>
-            ))}
+              );
+            })}
           </div>
         </div>
 
