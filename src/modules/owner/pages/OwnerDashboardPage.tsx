@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
@@ -3560,13 +3559,21 @@ function CustomersPage({ orders }: { orders: OdOrder[] }) {
   );
 }
 
-function getOrderingUrl(qrPath: string) {
-  if (!qrPath) return "";
+function getOrderingUrl(qrUrl: string | null | undefined) {
+  const rawUrl = qrUrl?.trim() ?? "";
+  if (!rawUrl) return "";
   try {
-    return getQrAppUrl(qrPath);
+    const url = new URL(rawUrl);
+    return `${url.origin}${url.pathname}${url.search}`;
   } catch {
     return "";
   }
+}
+
+function logOwnerQrDiagnostic(stage: string, context: Record<string, unknown>) {
+  const viteEnv = import.meta.env as unknown as { DEV?: boolean };
+  if (!viteEnv.DEV) return;
+  console.debug("[ServeFlow QR]", stage, context);
 }
 
 type PrintableQrTable = {
@@ -3787,7 +3794,7 @@ function QrTablesPage({
       lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
       lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? orders.find((order) => order.table_number === number)?.created_at ?? null,
       scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
-      orderingUrl: getOrderingUrl(restaurantTable.qr_url || restaurantTable.qr_path),
+      orderingUrl: getOrderingUrl(restaurantTable.qr_url),
     };
   });
 
@@ -3798,8 +3805,14 @@ function QrTablesPage({
     async function generateQrCodes() {
       const pairs = await Promise.all(
         tables.map(async (table) => {
-          const url = getOrderingUrl(table.qr_url || table.qr_path);
+          const url = getOrderingUrl(table.qr_url);
           if (!url) return [table.id, ""] as const;
+          logOwnerQrDiagnostic("ownerDashboard:generatedQrUrl", {
+            generatedQrUrl: url,
+            currentAppUrl: new URL(url).origin,
+            restaurantId,
+            tableNumber: table.table_number,
+          });
           const dataUrl = await QRCode.toDataURL(url, { width: 96, margin: 1 });
           return [table.id, dataUrl] as const;
         })
@@ -3885,7 +3898,7 @@ function QrTablesPage({
     }
   }
 
-  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url || previewTable.qr_path) : "";
+  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url) : "";
   const previewPrintable = previewTable && previewUrl ? { table: previewTable, orderingUrl: previewUrl } : null;
   const allSelected = rows.length > 0 && rows.every((row) => selectedTableIds.includes(row.table.id));
 
@@ -3990,7 +4003,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         <div className="od-card-header">
           <div>
             <div className="od-card-title">Restaurant Tables</div>
-            <div className="od-card-subtitle">Owner QR controls for the existing /r/{restaurantSlug || ":slug"}/order route.</div>
+            <div className="od-card-subtitle">Owner QR controls for the direct /r/{restaurantSlug || ":slug"} digital menu route.</div>
           </div>
         </div>
         <div className="od-table-wrap">
@@ -4156,7 +4169,7 @@ function SettingsPage({
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
-  const [appUrl, setAppUrl] = useState("http://localhost:5173");
+  const [appUrl, setAppUrl] = useState("");
   const [appUrlWorking, setAppUrlWorking] = useState(false);
   const activeTables = useMemo(() => tables.filter((table) => table.active), [tables]);
 
@@ -4187,8 +4200,14 @@ function SettingsPage({
       try {
         const pairs = await Promise.all(
           activeTables.slice(0, 80).map(async (table) => {
-            const url = getOrderingUrl(table.qr_url || table.qr_path);
+            const url = getOrderingUrl(table.qr_url);
             if (!url) return [table.table_number, ""] as const;
+            logOwnerQrDiagnostic("ownerSettings:generatedQrUrl", {
+              generatedQrUrl: url,
+              currentAppUrl: new URL(url).origin,
+              restaurantId,
+              tableNumber: table.table_number,
+            });
             const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
             return [table.table_number, dataUrl] as const;
           })

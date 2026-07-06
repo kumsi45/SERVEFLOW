@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { getQrAppUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import "./restaurantSetupWizard.css";
 
@@ -103,13 +102,20 @@ const STEPS = [
 const FINAL_STEP = STEPS.length - 1;
 
 function getOrderingUrl(table: ExistingTable) {
-  const path = table.qr_url || table.qr_path;
-  if (!path) return "";
+  const qrUrl = table.qr_url?.trim() ?? "";
+  if (!qrUrl) return "";
   try {
-    return getQrAppUrl(path);
+    const url = new URL(qrUrl);
+    return `${url.origin}${url.pathname}${url.search}`;
   } catch {
     return "";
   }
+}
+
+function logSetupQrDiagnostic(stage: string, context: Record<string, unknown>) {
+  const viteEnv = import.meta.env as unknown as { DEV?: boolean };
+  if (!viteEnv.DEV) return;
+  console.debug("[ServeFlow QR]", stage, context);
 }
 
 function safeFilename(value: string) {
@@ -151,6 +157,11 @@ async function buildQrPdf(tables: ExistingTable[], restaurantName: string) {
     if (!orderingUrl) {
       throw new Error("QR base URL is not configured. Set the Application URL before generating QR codes.");
     }
+    logSetupQrDiagnostic("setupWizard:generatedQrUrl", {
+      generatedQrUrl: orderingUrl,
+      currentAppUrl: new URL(orderingUrl).origin,
+      tableNumber: table.table_number,
+    });
     const qr = await QRCode.toDataURL(orderingUrl, { width: 220, margin: 1 });
     return `<section><h1>${restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
   }));
@@ -507,6 +518,11 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
         if (!orderingUrl) {
           throw new Error("QR base URL is not configured. Set the Application URL before generating QR codes.");
         }
+        logSetupQrDiagnostic("setupWizard:printQrUrl", {
+          generatedQrUrl: orderingUrl,
+          currentAppUrl: new URL(orderingUrl).origin,
+          tableNumber: table.table_number,
+        });
         const qr = await QRCode.toDataURL(orderingUrl, { width: 260, margin: 1 });
         return `<section><h1>${restaurantInfo.restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
       }));

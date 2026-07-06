@@ -221,10 +221,13 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const contextRef = useRef<KitchenDashboardContext | null>(null);
   const selectedStationRef = useRef<"all" | string>("all");
   const skipNextStationLoadRef = useRef(true);
+  const knownKitchenTicketKeysRef = useRef<Set<string>>(new Set());
+  const kitchenRealtimeReadyRef = useRef(false);
 
   useEffect(() => {
     contextRef.current = dashboardContext;
@@ -234,7 +237,20 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     selectedStationRef.current = selectedStationId;
   }, [selectedStationId]);
 
-  async function refreshStationOrders(logQueueView = false) {
+  function applyKitchenOrders(rows: KitchenOrder[], notifyNewTickets: boolean) {
+    const nextTicketKeys = new Set(rows.map(kitchenTicketKey));
+    const newTicketCount = rows.filter((order) => !knownKitchenTicketKeysRef.current.has(kitchenTicketKey(order))).length;
+
+    if (notifyNewTickets && kitchenRealtimeReadyRef.current && newTicketCount > 0) {
+      setRealtimeNotice(`${newTicketCount} new kitchen order${newTicketCount === 1 ? "" : "s"} received.`);
+    }
+
+    knownKitchenTicketKeysRef.current = nextTicketKeys;
+    kitchenRealtimeReadyRef.current = true;
+    setOrders(rows);
+  }
+
+  async function refreshStationOrders(logQueueView = false, notifyNewTickets = false) {
     const context = contextRef.current;
     if (!context) return;
 
@@ -242,7 +258,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     const includeAllStations = context.role === "owner" && selection === "all";
     const stationId = includeAllStations ? null : selection;
     const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, logQueueView);
-    setOrders(rows);
+    applyKitchenOrders(rows, notifyNewTickets);
   }
 
   // ── load ───────────────────────────────────────────────────────────────────
@@ -263,7 +279,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
         const includeAllStations = context.role === "owner" && nextSelection === "all";
         const stationId = includeAllStations ? null : nextSelection;
         const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, true);
-        if (mounted) setOrders(rows);
+        if (mounted) applyKitchenOrders(rows, false);
       } catch (e) { if (mounted) setError(e instanceof Error ? e.message : "Could not load orders."); }
       finally { if (mounted) setLoading(false); }
     }
@@ -286,7 +302,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
         const includeAllStations = context.role === "owner" && selectedStationId === "all";
         const stationId = includeAllStations ? null : selectedStationId;
         const rows = await fetchStationKitchenOrders(restaurantId, stationId, includeAllStations, true);
-        if (mounted) setOrders(rows);
+        if (mounted) applyKitchenOrders(rows, false);
       } catch (e) {
         if (mounted) setError(e instanceof Error ? e.message : "Could not load orders.");
       }
@@ -304,9 +320,12 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     const itemFilter = includeAllStations ? `restaurant_id=eq.${restaurantId}` : `kitchen_station_id=eq.${selectedStationId}`;
     const ch = supabase.channel(`kitchen-${restaurantId}-${selectedStationId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
-        async () => { await refreshStationOrders(false); })
+        async () => { await refreshStationOrders(false, true); })
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: itemFilter },
-        async () => { await refreshStationOrders(false); })
+        async () => {
+          setRealtimeNotice("Kitchen queue updated.");
+          await refreshStationOrders(false, true);
+        })
       .subscribe();
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
@@ -397,7 +416,10 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
         </div>
         <div className="kd-active-badge">🍽 {totalActive} ACTIVE</div>
         <div className="kd-header-actions">
-          <button className="kd-icon-btn" aria-label="Notifications">🔔</button>
+          <button className="kd-icon-btn" aria-label="Notifications" onClick={() => setRealtimeNotice(null)}>
+            🔔
+            {realtimeNotice ? <span className="kd-notif-dot" /> : null}
+          </button>
           <button className="kd-icon-btn" aria-label="Refresh" onClick={() => window.location.reload()}>↻</button>
           <button className="kd-signout-btn" onClick={handleSignOut}>⎋ Sign Out</button>
         </div>
@@ -414,6 +436,12 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
       </div>
 
       {error && <div className="kd-error-banner">⚠️ {error}</div>}
+      {realtimeNotice ? (
+        <div className="kd-realtime-notice" role="status">
+          <strong>{realtimeNotice}</strong>
+          <button type="button" onClick={() => setRealtimeNotice(null)}>Dismiss</button>
+        </div>
+      ) : null}
 
       {/* ── BODY ───────────────────────────────────────────────────────── */}
       <div className="kd-station-bar">

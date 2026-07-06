@@ -85,6 +85,13 @@ export function AppRouter() {
   }
 
   if (route.name === "ordering") {
+    const params = new URLSearchParams(window.location.search);
+    if ((params.get("t") || params.get("table")) && params.get("qr")) {
+      const menuPath = `/r/${encodeURIComponent(route.restaurantSlug)}${window.location.search}`;
+      window.history.replaceState({}, "", menuPath);
+      return <QRMenuPage restaurantSlug={route.restaurantSlug} />;
+    }
+
     return <OrderingPage restaurantSlug={route.restaurantSlug} />;
   }
 

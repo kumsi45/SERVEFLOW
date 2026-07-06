@@ -1,6 +1,8 @@
 import { supabase } from "../../../core/database";
+import { logPublicQrContext } from "./publicQrContext";
 import type {
   PublicQrCartItem,
+  PublicQrOrderInvoice,
   PublicQrOrderSession,
   PublicQrPaymentMethod,
   PublicQrSessionItem,
@@ -61,6 +63,29 @@ function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
   };
 }
 
+function normalizeSessionInvoice(value: unknown): PublicQrOrderInvoice | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  if (typeof payload.id !== "string" || typeof payload.status !== "string") {
+    return null;
+  }
+
+  return {
+    id: payload.id,
+    invoice_number: Number(payload.invoice_number ?? 1),
+    status: payload.status,
+    total_price: Number(payload.total_price ?? 0),
+    payment_method: payload.payment_method as PublicQrPaymentMethod | null | undefined,
+    paid_at: typeof payload.paid_at === "string" ? payload.paid_at : null,
+    locked_at: typeof payload.locked_at === "string" ? payload.locked_at : null,
+    created_at: typeof payload.created_at === "string" ? payload.created_at : null,
+  };
+}
+
 function normalizeSession(value: unknown): PublicQrOrderSession | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -79,6 +104,7 @@ function normalizeSession(value: unknown): PublicQrOrderSession | null {
   }
 
   const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  const rawInvoices = Array.isArray(payload.invoices) ? payload.invoices : [];
 
   return {
     order_id: orderId,
@@ -90,6 +116,7 @@ function normalizeSession(value: unknown): PublicQrOrderSession | null {
     created_at: payload.created_at,
     payment_verified_at: typeof payload.payment_verified_at === "string" ? payload.payment_verified_at : null,
     items: rawItems.flatMap((item) => normalizeSessionItem(item) ?? []),
+    invoices: rawInvoices.flatMap((invoice) => normalizeSessionInvoice(invoice) ?? []),
   };
 }
 
@@ -106,6 +133,12 @@ export async function fetchPublicQrOrderSession({
     return null;
   }
 
+  logPublicQrContext("publicQrOrderService:sessionLookup", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+  });
+
   const { data, error } = await supabase.rpc("get_public_qr_order_session", {
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber,
@@ -113,10 +146,23 @@ export async function fetchPublicQrOrderSession({
   });
 
   if (error) {
+    logPublicQrContext("publicQrOrderService:sessionLookup:error", {
+      restaurantSlug,
+      tableNumber,
+      qrToken,
+      message: error.message,
+    });
     throw new Error(error.message);
   }
 
-  return normalizeSession(data);
+  const session = normalizeSession(data);
+  logPublicQrContext("publicQrOrderService:sessionLookup:result", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+    activeOrderId: session?.order_id ?? null,
+  });
+  return session;
 }
 
 export async function submitPublicQrOrder({
@@ -132,6 +178,14 @@ export async function submitPublicQrOrder({
     quantity: item.quantity,
   }));
 
+  logPublicQrContext("publicQrOrderService:submit", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+    paymentMethod,
+    itemCount: requestedItems.length,
+  });
+
   const { data, error } = await supabase.rpc("create_public_qr_order", {
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber ?? "",
@@ -142,6 +196,12 @@ export async function submitPublicQrOrder({
   });
 
   if (error) {
+    logPublicQrContext("publicQrOrderService:submit:error", {
+      restaurantSlug,
+      tableNumber,
+      qrToken,
+      message: error.message,
+    });
     throw new Error(error.message);
   }
 
@@ -151,8 +211,14 @@ export async function submitPublicQrOrder({
 
   // Normalize: RPC returns 'id', client expects 'order_id'
   const normalized = data as Record<string, unknown>;
-  return {
+  const submittedOrder: SubmittedPublicQrOrder = {
     order_id: (normalized.order_id ?? normalized.id) as string,
+    invoice_id: normalized.invoice_id as string | null | undefined,
+    invoice_number: typeof normalized.invoice_number === "undefined" || normalized.invoice_number === null
+      ? null
+      : Number(normalized.invoice_number),
+    invoice_status: normalized.invoice_status as string | null | undefined,
+    invoice_total: Number(normalized.invoice_total ?? normalized.added_total ?? normalized.total_price ?? 0),
     status: normalized.status as string,
     total_price: Number(normalized.total_price),
     table_number: normalized.table_number as string | null | undefined,
@@ -166,4 +232,15 @@ export async function submitPublicQrOrder({
       ? normalized.items_added.flatMap((item) => normalizeSessionItem({ id: `${String((item as Record<string, unknown>).menu_item_id ?? "")}:${String((item as Record<string, unknown>).name ?? "")}`, ...item }) ?? [])
       : [],
   };
+
+  logPublicQrContext("publicQrOrderService:submit:result", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+    orderId: submittedOrder.order_id,
+    status: submittedOrder.status,
+    sessionAction: submittedOrder.session_action,
+  });
+
+  return submittedOrder;
 }

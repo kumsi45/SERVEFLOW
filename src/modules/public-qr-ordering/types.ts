@@ -16,6 +16,10 @@ export type AddPublicQrCartItemInput = {
 
 export type SubmittedPublicQrOrder = {
   order_id: string;
+  invoice_id?: string | null;
+  invoice_number?: number | null;
+  invoice_status?: "pending" | "paid" | "cancelled" | string | null;
+  invoice_total?: number;
   status: string;
   total_price: number;
   table_number?: string | null;
@@ -40,6 +44,17 @@ export type PublicQrSessionItem = {
   created_at?: string | null;
 };
 
+export type PublicQrOrderInvoice = {
+  id: string;
+  invoice_number: number;
+  status: "pending" | "paid" | "cancelled" | string;
+  total_price: number;
+  payment_method?: PublicQrPaymentMethod | null;
+  paid_at?: string | null;
+  locked_at?: string | null;
+  created_at?: string | null;
+};
+
 export type PublicQrOrderSession = {
   order_id: string;
   status: string;
@@ -50,6 +65,7 @@ export type PublicQrOrderSession = {
   created_at: string;
   payment_verified_at?: string | null;
   items: PublicQrSessionItem[];
+  invoices: PublicQrOrderInvoice[];
 };
 
 export const PUBLIC_QR_PAYMENT_METHODS = [

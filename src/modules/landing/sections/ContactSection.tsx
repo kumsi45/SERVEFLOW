@@ -16,7 +16,7 @@ export function ContactSection() {
           <p>Book a free demo with our team and see ServeFlow in action for your business.</p>
 
           <div className="lp-contact-person">
-            <div className="lp-contact-avatar">A</div>
+            <img className="lp-contact-avatar" src="/contact.jpg" alt="Abdulhayi Alo" />
             <div>
               <div className="lp-contact-name">Abdulhayi Alo</div>
               <div className="lp-contact-title">ServeFlow Founder &amp; Sales</div>

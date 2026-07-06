@@ -49,7 +49,7 @@ function normalizePath(value) {
 
 function qrMatchesTable(row, field) {
   const parsed = normalizePath(row[field]);
-  return parsed.pathname === `/r/${row.slug}/order`
+  return parsed.pathname === `/r/${row.slug}`
     && parsed.tableNumber === String(row.table_number)
     && parsed.qrToken === String(row.qr_token);
 }
@@ -511,10 +511,10 @@ async function auditSyntheticLifecycle(client, ids, results) {
     [ids.restaurantA]
   );
   results.push(result(
-    "QR regeneration preserves table IDs and QR tokens",
+    "QR regeneration preserves table IDs and rotates QR tokens",
     regenerated.rowCount === 20
       && regenerated.rows.find((row) => row.table_number === 1)?.id === originalTableOne.id
-      && regenerated.rows.find((row) => row.table_number === 1)?.qr_token === originalTableOne.qr_token
+      && regenerated.rows.find((row) => row.table_number === 1)?.qr_token !== originalTableOne.qr_token
       && regenerated.rows.every((row) => qrMatchesTable({ ...row, slug: "phase4e-public-qr-a" }, "qr_path"))
       && regenerated.rows.every((row) => qrMatchesTable({ ...row, slug: "phase4e-public-qr-a" }, "qr_url")),
     JSON.stringify(regenerated.rows.map((row) => ({ table_number: row.table_number, qr_token: row.qr_token })).slice(0, 5))

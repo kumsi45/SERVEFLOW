@@ -21,12 +21,31 @@ import {
   logPublicQrContext,
 } from "../../public-qr-ordering/services/publicQrContext";
 import { isPaymentMethod } from "../../public-qr-ordering/types";
-import type { PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
+import type { PublicQrOrderInvoice, PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
 
 type QRMenuPageProps = {
   restaurantSlug: string;
 };
+
+function getLatestInvoice(invoices: PublicQrOrderInvoice[]) {
+  return invoices.reduce<PublicQrOrderInvoice | null>((latest, invoice) => {
+    if (!latest || invoice.invoice_number > latest.invoice_number) {
+      return invoice;
+    }
+    return latest;
+  }, null);
+}
+
+function getCustomerTrackingStatus(orderStatus?: string, invoiceStatus?: string | null) {
+  if (invoiceStatus === "pending") return "pending_payment";
+  if (invoiceStatus === "cancelled") return "cancelled";
+  return orderStatus ?? (invoiceStatus === "paid" ? "paid" : "pending_payment");
+}
+
+function formatStatusLabel(status?: string) {
+  return status ? status.replace(/_/g, " ") : "pending";
+}
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const checkout = usePublicQrCheckoutState(restaurantSlug);
@@ -267,6 +286,26 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     );
   }
 
+  const activeSessionLatestInvoice = activeSession ? getLatestInvoice(activeSession.invoices) : null;
+  const submittedOrderInvoice = submittedOrder?.invoice_id && activeSession?.order_id === submittedOrder.order_id
+    ? activeSession.invoices.find((invoice) => invoice.id === submittedOrder.invoice_id) ?? null
+    : null;
+  const trackingInvoice = submittedOrderInvoice ?? activeSessionLatestInvoice;
+  const trackingOrderId = submittedOrder?.order_id ?? activeSession?.order_id;
+  const trackingStatus = getCustomerTrackingStatus(
+    activeSession?.status ?? submittedOrder?.status,
+    trackingInvoice?.status ?? submittedOrder?.invoice_status ?? null
+  );
+  const trackingTotal = submittedOrder
+    ? submittedOrder.invoice_total ?? submittedOrder.added_total ?? submittedOrder.total_price
+    : trackingInvoice?.total_price ?? activeSession?.total_price ?? 0;
+  const trackingPaymentApproved = trackingStatus
+    ? ["paid", "preparing", "ready", "completed"].includes(trackingStatus)
+    : false;
+  const trackingMessage = submittedOrder?.session_action === "appended"
+    ? "Your new items were added as a separate payment batch."
+    : "Track your current table order here.";
+
   return (
     <main className="qr-menu-page">
       <RestaurantHeader
@@ -274,6 +313,25 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         tableNumber={checkout.tableNumber}
         tableNumberFromQr={checkout.tableNumberFromQr}
       />
+      {trackingOrderId ? (
+        <section className="public-order-confirmation public-order-tracker" aria-label="Order tracking">
+          <div className="order-success-mark" aria-hidden="true">OK</div>
+          <p className="eyebrow">{submittedOrder ? "Order sent" : "Current order"}</p>
+          <h2>
+            Order #{trackingOrderId.slice(0, 8)}
+            {trackingInvoice ? ` · Bill #${trackingInvoice.invoice_number}` : ""}
+          </h2>
+          <p>{trackingMessage}</p>
+          <div className="order-waiting-card" aria-live="polite">
+            <span className="status-pulse" aria-hidden="true" />
+            <div>
+              <strong>{trackingPaymentApproved ? "Payment approved." : "Waiting for cashier approval..."}</strong>
+              <span>Status: {formatStatusLabel(trackingStatus)}</span>
+            </div>
+          </div>
+          <p className="order-total-note">This payment: {formatETBPrice(trackingTotal)}</p>
+        </section>
+      ) : null}
       <div className="qr-menu-shell">
         <div className="qr-menu-main">
           <section className="menu-controls">
@@ -375,25 +433,6 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             {formatETBPrice(cart.displaySubtotal)}
           </strong>
         </button>
-      ) : null}
-      {submittedOrder ? (
-        <section className="public-order-confirmation" aria-label="Order confirmation">
-          <div className="order-success-mark" aria-hidden="true">OK</div>
-          <p className="eyebrow">Order sent</p>
-          <h2>Order #{submittedOrder.order_id.slice(0, 8)}</h2>
-          <p>{submittedOrder.session_action === "appended" ? "Your new items were added to the current order." : "Your order has been sent. Please wait while the cashier confirms your order."}</p>
-          <div className="order-waiting-card" aria-live="polite">
-            <span className="status-pulse" aria-hidden="true" />
-            <div>
-              <strong>Waiting for cashier approval...</strong>
-              <span>Status: {submittedOrder.status}</span>
-            </div>
-          </div>
-          <button className="track-order-button" type="button">
-            Track Order
-          </button>
-          <p className="order-total-note">Total: {formatETBPrice(submittedOrder.total_price)}</p>
-        </section>
       ) : null}
       <FoodInfoPanel
         item={foodInfoItem}

@@ -1,4 +1,4 @@
-const DEFAULT_APP_ORIGIN = "http://localhost:5173";
+const DEFAULT_APP_ORIGIN = "https://serveflow.app";
 
 function normalizeHttpOrigin(value: string | undefined | null) {
   const rawValue = value?.trim();
@@ -30,26 +30,6 @@ function getConfiguredPublicOrigin() {
 
 export function getAppOrigin() {
   return getConfiguredPublicOrigin();
-}
-
-export function getQrAppOrigin() {
-  return getConfiguredPublicOrigin();
-}
-
-export function getQrAppUrl(pathOrUrl: string) {
-  const rawValue = pathOrUrl.trim();
-  if (!rawValue) {
-    return "";
-  }
-
-  try {
-    const url = new URL(rawValue);
-    return `${url.origin}${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    const origin = getQrAppOrigin();
-    const path = rawValue.startsWith("/") ? rawValue : `/${rawValue}`;
-    return `${origin}${path}`;
-  }
 }
 
 export function getPasswordResetRedirectUrl() {

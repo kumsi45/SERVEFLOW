@@ -117,13 +117,9 @@ export function buildPublicQrContextUrl(path: string, context: Pick<PublicQrCont
 }
 
 export function logPublicQrContext(stage: string, context: Record<string, unknown>) {
-  if (typeof window === "undefined") return;
-
   const viteEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
-  const debugEnabled =
-    Boolean(viteEnv?.DEV) || window.localStorage.getItem("serveflow.debugQr") === "1";
 
-  if (!debugEnabled) return;
+  if (!viteEnv?.DEV || typeof window === "undefined") return;
 
   console.debug("[ServeFlow QR]", stage, context);
 }

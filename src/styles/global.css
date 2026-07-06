@@ -2529,6 +2529,24 @@ h1 {
   text-align: center;
 }
 
+.public-order-tracker {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 auto 16px;
+  width: min(1120px, calc(100% - 32px));
+  border: 1px solid rgba(30, 91, 76, 0.26);
+  border-radius: 12px;
+  background: rgba(232, 243, 237, 0.97);
+  box-shadow: 0 14px 32px rgba(30, 91, 76, 0.16);
+}
+
+.public-order-tracker .order-success-mark {
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+}
+
 .order-success-mark {
   display: grid;
   width: 70px;

@@ -58,8 +58,12 @@
 .kd-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--kd-muted); pointer-events: none; }
 .kd-active-badge { display: flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 9px; background: var(--kd-new); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .kd-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.kd-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--kd-border); background: var(--kd-surface); cursor: pointer; display: grid; place-items: center; font-size: 15px; color: var(--kd-muted); transition: background 150ms; }
+.kd-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--kd-border); background: var(--kd-surface); cursor: pointer; display: grid; place-items: center; font-size: 15px; color: var(--kd-muted); transition: background 150ms; position: relative; }
 .kd-icon-btn:hover { background: var(--kd-bg); }
+.kd-notif-dot {
+  position: absolute; top: 6px; right: 6px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--kd-urgent); border: 1px solid #fff;
+}
 .kd-signout-btn { padding: 0 14px; height: 36px; border-radius: 8px; border: 1px solid var(--kd-border); background: var(--kd-surface); font-size: 13px; font-weight: 600; color: var(--kd-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 150ms, color 150ms; }
 .kd-signout-btn:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
@@ -75,6 +79,16 @@
 .kd-station-picker { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--kd-muted); }
 .kd-station-picker select { height: 30px; min-width: 180px; border-radius: 8px; border: 1px solid var(--kd-border); background: var(--kd-surface); color: var(--kd-text); font-size: 12px; font-weight: 700; padding: 0 30px 0 10px; }
 .kd-station-lock { font-size: 12px; font-weight: 800; color: var(--kd-text); padding: 6px 10px; border: 1px solid var(--kd-border); border-radius: 8px; background: var(--kd-bg); }
+.kd-realtime-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; border-bottom: 1px solid var(--kd-new-border);
+  background: var(--kd-new-bg); color: #1d4ed8;
+}
+.kd-realtime-notice strong { font-size: 13px; font-weight: 800; }
+.kd-realtime-notice button {
+  border: 1px solid var(--kd-new-border); background: #fff; color: #1d4ed8;
+  border-radius: 8px; height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
 
 /* ─── MAIN BODY ─── */
 .kd-body { flex: 1; display: flex; min-height: 0; overflow: hidden; }

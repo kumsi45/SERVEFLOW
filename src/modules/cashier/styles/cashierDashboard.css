@@ -71,6 +71,16 @@
 
 /* ─── LAYOUT ─── */
 .cd-body { max-width: 1400px; margin: 0 auto; padding: 24px 20px 48px; display: flex; flex-direction: column; gap: 24px; }
+.cd-realtime-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid #bfdbfe; border-radius: 10px;
+  background: #eff6ff; color: #1d4ed8; box-shadow: var(--cd-shadow);
+}
+.cd-realtime-notice strong { font-size: 13px; font-weight: 800; }
+.cd-realtime-notice button {
+  border: 1px solid #bfdbfe; background: #fff; color: #1d4ed8;
+  border-radius: 8px; height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
 
 /* ─── KPI CARDS ─── */
 .cd-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }

@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { logPublicQrContext } from "../../public-qr-ordering/services/publicQrContext";
 import type { MenuCategory, MenuItem, Restaurant } from "../types";
 
 type QRMenuData = {
@@ -25,11 +26,17 @@ function isQRMenuData(value: unknown): value is QRMenuData {
 }
 
 export async function fetchQRMenuData(restaurantSlug: string): Promise<QRMenuData> {
+  logPublicQrContext("qrMenuService:menuLookup", { restaurantSlug });
+
   const { data, error } = await supabase.rpc("get_public_qr_menu", {
     target_restaurant_slug: restaurantSlug,
   });
 
   if (error) {
+    logPublicQrContext("qrMenuService:menuLookup:error", {
+      restaurantSlug,
+      message: error.message,
+    });
     throw new Error(error.message);
   }
 
@@ -37,6 +44,12 @@ export async function fetchQRMenuData(restaurantSlug: string): Promise<QRMenuDat
     throw new Error("Restaurant menu not found.");
   }
 
+  logPublicQrContext("qrMenuService:menuLookup:result", {
+    restaurantSlug,
+    restaurantId: data.restaurant.id,
+    categoryCount: data.categories.length,
+    itemCount: data.items.length,
+  });
   return data;
 }
 
@@ -51,6 +64,12 @@ export async function logPublicQrScan({
 }) {
   if (!tableNumber.trim() || !qrToken.trim()) return;
 
+  logPublicQrContext("qrMenuService:scanLog", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+  });
+
   const { error } = await supabase.rpc("log_public_qr_scan", {
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber,
@@ -58,6 +77,19 @@ export async function logPublicQrScan({
   });
 
   if (error) {
+    logPublicQrContext("qrMenuService:scanLog:error", {
+      restaurantSlug,
+      tableNumber,
+      qrToken,
+      message: error.message,
+    });
     throw new Error(error.message);
   }
+
+  logPublicQrContext("qrMenuService:scanLog:result", {
+    restaurantSlug,
+    tableNumber,
+    qrToken,
+    validated: true,
+  });
 }

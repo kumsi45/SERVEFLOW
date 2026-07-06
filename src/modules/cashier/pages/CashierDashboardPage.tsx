@@ -363,7 +363,10 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const [actualCash, setActualCash] = useState("");
   const [varianceReason, setVarianceReason] = useState("");
   const [workingShift, setWorkingShift] = useState(false);
+  const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const knownPendingPaymentIdsRef = useRef<Set<string>>(new Set());
+  const dashboardHydratedRef = useRef(false);
 
   async function loadDashboard() {
     const [
@@ -393,8 +396,26 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     if (rest?.name) setRestaurant({ id: rest.id, name: rest.name, logoUrl: null });
 
     const summary = shiftSummary as { active_shift?: ActiveShift | null } | null;
+    const normalizedOrders = ((invoiceRows ?? []) as OrderRow[]).map(normalizeInvoiceRow);
+    const pendingPaymentIds = new Set(
+      normalizedOrders
+        .filter((order) => order.invoiceStatus === "pending")
+        .map((order) => order.invoiceId ?? order.id)
+    );
+    const newPendingPaymentCount = normalizedOrders.filter((order) => {
+      const orderKey = order.invoiceId ?? order.id;
+      return order.invoiceStatus === "pending" && !knownPendingPaymentIdsRef.current.has(orderKey);
+    }).length;
+
+    if (dashboardHydratedRef.current && newPendingPaymentCount > 0) {
+      setRealtimeNotice(`${newPendingPaymentCount} new order${newPendingPaymentCount === 1 ? "" : "s"} waiting for payment approval.`);
+      setQueueTab("pending");
+    }
+
+    knownPendingPaymentIdsRef.current = pendingPaymentIds;
+    dashboardHydratedRef.current = true;
     setActiveShift(summary?.active_shift ?? null);
-    setOrders(((invoiceRows ?? []) as OrderRow[]).map(normalizeInvoiceRow));
+    setOrders(normalizedOrders);
     setTables((tableRows ?? []).map((row) => ({ ...row, table_number: Number(row.table_number) })) as RestaurantTable[]);
     setCategories((categoryRows ?? []) as MenuCategoryRow[]);
     setMenuItems((menuRows ?? []).map((row) => {
@@ -646,12 +667,21 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
         </div>
         <div className="cd-header-right">
           <div className="cd-header-datetime"><div className="cd-header-date">{dateStr}</div><div className="cd-header-time">{timeStr}</div></div>
-          <button className="cd-icon-btn" aria-label="Notifications">!</button>
+          <button className="cd-icon-btn" aria-label="Notifications" onClick={() => setRealtimeNotice(null)}>
+            !
+            {realtimeNotice ? <span className="cd-notif-dot" /> : null}
+          </button>
           <button className="cd-signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
       </header>
 
       <main className="cd-body">
+        {realtimeNotice ? (
+          <div className="cd-realtime-notice" role="status">
+            <strong>{realtimeNotice}</strong>
+            <button type="button" onClick={() => setRealtimeNotice(null)}>Dismiss</button>
+          </div>
+        ) : null}
         {error && <div className="cd-error-banner">{error}</div>}
 
         {loading ? (
