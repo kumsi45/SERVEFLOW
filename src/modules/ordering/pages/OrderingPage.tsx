@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { useCart } from "../hooks/useCart";
 import { useOrderingMenu } from "../hooks/useOrderingMenu";
 import { submitPublicQrCustomerOrder } from "../services/orderingService";
 import { fetchPublicQrOrderSession } from "../../public-qr-ordering/services/publicQrOrderService";
+import {
+  buildPublicQrSession,
+  buildPublicQrContextUrl,
+  logPublicQrContext,
+  readPublicQrContext,
+} from "../../public-qr-ordering/services/publicQrContext";
 import type { PublicQrOrderSession } from "../../public-qr-ordering/types";
 import type { SubmittedOrder } from "../types";
 
@@ -17,13 +23,11 @@ const currencyFormatter = new Intl.NumberFormat("en", {
 });
 
 export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
-  const qrParams = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return {
-      tableNumber: params.get("t") || params.get("table") || "",
-      qrToken: params.get("qr") || "",
-    };
-  }, []);
+  const currentSearch = typeof window === "undefined" ? "" : window.location.search;
+  const qrParams = useMemo(
+    () => readPublicQrContext(restaurantSlug),
+    [restaurantSlug, currentSearch]
+  );
   const {
     restaurant,
     categories,
@@ -40,6 +44,22 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [submittedOrder, setSubmittedOrder] = useState<SubmittedOrder | null>(null);
   const [activeSession, setActiveSession] = useState<PublicQrOrderSession | null>(null);
+  const previousActiveSessionId = useRef<string | null>(null);
+  const currentSessionKeyRef = useRef(qrParams.sessionKey);
+  const publicQrSession = useMemo(
+    () => buildPublicQrSession(
+      qrParams,
+      restaurant?.id ?? null,
+      activeSession?.order_id ?? null
+    ),
+    [
+      activeSession?.order_id,
+      qrParams.qrToken,
+      qrParams.sessionKey,
+      qrParams.tableNumber,
+      restaurant?.id,
+    ]
+  );
 
   const cartQuantity = useMemo(
     () => cartLines.reduce((sum, line) => sum + line.quantity, 0),
@@ -49,24 +69,82 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
   const existingSubtotal = activeSession?.total_price ?? 0;
   const grandTotal = existingSubtotal + total;
 
-  async function refreshActiveSession() {
+  useEffect(() => {
+    currentSessionKeyRef.current = qrParams.sessionKey;
+  }, [qrParams.sessionKey]);
+
+  useEffect(() => {
+    logPublicQrContext("OrderingPage:init", {
+      restaurantSlug,
+      tableNumber: qrParams.tableNumber,
+      qrToken: qrParams.qrToken,
+      sessionKey: qrParams.sessionKey,
+      source: qrParams.source,
+    });
+  }, [qrParams.qrToken, qrParams.sessionKey, qrParams.source, qrParams.tableNumber, restaurantSlug]);
+
+  const refreshActiveSession = useCallback(async () => {
+    const requestSessionKey = qrParams.sessionKey;
+
+    logPublicQrContext("OrderingPage:session", {
+      restaurantSlug,
+      tableNumber: qrParams.tableNumber,
+      qrToken: qrParams.qrToken,
+      sessionKey: requestSessionKey,
+    });
+
+    if (!qrParams.tableNumber || !qrParams.qrToken) {
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setActiveSession(null);
+      }
+      return;
+    }
+
     const session = await fetchPublicQrOrderSession({
       restaurantSlug,
       tableNumber: qrParams.tableNumber,
       qrToken: qrParams.qrToken,
     });
-    setActiveSession(session);
-  }
+
+    if (currentSessionKeyRef.current === requestSessionKey) {
+      setActiveSession(session);
+    }
+  }, [qrParams.qrToken, qrParams.sessionKey, qrParams.tableNumber, restaurantSlug]);
 
   useEffect(() => {
     void refreshActiveSession().catch(() => setActiveSession(null));
-  }, [restaurantSlug, qrParams.tableNumber, qrParams.qrToken]);
+  }, [refreshActiveSession]);
+
+  useEffect(() => {
+    setActiveSession(null);
+    setSubmittedOrder(null);
+    setCheckoutError(null);
+    clearCart();
+    setSubmitting(false);
+  }, [qrParams.sessionKey, restaurantSlug]);
+
+  useEffect(() => {
+    if (previousActiveSessionId.current && !activeSession) {
+      clearCart();
+      setSubmittedOrder(null);
+      setCheckoutError(null);
+    }
+
+    previousActiveSessionId.current = activeSession?.order_id ?? null;
+  }, [activeSession]);
 
   async function handleSubmitOrder() {
+    const requestSessionKey = qrParams.sessionKey;
+
     setSubmitting(true);
     setCheckoutError(null);
 
     try {
+      logPublicQrContext("OrderingPage:submit", {
+        restaurantSlug,
+        publicQrSession,
+      });
+
       if (!qrParams.tableNumber.trim() || !qrParams.qrToken.trim()) {
         throw new Error("A valid table QR code is required to place this order.");
       }
@@ -77,15 +155,21 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
         qrToken: qrParams.qrToken,
         cartLines,
       });
-      setSubmittedOrder(order);
-      clearCart();
-      await refreshActiveSession();
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setSubmittedOrder(order);
+        clearCart();
+        await refreshActiveSession();
+      }
     } catch (orderError) {
-      setCheckoutError(
-        orderError instanceof Error ? orderError.message : "Order could not be placed."
-      );
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setCheckoutError(
+          orderError instanceof Error ? orderError.message : "Order could not be placed."
+        );
+      }
     } finally {
-      setSubmitting(false);
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setSubmitting(false);
+      }
     }
   }
 
@@ -115,7 +199,9 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
           <p className="eyebrow">Order ahead</p>
           <h1>{restaurant.name}</h1>
         </div>
-        <a href={`/r/${encodeURIComponent(restaurant.slug)}`}>View menu</a>
+        <a href={buildPublicQrContextUrl(`/r/${encodeURIComponent(restaurant.slug)}`, qrParams)}>
+          View menu
+        </a>
       </header>
 
       {submittedOrder ? (

@@ -134,11 +134,25 @@ function getResetRedirectUrl(request: Request) {
   return `${baseUrl}/reset-password`;
 }
 
-function generateTemporaryPassword() {
-  const bytes = new Uint8Array(18);
+function twoDigitSuffix() {
+  const bytes = new Uint8Array(1);
   crypto.getRandomValues(bytes);
-  const token = btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, "").slice(0, 18);
-  return `Sf-${token}9!`;
+  return String(bytes[0] % 100).padStart(2, "0");
+}
+
+function passwordNameBase(displayName: string) {
+  const firstName = displayName.trim().split(/\s+/)[0] ?? "";
+  const lettersAndNumbers = firstName.replace(/[^\p{L}\p{N}]/gu, "");
+  const readableBase = lettersAndNumbers || "Staff";
+  const normalizedBase = readableBase.charAt(0).toUpperCase() + readableBase.slice(1);
+
+  return Array.from(normalizedBase).length >= 4
+    ? normalizedBase
+    : `${normalizedBase}User`.slice(0, 4);
+}
+
+function generateTemporaryPassword(displayName: string) {
+  return `${passwordNameBase(displayName)}${twoDigitSuffix()}`;
 }
 
 function logInfo(requestId: string, message: string, details: Record<string, unknown> = {}) {
@@ -358,7 +372,7 @@ Deno.serve(async (request) => {
         return jsonResponse(409, { error: "A staff account with this email already exists for this restaurant." });
       }
 
-      const temporaryPassword = generateTemporaryPassword();
+      const temporaryPassword = generateTemporaryPassword(fullName);
       const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
         email,
         password: temporaryPassword,
@@ -556,7 +570,7 @@ Deno.serve(async (request) => {
     }
 
     if (action === "generate-temporary-password") {
-      const temporaryPassword = generateTemporaryPassword();
+      const temporaryPassword = generateTemporaryPassword(targetStaff.display_name);
       const { error } = await serviceClient.auth.admin.updateUserById(targetStaff.user_id, {
         password: temporaryPassword,
       });

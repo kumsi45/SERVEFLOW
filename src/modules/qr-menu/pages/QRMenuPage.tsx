@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { CategoryFilter } from "../components/CategoryFilter";
-import { FeaturedDishes } from "../components/FeaturedDishes";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
 import { MenuGroup } from "../components/MenuGroup";
 import { MenuSearch } from "../components/MenuSearch";
@@ -17,6 +16,10 @@ import {
   fetchPublicQrOrderSession,
   submitPublicQrOrder,
 } from "../../public-qr-ordering/services/publicQrOrderService";
+import {
+  buildPublicQrSession,
+  logPublicQrContext,
+} from "../../public-qr-ordering/services/publicQrContext";
 import { isPaymentMethod } from "../../public-qr-ordering/types";
 import type { PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
@@ -26,11 +29,13 @@ type QRMenuPageProps = {
 };
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
-  const cart = usePublicQrCart(restaurantSlug);
   const checkout = usePublicQrCheckoutState(restaurantSlug);
+  const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
   const [submitError, setSubmitError] = useState<string>();
   const [submittedOrder, setSubmittedOrder] = useState<SubmittedPublicQrOrder>();
   const [activeSession, setActiveSession] = useState<PublicQrOrderSession | null>(null);
+  const previousActiveSessionId = useRef<string | null>(null);
+  const currentSessionKeyRef = useRef(checkout.sessionKey);
   const [submitting, setSubmitting] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [foodInfoItem, setFoodInfoItem] = useState<MenuItem>();
@@ -46,10 +51,39 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setActiveCategoryId,
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
+  const publicQrSession = useMemo(
+    () => buildPublicQrSession(
+      checkout,
+      restaurant?.id ?? null,
+      activeSession?.order_id ?? null
+    ),
+    [
+      activeSession?.order_id,
+      checkout.qrToken,
+      checkout.sessionKey,
+      checkout.tableNumber,
+      restaurant?.id,
+    ]
+  );
+
+  useEffect(() => {
+    currentSessionKeyRef.current = checkout.sessionKey;
+  }, [checkout.sessionKey]);
 
   const refreshActiveSession = useCallback(async () => {
+    const requestSessionKey = checkout.sessionKey;
+
+    logPublicQrContext("QRMenuPage:session", {
+      restaurantSlug,
+      sessionKey: requestSessionKey,
+      tableNumber: checkout.tableNumber,
+      qrToken: checkout.qrToken,
+    });
+
     if (!checkout.tableNumber || !checkout.qrToken) {
-      setActiveSession(null);
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setActiveSession(null);
+      }
       return;
     }
 
@@ -58,8 +92,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       tableNumber: checkout.tableNumber,
       qrToken: checkout.qrToken,
     });
-    setActiveSession(session);
-  }, [checkout.qrToken, checkout.tableNumber, restaurantSlug]);
+
+    if (currentSessionKeyRef.current === requestSessionKey) {
+      setActiveSession(session);
+    }
+  }, [checkout.qrToken, checkout.sessionKey, checkout.tableNumber, restaurantSlug]);
 
   useEffect(() => {
     if (!checkout.tableNumberFromQr || !checkout.tableNumber || !checkout.qrToken) return;
@@ -80,12 +117,34 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   }, [refreshActiveSession]);
 
   useEffect(() => {
+    setActiveSession(null);
+    setSubmittedOrder(undefined);
+    setSubmitError(undefined);
+    setCartVisible(false);
+    setSubmitting(false);
+    setFoodInfoItem(undefined);
+    cart.clearCart();
+  }, [checkout.sessionKey, restaurantSlug]);
+
+  useEffect(() => {
+    if (previousActiveSessionId.current && !activeSession) {
+      cart.clearCart();
+      setSubmittedOrder(undefined);
+      setSubmitError(undefined);
+      setCartVisible(false);
+      checkout.resetCheckoutState();
+    }
+
+    previousActiveSessionId.current = activeSession?.order_id ?? null;
+  }, [activeSession?.order_id]);
+
+  useEffect(() => {
     if (!restaurant?.id || !checkout.tableNumber || !checkout.qrToken) return;
 
     const refresh = () => {
       void refreshActiveSession().catch(() => undefined);
     };
-    const channel = supabase.channel(`public-order-session-${restaurant.id}-${checkout.tableNumber}`)
+    const channel = supabase.channel(`public-order-session-${restaurant.id}-${checkout.sessionKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
       .subscribe();
@@ -93,7 +152,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [checkout.qrToken, checkout.tableNumber, refreshActiveSession, restaurant?.id]);
+  }, [checkout.qrToken, checkout.sessionKey, checkout.tableNumber, refreshActiveSession, restaurant?.id]);
 
   function getTableNumberValidationMessage(tableNumber: string) {
     const normalizedTableNumber = tableNumber.trim();
@@ -147,8 +206,14 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
     setSubmitError(undefined);
     setSubmitting(true);
+    const requestSessionKey = checkout.sessionKey;
 
     try {
+      logPublicQrContext("QRMenuPage:submit", {
+        restaurantSlug,
+        publicQrSession,
+      });
+
       const order = await submitPublicQrOrder({
         restaurantSlug,
         tableNumber: tableNum,
@@ -158,14 +223,20 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         items: cart.items,
       });
 
-      setSubmittedOrder(order);
-      cart.clearCart();
-      await refreshActiveSession();
-      checkout.resetCheckoutState();
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setSubmittedOrder(order);
+        cart.clearCart();
+        await refreshActiveSession();
+        checkout.resetCheckoutState();
+      }
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Order could not be placed.");
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setSubmitError(error instanceof Error ? error.message : "Order could not be placed.");
+      }
     } finally {
-      setSubmitting(false);
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setSubmitting(false);
+      }
     }
   }
 
@@ -213,11 +284,6 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               onChange={setActiveCategoryId}
             />
           </section>
-          <FeaturedDishes
-            items={items}
-            onAddToCart={addItemToCart}
-            onOpenFoodInfo={setFoodInfoItem}
-          />
           <section className="menu-content">
             {groups.length > 0 ? (
               groups.map((group) => (

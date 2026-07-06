@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { logPublicQrContext, readPublicQrContext } from "../services/publicQrContext";
 import { PUBLIC_QR_PAYMENT_METHODS, type PublicQrPaymentMethod } from "../types";
 
 type StoredCheckoutState = {
@@ -15,8 +16,11 @@ type StoredCheckoutPayload = {
 
 const CHECKOUT_STORAGE_PREFIX = "serveflow.publicQrCheckout";
 
-function getCheckoutStorageKey(restaurantSlug: string) {
-  return `${CHECKOUT_STORAGE_PREFIX}:${restaurantSlug}`;
+function getCheckoutStorageKey(restaurantSlug: string, sessionKey = "") {
+  const normalizedSessionKey = sessionKey.trim();
+  return normalizedSessionKey
+    ? `${CHECKOUT_STORAGE_PREFIX}:${restaurantSlug}:${normalizedSessionKey}`
+    : `${CHECKOUT_STORAGE_PREFIX}:${restaurantSlug}`;
 }
 
 function isStoredCheckoutState(value: unknown): value is StoredCheckoutPayload {
@@ -35,13 +39,13 @@ function isStoredCheckoutState(value: unknown): value is StoredCheckoutPayload {
   );
 }
 
-function readStoredCheckoutState(restaurantSlug: string): StoredCheckoutState {
+function readStoredCheckoutState(restaurantSlug: string, sessionKey = ""): StoredCheckoutState {
   if (typeof window === "undefined") {
     return { checkoutVisible: false, customerName: "", paymentMethod: "" };
   }
 
   try {
-    const storedValue = window.localStorage.getItem(getCheckoutStorageKey(restaurantSlug));
+    const storedValue = window.localStorage.getItem(getCheckoutStorageKey(restaurantSlug, sessionKey));
 
     if (!storedValue) {
       return { checkoutVisible: false, customerName: "", paymentMethod: "" };
@@ -57,30 +61,18 @@ function readStoredCheckoutState(restaurantSlug: string): StoredCheckoutState {
   }
 }
 
-function readTableNumber() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  return (params.get("t") || params.get("table") || "").trim();
-}
-
-function readQrToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return new URLSearchParams(window.location.search).get("qr")?.trim() ?? "";
-}
-
 export function usePublicQrCheckoutState(restaurantSlug: string) {
-  const initialCheckoutState = useMemo(() => readStoredCheckoutState(restaurantSlug), [restaurantSlug]);
-  const qrToken = useMemo(() => readQrToken(), []);
-  const tableNumberFromQr = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return !!readTableNumber();
-  }, []);
+  const currentSearch = typeof window === "undefined" ? "" : window.location.search;
+  const qrContext = useMemo(
+    () => readPublicQrContext(restaurantSlug),
+    [restaurantSlug, currentSearch]
+  );
+  const initialCheckoutState = useMemo(
+    () => readStoredCheckoutState(restaurantSlug, qrContext.sessionKey),
+    [qrContext.sessionKey, restaurantSlug]
+  );
+  const qrToken = qrContext.qrToken;
+  const tableNumberFromQr = qrContext.tableNumberFromQr;
   const [checkoutVisible, setCheckoutVisible] = useState(
     () => initialCheckoutState.checkoutVisible
   );
@@ -90,24 +82,40 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
   const [paymentMethod, setPaymentMethod] = useState<PublicQrPaymentMethod | "">(
     () => initialCheckoutState.paymentMethod
   );
-  // tableNumber: seed from URL ?t= param, then allow manual entry if not from QR
-  const [tableNumber, setTableNumber] = useState(() => readTableNumber());
+  const [tableNumber, setTableNumber] = useState(() => qrContext.tableNumber);
+
+  useEffect(() => {
+    logPublicQrContext("usePublicQrCheckoutState:init", {
+      restaurantSlug,
+      tableNumber: qrContext.tableNumber,
+      qrToken: qrContext.qrToken,
+      source: qrContext.source,
+    });
+  }, [qrContext.qrToken, qrContext.source, qrContext.tableNumber, restaurantSlug]);
+
+  useEffect(() => {
+    const storedState = readStoredCheckoutState(restaurantSlug, qrContext.sessionKey);
+    setCheckoutVisible(storedState.checkoutVisible);
+    setCustomerName(storedState.customerName);
+    setPaymentMethod(storedState.paymentMethod);
+    setTableNumber(qrContext.tableNumber);
+  }, [qrContext.sessionKey, qrContext.tableNumber, restaurantSlug]);
 
   useEffect(() => {
     try {
       if (!checkoutVisible && !customerName && !paymentMethod) {
-        window.localStorage.removeItem(getCheckoutStorageKey(restaurantSlug));
+        window.localStorage.removeItem(getCheckoutStorageKey(restaurantSlug, qrContext.sessionKey));
         return;
       }
 
       window.localStorage.setItem(
-        getCheckoutStorageKey(restaurantSlug),
+        getCheckoutStorageKey(restaurantSlug, qrContext.sessionKey),
         JSON.stringify({ checkoutVisible, customerName, paymentMethod })
       );
     } catch {
       // localStorage may be unavailable in private browsing or embedded webviews.
     }
-  }, [checkoutVisible, customerName, paymentMethod, restaurantSlug]);
+  }, [checkoutVisible, customerName, paymentMethod, qrContext.sessionKey, restaurantSlug]);
 
   return {
     checkoutVisible,
@@ -116,6 +124,7 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
     tableNumber,
     qrToken,
     tableNumberFromQr,
+    sessionKey: qrContext.sessionKey,
     setCheckoutVisible,
     setCustomerName,
     setPaymentMethod,
@@ -124,10 +133,9 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
       setCheckoutVisible(false);
       setCustomerName("");
       setPaymentMethod("");
-      // Only reset tableNumber if it wasn't from QR (preserve QR-provided table)
-      if (!tableNumberFromQr) setTableNumber("");
+      setTableNumber(tableNumberFromQr ? qrContext.tableNumber : "");
       try {
-        window.localStorage.removeItem(getCheckoutStorageKey(restaurantSlug));
+        window.localStorage.removeItem(getCheckoutStorageKey(restaurantSlug, qrContext.sessionKey));
       } catch {
         // localStorage may be unavailable in private browsing or embedded webviews.
       }

@@ -2733,7 +2733,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setFormPrice("");
     setFormCategoryId(categories[0]?.id ?? "");
     setFormNewCategory(categories.length === 0 ? "Main Menu" : "");
-    setFormStationId(activeStations[0]?.id ?? "");
+    setFormStationId("");
     setFormAvailable(true);
     setFormImageFile(null);
     setFormImageUrl("");
@@ -2911,8 +2911,6 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       const price = Number(formPrice);
       if (name.length < 2) throw new Error("Item name must be at least 2 characters.");
       if (!Number.isFinite(price) || price <= 0) throw new Error("Price must be greater than zero.");
-      if (!formStationId) throw new Error("Choose a kitchen station for this menu item.");
-
       const categoryId = await ensureCategory();
       const imageUrl = await uploadImageIfNeeded();
       const ingredients = parseIngredientInput(formIngredients);
@@ -2931,7 +2929,7 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         preparation_time_minutes: preparationTimeMinutes,
         price,
         category_id: categoryId,
-        kitchen_station_id: formStationId,
+        kitchen_station_id: formStationId || null,
         available: formAvailable,
         image_url: imageUrl,
         ingredients,
@@ -3203,8 +3201,9 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
               </label>
               <label>
                 Kitchen Station
-                <select value={formStationId} onChange={(event) => setFormStationId(event.target.value)} disabled={isWorking || activeStations.length === 0} required>
-                  {activeStations.length === 0 ? <option value="">No active stations</option> : activeStations.map((station) => (
+                <select value={formStationId} onChange={(event) => setFormStationId(event.target.value)} disabled={isWorking}>
+                  <option value="">Auto assign</option>
+                  {activeStations.map((station) => (
                     <option key={station.id} value={station.id}>{station.name}</option>
                   ))}
                 </select>
@@ -4157,11 +4156,30 @@ function SettingsPage({
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
+  const [appUrl, setAppUrl] = useState("http://localhost:5173");
+  const [appUrlWorking, setAppUrlWorking] = useState(false);
   const activeTables = useMemo(() => tables.filter((table) => table.active), [tables]);
 
   useEffect(() => {
     setForm(configToSettingsForm(config, fallbackRestaurantName));
   }, [config, fallbackRestaurantName]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadAppUrl() {
+      try {
+        const { data, error } = await supabase.rpc("get_app_url");
+        if (error) throw new Error(error.message);
+        if (mounted && typeof data === "string" && data.trim()) {
+          setAppUrl(data);
+        }
+      } catch (error) {
+        if (mounted) setSettingsError(error instanceof Error ? error.message : "Could not load application URL.");
+      }
+    }
+    void loadAppUrl();
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -4296,6 +4314,43 @@ function SettingsPage({
     }
   }
 
+  async function saveApplicationUrl() {
+    try {
+      setAppUrlWorking(true);
+      setSettingsError(null);
+      setNotice(null);
+      const { data, error } = await supabase.rpc("set_app_url", {
+        requested_app_url: appUrl,
+      });
+      if (error) throw new Error(error.message);
+      if (typeof data === "string" && data.trim()) setAppUrl(data);
+      await onSettingsChanged();
+      setNotice("Application URL saved and QR codes regenerated.");
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Could not save application URL.");
+    } finally {
+      setAppUrlWorking(false);
+    }
+  }
+
+  async function regenerateAllQrCodes() {
+    try {
+      setAppUrlWorking(true);
+      setSettingsError(null);
+      setNotice(null);
+      const { error } = await supabase.rpc("regenerate_all_restaurant_table_qr", {
+        target_restaurant_id: restaurantId,
+      });
+      if (error) throw new Error(error.message);
+      await onSettingsChanged();
+      setNotice("All table QR codes regenerated with the configured application URL.");
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Could not regenerate QR codes.");
+    } finally {
+      setAppUrlWorking(false);
+    }
+  }
+
   function handleCancel() {
     setForm(configToSettingsForm(config, fallbackRestaurantName));
     setSettingsError(null);
@@ -4395,6 +4450,15 @@ function SettingsPage({
           <div className="od-settings-side">
             <section className="od-card">
               <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Shows existing active table ordering codes.</div></div></div>
+              <div className="od-settings-stack">
+                <label>Application URL<input value={appUrl} onChange={(event) => setAppUrl(event.target.value)} disabled={appUrlWorking || working} placeholder="http://10.61.145.181:5173" /></label>
+                <button className="od-btn-primary" type="button" onClick={() => void saveApplicationUrl()} disabled={appUrlWorking || working}>
+                  {appUrlWorking ? "Updating..." : "Save Application URL"}
+                </button>
+                <button className="od-btn-ghost" type="button" onClick={() => void regenerateAllQrCodes()} disabled={appUrlWorking || working || activeTables.length === 0}>
+                  Regenerate All QR Codes
+                </button>
+              </div>
               <div className="od-qr-list">
                 {activeTables.length === 0 ? <div className="od-empty compact">No active table QR codes yet.</div> : activeTables.slice(0, 12).map((table) => (
                   <div className="od-qr-row" key={table.id}>

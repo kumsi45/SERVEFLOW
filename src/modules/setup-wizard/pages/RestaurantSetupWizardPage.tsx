@@ -149,7 +149,7 @@ async function buildQrPdf(tables: ExistingTable[], restaurantName: string) {
   const cards = await Promise.all(tables.map(async (table) => {
     const orderingUrl = getOrderingUrl(table);
     if (!orderingUrl) {
-      throw new Error("QR base URL is not configured. Set PUBLIC_APP_URL or open ServeFlow from its LAN URL before generating QR codes.");
+      throw new Error("QR base URL is not configured. Set the Application URL before generating QR codes.");
     }
     const qr = await QRCode.toDataURL(orderingUrl, { width: 220, margin: 1 });
     return `<section><h1>${restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
@@ -505,7 +505,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
       cards = await Promise.all(printableTables.map(async (table) => {
         const orderingUrl = getOrderingUrl(table);
         if (!orderingUrl) {
-          throw new Error("QR base URL is not configured. Set PUBLIC_APP_URL or open ServeFlow from its LAN URL before generating QR codes.");
+          throw new Error("QR base URL is not configured. Set the Application URL before generating QR codes.");
         }
         const qr = await QRCode.toDataURL(orderingUrl, { width: 260, margin: 1 });
         return `<section><h1>${restaurantInfo.restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;

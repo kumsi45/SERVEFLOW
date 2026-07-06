@@ -1,7 +1,6 @@
-import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
+import { memo } from "react";
 import type { MenuItem } from "../types";
 import { formatETBPrice } from "./menuPresentation";
-import { NutritionSummary } from "./NutritionSummary";
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -10,14 +9,12 @@ type MenuItemCardProps = {
   onOpenFoodInfo?: (item: MenuItem) => void;
 };
 
-export function MenuItemCard({
+export const MenuItemCard = memo(function MenuItemCard({
   item,
-  categoryName = "House menu",
   onAddToCart,
   onOpenFoodInfo,
 }: MenuItemCardProps) {
   const imageUrl = item.effective_image_url || item.image_url;
-  const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
 
   return (
     <article
@@ -33,46 +30,38 @@ export function MenuItemCard({
     >
       <div className="menu-item-image-wrap">
         {imageUrl ? (
-          <img className="menu-item-image" src={imageUrl} alt={item.name} loading="lazy" />
+          <img className="menu-item-image" src={imageUrl} alt={item.name} loading="lazy" decoding="async" />
         ) : (
           <div className="menu-item-image placeholder" aria-hidden="true" />
         )}
       </div>
+
       <div className="menu-item-copy">
         <div className="menu-item-heading">
           <div>
             <h3>{item.name}</h3>
+            {item.description ? <p>{item.description}</p> : null}
           </div>
           <div className="menu-item-price">
             <strong>{formatETBPrice(Number(item.price))}</strong>
           </div>
         </div>
-        {item.description ? <p>{item.description}</p> : null}
-        <NutritionSummary item={item} compact />
-        <div className="menu-item-footer">
-          <span className="menu-meta-row">
-            <span className={item.available ? "availability available" : "availability"}>
-              {item.available ? "Available today" : "Unavailable"}
-            </span>
-            {preparationEstimate ? <span className="prep-time-chip">{preparationEstimate}</span> : null}
-          </span>
-          <span className="restaurant-chip">{categoryName}</span>
-        </div>
-        {onAddToCart ? (
-          <div className="menu-item-actions">
-            {onOpenFoodInfo ? (
-              <button
-                className="food-info-icon-button"
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenFoodInfo(item);
-                }}
-                aria-label={`Open food information for ${item.name}`}
-              >
-                i
-              </button>
-            ) : null}
+
+        <div className="menu-item-actions">
+          {onOpenFoodInfo ? (
+            <button
+              className="food-info-icon-button"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenFoodInfo(item);
+              }}
+              aria-label={`Open food information for ${item.name}`}
+            >
+              i
+            </button>
+          ) : null}
+          {onAddToCart ? (
             <button
               className="menu-item-cart-button"
               type="button"
@@ -82,11 +71,11 @@ export function MenuItemCard({
               }}
               disabled={!item.available}
             >
-              Add
+              {item.available ? "Add" : "Unavailable"}
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </article>
   );
-}
+});
