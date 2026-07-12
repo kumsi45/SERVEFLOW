@@ -85,13 +85,14 @@ export function PublicQrCheckoutPanel({
   const existingSubtotal = activeSession?.total_price ?? 0;
   const grandTotal = existingSubtotal + displaySubtotal;
   const isContinuingOrder = Boolean(activeSession);
+  const activeOrderLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
 
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
       <div className="public-checkout-heading">
         <div>
           <p className="eyebrow">{isContinuingOrder ? "Continue Ordering" : "Review Order"}</p>
-          <h2>{isContinuingOrder ? `Order #${activeSession?.order_id.slice(0, 8)}` : "Checkout"}</h2>
+          <h2>{isContinuingOrder ? activeOrderLabel : "Checkout"}</h2>
           {restaurantName ? <p>{restaurantName}</p> : null}
         </div>
         <div className="checkout-heading-actions">

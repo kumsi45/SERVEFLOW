@@ -1,0 +1,386 @@
+.waiter-order-page {
+  min-height: 100vh;
+  color: #101820;
+  background: #f6f7f9;
+}
+
+.waiter-order-page .eyebrow {
+  margin: 0 0 6px;
+  color: #087d36;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.waiter-order-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 0 22px;
+  border-bottom: 1px solid #dce2e8;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.waiter-order-topbar button {
+  min-height: 40px;
+  border: 1px solid #cfd7df;
+  border-radius: 8px;
+  padding: 0 16px;
+  color: #101820;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.waiter-order-topbar div {
+  min-width: 0;
+  text-align: center;
+}
+
+.waiter-order-topbar strong,
+.waiter-order-topbar span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waiter-order-topbar strong {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.waiter-order-topbar span {
+  margin-top: 3px;
+  color: #53606b;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.waiter-order-hero {
+  width: min(100%, 1320px);
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 auto;
+  padding: 28px 24px 18px;
+}
+
+.waiter-order-hero h1 {
+  margin: 0;
+  color: #101820;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1;
+}
+
+.waiter-order-hero p:last-child {
+  margin: 9px 0 0;
+  color: #53606b;
+  font-size: 17px;
+}
+
+.waiter-session-card {
+  min-width: 220px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(16, 24, 32, 0.06);
+}
+
+.waiter-session-card span,
+.waiter-session-card small {
+  color: #53606b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.waiter-session-card strong {
+  color: #087d36;
+  font-size: 27px;
+}
+
+.waiter-order-success {
+  width: min(calc(100% - 48px), 1320px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 auto 14px;
+  border: 1px solid #bcefd0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: #075f2b;
+  background: #e7f9ef;
+}
+
+.waiter-order-success strong,
+.waiter-order-success span {
+  display: block;
+}
+
+.waiter-order-shell {
+  width: min(100%, 1320px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 410px);
+  gap: 18px;
+  margin: 0 auto;
+  padding: 0 24px 34px;
+}
+
+.waiter-order-menu {
+  min-width: 0;
+}
+
+.waiter-submit-panel {
+  position: sticky;
+  top: 76px;
+  align-self: start;
+  display: grid;
+  gap: 14px;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(16, 24, 32, 0.08);
+}
+
+.waiter-submit-heading,
+.waiter-submit-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.waiter-submit-heading h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.waiter-submit-heading > span {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: #087d36;
+  background: #dff8e9;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.waiter-submit-field {
+  display: grid;
+  gap: 6px;
+}
+
+.waiter-submit-field span {
+  color: #53606b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.waiter-submit-field input,
+.waiter-submit-field textarea {
+  width: 100%;
+  border: 1px solid #d5dde5;
+  border-radius: 8px;
+  padding: 12px;
+  color: #101820;
+  background: #ffffff;
+  font: inherit;
+  font-size: 15px;
+}
+
+.waiter-submit-field input {
+  min-height: 46px;
+}
+
+.waiter-submit-field textarea {
+  resize: vertical;
+}
+
+.waiter-submit-panel .public-cart-panel {
+  position: static;
+  width: 100%;
+  min-height: 0;
+  max-height: 42vh;
+  overflow: auto;
+  border: 1px solid #e4e9ef;
+  box-shadow: none;
+}
+
+.waiter-submit-panel .public-cart-review-button,
+.waiter-submit-panel .panel-close-button {
+  display: none;
+}
+
+.waiter-submit-total {
+  color: #53606b;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.waiter-submit-total strong {
+  color: #101820;
+  font-size: 18px;
+}
+
+.waiter-submit-total.grand {
+  border-top: 1px solid #edf1f5;
+  padding-top: 12px;
+}
+
+.waiter-submit-total.grand strong {
+  color: #087d36;
+  font-size: 24px;
+}
+
+.waiter-submit-error {
+  margin: 0;
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: #9f1d2b;
+  background: #fff2f3;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.waiter-submit-button {
+  min-height: 54px;
+  border: 1px solid #087d36;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #087d36;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.waiter-submit-button:disabled {
+  border-color: #cfd7df;
+  color: #7a8792;
+  background: #edf1f5;
+  cursor: not-allowed;
+}
+
+.waiter-floating-cart {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 35;
+  min-height: 54px;
+  display: none;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #087d36;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 850;
+  box-shadow: 0 18px 42px rgba(8, 125, 54, 0.24);
+}
+
+.waiter-order-state {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #53606b;
+  font-size: 18px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.waiter-order-state.error {
+  align-content: center;
+  gap: 12px;
+}
+
+.waiter-order-state h1 {
+  margin: 0;
+  color: #101820;
+}
+
+.waiter-order-state p {
+  margin: 0;
+}
+
+.waiter-order-state button {
+  min-height: 48px;
+  border: 1px solid #087d36;
+  border-radius: 8px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #087d36;
+  font: inherit;
+  font-weight: 850;
+}
+
+.waiter-order-page button:focus-visible,
+.waiter-order-page input:focus-visible,
+.waiter-order-page textarea:focus-visible {
+  outline: 3px solid rgba(8, 125, 54, 0.24);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1040px) {
+  .waiter-order-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-submit-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .waiter-order-topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 10px 14px;
+  }
+
+  .waiter-order-topbar button:last-child {
+    display: none;
+  }
+
+  .waiter-order-hero {
+    display: grid;
+    padding: 22px 14px 14px;
+  }
+
+  .waiter-session-card {
+    min-width: 0;
+  }
+
+  .waiter-order-shell {
+    padding: 0 14px 84px;
+  }
+
+  .waiter-submit-panel {
+    display: none;
+  }
+
+  .waiter-floating-cart {
+    display: block;
+  }
+
+  .waiter-order-success {
+    width: calc(100% - 28px);
+    display: grid;
+  }
+}

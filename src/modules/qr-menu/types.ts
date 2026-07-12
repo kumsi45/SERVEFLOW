@@ -6,6 +6,7 @@ export type Restaurant = {
   total_tables?: number | null;
   logo_url?: string | null;
   cover_url?: string | null;
+  ordering_settings?: Record<string, unknown> | null;
 };
 
 export type MenuCategory = {

@@ -116,8 +116,8 @@ async function main() {
       results.push(result(
         "QR uses configured APP_URL",
         initialTables.rows.length === 2
-          && initialTables.rows.every((row) => row.qr_url.startsWith("https://app-url-audit.example.test/r/app-url-audit?t="))
-          && initialTables.rows.every((row) => row.qr_path.startsWith("/r/app-url-audit?t=")),
+          && initialTables.rows.every((row) => row.qr_url.startsWith("https://app-url-audit.example.test/r/app-url-audit/order?t="))
+          && initialTables.rows.every((row) => row.qr_path.startsWith("/r/app-url-audit/order?t=")),
         JSON.stringify(initialTables.rows)
       ));
 
@@ -128,7 +128,7 @@ async function main() {
       results.push(result(
         "LAN IP APP_URL works and preserves identifiers",
         lanUrl.rows[0].app_url === "http://10.61.145.181:5173"
-          && lanTables.rows.every((row) => row.qr_url.startsWith("http://10.61.145.181:5173/r/app-url-audit?t="))
+          && lanTables.rows.every((row) => row.qr_url.startsWith("http://10.61.145.181:5173/r/app-url-audit/order?t="))
           && lanTables.rows.every((row) => before.get(row.table_number).id === row.id && before.get(row.table_number).token === row.qr_token),
         JSON.stringify(lanTables.rows)
       ));
@@ -138,8 +138,8 @@ async function main() {
       results.push(result(
         "Production APP_URL works",
         productionUrl.rows[0].app_url === "https://yourdomain.com"
-          && productionTables.rows.every((row) => row.qr_url.startsWith("https://yourdomain.com/r/app-url-audit?t="))
-          && productionTables.rows.every((row) => row.qr_path.startsWith("/r/app-url-audit?t=")),
+          && productionTables.rows.every((row) => row.qr_url.startsWith("https://yourdomain.com/r/app-url-audit/order?t="))
+          && productionTables.rows.every((row) => row.qr_path.startsWith("/r/app-url-audit/order?t=")),
         JSON.stringify(productionTables.rows)
       ));
 
@@ -153,7 +153,7 @@ async function main() {
       results.push(result(
         "Regenerated QR rotates tokens and preserves table IDs",
         regenerated.rows.length === 2
-          && regenerated.rows.every((row) => row.qr_url.startsWith("https://yourdomain.com/r/app-url-audit?t="))
+          && regenerated.rows.every((row) => row.qr_url.startsWith("https://yourdomain.com/r/app-url-audit/order?t="))
           && regenerated.rows.every((row) => before.get(row.table_number).id === row.id && before.get(row.table_number).token !== row.qr_token),
         JSON.stringify(regenerated.rows)
       ));
@@ -170,7 +170,7 @@ async function main() {
         "Single QR regenerate rotates token",
         single.rows[0].id === singleBefore.id
           && single.rows[0].qr_token !== singleBefore.qr_token
-          && single.rows[0].qr_url.startsWith("https://yourdomain.com/r/app-url-audit?t=1"),
+          && single.rows[0].qr_url.startsWith("https://yourdomain.com/r/app-url-audit/order?t=1"),
         JSON.stringify(single.rows[0])
       ));
 

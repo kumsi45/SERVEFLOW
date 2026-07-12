@@ -1,17 +1,20 @@
 import { supabase } from "../../../core/database";
 
-export type ManagedStaffRole = "owner" | "cashier" | "kitchen";
+export type ManagedStaffRole = "owner" | "cashier" | "kitchen" | "waiter";
 
 export type ManagedStaffMember = {
   id: string;
   user_id: string;
   display_name: string;
   email: string | null;
+  username: string | null;
+  phone_number: string | null;
   role: ManagedStaffRole;
   assigned_kitchen_station_id: string | null;
   active: boolean;
   created_at: string;
   last_login_at: string | null;
+  waiter_session_active: boolean | null;
 };
 
 export type StaffActivityAction =
@@ -20,6 +23,12 @@ export type StaffActivityAction =
   | "staff_reactivated"
   | "password_reset_sent"
   | "temporary_password_generated"
+  | "waiter_created"
+  | "waiter_updated"
+  | "waiter_activated"
+  | "waiter_deactivated"
+  | "waiter_pin_reset"
+  | "waiter_deleted"
   | "role_changed"
   | "staff_updated"
   | "kitchen_station_created"
@@ -45,7 +54,10 @@ export type StaffActivityLog = {
 export type CreateStaffInput = {
   restaurantId: string;
   fullName: string;
-  email: string;
+  email?: string;
+  username?: string;
+  pinPassword?: string;
+  phoneNumber?: string;
   role: Exclude<ManagedStaffRole, "owner">;
   assignedKitchenStationId?: string | null;
 };
@@ -54,6 +66,8 @@ export type UpdateStaffInput = {
   restaurantId: string;
   staffId: string;
   fullName?: string;
+  username?: string;
+  phoneNumber?: string;
   role?: Exclude<ManagedStaffRole, "owner">;
   assignedKitchenStationId?: string | null;
 };
@@ -104,7 +118,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 export async function loadManagedStaff(restaurantId: string) {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
+    .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
     .eq("restaurant_id", restaurantId)
     .neq("role", "owner")
     .order("created_at", { ascending: true });
@@ -137,6 +151,9 @@ export async function createStaff(input: CreateStaffInput) {
     restaurantId: input.restaurantId,
     fullName: input.fullName,
     email: input.email,
+    username: input.username,
+    pinPassword: input.pinPassword,
+    phoneNumber: input.phoneNumber,
     role: input.role,
     assignedKitchenStationId: input.assignedKitchenStationId ?? null,
   });
@@ -148,6 +165,8 @@ export async function updateStaff(input: UpdateStaffInput) {
     restaurantId: input.restaurantId,
     staffId: input.staffId,
     fullName: input.fullName,
+    username: input.username,
+    phoneNumber: input.phoneNumber,
     role: input.role,
     assignedKitchenStationId: input.assignedKitchenStationId ?? null,
   });
@@ -167,4 +186,8 @@ export async function sendStaffPasswordReset(restaurantId: string, staffId: stri
 
 export async function generateStaffTemporaryPassword(restaurantId: string, staffId: string) {
   return invokeManageStaff({ action: "generate-temporary-password", restaurantId, staffId });
+}
+
+export async function deleteStaff(restaurantId: string, staffId: string) {
+  return invokeManageStaff({ action: "delete-staff", restaurantId, staffId });
 }

@@ -11,6 +11,8 @@ import type {
 
 type OrderRow = {
   id: string;
+  display_number?: string | null;
+  kitchen_ticket_number?: string | null;
   kitchen_batch_key?: string | null;
   status: KitchenOrderStatus;
   customer_name: string | null;
@@ -102,6 +104,8 @@ function getStaffRestaurant(
 function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = [], stationProgress: KitchenOrderStationProgress[] = []): KitchenOrder {
   return {
     id: row.id,
+    displayNumber: row.display_number ?? null,
+    kitchenTicketNumber: row.kitchen_ticket_number ?? null,
     kitchenBatchKey: row.kitchen_batch_key ?? null,
     status: row.status,
     customerName: row.customer_name,
@@ -201,7 +205,7 @@ export async function fetchKitchenOrders(activeRestaurantId: string): Promise<Ki
   const { data: orderRows, error: ordersError } = await supabase
     .from("orders")
     .select(
-      "id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,preparation_started_at,ready_marked_at"
+      "id,display_number,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,preparation_started_at,ready_marked_at"
     )
     .eq("restaurant_id", activeRestaurantId)
     .in("status", ["paid", "preparing", "ready"])

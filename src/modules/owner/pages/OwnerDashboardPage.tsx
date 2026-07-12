@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { assertAbsoluteQrPayload, buildAbsolutePublicUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
   createStaff,
+  deleteStaff,
   deactivateStaff,
   generateStaffTemporaryPassword,
   loadStaffActivityLog,
@@ -24,8 +26,8 @@ function fmtMoneyK(value: number) {
   return value >= 1000 ? `ETB ${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : fmtMoney(value);
 }
 
-function fmtOrderId(id: string) {
-  return `#SF-${id.slice(0, 5).toUpperCase()}`;
+function fmtOrderLabel(order: Pick<OdOrder, "display_number" | "id">) {
+  return order.display_number ?? "Current order";
 }
 
 function fmtDateTime(iso: string) {
@@ -74,7 +76,9 @@ type AnalyticsPeriod = "today" | "week" | "month";
 
 type OdOrder = {
   id: string;
+  display_number: string | null;
   status: OwnerOrderStatus;
+  dining_session_status: "open" | "closed" | "abandoned" | "expired" | "checked_out" | string | null;
   customer_name: string | null;
   table_number: string | null;
   payment_method: string | null;
@@ -133,10 +137,22 @@ type OdMenuUpload = {
 type OdOrderItem = {
   id: string;
   order_id: string;
+  invoice_id: string | null;
   quantity: number;
   price: number;
   menu_item_id: string | null;
   name: string;
+};
+
+type OdPayment = {
+  id: string;
+  order_id: string;
+  status: string;
+  total_price: number;
+  payment_method: string | null;
+  verified_at: string | null;
+  paid_at: string | null;
+  created_at: string;
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -240,7 +256,6 @@ const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
   { id: "settings", icon: "SE", label: "Settings" },
 ];
 
-const REVENUE_STATUSES: OwnerOrderStatus[] = ["paid", "preparing", "ready", "completed"];
 const ACTIVE_ORDER_STATUSES: OwnerOrderStatus[] = ["pending_payment", "paid", "preparing", "ready"];
 
 type OwnerDashboardPageProps = {
@@ -323,7 +338,7 @@ function sameHour(iso: string, hour: number) {
 }
 
 function isRevenueOrder(order: OdOrder) {
-  return Boolean(order.payment_verified_at) || REVENUE_STATUSES.includes(order.status);
+  return Boolean(order.payment_verified_at);
 }
 
 function toJsonRecord(value: unknown): JsonRecord {
@@ -399,7 +414,20 @@ function normalizeKitchenStation(row: Record<string, unknown>): OdKitchenStation
 }
 
 function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDateInputRange(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00`);
+  const endExclusive = new Date(`${endDate}T00:00:00`);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  return {
+    rangeStart: start.toISOString(),
+    rangeEnd: endExclusive.toISOString(),
+  };
 }
 
 function downloadText(filename: string, content: string, mimeType: string) {
@@ -443,6 +471,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const [nav, setNav] = useState<NavId>("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orders, setOrders] = useState<OdOrder[]>([]);
+  const [payments, setPayments] = useState<OdPayment[]>([]);
   const [staff, setStaff] = useState<OdStaff[]>([]);
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
@@ -476,18 +505,19 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           { data: restaurantData, error: restaurantError },
           { data: tableData, error: tableError },
           { data: shiftData, error: shiftError },
+          { data: paymentData, error: paymentError },
           { data: stationData, error: stationError },
         ] =
           await Promise.all([
             supabase
               .from("orders")
-              .select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at")
+              .select("id,display_number,status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at")
               .eq("restaurant_id", restaurantId)
               .order("created_at", { ascending: false })
               .limit(500),
             supabase
               .from("restaurant_staff")
-              .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
+              .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
               .eq("restaurant_id", restaurantId)
               .neq("role", "owner")
               .order("created_at", { ascending: true }),
@@ -518,6 +548,14 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .eq("restaurant_id", restaurantId)
               .is("closed_at", null)
               .order("opened_at", { ascending: false }),
+            supabase
+              .from("order_invoices")
+              .select("id,order_id,status,total_price,payment_method,verified_at,paid_at,created_at")
+              .eq("restaurant_id", restaurantId)
+              .in("status", ["paid", "verified"])
+              .not("verified_at", "is", null)
+              .order("verified_at", { ascending: false })
+              .limit(1000),
             supabase.rpc("get_owner_kitchen_stations", {
               target_restaurant_id: restaurantId,
             }),
@@ -530,12 +568,15 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         if (restaurantError) throw new Error(restaurantError.message);
         if (tableError) throw new Error(tableError.message);
         if (shiftError) throw new Error(shiftError.message);
+        if (paymentError) throw new Error(paymentError.message);
         if (stationError) throw new Error(stationError.message);
         if (!mounted) return;
 
         const normalizedOrders = (orderData ?? []).map((row) => ({
           id: String(row.id),
+          display_number: typeof row.display_number === "string" ? row.display_number : null,
           status: String(row.status) as OwnerOrderStatus,
+          dining_session_status: typeof row.dining_session_status === "string" ? row.dining_session_status : null,
           customer_name: row.customer_name ?? null,
           table_number: row.table_number ?? null,
           payment_method: row.payment_method ?? null,
@@ -552,7 +593,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         if (orderIds.length > 0) {
           const { data: itemData, error: itemError } = await supabase
             .from("order_items")
-            .select("id,order_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .select("id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
             .eq("restaurant_id", restaurantId)
             .in("order_id", orderIds);
 
@@ -561,6 +602,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           normalizedItems = (itemData ?? []).map((row) => ({
             id: String(row.id),
             order_id: String(row.order_id),
+            invoice_id: typeof row.invoice_id === "string" ? row.invoice_id : null,
             menu_item_id: row.menu_item_id ? String(row.menu_item_id) : null,
             quantity: Number(row.quantity),
             price: Number(row.price),
@@ -574,6 +616,16 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         }
 
         setOrders(normalizedOrders.map((order) => ({ ...order, item_count: itemCounts.get(order.id) ?? 0 })));
+        setPayments((paymentData ?? []).map((row) => ({
+          id: String(row.id),
+          order_id: String(row.order_id),
+          status: String(row.status),
+          total_price: Number(row.total_price),
+          payment_method: row.payment_method ?? null,
+          verified_at: row.verified_at ?? row.paid_at ?? null,
+          paid_at: row.paid_at ?? null,
+          created_at: String(row.created_at),
+        })));
         setOrderItems(normalizedItems);
         setStaff((staffData ?? []) as OdStaff[]);
         setMenuItems((menuData ?? []).map((row) => ({ ...row, price: Number(row.price) })) as OdMenuItem[]);
@@ -604,13 +656,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
         const reports = await Promise.all(
           (["today", "week", "month"] as AnalyticsPeriod[]).map(async (reportPeriod) => {
             const { rangeStart, rangeEnd } = getAnalyticsDateRange(reportPeriod);
-            const { data: reportPayload, error: reportError } = await supabase.rpc("get_owner_reporting_center", {
-              target_restaurant_id: restaurantId,
-              range_start: rangeStart,
-              range_end: rangeEnd,
-            });
-            if (reportError) throw new Error(reportError.message);
-            return [reportPeriod, normalizeReportData(reportPayload && typeof reportPayload === "object" ? reportPayload as object : {}).summary] as const;
+            const [reportPayload, billPayload] = await Promise.all([
+              loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
+              loadOwnerDiningBillReportData(restaurantId, rangeStart, rangeEnd),
+            ]);
+            return [reportPeriod, mergeOwnerBillMetrics(reportPayload, billPayload).summary] as const;
           })
         );
         if (mounted) setDashboardReports(Object.fromEntries(reports) as Record<AnalyticsPeriod, OwnerReportSummary>);
@@ -642,7 +692,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           const existing = index >= 0 ? previous[index] : undefined;
           const order: OdOrder = {
             id: String(row.id),
+            display_number: typeof row.display_number === "string" ? row.display_number : existing?.display_number ?? null,
             status: String(row.status) as OwnerOrderStatus,
+            dining_session_status: typeof row.dining_session_status === "string" ? row.dining_session_status : existing?.dining_session_status ?? null,
             customer_name: row.customer_name ?? null,
             table_number: row.table_number ?? null,
             payment_method: row.payment_method ?? null,
@@ -662,7 +714,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, async (payload) => {
         const oldRow = payload.old as Partial<OdOrderItem> & { order_id?: string; quantity?: number | string } | null;
-        const newRow = payload.new as Partial<OdOrderItem> & { order_id?: string; quantity?: number | string; menu_item_id?: string | null } | null;
+        const newRow = payload.new as Partial<OdOrderItem> & { order_id?: string; invoice_id?: string | null; quantity?: number | string; menu_item_id?: string | null } | null;
         const orderId = String(newRow?.order_id ?? oldRow?.order_id ?? "");
         if (!orderId) return;
 
@@ -673,6 +725,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             {
               id: String(newRow.id),
               order_id: orderId,
+              invoice_id: newRow.invoice_id ? String(newRow.invoice_id) : null,
               menu_item_id: newRow.menu_item_id ? String(newRow.menu_item_id) : null,
               quantity: Number(newRow.quantity ?? 0),
               price: Number(newRow.price ?? 0),
@@ -686,6 +739,32 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
           setOrderItems((previous) => previous.filter((item) => item.id !== oldRow.id));
           setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, item_count: Math.max(0, order.item_count - Number(oldRow.quantity ?? 0)) } : order));
         }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => {
+        void supabase
+          .from("order_invoices")
+          .select("id,order_id,status,total_price,payment_method,verified_at,paid_at,created_at")
+          .eq("restaurant_id", restaurantId)
+          .in("status", ["paid", "verified"])
+          .not("verified_at", "is", null)
+          .order("verified_at", { ascending: false })
+          .limit(1000)
+          .then(({ data, error: paymentError }) => {
+            if (paymentError) {
+              setError(paymentError.message);
+              return;
+            }
+            setPayments((data ?? []).map((row) => ({
+              id: String(row.id),
+              order_id: String(row.order_id),
+              status: String(row.status),
+              total_price: Number(row.total_price),
+              payment_method: row.payment_method ?? null,
+              verified_at: row.verified_at ?? null,
+              paid_at: row.paid_at ?? null,
+              created_at: String(row.created_at),
+            })));
+          });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, () => {
         void supabase
@@ -736,12 +815,18 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
 
   const todayStart = startOfTodayIso();
   const todayOrders = useMemo(() => orders.filter((order) => order.created_at >= todayStart), [orders, todayStart]);
+  const todayPayments = useMemo(() => payments.filter((payment) => Boolean(payment.verified_at) && payment.verified_at! >= todayStart), [payments, todayStart]);
   const revenueOrders = useMemo(() => todayOrders.filter(isRevenueOrder), [todayOrders]);
   const allRevenueOrders = useMemo(() => orders.filter(isRevenueOrder), [orders]);
   const todayRevenue = dashboardReports.today.revenue;
   const weekRevenue = dashboardReports.week.revenue;
   const monthRevenue = dashboardReports.month.revenue;
   const allRevenue = monthRevenue;
+  const todayBillsPrinted = dashboardReports.today.bills_printed;
+  const todayBillsReprinted = dashboardReports.today.bills_reprinted;
+  const todayAverageBill = dashboardReports.today.average_bill;
+  const todayLargestBill = dashboardReports.today.largest_bill;
+  const todayVatCollected = dashboardReports.today.vat_collected;
   const activeOrders = useMemo(() => orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status)), [orders]);
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "pending_payment"), [orders]);
   const completedToday = useMemo(() => orders.filter((order) => order.status === "completed" && (order.completed_at ?? order.created_at) >= todayStart), [orders, todayStart]);
@@ -753,22 +838,22 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const sparkData = Array.from({ length: 7 }, (_, index) => {
     const hour = new Date();
     hour.setHours(hour.getHours() - (6 - index), 0, 0, 0);
-    return revenueOrders.filter((order) => sameHour(order.payment_verified_at ?? order.created_at, hour.getHours())).reduce((sum, order) => sum + order.total_price, 0);
+    return todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour.getHours())).reduce((sum, payment) => sum + payment.total_price, 0);
   });
   const sparkMax = Math.max(...sparkData, 1);
 
   const barHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
   const barData = barHours.map((hour) =>
-    revenueOrders.filter((order) => sameHour(order.payment_verified_at ?? order.created_at, hour)).reduce((sum, order) => sum + order.total_price, 0)
+    todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour)).reduce((sum, payment) => sum + payment.total_price, 0)
   );
-  const orderBarData = barHours.map((hour) => todayOrders.filter((order) => sameHour(order.created_at, hour)).length);
+  const orderBarData = barHours.map((hour) => todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour)).length);
   const barMax = Math.max(...barData, 1);
   const orderBarMax = Math.max(...orderBarData, 1);
 
-  const methods = ["Cash", "Telebirr", "CBE Birr", "Mobile Banking", "Chapa", "Credit/Debit Card"];
+  const methods = ["Cash", "Telebirr", "CBE Birr", "Card", "Chapa"];
   const colors = ["#0f766e", "#f59e0b", "#475569", "#7c3aed", "#ef4444", "#0891b2"];
   const methodTotals = methods.map((method) =>
-    revenueOrders.filter((order) => order.payment_method === method).reduce((sum, order) => sum + order.total_price, 0)
+    todayPayments.filter((payment) => (payment.payment_method === "Credit/Debit Card" ? "Card" : payment.payment_method) === method).reduce((sum, payment) => sum + payment.total_price, 0)
   );
   const methodTotal = Math.max(methodTotals.reduce((sum, value) => sum + value, 0), 1);
   const donutData = methods
@@ -788,11 +873,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     return slice;
   });
 
-  const revenueOrderIds = useMemo(() => new Set(allRevenueOrders.map((order) => order.id)), [allRevenueOrders]);
+  const revenueInvoiceIds = useMemo(() => new Set(payments.map((payment) => payment.id)), [payments]);
   const topItems = useMemo(() => {
     const totals = new Map<string, { name: string; quantity: number; revenue: number }>();
     for (const item of orderItems) {
-      if (!revenueOrderIds.has(item.order_id)) continue;
+      if (!item.invoice_id || !revenueInvoiceIds.has(item.invoice_id)) continue;
       const key = item.menu_item_id ?? item.name;
       const current = totals.get(key) ?? { name: item.name, quantity: 0, revenue: 0 };
       current.quantity += item.quantity;
@@ -800,7 +885,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
       totals.set(key, current);
     }
     return [...totals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 6);
-  }, [orderItems, revenueOrderIds]);
+  }, [orderItems, revenueInvoiceIds]);
 
   const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
@@ -815,7 +900,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   async function refreshStaff() {
     const { data, error: staffError } = await supabase
       .from("restaurant_staff")
-      .select("id,user_id,display_name,email,role,assigned_kitchen_station_id,active,created_at,last_login_at")
+      .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
       .order("created_at", { ascending: true });
@@ -906,6 +991,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
     donutSlices,
     donutData,
     topItems,
+    todayBillsPrinted,
+    todayBillsReprinted,
+    todayAverageBill,
+    todayLargestBill,
+    todayVatCollected,
     r,
     cx,
     cy,
@@ -1138,6 +1228,11 @@ type DashboardData = {
   donutSlices: { label: string; pct: number; color: string; dash: number; gap: number; offset: number }[];
   donutData: { label: string; pct: number; color: string }[];
   topItems: { name: string; quantity: number; revenue: number }[];
+  todayBillsPrinted: number;
+  todayBillsReprinted: number;
+  todayAverageBill: number;
+  todayLargestBill: number;
+  todayVatCollected: number;
   r: number;
   cx: number;
   cy: number;
@@ -1151,7 +1246,11 @@ function OverviewPage({ data, staff, ownerName, onNavigate, now }: { data: Dashb
     { label: "Revenue Today", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayRevenue), badge: "Today", tone: "up" },
     { label: "Current Week", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.weekRevenue), badge: "Week", tone: "up" },
     { label: "Current Month", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.monthRevenue), badge: "Month", tone: "up" },
-    { label: "Avg Order Value", value: fmtMoney(data.avgOrderValue), badge: "Paid", tone: "up" },
+    { label: "Bills Printed Today", value: data.dashboardReportsLoading ? "Loading..." : `${data.todayBillsPrinted}`, badge: "Bills", tone: "up" },
+    { label: "Bills Reprinted Today", value: data.dashboardReportsLoading ? "Loading..." : `${data.todayBillsReprinted}`, badge: "Reprints", tone: data.todayBillsReprinted > 0 ? "neutral" : "up" },
+    { label: "Average Bill", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(Math.round(data.todayAverageBill)), badge: "Bills", tone: "up" },
+    { label: "Largest Bill", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayLargestBill), badge: "Bills", tone: "up" },
+    { label: "VAT Collected", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayVatCollected), badge: "VAT", tone: "up" },
     { label: "Pending Payment", value: `${data.pendingOrders.length}`, badge: "Action", tone: data.pendingOrders.length > 0 ? "down" : "neutral" },
     { label: "Active Staff", value: `${data.activeStaff}`, badge: `${data.kitchenStaff.length} kitchen`, tone: "neutral" },
     { label: "Menu Items", value: `${data.menuItems.length}`, badge: `${data.menuItems.filter((item) => item.available).length} live`, tone: "neutral" },
@@ -1314,7 +1413,7 @@ function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: Dashb
           <button key={order.id} type="button" className="od-mobile-activity-row" onClick={() => onNavigate("orders")}>
             <span className="od-mobile-activity-icon">[]</span>
             <span className="od-mobile-activity-main">
-              <strong>{fmtOrderId(order.id)}</strong>
+              <strong>{fmtOrderLabel(order)}</strong>
               <span>{order.table_number ? `Table ${order.table_number}` : "Takeout"} - {order.item_count || 0} items</span>
             </span>
             <span className="od-mobile-activity-side">
@@ -1439,7 +1538,7 @@ function RecentOrdersTable({ orders, title, emptyLabel }: { orders: OdOrder[]; t
               highValue.map((order) => (
                 <tr key={order.id}>
                   <td>
-                    <span className="od-order-id">{fmtOrderId(order.id)}</span>
+                    <span className="od-order-id">{fmtOrderLabel(order)}</span>
                   </td>
                   <td>{order.table_number ? `Table ${order.table_number}` : "No table"}</td>
                   <td>{order.customer_name || "Guest"}</td>
@@ -1500,7 +1599,7 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
               .map((order) => (
                 <div key={order.id} className="od-order-card">
                   <div className="od-order-card-top">
-                    <strong>{fmtOrderId(order.id)}</strong>
+                    <strong>{fmtOrderLabel(order)}</strong>
                     <span>{fmtTimeAgo(order.created_at)}</span>
                   </div>
                   <div className="od-order-table">{order.table_number ? `Table ${order.table_number}` : "No table"}</div>
@@ -1558,7 +1657,7 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
                 filtered.map((order) => (
                   <tr key={order.id}>
                     <td>
-                      <span className="od-order-id">{fmtOrderId(order.id)}</span>
+                      <span className="od-order-id">{fmtOrderLabel(order)}</span>
                     </td>
                     <td>{order.table_number ? `Table ${order.table_number}` : "No table"}</td>
                     <td>{order.customer_name || "Guest"}</td>
@@ -1594,13 +1693,8 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
         setLoadingPeriodReport(true);
         setPeriodReportError(null);
         const { rangeStart, rangeEnd } = getAnalyticsDateRange(period);
-        const { data: reportPayload, error } = await supabase.rpc("get_owner_reporting_center", {
-          target_restaurant_id: restaurantId,
-          range_start: rangeStart,
-          range_end: rangeEnd,
-        });
-        if (error) throw new Error(error.message);
-        if (mounted) setPeriodReport(normalizeReportData(reportPayload && typeof reportPayload === "object" ? reportPayload as object : {}));
+        const reportPayload = await loadOwnerReportData(restaurantId, rangeStart, rangeEnd);
+        if (mounted) setPeriodReport(reportPayload);
       } catch (loadError) {
         if (mounted) setPeriodReportError(loadError instanceof Error ? loadError.message : "Could not load revenue report.");
       } finally {
@@ -1654,6 +1748,20 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
             <span className="od-kpi-badge up">{periodLabel}</span>
           </div>
           <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : periodSummary.completed_orders}</div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-top">
+            <div className="od-kpi-label">Feedback</div>
+            <span className="od-kpi-badge neutral">{periodLabel}</span>
+          </div>
+          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : periodSummary.feedback_count}</div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-top">
+            <div className="od-kpi-label">Avg. Rating</div>
+            <span className="od-kpi-badge neutral">{periodSummary.feedback_count} responses</span>
+          </div>
+          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : `${periodSummary.average_rating.toFixed(1)}/5`}</div>
         </div>
       </div>
 
@@ -1816,6 +1924,12 @@ function staffActionLabel(action: StaffActivityLog["action"]) {
     staff_reactivated: "Staff Reactivated",
     password_reset_sent: "Password Reset Sent",
     temporary_password_generated: "Temporary Password Generated",
+    waiter_created: "Waiter Created",
+    waiter_updated: "Waiter Updated",
+    waiter_activated: "Waiter Activated",
+    waiter_deactivated: "Waiter Deactivated",
+    waiter_pin_reset: "Waiter PIN Reset",
+    waiter_deleted: "Waiter Deleted",
     role_changed: "Role Changed",
     staff_updated: "Staff Updated",
     kitchen_station_created: "Kitchen Station Created",
@@ -1843,7 +1957,20 @@ function isMenuStationAction(action: StaffActivityLog["action"]) {
   return action.startsWith("menu_station_");
 }
 
+function isWaiterAction(action: StaffActivityLog["action"]) {
+  return action.startsWith("waiter_");
+}
+
 function staffActivityTargetLabel(entry: StaffActivityLog) {
+  if (isWaiterAction(entry.action)) {
+    const username = entry.details.username;
+    const displayName = entry.details.display_name;
+    if (typeof displayName === "string" && displayName.trim()) {
+      return displayName;
+    }
+    return typeof username === "string" && username.trim() ? username : "Waiter record";
+  }
+
   if (isKitchenStaffStationAction(entry.action)) {
     const staffName = entry.details.staff_name;
     const oldStation = entry.details.old_station;
@@ -1886,12 +2013,15 @@ type StaffModalState =
 
 function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChanged }: StaffPageProps) {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "cashier" | "kitchen">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "cashier" | "kitchen" | "waiter">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [modal, setModal] = useState<StaffModalState>(null);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formRole, setFormRole] = useState<"cashier" | "kitchen">("cashier");
+  const [formUsername, setFormUsername] = useState("");
+  const [formPin, setFormPin] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formRole, setFormRole] = useState<"cashier" | "kitchen" | "waiter">("cashier");
   const [formStationId, setFormStationId] = useState("");
   const [activity, setActivity] = useState<StaffActivityLog[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1936,6 +2066,9 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
     setNotice(null);
     setFormName("");
     setFormEmail("");
+    setFormUsername("");
+    setFormPin("");
+    setFormPhone("");
     setFormRole("cashier");
     setFormStationId(activeStations.length === 1 ? activeStations[0].id : "");
     setModal({ mode: "create" });
@@ -1946,7 +2079,10 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
     setNotice(null);
     setFormName(member.display_name);
     setFormEmail(member.email ?? "");
-    setFormRole(member.role === "kitchen" ? "kitchen" : "cashier");
+    setFormUsername(member.username ?? "");
+    setFormPin("");
+    setFormPhone(member.phone_number ?? "");
+    setFormRole(member.role === "kitchen" ? "kitchen" : member.role === "waiter" ? "waiter" : "cashier");
     setFormStationId(member.role === "kitchen" ? member.assigned_kitchen_station_id ?? "" : "");
     setModal({ mode, member });
   }
@@ -1979,12 +2115,27 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       return;
     }
 
+    if (formRole === "waiter") {
+      if (!formUsername.trim()) {
+        setStaffError("Enter a username for the waiter.");
+        return;
+      }
+
+      if (modal.mode === "create" && !formPin.trim()) {
+        setStaffError("Enter a numeric PIN for the waiter.");
+        return;
+      }
+    }
+
     await runStaffAction(async () => {
       if (modal.mode === "create") {
         const result = await createStaff({
           restaurantId,
           fullName: formName,
           email: formEmail,
+          username: formUsername,
+          pinPassword: formPin,
+          phoneNumber: formPhone,
           role: formRole,
           assignedKitchenStationId,
         });
@@ -1996,6 +2147,8 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
         restaurantId,
         staffId: modal.member.id,
         fullName: formName,
+        username: formUsername,
+        phoneNumber: formPhone,
         role: formRole,
         assignedKitchenStationId,
       });
@@ -2019,7 +2172,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
   const filtered = operationalStaff.filter((member) => {
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? member.active : !member.active);
-    const haystack = `${member.display_name} ${member.email ?? ""} ${member.role}`.toLowerCase();
+    const haystack = `${member.display_name} ${member.username ?? ""} ${member.email ?? ""} ${member.role}`.toLowerCase();
     return matchesRole && matchesStatus && haystack.includes(search.trim().toLowerCase());
   });
 
@@ -2027,6 +2180,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
   const activeStaff = operationalStaff.filter((member) => member.active).length;
   const cashierCount = operationalStaff.filter((member) => member.role === "cashier").length;
   const kitchenCount = operationalStaff.filter((member) => member.role === "kitchen").length;
+  const waiterCount = operationalStaff.filter((member) => member.role === "waiter").length;
 
   return (
     <div className="od-page">
@@ -2050,6 +2204,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
           ["Active Staff", activeStaff, `${totalStaff - activeStaff} inactive`],
           ["Cashiers", cashierCount, "POS access"],
           ["Kitchen Staff", kitchenCount, "KDS access"],
+          ["Waiters", waiterCount, "Shared terminal access"],
         ].map(([label, value, sub]) => (
           <div key={label} className="od-kpi-card">
             <div className="od-kpi-label">{label}</div>
@@ -2072,6 +2227,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                 <option value="all">All roles</option>
                 <option value="cashier">Cashier</option>
                 <option value="kitchen">Kitchen</option>
+                <option value="waiter">Waiter</option>
               </select>
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="Filter by status">
                 <option value="all">All statuses</option>
@@ -2085,7 +2241,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Email</th>
+                  <th>Username</th>
                   <th>Role</th>
                   <th>Station</th>
                   <th>Status</th>
@@ -2112,11 +2268,11 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                           <div className="od-staff-avatar-small">{member.display_name.charAt(0).toUpperCase()}</div>
                           <div>
                             <div className="od-staff-name">{member.display_name}</div>
-                            <div className="od-staff-email">{member.id.slice(0, 8)}</div>
+                            <div className="od-staff-email">{member.email || member.username || "Staff account"}</div>
                           </div>
                         </div>
                       </td>
-                      <td>{member.email || "Not stored"}</td>
+                      <td>{member.username || member.email || "Not stored"}</td>
                       <td style={{ textTransform: "capitalize" }}>{member.role}</td>
                       <td>{member.role === "kitchen" && member.assigned_kitchen_station_id ? stationById.get(member.assigned_kitchen_station_id)?.name ?? "Unassigned" : "-"}</td>
                       <td>
@@ -2126,7 +2282,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                             Active
                           </span>
                         ) : (
-                          <span className="od-offline-pill">Offline</span>
+                          <span className="od-offline-pill">Inactive</span>
                         )}
                       </td>
                       <td style={{ fontSize: 12, color: "var(--od-muted)" }}>{new Date(member.created_at).toLocaleDateString()}</td>
@@ -2164,8 +2320,17 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                             onClick={() => runStaffAction(() => generateStaffTemporaryPassword(restaurantId, member.id), "Temporary password generated.")}
                             disabled={isWorking}
                           >
-                            Temp Password
+                            {member.role === "waiter" ? "Reset PIN" : "Temp Password"}
                           </button>
+                          {member.role === "waiter" && (
+                            <button
+                              className="od-btn-ghost compact danger"
+                              onClick={() => runStaffAction(() => deleteStaff(restaurantId, member.id), "Waiter deleted.")}
+                              disabled={isWorking || Boolean(member.waiter_session_active)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2211,7 +2376,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                 <div className="od-card-title">
                   {modal.mode === "create" ? "Add Staff" : modal.mode === "edit" ? "Edit Staff" : "Staff Profile"}
                 </div>
-                <div className="od-card-subtitle">Cashier and kitchen accounts are created through Supabase Auth.</div>
+                <div className="od-card-subtitle">Cashier, kitchen, and waiter accounts are created through Supabase Auth.</div>
               </div>
               <button className="od-icon-btn" onClick={() => setModal(null)} aria-label="Close">x</button>
             </div>
@@ -2227,15 +2392,54 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   type="email"
                   value={formEmail}
                   onChange={(event) => setFormEmail(event.target.value)}
-                  disabled={modal.mode !== "create" || isWorking}
-                  required
+                  disabled={modal.mode !== "create" || formRole === "waiter" || isWorking}
+                  required={formRole !== "waiter"}
+                  placeholder={formRole === "waiter" ? "Not needed for waiter login" : ""}
                 />
               </label>
+              {formRole === "waiter" && (
+                <>
+                  <label>
+                    Username
+                    <input
+                      value={formUsername}
+                      onChange={(event) => setFormUsername(event.target.value)}
+                      disabled={modal.mode === "view" || isWorking}
+                      required
+                      autoComplete="off"
+                    />
+                  </label>
+                  {modal.mode === "create" && (
+                    <label>
+                      PIN / Password
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        value={formPin}
+                        onChange={(event) => setFormPin(event.target.value)}
+                        disabled={isWorking}
+                        required
+                        placeholder="4-12 digits"
+                      />
+                    </label>
+                  )}
+                  <label>
+                    Phone Number
+                    <input
+                      value={formPhone}
+                      onChange={(event) => setFormPhone(event.target.value)}
+                      disabled={modal.mode === "view" || isWorking}
+                      inputMode="tel"
+                    />
+                  </label>
+                </>
+              )}
               <label>
                 Role
-                <select value={formRole} onChange={(event) => setFormRole(event.target.value as "cashier" | "kitchen")} disabled={modal.mode === "view" || isWorking}>
+                <select value={formRole} onChange={(event) => setFormRole(event.target.value as "cashier" | "kitchen" | "waiter")} disabled={modal.mode === "view" || isWorking}>
                   <option value="cashier">Cashier</option>
                   <option value="kitchen">Kitchen</option>
+                  <option value="waiter">Waiter</option>
                 </select>
               </label>
               {formRole === "kitchen" && (
@@ -2259,6 +2463,10 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                 <div className="od-staff-detail-grid">
                   <span>Status</span>
                   <strong>{modal.member.active ? "Active" : "Inactive"}</strong>
+                  <span>Username</span>
+                  <strong>{modal.member.username || "-"}</strong>
+                  <span>Phone</span>
+                  <strong>{modal.member.phone_number || "-"}</strong>
                   <span>Created</span>
                   <strong>{new Date(modal.member.created_at).toLocaleDateString()}</strong>
                   <span>Last Active</span>
@@ -3241,29 +3449,46 @@ type OwnerReportData = {
     completed_orders: number;
     cancelled_orders: number;
     unique_customers: number;
+    feedback_count: number;
+    average_rating: number;
+    bills_printed: number;
+    bills_reprinted: number;
+    average_bill: number;
+    largest_bill: number;
+    vat_collected: number;
   };
   sales_by_day: { date: string; revenue: number; orders: number }[];
   orders_by_status: { status: string; orders: number }[];
   menu_performance: { name: string; category: string; quantity: number; revenue: number }[];
+  payment_methods: { method: string; payments: number; revenue: number }[];
   staff_performance: { name: string; role: string; orders_completed: number; payments_verified: number }[];
   table_usage: { table_number: number; orders: number; revenue: number }[];
   customers: { customer_name: string; orders: number; revenue: number; last_order_at: string | null }[];
   shift_history: OwnerShiftHistory[];
   cash_variances: OwnerCashVariance[];
+  feedback: OwnerFeedbackReportRow[];
+  daily_bill_counts: { date: string; bills: number; revenue: number; vat: number }[];
+  monthly_bill_counts: { month: string; bills: number; revenue: number; vat: number }[];
+  top_bills: { bill_number: string; printed_at: string; print_count: number; grand_total: number; vat_amount: number }[];
   ai_insights: { title: string; detail: string }[];
 };
 
 function emptyReportData(): OwnerReportData {
   return {
-    summary: { revenue: 0, orders: 0, average_order_value: 0, completed_orders: 0, cancelled_orders: 0, unique_customers: 0 },
+    summary: { revenue: 0, orders: 0, average_order_value: 0, completed_orders: 0, cancelled_orders: 0, unique_customers: 0, feedback_count: 0, average_rating: 0, bills_printed: 0, bills_reprinted: 0, average_bill: 0, largest_bill: 0, vat_collected: 0 },
     sales_by_day: [],
     orders_by_status: [],
     menu_performance: [],
+    payment_methods: [],
     staff_performance: [],
     table_usage: [],
     customers: [],
     shift_history: [],
     cash_variances: [],
+    feedback: [],
+    daily_bill_counts: [],
+    monthly_bill_counts: [],
+    top_bills: [],
     ai_insights: [],
   };
 }
@@ -3279,10 +3504,18 @@ function normalizeReportData(value: unknown): OwnerReportData {
       completed_orders: Number(summary.completed_orders ?? 0),
       cancelled_orders: Number(summary.cancelled_orders ?? 0),
       unique_customers: Number(summary.unique_customers ?? 0),
+      feedback_count: Number(summary.feedback_count ?? 0),
+      average_rating: Number(summary.average_rating ?? 0),
+      bills_printed: Number(summary.bills_printed ?? 0),
+      bills_reprinted: Number(summary.bills_reprinted ?? 0),
+      average_bill: Number(summary.average_bill ?? 0),
+      largest_bill: Number(summary.largest_bill ?? 0),
+      vat_collected: Number(summary.vat_collected ?? 0),
     },
     sales_by_day: (data.sales_by_day ?? []).map((row) => ({ date: String(row.date), revenue: Number(row.revenue), orders: Number(row.orders) })),
     orders_by_status: (data.orders_by_status ?? []).map((row) => ({ status: String(row.status), orders: Number(row.orders) })),
     menu_performance: (data.menu_performance ?? []).map((row) => ({ name: String(row.name), category: String(row.category), quantity: Number(row.quantity), revenue: Number(row.revenue) })),
+    payment_methods: (data.payment_methods ?? []).map((row) => ({ method: String(row.method), payments: Number(row.payments), revenue: Number(row.revenue) })),
     staff_performance: (data.staff_performance ?? []).map((row) => ({ name: String(row.name), role: String(row.role), orders_completed: Number(row.orders_completed), payments_verified: Number(row.payments_verified) })),
     table_usage: (data.table_usage ?? []).map((row) => ({ table_number: Number(row.table_number), orders: Number(row.orders), revenue: Number(row.revenue) })),
     customers: (data.customers ?? []).map((row) => ({ customer_name: String(row.customer_name), orders: Number(row.orders), revenue: Number(row.revenue), last_order_at: row.last_order_at ? String(row.last_order_at) : null })),
@@ -3307,8 +3540,493 @@ function normalizeReportData(value: unknown): OwnerReportData {
       variance: Number(row.variance),
       variance_reason: row.variance_reason ? String(row.variance_reason) : null,
     })),
+    feedback: (data.feedback ?? []).map((row) => ({
+      id: String(row.id),
+      order_id: String(row.order_id),
+      table_number: row.table_number ? String(row.table_number) : null,
+      customer_name: row.customer_name ? String(row.customer_name) : null,
+      rating: Number(row.rating),
+      reactions: Array.isArray(row.reactions) ? row.reactions.map(String) : [],
+      comment: row.comment ? String(row.comment) : null,
+      photo_url: row.photo_url ? String(row.photo_url) : null,
+      created_at: String(row.created_at),
+    })),
+    daily_bill_counts: (data.daily_bill_counts ?? []).map((row) => ({
+      date: String(row.date),
+      bills: Number(row.bills),
+      revenue: Number(row.revenue),
+      vat: Number(row.vat),
+    })),
+    monthly_bill_counts: (data.monthly_bill_counts ?? []).map((row) => ({
+      month: String(row.month),
+      bills: Number(row.bills),
+      revenue: Number(row.revenue),
+      vat: Number(row.vat),
+    })),
+    top_bills: (data.top_bills ?? []).map((row) => ({
+      bill_number: String(row.bill_number),
+      printed_at: String(row.printed_at),
+      print_count: Number(row.print_count),
+      grand_total: Number(row.grand_total),
+      vat_amount: Number(row.vat_amount),
+    })),
     ai_insights: (data.ai_insights ?? []).map((row) => ({ title: String(row.title), detail: String(row.detail) })),
   };
+}
+
+type OwnerFeedbackReportRow = {
+  id: string;
+  order_id: string;
+  table_number: string | null;
+  customer_name: string | null;
+  rating: number;
+  reactions: string[];
+  comment: string | null;
+  photo_url: string | null;
+  created_at: string;
+};
+
+type OwnerReportOrderRow = {
+  id: string;
+  status: string;
+  customer_name: string | null;
+  table_number: string | null;
+  payment_method: string | null;
+  total_price: number | string;
+  created_at: string;
+  payment_verified_at: string | null;
+  completed_at?: string | null;
+  completed_by?: string | null;
+};
+
+type OwnerReportInvoiceRow = {
+  id: string;
+  order_id: string;
+  status: string;
+  total_price: number | string;
+  payment_method: string | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  created_by_staff_id?: string | null;
+  created_at: string;
+};
+
+type OwnerReportItemRow = {
+  id: string;
+  order_id: string;
+  invoice_id?: string | null;
+  menu_item_id: string | null;
+  quantity: number | string;
+  price: number | string;
+};
+
+type OwnerReportMenuRow = {
+  id: string;
+  name: string;
+  category_id: string | null;
+};
+
+type OwnerReportStaffRow = {
+  id: string;
+  display_name: string;
+  role: string;
+};
+
+type OwnerFeedbackDbRow = {
+  id: string;
+  order_id: string;
+  table_number: string | null;
+  rating: number | string;
+  reactions: string[] | null;
+  comment: string | null;
+  photo_url: string | null;
+  created_at: string;
+};
+
+function isInRange(iso: string | null | undefined, rangeStart: string, rangeEnd: string) {
+  return Boolean(iso && iso >= rangeStart && iso < rangeEnd);
+}
+
+function dateKey(iso: string) {
+  return toDateInputValue(new Date(iso));
+}
+
+function mergeFeedbackIntoReport(report: OwnerReportData, feedback: OwnerFeedbackReportRow[]): OwnerReportData {
+  const averageRating = feedback.length > 0
+    ? feedback.reduce((sum, row) => sum + row.rating, 0) / feedback.length
+    : 0;
+
+  return {
+    ...report,
+    summary: {
+      ...report.summary,
+      feedback_count: feedback.length,
+      average_rating: averageRating,
+    },
+    feedback,
+    ai_insights: [
+      ...report.ai_insights,
+      ...(feedback.length > 0
+        ? [{
+            title: "Customer feedback",
+            detail: `Average meal rating is ${averageRating.toFixed(1)}/5 from ${feedback.length} response${feedback.length === 1 ? "" : "s"}. Review comments for service and menu improvements.`,
+          }]
+        : [{
+            title: "Customer feedback",
+            detail: "No feedback was submitted in this range yet. Keep prompting guests after served orders.",
+          }]),
+    ],
+  };
+}
+
+async function loadOwnerFeedbackReportRows(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerFeedbackReportRow[]> {
+  const { data: feedbackRows, error: feedbackError } = await supabase
+    .from("public_order_feedback")
+    .select("id,order_id,table_number,rating,reactions,comment,photo_url,created_at")
+    .eq("restaurant_id", restaurantId)
+    .gte("created_at", rangeStart)
+    .lt("created_at", rangeEnd)
+    .order("created_at", { ascending: false });
+
+  if (feedbackError) {
+    throw new Error(`Could not load customer feedback: ${feedbackError.message}`);
+  }
+
+  const feedback = (feedbackRows ?? []) as OwnerFeedbackDbRow[];
+  const orderIds = [...new Set(feedback.map((row) => row.order_id).filter(Boolean))];
+  const orderCustomerById = new Map<string, string | null>();
+
+  if (orderIds.length > 0) {
+    const { data: orderRows, error: orderError } = await supabase
+      .from("orders")
+      .select("id,customer_name")
+      .eq("restaurant_id", restaurantId)
+      .in("id", orderIds);
+
+    if (orderError) {
+      throw new Error(`Could not load feedback orders: ${orderError.message}`);
+    }
+
+    for (const order of (orderRows ?? []) as { id: string; customer_name: string | null }[]) {
+      orderCustomerById.set(order.id, order.customer_name);
+    }
+  }
+
+  return feedback.map((row) => ({
+    id: row.id,
+    order_id: row.order_id,
+    table_number: row.table_number,
+    customer_name: orderCustomerById.get(row.order_id) ?? null,
+    rating: Number(row.rating),
+    reactions: Array.isArray(row.reactions) ? row.reactions.map(String) : [],
+    comment: row.comment,
+    photo_url: row.photo_url,
+    created_at: row.created_at,
+  }));
+}
+
+async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
+  const [
+    { data: orderRows, error: orderError },
+    { data: invoiceRows, error: invoiceError },
+    { data: itemRows, error: itemError },
+    { data: menuRows, error: menuError },
+    { data: categoryRows, error: categoryError },
+    { data: staffRows, error: staffError },
+  ] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at,completed_by")
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", rangeStart)
+      .lt("created_at", rangeEnd),
+    supabase
+      .from("order_invoices")
+      .select("id,order_id,status,total_price,payment_method,verified_at,verified_by,paid_at,paid_by,created_by_staff_id,created_at")
+      .eq("restaurant_id", restaurantId),
+    supabase
+      .from("order_items")
+      .select("id,order_id,invoice_id,menu_item_id,quantity,price")
+      .eq("restaurant_id", restaurantId),
+    supabase
+      .from("menu_items")
+      .select("id,name,category_id")
+      .eq("restaurant_id", restaurantId),
+    supabase
+      .from("categories")
+      .select("id,name")
+      .eq("restaurant_id", restaurantId),
+    supabase
+      .from("restaurant_staff")
+      .select("id,display_name,role")
+      .eq("restaurant_id", restaurantId),
+  ]);
+
+  if (orderError) throw new Error(orderError.message);
+  if (itemError) throw new Error(itemError.message);
+  if (menuError) throw new Error(menuError.message);
+  if (categoryError) throw new Error(categoryError.message);
+  if (staffError) throw new Error(staffError.message);
+
+  const orders = ((orderRows ?? []) as OwnerReportOrderRow[]).map((row) => ({
+    ...row,
+    total_price: Number(row.total_price),
+  }));
+  const invoices = invoiceError
+    ? []
+    : ((invoiceRows ?? []) as OwnerReportInvoiceRow[])
+      .filter((invoice) => ["paid", "verified"].includes(invoice.status) && Boolean(invoice.verified_at) && isInRange(invoice.verified_at ?? "", rangeStart, rangeEnd))
+      .map((invoice) => ({ ...invoice, total_price: Number(invoice.total_price) }));
+  const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+  const revenueByOrderId = new Map<string, number>();
+
+  for (const invoice of invoices) {
+    revenueByOrderId.set(invoice.order_id, (revenueByOrderId.get(invoice.order_id) ?? 0) + invoice.total_price);
+  }
+
+  const totalRevenue = [...revenueByOrderId.values()].reduce((sum, value) => sum + value, 0);
+  const revenueOrderIds = new Set(revenueByOrderId.keys());
+  const orderById = new Map(orders.map((order) => [order.id, order]));
+  const menuById = new Map(((menuRows ?? []) as OwnerReportMenuRow[]).map((menuItem) => [menuItem.id, menuItem]));
+  const categoryById = new Map(((categoryRows ?? []) as OdCategory[]).map((category) => [category.id, category.name]));
+  const staffById = new Map(((staffRows ?? []) as OwnerReportStaffRow[]).map((staffMember) => [staffMember.id, staffMember]));
+
+  const salesByDay = new Map<string, { date: string; revenue: number; orders: number }>();
+  for (const invoice of invoices) {
+    const key = dateKey(invoice.verified_at ?? invoice.created_at);
+    const current = salesByDay.get(key) ?? { date: key, revenue: 0, orders: 0 };
+    current.revenue += invoice.total_price;
+    current.orders += 1;
+    salesByDay.set(key, current);
+  }
+
+  const ordersByStatus = new Map<string, number>();
+  const tableUsage = new Map<number, { table_number: number; orders: number; revenue: number }>();
+  const customerTotals = new Map<string, { customer_name: string; orders: number; revenue: number; last_order_at: string | null }>();
+  for (const order of orders) {
+    if (!revenueOrderIds.has(order.id)) continue;
+    ordersByStatus.set(order.status, (ordersByStatus.get(order.status) ?? 0) + 1);
+    const tableNumber = Number(order.table_number);
+    if (Number.isFinite(tableNumber)) {
+      const current = tableUsage.get(tableNumber) ?? { table_number: tableNumber, orders: 0, revenue: 0 };
+      current.orders += invoices.filter((invoice) => invoice.order_id === order.id).length;
+      current.revenue += revenueByOrderId.get(order.id) ?? 0;
+      tableUsage.set(tableNumber, current);
+    }
+    const customerName = order.customer_name?.trim() || "Guest";
+    const customer = customerTotals.get(customerName) ?? { customer_name: customerName, orders: 0, revenue: 0, last_order_at: null };
+    customer.orders += invoices.filter((invoice) => invoice.order_id === order.id).length;
+    customer.revenue += revenueByOrderId.get(order.id) ?? 0;
+    if (!customer.last_order_at || order.created_at > customer.last_order_at) customer.last_order_at = order.created_at;
+    customerTotals.set(customerName, customer);
+  }
+
+  const menuTotals = new Map<string, { name: string; category: string; quantity: number; revenue: number }>();
+  for (const item of (itemRows ?? []) as OwnerReportItemRow[]) {
+    const invoice = item.invoice_id ? invoiceById.get(item.invoice_id) : null;
+    if (!invoice) continue;
+
+    const menuItem = item.menu_item_id ? menuById.get(item.menu_item_id) : undefined;
+    const key = item.menu_item_id ?? `${item.order_id}:${item.id}`;
+    const current = menuTotals.get(key) ?? {
+      name: menuItem?.name ?? "Menu item",
+      category: menuItem?.category_id ? categoryById.get(menuItem.category_id) ?? "Menu" : "Menu",
+      quantity: 0,
+      revenue: 0,
+    };
+    current.quantity += Number(item.quantity);
+    current.revenue += Number(item.quantity) * Number(item.price);
+    menuTotals.set(key, current);
+  }
+
+  const paymentMethodTotals = new Map<string, { method: string; payments: number; revenue: number }>();
+  for (const invoice of invoices) {
+    const method = invoice.payment_method || "Unknown";
+    const current = paymentMethodTotals.get(method) ?? { method, payments: 0, revenue: 0 };
+    current.payments += 1;
+    current.revenue += invoice.total_price;
+    paymentMethodTotals.set(method, current);
+  }
+
+  const staffTotals = new Map<string, { name: string; role: string; orders_completed: number; payments_verified: number }>();
+  function staffTotal(staffId: string | null | undefined) {
+    if (!staffId) return null;
+    const staffMember = staffById.get(staffId);
+    const current = staffTotals.get(staffId) ?? {
+      name: staffMember?.display_name ?? "Staff",
+      role: staffMember?.role ?? "staff",
+      orders_completed: 0,
+      payments_verified: 0,
+    };
+    staffTotals.set(staffId, current);
+    return current;
+  }
+  for (const invoice of invoices) {
+    const creator = staffTotal(invoice.created_by_staff_id);
+    if (creator) creator.orders_completed += 1;
+    const total = staffTotal(invoice.verified_by ?? invoice.paid_by);
+    if (total) total.payments_verified += 1;
+  }
+  for (const order of orders) {
+    if (order.status === "completed") {
+      const total = staffTotal(order.completed_by);
+      if (total) total.orders_completed += 1;
+    }
+  }
+
+  const paidOrderCount = invoices.length;
+  const uniqueCustomers = [...customerTotals.keys()].filter((name) => name !== "Guest").length;
+
+  return {
+    summary: {
+      ...emptyReportData().summary,
+      revenue: totalRevenue,
+      orders: invoices.length,
+      average_order_value: paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0,
+      completed_orders: orders.filter((order) => revenueOrderIds.has(order.id) && order.status === "completed").length,
+      cancelled_orders: orders.filter((order) => revenueOrderIds.has(order.id) && order.status === "cancelled").length,
+      unique_customers: uniqueCustomers,
+      feedback_count: 0,
+      average_rating: 0,
+    },
+    sales_by_day: [...salesByDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    orders_by_status: [...ordersByStatus.entries()].map(([status, orderCount]) => ({ status, orders: orderCount })),
+    menu_performance: [...menuTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 20),
+    payment_methods: [...paymentMethodTotals.values()].sort((a, b) => b.revenue - a.revenue),
+    staff_performance: [...staffTotals.values()].sort((a, b) => (b.payments_verified + b.orders_completed) - (a.payments_verified + a.orders_completed)),
+    table_usage: [...tableUsage.values()].sort((a, b) => a.table_number - b.table_number),
+    customers: [...customerTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 50),
+    shift_history: [],
+    cash_variances: [],
+    feedback: [],
+    daily_bill_counts: [],
+    monthly_bill_counts: [],
+    top_bills: [],
+    ai_insights: [
+      {
+        title: "Report source",
+        detail: "Generated from persisted owner-visible orders, invoices, items, staff, and table data.",
+      },
+    ],
+  };
+}
+
+async function loadOwnerReportData(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
+  const feedbackRows = await loadOwnerFeedbackReportRows(restaurantId, rangeStart, rangeEnd);
+  const { data, error } = await supabase.rpc("get_owner_reporting_center", {
+    target_restaurant_id: restaurantId,
+    range_start: rangeStart,
+    range_end: rangeEnd,
+  });
+
+  if (error) {
+    const tableReport = await buildOwnerReportDataFromTables(restaurantId, rangeStart, rangeEnd);
+    return mergeFeedbackIntoReport(tableReport, feedbackRows);
+  }
+
+  const rpcReport = normalizeReportData(data && typeof data === "object" ? data as object : {});
+
+  if (
+    rpcReport.summary.orders > 0 ||
+    rpcReport.summary.revenue > 0 ||
+    rpcReport.sales_by_day.length > 0 ||
+    rpcReport.menu_performance.length > 0
+  ) {
+    return mergeFeedbackIntoReport(rpcReport, feedbackRows);
+  }
+
+  const tableReport = await buildOwnerReportDataFromTables(restaurantId, rangeStart, rangeEnd);
+  return mergeFeedbackIntoReport(
+    tableReport.summary.orders > 0 || tableReport.summary.revenue > 0 ? tableReport : rpcReport,
+    feedbackRows
+  );
+}
+
+type OwnerDiningBillRow = {
+  bill_number: string;
+  printed_at: string;
+  print_count: number | string;
+  grand_total: number | string;
+  vat_amount: number | string;
+};
+
+function mergeOwnerBillMetrics(report: OwnerReportData, billReport: OwnerReportData): OwnerReportData {
+  return normalizeReportData({
+    ...report,
+    summary: {
+      ...report.summary,
+      bills_printed: billReport.summary.bills_printed,
+      bills_reprinted: billReport.summary.bills_reprinted,
+      average_bill: billReport.summary.average_bill,
+      largest_bill: billReport.summary.largest_bill,
+      vat_collected: billReport.summary.vat_collected,
+    },
+    daily_bill_counts: billReport.daily_bill_counts,
+    monthly_bill_counts: billReport.monthly_bill_counts,
+    top_bills: billReport.top_bills,
+  });
+}
+
+async function loadOwnerDiningBillReportData(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
+  const empty = emptyReportData();
+  const { data, error } = await supabase
+    .from("dining_session_bills")
+    .select("bill_number,printed_at,print_count,grand_total,vat_amount")
+    .eq("restaurant_id", restaurantId)
+    .neq("status", "voided")
+    .gte("printed_at", rangeStart)
+    .lt("printed_at", rangeEnd)
+    .order("grand_total", { ascending: false });
+
+  if (error) return empty;
+
+  const rows = ((data ?? []) as OwnerDiningBillRow[]).map((row) => ({
+    bill_number: String(row.bill_number),
+    printed_at: String(row.printed_at),
+    print_count: Number(row.print_count ?? 1),
+    grand_total: Number(row.grand_total ?? 0),
+    vat_amount: Number(row.vat_amount ?? 0),
+  }));
+
+  const daily = new Map<string, { date: string; bills: number; revenue: number; vat: number }>();
+  const monthly = new Map<string, { month: string; bills: number; revenue: number; vat: number }>();
+  for (const bill of rows) {
+    const printedAt = new Date(bill.printed_at);
+    const dayKey = Number.isNaN(printedAt.getTime()) ? bill.printed_at.slice(0, 10) : printedAt.toISOString().slice(0, 10);
+    const monthKey = dayKey.slice(0, 7);
+    const day = daily.get(dayKey) ?? { date: dayKey, bills: 0, revenue: 0, vat: 0 };
+    day.bills += 1;
+    day.revenue += bill.grand_total;
+    day.vat += bill.vat_amount;
+    daily.set(dayKey, day);
+    const month = monthly.get(monthKey) ?? { month: monthKey, bills: 0, revenue: 0, vat: 0 };
+    month.bills += 1;
+    month.revenue += bill.grand_total;
+    month.vat += bill.vat_amount;
+    monthly.set(monthKey, month);
+  }
+
+  const billCount = rows.length;
+  const totalRevenue = rows.reduce((sum, bill) => sum + bill.grand_total, 0);
+  const totalVat = rows.reduce((sum, bill) => sum + bill.vat_amount, 0);
+  const reprintCount = rows.reduce((sum, bill) => sum + Math.max(0, bill.print_count - 1), 0);
+
+  return normalizeReportData({
+    ...empty,
+    summary: {
+      ...empty.summary,
+      bills_printed: billCount,
+      bills_reprinted: reprintCount,
+      average_bill: billCount > 0 ? totalRevenue / billCount : 0,
+      largest_bill: rows[0]?.grand_total ?? 0,
+      vat_collected: totalVat,
+    },
+    daily_bill_counts: [...daily.values()].sort((left, right) => left.date.localeCompare(right.date)),
+    monthly_bill_counts: [...monthly.values()].sort((left, right) => left.month.localeCompare(right.month)),
+    top_bills: rows.slice(0, 10),
+  });
 }
 
 function MiniLineChart({ rows }: { rows: { date: string; revenue: number; orders: number }[] }) {
@@ -3381,27 +4099,27 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
       try {
         setLoadingReport(true);
         setReportError(null);
-        const endExclusive = new Date(`${endDate}T00:00:00`);
-        endExclusive.setDate(endExclusive.getDate() + 1);
-        const rangeStart = new Date(`${startDate}T00:00:00`).toISOString();
-        const rangeEnd = endExclusive.toISOString();
-        const [{ data, error }, { data: shiftData, error: shiftError }] = await Promise.all([
-          supabase.rpc("get_owner_reporting_center", {
-            target_restaurant_id: restaurantId,
-            range_start: rangeStart,
-            range_end: rangeEnd,
-          }),
+        const { rangeStart, rangeEnd } = getDateInputRange(startDate, endDate);
+        const [reportPayload, billPayload, { data: shiftData, error: shiftError }] = await Promise.all([
+          loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
+          loadOwnerDiningBillReportData(restaurantId, rangeStart, rangeEnd),
           supabase.rpc("get_owner_shift_visibility", {
             target_restaurant_id: restaurantId,
             range_start: rangeStart,
             range_end: rangeEnd,
           }),
         ]);
-        if (error) throw new Error(error.message);
         if (shiftError) throw new Error(shiftError.message);
-        const reportPayload = data && typeof data === "object" ? data as object : {};
         const shiftPayload = shiftData && typeof shiftData === "object" ? shiftData as object : {};
-        if (mounted) setReportData(normalizeReportData({ ...reportPayload, ...shiftPayload }));
+        const billMergedReport = mergeOwnerBillMetrics(reportPayload, billPayload);
+        if (mounted) {
+          setReportData(normalizeReportData({
+            ...billMergedReport,
+            ...shiftPayload,
+            summary: billMergedReport.summary,
+            feedback: reportPayload.feedback,
+          }));
+        }
       } catch (loadError) {
         if (mounted) setReportError(loadError instanceof Error ? loadError.message : "Could not load reports.");
       } finally {
@@ -3415,9 +4133,28 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
   const salesRows = reportData.sales_by_day.map((row) => ({ Date: row.date.slice(0, 10), Revenue: fmtMoney(row.revenue), Orders: row.orders }));
   const orderRows = reportData.orders_by_status.map((row) => ({ Status: statusLabel(row.status), Orders: row.orders }));
   const menuRows = reportData.menu_performance.map((row) => ({ Item: row.name, Category: row.category, Quantity: row.quantity, Revenue: fmtMoney(row.revenue) }));
+  const paymentMethodRows = reportData.payment_methods.map((row) => ({ Method: row.method, Payments: row.payments, Revenue: fmtMoney(row.revenue) }));
+  const topBillRows = reportData.top_bills.map((row) => ({
+    "Bill Number": row.bill_number,
+    Printed: fmtDateTime(row.printed_at),
+    "Print Count": row.print_count,
+    "Grand Total": fmtMoney(row.grand_total),
+    VAT: fmtMoney(row.vat_amount),
+  }));
+  const dailyBillRows = reportData.daily_bill_counts.map((row) => ({ Date: row.date, Bills: row.bills, Revenue: fmtMoney(row.revenue), VAT: fmtMoney(row.vat) }));
+  const monthlyBillRows = reportData.monthly_bill_counts.map((row) => ({ Month: row.month, Bills: row.bills, Revenue: fmtMoney(row.revenue), VAT: fmtMoney(row.vat) }));
   const staffRows = reportData.staff_performance.map((row) => ({ Staff: row.name, Role: row.role, Completed: row.orders_completed, Payments: row.payments_verified }));
   const tableRows = reportData.table_usage.map((row) => ({ Table: row.table_number, Orders: row.orders, Revenue: fmtMoney(row.revenue) }));
   const customerRows = reportData.customers.map((row) => ({ Customer: row.customer_name, Orders: row.orders, Revenue: fmtMoney(row.revenue), "Last Order": row.last_order_at ? fmtDateTime(row.last_order_at) : "-" }));
+  const feedbackRows = reportData.feedback.map((row) => ({
+    Date: fmtDateTime(row.created_at),
+    Customer: row.customer_name ?? "Guest",
+    Table: row.table_number ?? "-",
+    Rating: `${row.rating}/5`,
+    Reactions: row.reactions.length > 0 ? row.reactions.join(", ") : "-",
+    Comment: row.comment ?? "-",
+    Photo: row.photo_url ? "Yes" : "No",
+  }));
   const shiftRows = reportData.shift_history.map((row) => ({
     Cashier: row.cashier_name,
     Opened: fmtDateTime(row.opened_at),
@@ -3442,6 +4179,19 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
     ["Orders", "Cancelled orders", reportData.summary.cancelled_orders],
     ["Sales", "Average order value", Math.round(reportData.summary.average_order_value)],
     ["Customers", "Unique customers", reportData.summary.unique_customers],
+    ["Feedback", "Responses", reportData.summary.feedback_count],
+    ["Feedback", "Average rating", reportData.summary.average_rating ? reportData.summary.average_rating.toFixed(1) : "0.0"],
+    ["Bills", "Bills printed", reportData.summary.bills_printed],
+    ["Bills", "Bills reprinted", reportData.summary.bills_reprinted],
+    ["Bills", "Average bill", Math.round(reportData.summary.average_bill)],
+    ["Bills", "Largest bill", reportData.summary.largest_bill],
+    ["Bills", "VAT collected", reportData.summary.vat_collected],
+    ...reportData.payment_methods.map((row) => ["Payment Method", row.method, row.revenue] as [string, string, number]),
+    ...reportData.feedback.map((row) => [
+      "Feedback",
+      `${fmtDateTime(row.created_at)} | ${row.customer_name ?? "Guest"} | Table ${row.table_number ?? "-"}`,
+      `${row.rating}/5 | ${row.reactions.join(", ") || "No reactions"} | ${row.comment ?? "No comment"}${row.photo_url ? ` | Photo: ${row.photo_url}` : ""}`,
+    ] as [string, string, string]),
   ];
 
   function handleCsvExport() {
@@ -3480,11 +4230,19 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
       {reportError && <div className="od-error-inline">{reportError}</div>}
 
       <div className="od-kpi-grid analytics">
-        <div className="od-kpi-card"><div className="od-kpi-label">Revenue</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoneyK(reportData.summary.revenue)}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Orders</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.orders}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Average Order</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(Math.round(reportData.summary.average_order_value))}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Customers</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.unique_customers}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Bills Printed Today</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.bills_printed}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Bills Reprinted Today</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.bills_reprinted}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Average Bill</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(Math.round(reportData.summary.average_bill))}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Largest Bill</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(reportData.summary.largest_bill)}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">VAT Collected</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(reportData.summary.vat_collected)}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Daily Bill Count</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.daily_bill_counts.reduce((sum, row) => sum + row.bills, 0)}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Monthly Bill Count</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.monthly_bill_counts.reduce((sum, row) => sum + row.bills, 0)}</div></div>
+        <div className="od-kpi-card"><div className="od-kpi-label">Bill Revenue</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoneyK(reportData.top_bills.reduce((sum, row) => sum + row.grand_total, 0))}</div></div>
       </div>
+
+      <ReportTable title="Top Bills" subtitle="Highest final dining bills from dining_session_bills only." headers={["Bill Number", "Printed", "Print Count", "Grand Total", "VAT"]} rows={topBillRows} />
+      <ReportTable title="Daily Bill Count" subtitle="Daily final bill counts from dining_session_bills only." headers={["Date", "Bills", "Revenue", "VAT"]} rows={dailyBillRows} />
+      <ReportTable title="Monthly Bill Count" subtitle="Monthly final bill counts from dining_session_bills only." headers={["Month", "Bills", "Revenue", "VAT"]} rows={monthlyBillRows} />
 
       <div className="od-card">
         <div className="od-card-header">
@@ -3498,11 +4256,13 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
 
       <ReportTable title="Order Reports" subtitle="Order volume by workflow status." headers={["Status", "Orders"]} rows={orderRows} />
       <ReportTable title="Menu Performance Reports" subtitle="Top menu items by persisted order item revenue." headers={["Item", "Category", "Quantity", "Revenue"]} rows={menuRows} />
+      <ReportTable title="Payment Method Reports" subtitle="Revenue by verified payment method." headers={["Method", "Payments", "Revenue"]} rows={paymentMethodRows} />
       <ReportTable title="Staff Performance Reports" subtitle="Payment verification and completion activity by staff member." headers={["Staff", "Role", "Completed", "Payments"]} rows={staffRows} />
       <ReportTable title="Cashier Shift History" subtitle="Read-only shift openings, closings, and reconciliation totals." headers={["Cashier", "Opened", "Closed", "Expected", "Actual", "Variance"]} rows={shiftRows} />
       <ReportTable title="Cash Variance Reports" subtitle="Permanent reconciliation variances recorded at shift close." headers={["Cashier", "Closed", "Expected", "Actual", "Variance", "Reason"]} rows={varianceRows} />
       <ReportTable title="Table Usage Reports" subtitle="Revenue and order volume by managed table." headers={["Table", "Orders", "Revenue"]} rows={tableRows} />
       <ReportTable title="Customer Reports" subtitle="Repeat and high-value customers based on captured customer names." headers={["Customer", "Orders", "Revenue", "Last Order"]} rows={customerRows} />
+      <ReportTable title="Customer Feedback Reports" subtitle="Ratings, comments, reactions, and optional photos submitted after served orders." headers={["Date", "Customer", "Table", "Rating", "Reactions", "Comment", "Photo"]} rows={feedbackRows} />
 
       <div className="od-card">
         <div className="od-card-header">
@@ -3559,14 +4319,15 @@ function CustomersPage({ orders }: { orders: OdOrder[] }) {
   );
 }
 
-function getOrderingUrl(qrUrl: string | null | undefined) {
-  const rawUrl = qrUrl?.trim() ?? "";
-  if (!rawUrl) return "";
+function getOrderingUrl(qrUrl: string | null | undefined, qrPath?: string | null | undefined) {
+  return buildAbsolutePublicUrl(qrUrl?.trim() || qrPath?.trim());
+}
+
+function getOrderingUrlOrigin(orderingUrl: string) {
   try {
-    const url = new URL(rawUrl);
-    return `${url.origin}${url.pathname}${url.search}`;
+    return new URL(orderingUrl).origin;
   } catch {
-    return "";
+    return "relative";
   }
 }
 
@@ -3688,6 +4449,7 @@ async function createQrCardCanvas({
   context.font = "800 30px Arial";
   context.fillText(`Table ${table.table_number}`, 450, 388);
 
+  assertAbsoluteQrPayload(orderingUrl);
   const qrDataUrl = await QRCode.toDataURL(orderingUrl, { width: 560, margin: 1 });
   const qrImage = await loadImage(qrDataUrl);
   if (!qrImage) throw new Error("QR image could not be generated.");
@@ -3781,7 +4543,7 @@ function QrTablesPage({
   const [workingTableId, setWorkingTableId] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const activeTableOrders = orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status));
+  const activeTableOrders = orders.filter((order) => order.dining_session_status === "open");
   const activeTables = new Set(activeTableOrders.map((order) => order.table_number).filter(Boolean));
   const todayStart = startOfTodayIso();
   const rows = tables.map((restaurantTable) => {
@@ -3794,7 +4556,7 @@ function QrTablesPage({
       lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
       lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? orders.find((order) => order.table_number === number)?.created_at ?? null,
       scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
-      orderingUrl: getOrderingUrl(restaurantTable.qr_url),
+      orderingUrl: getOrderingUrl(restaurantTable.qr_url, restaurantTable.qr_path),
     };
   });
 
@@ -3805,14 +4567,15 @@ function QrTablesPage({
     async function generateQrCodes() {
       const pairs = await Promise.all(
         tables.map(async (table) => {
-          const url = getOrderingUrl(table.qr_url);
+          const url = getOrderingUrl(table.qr_url, table.qr_path);
           if (!url) return [table.id, ""] as const;
           logOwnerQrDiagnostic("ownerDashboard:generatedQrUrl", {
             generatedQrUrl: url,
-            currentAppUrl: new URL(url).origin,
+            currentAppUrl: getOrderingUrlOrigin(url),
             restaurantId,
             tableNumber: table.table_number,
           });
+          assertAbsoluteQrPayload(url);
           const dataUrl = await QRCode.toDataURL(url, { width: 96, margin: 1 });
           return [table.id, dataUrl] as const;
         })
@@ -3821,7 +4584,7 @@ function QrTablesPage({
     }
     void generateQrCodes();
     return () => { mounted = false; };
-  }, [tables]);
+  }, [restaurantId, tables]);
 
   useEffect(() => {
     let mounted = true;
@@ -3898,7 +4661,7 @@ function QrTablesPage({
     }
   }
 
-  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url) : "";
+  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url, previewTable.qr_path) : "";
   const previewPrintable = previewTable && previewUrl ? { table: previewTable, orderingUrl: previewUrl } : null;
   const allSelected = rows.length > 0 && rows.every((row) => selectedTableIds.includes(row.table.id));
 
@@ -3918,6 +4681,7 @@ function QrTablesPage({
   }
 
   async function downloadQrSvg(printable: PrintableQrTable) {
+    assertAbsoluteQrPayload(printable.orderingUrl);
     const qrSvg = await QRCode.toString(printable.orderingUrl, { type: "svg", width: 360, margin: 1 });
     const escapedName = escapeHtml(restaurantName);
     const escapedUrl = escapeHtml(printable.orderingUrl);
@@ -3949,6 +4713,7 @@ ${logoMarkup}
   async function printQrCards(printables: PrintableQrTable[]) {
     if (printables.length === 0) return;
     const cards = await Promise.all(printables.map(async (printable) => {
+      assertAbsoluteQrPayload(printable.orderingUrl);
       const qrDataUrl = await QRCode.toDataURL(printable.orderingUrl, { width: 320, margin: 1 });
       const logo = logoUrl
         ? `<img class="qr-logo" src="${escapeHtml(logoUrl)}" alt="" />`
@@ -4032,7 +4797,9 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
                   <td><span className={table.active ? "od-active-pill" : "od-offline-pill"}>{table.active ? "Active" : "Disabled"}</span></td>
                   <td><span className={`od-status-badge ${occupied ? "paid" : "pending"}`}>{occupied ? "Occupied" : "Available"}</span></td>
                   <td>
-                    {qrCodes[table.id] ? <img className="od-qr-thumb" src={qrCodes[table.id]} alt={`QR for ${table.label}`} /> : <div className="od-qr-placeholder compact">QR</div>}
+                    <button className="od-qr-thumb-button" type="button" onClick={() => setPreviewTable(table)} disabled={!orderingUrl} aria-label={`View QR for ${table.label}`}>
+                      {qrCodes[table.id] ? <img className="od-qr-thumb" src={qrCodes[table.id]} alt={`QR for ${table.label}`} /> : <span className="od-qr-placeholder compact">QR</span>}
+                    </button>
                   </td>
                   <td>{table.created_at ? fmtDateTime(table.created_at) : "Not recorded"}</td>
                   <td>{table.qr_regenerated_at ? fmtDateTime(table.qr_regenerated_at) : "Not recorded"}</td>
@@ -4200,14 +4967,15 @@ function SettingsPage({
       try {
         const pairs = await Promise.all(
           activeTables.slice(0, 80).map(async (table) => {
-            const url = getOrderingUrl(table.qr_url);
+            const url = getOrderingUrl(table.qr_url, table.qr_path);
             if (!url) return [table.table_number, ""] as const;
             logOwnerQrDiagnostic("ownerSettings:generatedQrUrl", {
               generatedQrUrl: url,
-              currentAppUrl: new URL(url).origin,
+              currentAppUrl: getOrderingUrlOrigin(url),
               restaurantId,
               tableNumber: table.table_number,
             });
+            assertAbsoluteQrPayload(url);
             const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
             return [table.table_number, dataUrl] as const;
           })

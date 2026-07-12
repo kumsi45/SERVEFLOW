@@ -49,7 +49,7 @@ function normalizePath(value) {
 
 function qrMatchesTable(row, field) {
   const parsed = normalizePath(row[field]);
-  return parsed.pathname === `/r/${row.slug}`
+  return parsed.pathname === `/r/${row.slug}/order`
     && parsed.tableNumber === String(row.table_number)
     && parsed.qrToken === String(row.qr_token);
 }

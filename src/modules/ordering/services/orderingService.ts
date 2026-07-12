@@ -5,6 +5,7 @@ type SubmitPublicOrderInput = {
   restaurantSlug: string;
   tableNumber: string;
   qrToken: string;
+  browserSessionToken?: string;
   cartLines: CartLine[];
 };
 
@@ -99,6 +100,7 @@ export async function submitPublicQrCustomerOrder({
   restaurantSlug,
   tableNumber,
   qrToken,
+  browserSessionToken,
   cartLines,
 }: SubmitPublicOrderInput): Promise<SubmittedOrder> {
   const requestedItems = cartLines.map((line) => ({
@@ -110,6 +112,7 @@ export async function submitPublicQrCustomerOrder({
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber,
     qr_token: qrToken,
+    browser_session_token: browserSessionToken ?? "",
     customer_name: "",
     selected_payment_method: "Cash",
     requested_items: requestedItems,

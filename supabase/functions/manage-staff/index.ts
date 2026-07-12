@@ -1,13 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type StaffRole = "cashier" | "kitchen";
+type StaffRole = "cashier" | "kitchen" | "waiter";
 type StaffAction =
   | "create-staff"
   | "update-staff"
   | "deactivate-staff"
   | "reactivate-staff"
   | "send-password-reset"
-  | "generate-temporary-password";
+  | "generate-temporary-password"
+  | "delete-staff";
 
 type ManageStaffPayload = {
   action: StaffAction;
@@ -15,6 +16,9 @@ type ManageStaffPayload = {
   staffId?: string;
   fullName?: string;
   email?: string;
+  username?: string;
+  pinPassword?: string;
+  phoneNumber?: string;
   role?: StaffRole;
   assignedKitchenStationId?: string | null;
 };
@@ -26,6 +30,7 @@ const STAFF_ACTIONS: StaffAction[] = [
   "reactivate-staff",
   "send-password-reset",
   "generate-temporary-password",
+  "delete-staff",
 ];
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -75,11 +80,11 @@ function normalizeAction(action: unknown): StaffAction {
 }
 
 function normalizeRole(role: unknown): StaffRole {
-  if (role === "cashier" || role === "kitchen") {
+  if (role === "cashier" || role === "kitchen" || role === "waiter") {
     return role;
   }
 
-  throw new Error("Role must be cashier or kitchen.");
+  throw new Error("Role must be cashier, kitchen, or waiter.");
 }
 
 function normalizeEmail(email: unknown) {
@@ -100,6 +105,51 @@ function normalizeDisplayName(name: unknown) {
   }
 
   return normalized;
+}
+
+function normalizeUsername(username: unknown) {
+  const normalized = requireString(username, "Username").toLowerCase();
+
+  if (!/^[a-z0-9._-]{3,32}$/.test(normalized)) {
+    throw new Error("Username must be 3-32 characters using letters, numbers, dots, underscores, or hyphens.");
+  }
+
+  return normalized;
+}
+
+function normalizeOptionalPhone(phone: unknown) {
+  if (phone === undefined || phone === null || String(phone).trim() === "") {
+    return null;
+  }
+
+  const normalized = String(phone).trim();
+  if (normalized.length > 32 || !/^[0-9+().\-\s]+$/.test(normalized)) {
+    throw new Error("Phone number is invalid.");
+  }
+
+  return normalized;
+}
+
+function normalizePinPassword(value: unknown) {
+  const pin = requireString(value, "PIN / password");
+
+  if (!/^\d{4,12}$/.test(pin)) {
+    throw new Error("Waiter PIN must be 4-12 digits.");
+  }
+
+  return pin;
+}
+
+function waiterAuthEmail(restaurantId: string, username: string) {
+  const restaurantPart = restaurantId.replace(/-/g, "");
+  return `${username}.${restaurantPart}@waiter.serveflow.local`;
+}
+
+function generateWaiterPin() {
+  const bytes = new Uint8Array(2);
+  crypto.getRandomValues(bytes);
+  const value = ((bytes[0] << 8) + bytes[1]) % 10000;
+  return String(value).padStart(4, "0");
 }
 
 function normalizeResetBaseUrl(value: string | null) {
@@ -285,7 +335,7 @@ Deno.serve(async (request) => {
     async function loadTargetStaff(staffId: string) {
       const { data, error } = await serviceClient
         .from("restaurant_staff")
-        .select("id, restaurant_id, user_id, email, display_name, role, active, assigned_kitchen_station_id")
+        .select("id, restaurant_id, user_id, email, username, phone_number, display_name, role, active, assigned_kitchen_station_id, waiter_session_active")
         .eq("restaurant_id", restaurantId)
         .eq("id", staffId)
         .limit(1)
@@ -348,14 +398,17 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
-      const email = normalizeEmail(payload.email);
       const role = normalizeRole(payload.role);
+      const username = role === "waiter" ? normalizeUsername(payload.username) : null;
+      const phoneNumber = role === "waiter" ? normalizeOptionalPhone(payload.phoneNumber) : null;
+      const pinPassword = role === "waiter" ? normalizePinPassword(payload.pinPassword) : null;
+      const email = role === "waiter" ? waiterAuthEmail(restaurantId, username) : normalizeEmail(payload.email);
       const assignedKitchenStationId = role === "kitchen"
         ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
         : null;
       const assignedStation = assignedKitchenStationId ? await requireActiveKitchenStation(assignedKitchenStationId) : null;
 
-      const { data: existingStaff, error: existingStaffError } = await serviceClient
+      const { data: existingEmailStaff, error: existingStaffError } = await serviceClient
         .from("restaurant_staff")
         .select("id, active")
         .eq("restaurant_id", restaurantId)
@@ -368,16 +421,35 @@ Deno.serve(async (request) => {
         throw new Error(existingStaffError.message);
       }
 
-      if (existingStaff) {
+      if (existingEmailStaff) {
         return jsonResponse(409, { error: "A staff account with this email already exists for this restaurant." });
       }
 
-      const temporaryPassword = generateTemporaryPassword(fullName);
+      if (username) {
+        const { data: existingUsernameStaff, error: existingUsernameError } = await serviceClient
+          .from("restaurant_staff")
+          .select("id")
+          .eq("restaurant_id", restaurantId)
+          .ilike("username", username)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingUsernameError) {
+          logError(requestId, "existing waiter username lookup failed", { restaurantId, username, error: existingUsernameError.message });
+          throw new Error(existingUsernameError.message);
+        }
+
+        if (existingUsernameStaff) {
+          return jsonResponse(409, { error: "This waiter username is already used in this restaurant." });
+        }
+      }
+
+      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : generateTemporaryPassword(fullName);
       const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
         email,
         password: temporaryPassword,
         email_confirm: true,
-        user_metadata: { full_name: fullName, serveflow_role: role },
+        user_metadata: { full_name: fullName, serveflow_role: role, username },
       });
 
       if (authError || !authData.user) {
@@ -416,6 +488,8 @@ Deno.serve(async (request) => {
           role,
           display_name: fullName,
           email,
+          username,
+          phone_number: phoneNumber,
           assigned_kitchen_station_id: assignedKitchenStationId,
           active: true,
         })
@@ -433,7 +507,11 @@ Deno.serve(async (request) => {
         throw new Error(staffInsertError?.message || "Could not create staff record.");
       }
 
-      await audit("staff_created", staffData.id, email, { role });
+      await audit(role === "waiter" ? "waiter_created" : "staff_created", staffData.id, email, {
+        role,
+        username,
+        phone_number: phoneNumber,
+      });
       if (role === "kitchen" && assignedStation) {
         await audit("kitchen_staff_station_assigned", staffData.id, email, {
           staff_name: fullName,
@@ -482,6 +560,35 @@ Deno.serve(async (request) => {
         details.display_name = displayName;
       }
 
+      if (nextRole === "waiter" && typeof payload.username === "string") {
+        const username = normalizeUsername(payload.username);
+        const { data: existingUsernameStaff, error: existingUsernameError } = await serviceClient
+          .from("restaurant_staff")
+          .select("id")
+          .eq("restaurant_id", restaurantId)
+          .ilike("username", username)
+          .neq("id", staffId)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingUsernameError) throw new Error(existingUsernameError.message);
+        if (existingUsernameStaff) {
+          return jsonResponse(409, { error: "This waiter username is already used in this restaurant." });
+        }
+
+        updates.username = username;
+        details.username = username;
+      }
+
+      if (nextRole === "waiter") {
+        const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
+        updates.phone_number = phoneNumber;
+        details.phone_number = phoneNumber;
+      } else {
+        updates.username = null;
+        updates.phone_number = null;
+      }
+
       if (payload.role) {
         updates.role = nextRole;
         details.previous_role = targetStaff.role;
@@ -519,9 +626,9 @@ Deno.serve(async (request) => {
           .eq("id", targetStaff.user_id)
           .eq("restaurant_id", restaurantId);
         if (userRoleError) throw new Error(userRoleError.message);
-        await audit("role_changed", staffId, targetStaff.email, details);
+        await audit(nextRole === "waiter" ? "waiter_updated" : "role_changed", staffId, targetStaff.email, details);
       } else {
-        await audit("staff_updated", staffId, targetStaff.email, details);
+        await audit(targetStaff.role === "waiter" ? "waiter_updated" : "staff_updated", staffId, targetStaff.email, details);
       }
 
       if (previousStationId !== nextStationId) {
@@ -540,10 +647,17 @@ Deno.serve(async (request) => {
 
     if (action === "deactivate-staff" || action === "reactivate-staff") {
       const active = action === "reactivate-staff";
-      const { error } = await serviceClient.from("restaurant_staff").update({ active }).eq("id", staffId).eq("restaurant_id", restaurantId);
+      const { error } = await serviceClient
+        .from("restaurant_staff")
+        .update({ active, waiter_session_active: targetStaff.role === "waiter" && active ? targetStaff.waiter_session_active : false })
+        .eq("id", staffId)
+        .eq("restaurant_id", restaurantId);
       if (error) throw new Error(error.message);
 
-      await audit(active ? "staff_reactivated" : "staff_deactivated", staffId, targetStaff.email, {});
+      const auditAction = targetStaff.role === "waiter"
+        ? active ? "waiter_activated" : "waiter_deactivated"
+        : active ? "staff_reactivated" : "staff_deactivated";
+      await audit(auditAction, staffId, targetStaff.email, { username: targetStaff.username ?? null });
       return jsonResponse(200, { ok: true });
     }
 
@@ -570,15 +684,47 @@ Deno.serve(async (request) => {
     }
 
     if (action === "generate-temporary-password") {
-      const temporaryPassword = generateTemporaryPassword(targetStaff.display_name);
+      const temporaryPassword = targetStaff.role === "waiter" ? generateWaiterPin() : generateTemporaryPassword(targetStaff.display_name);
       const { error } = await serviceClient.auth.admin.updateUserById(targetStaff.user_id, {
         password: temporaryPassword,
       });
 
       if (error) throw new Error(error.message);
 
-      await audit("temporary_password_generated", staffId, targetStaff.email, {});
+      await audit(targetStaff.role === "waiter" ? "waiter_pin_reset" : "temporary_password_generated", staffId, targetStaff.email, {
+        username: targetStaff.username ?? null,
+      });
       return jsonResponse(200, { temporaryPassword });
+    }
+
+    if (action === "delete-staff") {
+      if (targetStaff.role !== "waiter") {
+        return jsonResponse(400, { error: "Only waiter accounts can be safely deleted in this phase." });
+      }
+
+      if (targetStaff.waiter_session_active) {
+        return jsonResponse(409, { error: "This waiter is currently logged in. Ask them to logout before deleting." });
+      }
+
+      const futureShiftExists = false;
+      const futureAssignedTablesExist = false;
+
+      if (futureShiftExists || futureAssignedTablesExist) {
+        return jsonResponse(409, { error: "This waiter has future assignments and cannot be deleted." });
+      }
+
+      await audit("waiter_deleted", staffId, targetStaff.email, {
+        deleted_staff_id: staffId,
+        username: targetStaff.username ?? null,
+        display_name: targetStaff.display_name,
+        future_shift_check: futureShiftExists,
+        future_assigned_tables_check: futureAssignedTablesExist,
+      });
+
+      const { error } = await serviceClient.auth.admin.deleteUser(targetStaff.user_id);
+      if (error) throw new Error(error.message);
+
+      return jsonResponse(200, { ok: true });
     }
 
     return jsonResponse(400, { error: "Unsupported staff action." });

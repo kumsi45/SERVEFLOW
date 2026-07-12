@@ -35,13 +35,14 @@ export function PublicQrCartPanel({
   const existingSubtotal = activeSession?.total_price ?? 0;
   const grandTotal = existingSubtotal + displaySubtotal;
   const hasActiveSession = Boolean(activeSession);
+  const activeOrderLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
 
   return (
     <aside className={isOpen ? "public-cart-panel open" : "public-cart-panel"} aria-label="Cart">
       <div className="public-cart-heading">
         <div>
           <p className="eyebrow">{hasActiveSession ? "Current order" : "Your order"}</p>
-          <h2>{hasActiveSession ? `Order #${activeSession?.order_id.slice(0, 8)}` : "Cart"}</h2>
+          <h2>{hasActiveSession ? activeOrderLabel : "Cart"}</h2>
         </div>
         <span>
           {itemCount} {itemCount === 1 ? "item" : "items"}

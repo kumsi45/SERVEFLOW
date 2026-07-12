@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { assertAbsoluteQrPayload, buildAbsolutePublicUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import "./restaurantSetupWizard.css";
 
@@ -102,14 +103,7 @@ const STEPS = [
 const FINAL_STEP = STEPS.length - 1;
 
 function getOrderingUrl(table: ExistingTable) {
-  const qrUrl = table.qr_url?.trim() ?? "";
-  if (!qrUrl) return "";
-  try {
-    const url = new URL(qrUrl);
-    return `${url.origin}${url.pathname}${url.search}`;
-  } catch {
-    return "";
-  }
+  return buildAbsolutePublicUrl(table.qr_url?.trim() || table.qr_path?.trim());
 }
 
 function logSetupQrDiagnostic(stage: string, context: Record<string, unknown>) {
@@ -162,6 +156,7 @@ async function buildQrPdf(tables: ExistingTable[], restaurantName: string) {
       currentAppUrl: new URL(orderingUrl).origin,
       tableNumber: table.table_number,
     });
+    assertAbsoluteQrPayload(orderingUrl);
     const qr = await QRCode.toDataURL(orderingUrl, { width: 220, margin: 1 });
     return `<section><h1>${restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
   }));
@@ -523,6 +518,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           currentAppUrl: new URL(orderingUrl).origin,
           tableNumber: table.table_number,
         });
+        assertAbsoluteQrPayload(orderingUrl);
         const qr = await QRCode.toDataURL(orderingUrl, { width: 260, margin: 1 });
         return `<section><h1>${restaurantInfo.restaurantName}</h1><h2>Table ${table.table_number}</h2><img src="${qr}" /><p>Scan to Order</p></section>`;
       }));

@@ -4,6 +4,7 @@ export type PublicQrContext = {
   qrToken: string;
   tableNumberFromQr: boolean;
   sessionKey: string;
+  browserSessionToken: string;
   source: "url" | "empty";
 };
 
@@ -20,6 +21,7 @@ const QR_ACTIVE_SESSION_STORAGE_KEY = "serveflow.publicQrActiveSessionKey";
 const QR_LEGACY_ACTIVE_SCAN_STORAGE_KEY = "serveflow.publicQrActiveScan";
 const QR_CART_STORAGE_PREFIX = "serveflow.publicQrCart";
 const QR_CHECKOUT_STORAGE_PREFIX = "serveflow.publicQrCheckout";
+const QR_BROWSER_SESSION_STORAGE_PREFIX = "serveflow.publicQrBrowserSession";
 
 function normalize(value: string | null | undefined) {
   return value?.trim() ?? "";
@@ -27,6 +29,22 @@ function normalize(value: string | null | undefined) {
 
 export function buildPublicQrSessionKey(restaurantSlug: string, tableNumber: string, qrToken: string) {
   return `${restaurantSlug.trim()}-${tableNumber.trim()}-${qrToken.trim()}`;
+}
+
+function readBrowserSessionToken(sessionKey: string) {
+  if (typeof window === "undefined" || !sessionKey) return "";
+
+  const storageKey = `${QR_BROWSER_SESSION_STORAGE_PREFIX}:${sessionKey}`;
+  try {
+    const storedToken = window.sessionStorage.getItem(storageKey);
+    if (storedToken) return storedToken;
+
+    const newToken = crypto.randomUUID();
+    window.sessionStorage.setItem(storageKey, newToken);
+    return newToken;
+  } catch {
+    return "";
+  }
 }
 
 function clearPublicQrStorageForNewSession(sessionKey: string) {
@@ -57,7 +75,7 @@ function clearPublicQrStorageForNewSession(sessionKey: string) {
 
 export function readPublicQrContext(restaurantSlug: string): PublicQrContext {
   if (typeof window === "undefined") {
-    return { restaurantSlug, tableNumber: "", qrToken: "", tableNumberFromQr: false, sessionKey: "", source: "empty" };
+    return { restaurantSlug, tableNumber: "", qrToken: "", tableNumberFromQr: false, sessionKey: "", browserSessionToken: "", source: "empty" };
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -73,6 +91,7 @@ export function readPublicQrContext(restaurantSlug: string): PublicQrContext {
       qrToken: qrTokenFromUrl,
       tableNumberFromQr: true,
       sessionKey,
+      browserSessionToken: readBrowserSessionToken(sessionKey),
       source: "url",
     };
   }
@@ -83,6 +102,7 @@ export function readPublicQrContext(restaurantSlug: string): PublicQrContext {
     qrToken: qrTokenFromUrl,
     tableNumberFromQr: Boolean(tableNumberFromUrl && qrTokenFromUrl),
     sessionKey: "",
+    browserSessionToken: "",
     source: "empty",
   };
 }

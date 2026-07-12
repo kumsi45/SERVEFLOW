@@ -125,6 +125,7 @@ export function usePublicQrCheckoutState(restaurantSlug: string) {
     qrToken,
     tableNumberFromQr,
     sessionKey: qrContext.sessionKey,
+    browserSessionToken: qrContext.browserSessionToken,
     setCheckoutVisible,
     setCustomerName,
     setPaymentMethod,

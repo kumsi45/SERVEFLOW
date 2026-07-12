@@ -13,9 +13,22 @@ type SubmitPublicQrOrderInput = {
   restaurantSlug: string;
   tableNumber?: string;
   qrToken?: string;
+  browserSessionToken?: string;
   customerName?: string;
   paymentMethod: PublicQrPaymentMethod;
   items: PublicQrCartItem[];
+};
+
+type SubmitPublicOrderFeedbackInput = {
+  restaurantSlug: string;
+  tableNumber: string;
+  qrToken: string;
+  orderId: string;
+  rating: number;
+  reactions: string[];
+  comment?: string;
+  photoUrl?: string | null;
+  customerSessionKey?: string;
 };
 
 function isSubmittedPublicQrOrder(value: unknown): value is SubmittedPublicQrOrder {
@@ -36,6 +49,15 @@ function isSubmittedPublicQrOrder(value: unknown): value is SubmittedPublicQrOrd
   );
 }
 
+function toRpcPaymentMethod(method: PublicQrPaymentMethod) {
+  return method === "Card" ? "Credit/Debit Card" : method;
+}
+
+function fromRpcPaymentMethod(method: unknown): PublicQrPaymentMethod | null | undefined {
+  if (method === "Credit/Debit Card") return "Card";
+  return method as PublicQrPaymentMethod | null | undefined;
+}
+
 function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -52,6 +74,8 @@ function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
 
   return {
     id: itemId,
+    invoice_id: typeof payload.invoice_id === "string" ? payload.invoice_id : null,
+    invoice_status: typeof payload.invoice_status === "string" ? payload.invoice_status : null,
     menu_item_id: menuItemId,
     name,
     quantity: Number(payload.quantity ?? 0),
@@ -76,10 +100,12 @@ function normalizeSessionInvoice(value: unknown): PublicQrOrderInvoice | null {
 
   return {
     id: payload.id,
+    display_number: typeof payload.display_number === "string" ? payload.display_number : null,
+    kitchen_ticket_number: typeof payload.kitchen_ticket_number === "string" ? payload.kitchen_ticket_number : null,
     invoice_number: Number(payload.invoice_number ?? 1),
     status: payload.status,
     total_price: Number(payload.total_price ?? 0),
-    payment_method: payload.payment_method as PublicQrPaymentMethod | null | undefined,
+    payment_method: fromRpcPaymentMethod(payload.payment_method),
     paid_at: typeof payload.paid_at === "string" ? payload.paid_at : null,
     locked_at: typeof payload.locked_at === "string" ? payload.locked_at : null,
     created_at: typeof payload.created_at === "string" ? payload.created_at : null,
@@ -108,11 +134,13 @@ function normalizeSession(value: unknown): PublicQrOrderSession | null {
 
   return {
     order_id: orderId,
+    display_number: typeof payload.display_number === "string" ? payload.display_number : null,
+    dining_session_display_number: typeof payload.dining_session_display_number === "string" ? payload.dining_session_display_number : null,
     status: payload.status,
     total_price: Number(payload.total_price),
     table_number: typeof payload.table_number === "string" ? payload.table_number : null,
     customer_name: typeof payload.customer_name === "string" ? payload.customer_name : null,
-    payment_method: payload.payment_method as PublicQrPaymentMethod | null | undefined,
+    payment_method: fromRpcPaymentMethod(payload.payment_method),
     created_at: payload.created_at,
     payment_verified_at: typeof payload.payment_verified_at === "string" ? payload.payment_verified_at : null,
     items: rawItems.flatMap((item) => normalizeSessionItem(item) ?? []),
@@ -124,10 +152,12 @@ export async function fetchPublicQrOrderSession({
   restaurantSlug,
   tableNumber,
   qrToken,
+  browserSessionToken,
 }: {
   restaurantSlug: string;
   tableNumber?: string;
   qrToken?: string;
+  browserSessionToken?: string;
 }): Promise<PublicQrOrderSession | null> {
   if (!tableNumber?.trim() || !qrToken?.trim()) {
     return null;
@@ -143,6 +173,7 @@ export async function fetchPublicQrOrderSession({
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber,
     qr_token: qrToken,
+    browser_session_token: browserSessionToken ?? "",
   });
 
   if (error) {
@@ -169,6 +200,7 @@ export async function submitPublicQrOrder({
   restaurantSlug,
   tableNumber,
   qrToken,
+  browserSessionToken,
   customerName,
   paymentMethod,
   items,
@@ -190,8 +222,9 @@ export async function submitPublicQrOrder({
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber ?? "",
     qr_token: qrToken ?? "",
+    browser_session_token: browserSessionToken ?? "",
     customer_name: customerName ?? "",
-    selected_payment_method: paymentMethod,
+    selected_payment_method: toRpcPaymentMethod(paymentMethod),
     requested_items: requestedItems,
   });
 
@@ -213,7 +246,11 @@ export async function submitPublicQrOrder({
   const normalized = data as Record<string, unknown>;
   const submittedOrder: SubmittedPublicQrOrder = {
     order_id: (normalized.order_id ?? normalized.id) as string,
+    display_number: typeof normalized.display_number === "string" ? normalized.display_number : null,
+    dining_session_display_number: typeof normalized.dining_session_display_number === "string" ? normalized.dining_session_display_number : null,
     invoice_id: normalized.invoice_id as string | null | undefined,
+    invoice_display_number: typeof normalized.invoice_display_number === "string" ? normalized.invoice_display_number : null,
+    kitchen_ticket_number: typeof normalized.kitchen_ticket_number === "string" ? normalized.kitchen_ticket_number : null,
     invoice_number: typeof normalized.invoice_number === "undefined" || normalized.invoice_number === null
       ? null
       : Number(normalized.invoice_number),
@@ -223,7 +260,7 @@ export async function submitPublicQrOrder({
     total_price: Number(normalized.total_price),
     table_number: normalized.table_number as string | null | undefined,
     customer_name: normalized.customer_name as string | null | undefined,
-    payment_method: normalized.payment_method as import("../types").PublicQrPaymentMethod | null | undefined,
+    payment_method: fromRpcPaymentMethod(normalized.payment_method),
     created_at: normalized.created_at as string,
     session_action: normalized.session_action === "appended" ? "appended" : "created",
     appended_at: typeof normalized.appended_at === "string" ? normalized.appended_at : null,
@@ -243,4 +280,62 @@ export async function submitPublicQrOrder({
   });
 
   return submittedOrder;
+}
+
+export async function uploadPublicOrderFeedbackPhoto({
+  restaurantId,
+  orderId,
+  file,
+}: {
+  restaurantId: string;
+  orderId: string;
+  file: File;
+}) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Feedback photo must be an image.");
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${restaurantId}/${orderId}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("feedback-photos").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const { data } = supabase.storage.from("feedback-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function submitPublicOrderFeedback({
+  restaurantSlug,
+  tableNumber,
+  qrToken,
+  orderId,
+  rating,
+  reactions,
+  comment,
+  photoUrl,
+  customerSessionKey,
+}: SubmitPublicOrderFeedbackInput) {
+  const { data, error } = await supabase.rpc("submit_public_order_feedback", {
+    target_restaurant_slug: restaurantSlug,
+    table_number: tableNumber,
+    qr_token: qrToken,
+    target_order_id: orderId,
+    rating,
+    reactions,
+    comment: comment ?? null,
+    photo_url: photoUrl ?? null,
+    customer_session_key: customerSessionKey ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const payload = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  return {
+    submitted: Boolean(payload.submitted),
+    duplicate: Boolean(payload.duplicate),
+  };
 }

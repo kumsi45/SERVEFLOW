@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
+import { playNotificationTone, realtimeStateFromStatus, type RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { fetchKitchenDashboardContext, fetchStationKitchenOrders, markOrderCompleted, markOrderReady, startOrderPreparation } from "../services/kitchenOrderService";
 import type { KitchenDashboardContext, KitchenOrder, KitchenOrderItem, KitchenRestaurant } from "../types";
@@ -7,7 +8,7 @@ import "../styles/kitchenDashboard.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function fmtMoney(v: number) { return `ETB ${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`; }
-function fmtId(id: string) { return `#${id.slice(0, 6).toUpperCase()}`; }
+function fmtTicket(order: KitchenOrder) { return order.kitchenTicketNumber ?? order.displayNumber ?? "Kitchen ticket"; }
 function fmtTime(iso: string) { return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso)); }
 function elapsedMin(iso: string | null) {
   if (!iso) return 0;
@@ -25,7 +26,7 @@ function useNow() {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 type OrderRow = {
-  id: string; kitchen_batch_key?: string | null; status: string; customer_name: string | null; table_number: string | null;
+  id: string; display_number?: string | null; kitchen_ticket_number?: string | null; kitchen_batch_key?: string | null; status: string; customer_name: string | null; table_number: string | null;
   payment_method: string | null; total_price: number | string; created_at: string;
   payment_verified_at: string | null; preparation_started_at: string | null; ready_marked_at: string | null;
 };
@@ -40,7 +41,7 @@ type ItemRow = {
 };
 
 function normalizeOrder(row: OrderRow, items: KitchenOrderItem[] = []): KitchenOrder {
-  return { id: row.id, kitchenBatchKey: row.kitchen_batch_key ?? null, status: row.status as KitchenOrder["status"], customerName: row.customer_name, tableNumber: row.table_number, paymentMethod: row.payment_method, totalPrice: Number(row.total_price), createdAt: row.created_at, paymentVerifiedAt: row.payment_verified_at, preparationStartedAt: row.preparation_started_at, readyMarkedAt: row.ready_marked_at, items, stationProgress: [] };
+  return { id: row.id, displayNumber: row.display_number ?? null, kitchenTicketNumber: row.kitchen_ticket_number ?? null, kitchenBatchKey: row.kitchen_batch_key ?? null, status: row.status as KitchenOrder["status"], customerName: row.customer_name, tableNumber: row.table_number, paymentMethod: row.payment_method, totalPrice: Number(row.total_price), createdAt: row.created_at, paymentVerifiedAt: row.payment_verified_at, preparationStartedAt: row.preparation_started_at, readyMarkedAt: row.ready_marked_at, items, stationProgress: [] };
 }
 function normalizeItem(row: ItemRow): KitchenOrderItem {
   const mi = row.menu_items; const name = Array.isArray(mi) ? (mi[0]?.name ?? "Item") : (mi?.name ?? "Item");
@@ -80,7 +81,7 @@ function OrderTicket({ order, actionId, onStart, onReady, onComplete, now }: {
     <div className={`kd-ticket${isUrgent ? " urgent" : isWarning ? " warning-age" : ""}`}>
       <div className="kd-ticket-header">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="kd-ticket-id">{fmtId(order.id)}</span>
+          <span className="kd-ticket-id">{fmtTicket(order)}</span>
           {isUrgent && <span className="kd-priority urgent">🔴 Urgent</span>}
         </div>
         <span className="kd-ticket-type kd-type-dine">🍽 Dine-in</span>
@@ -222,12 +223,14 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
   const [actionId, setActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
+  const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>("connecting");
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const contextRef = useRef<KitchenDashboardContext | null>(null);
   const selectedStationRef = useRef<"all" | string>("all");
   const skipNextStationLoadRef = useRef(true);
   const knownKitchenTicketKeysRef = useRef<Set<string>>(new Set());
   const kitchenRealtimeReadyRef = useRef(false);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     contextRef.current = dashboardContext;
@@ -243,6 +246,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
 
     if (notifyNewTickets && kitchenRealtimeReadyRef.current && newTicketCount > 0) {
       setRealtimeNotice(`${newTicketCount} new kitchen order${newTicketCount === 1 ? "" : "s"} received.`);
+      playNotificationTone("kitchen");
     }
 
     knownKitchenTicketKeysRef.current = nextTicketKeys;
@@ -318,17 +322,34 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
 
     const includeAllStations = dashboardContext.role === "owner" && selectedStationId === "all";
     const itemFilter = includeAllStations ? `restaurant_id=eq.${restaurantId}` : `kitchen_station_id=eq.${selectedStationId}`;
+    const refresh = () => {
+      if (realtimeRefreshTimerRef.current !== null) window.clearTimeout(realtimeRefreshTimerRef.current);
+      realtimeRefreshTimerRef.current = window.setTimeout(() => {
+        realtimeRefreshTimerRef.current = null;
+        void refreshStationOrders(false, true);
+      }, 120);
+    };
     const ch = supabase.channel(`kitchen-${restaurantId}-${selectedStationId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
-        async () => { await refreshStationOrders(false, true); })
+        refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: itemFilter },
-        async () => {
+        () => {
           setRealtimeNotice("Kitchen queue updated.");
-          await refreshStationOrders(false, true);
+          refresh();
         })
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dining_sessions", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurantId}` }, refresh)
+      .subscribe((status) => {
+        setRealtimeState(realtimeStateFromStatus(status));
+        if (status === "SUBSCRIBED" && kitchenRealtimeReadyRef.current) refresh();
+      });
     channelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      if (realtimeRefreshTimerRef.current !== null) window.clearTimeout(realtimeRefreshTimerRef.current);
+      realtimeRefreshTimerRef.current = null;
+      void supabase.removeChannel(ch);
+    };
   }, [dashboardContext, restaurantId, selectedStationId]);
 
   // ── actions ────────────────────────────────────────────────────────────────
@@ -400,6 +421,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     <div className="kd-root">
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header className="kd-header">
+        {realtimeState !== "connected" ? <div role="status" className="kd-realtime-state">Realtime reconnecting…</div> : null}
         <div className="kd-header-logo-area">
           <div className="kd-logo-mark">{restaurant.name.charAt(0)}</div>
           <div>

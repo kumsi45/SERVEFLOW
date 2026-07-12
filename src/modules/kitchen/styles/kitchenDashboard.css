@@ -211,3 +211,4 @@
 /* ─── RESPONSIVE ─── */
 @media (max-width: 900px) { .kd-sidebar { display: none; } .kd-kanban { grid-template-columns: repeat(3,minmax(220px,1fr)); overflow-x: auto; } }
 @media (max-width: 640px) { .kd-kanban { grid-template-columns: repeat(3,260px); } }
+.kd-realtime-state { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 100; padding: 6px 12px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 800; box-shadow: 0 2px 10px #0002; }

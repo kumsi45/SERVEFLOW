@@ -16,7 +16,11 @@ export type AddPublicQrCartItemInput = {
 
 export type SubmittedPublicQrOrder = {
   order_id: string;
+  display_number?: string | null;
+  dining_session_display_number?: string | null;
   invoice_id?: string | null;
+  invoice_display_number?: string | null;
+  kitchen_ticket_number?: string | null;
   invoice_number?: number | null;
   invoice_status?: "pending" | "paid" | "cancelled" | string | null;
   invoice_total?: number;
@@ -34,6 +38,8 @@ export type SubmittedPublicQrOrder = {
 
 export type PublicQrSessionItem = {
   id: string;
+  invoice_id?: string | null;
+  invoice_status?: string | null;
   menu_item_id: string;
   name: string;
   quantity: number;
@@ -46,6 +52,8 @@ export type PublicQrSessionItem = {
 
 export type PublicQrOrderInvoice = {
   id: string;
+  display_number?: string | null;
+  kitchen_ticket_number?: string | null;
   invoice_number: number;
   status: "pending" | "paid" | "cancelled" | string;
   total_price: number;
@@ -57,6 +65,8 @@ export type PublicQrOrderInvoice = {
 
 export type PublicQrOrderSession = {
   order_id: string;
+  display_number?: string | null;
+  dining_session_display_number?: string | null;
   status: string;
   total_price: number;
   table_number?: string | null;
@@ -74,7 +84,7 @@ export const PUBLIC_QR_PAYMENT_METHODS = [
   "CBE Birr",
   "Mobile Banking",
   "Chapa",
-  "Credit/Debit Card",
+  "Card",
 ] as const;
 
 export type PublicQrPaymentMethod = (typeof PUBLIC_QR_PAYMENT_METHODS)[number];

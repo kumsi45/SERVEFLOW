@@ -68,6 +68,8 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
 
   const existingSubtotal = activeSession?.total_price ?? 0;
   const grandTotal = existingSubtotal + total;
+  const submittedOrderLabel = submittedOrder?.display_number ?? submittedOrder?.dining_session_display_number ?? "Current order";
+  const activeSessionLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
 
   useEffect(() => {
     currentSessionKeyRef.current = qrParams.sessionKey;
@@ -104,12 +106,13 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
       restaurantSlug,
       tableNumber: qrParams.tableNumber,
       qrToken: qrParams.qrToken,
+      browserSessionToken: qrParams.browserSessionToken,
     });
 
     if (currentSessionKeyRef.current === requestSessionKey) {
       setActiveSession(session);
     }
-  }, [qrParams.qrToken, qrParams.sessionKey, qrParams.tableNumber, restaurantSlug]);
+  }, [qrParams.browserSessionToken, qrParams.qrToken, qrParams.sessionKey, qrParams.tableNumber, restaurantSlug]);
 
   useEffect(() => {
     void refreshActiveSession().catch(() => setActiveSession(null));
@@ -153,6 +156,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
         restaurantSlug,
         tableNumber: qrParams.tableNumber,
         qrToken: qrParams.qrToken,
+        browserSessionToken: qrParams.browserSessionToken,
         cartLines,
       });
       if (currentSessionKeyRef.current === requestSessionKey) {
@@ -207,7 +211,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
       {submittedOrder ? (
         <section className="order-confirmation">
           <p className="eyebrow">Order received</p>
-          <h2>Order #{submittedOrder.order_id.slice(0, 8)}</h2>
+          <h2>{submittedOrderLabel}</h2>
           {submittedOrder.session_action === "appended" ? <p>New items were added to your current order.</p> : null}
           <p>
             Status: <strong>{submittedOrder.status}</strong>
@@ -298,7 +302,7 @@ export function OrderingPage({ restaurantSlug }: OrderingPageProps) {
 
           {activeSession ? (
             <div className="cart-lines">
-              <h3>Current Order #{activeSession.order_id.slice(0, 8)}</h3>
+              <h3>{activeSessionLabel}</h3>
               {activeSession.items.map((item) => (
                 <div className="cart-line" key={item.id}>
                   <div>

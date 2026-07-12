@@ -1,0 +1,17 @@
+export type WaiterRestaurant = {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+};
+
+export type WaiterSession = {
+  staffId: string;
+  userId: string;
+  username?: string;
+  displayName: string;
+  restaurant: WaiterRestaurant;
+  signedInAt: string;
+};
+
+export type WaiterTerminalContext = WaiterRestaurant;

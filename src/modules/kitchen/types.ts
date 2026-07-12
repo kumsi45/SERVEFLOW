@@ -16,6 +16,8 @@ export type KitchenOrderItem = {
 
 export type KitchenOrder = {
   id: string;
+  displayNumber?: string | null;
+  kitchenTicketNumber?: string | null;
   kitchenBatchKey: string | null;
   status: KitchenOrderStatus;
   customerName: string | null;

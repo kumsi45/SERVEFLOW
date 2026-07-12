@@ -58,6 +58,8 @@ export type CartLineDetail = CartLine & {
 
 export type SubmittedOrder = {
   order_id: string;
+  display_number?: string | null;
+  dining_session_display_number?: string | null;
   status: "pending" | "pending_payment" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
   total_price: number;
   created_at: string;

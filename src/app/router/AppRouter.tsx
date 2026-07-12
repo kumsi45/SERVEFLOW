@@ -6,6 +6,9 @@ import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwn
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
 import { ForgotPasswordPage } from "../../modules/staff-auth/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../../modules/staff-auth/pages/ResetPasswordPage";
+import { WaiterLoginPage } from "../../modules/waiter-auth/pages/WaiterLoginPage";
+import { WaiterDashboardPage } from "../../modules/waiter-dashboard/pages/WaiterDashboardPage";
+import { WaiterOrderPage } from "../../modules/waiter-order/pages/WaiterOrderPage";
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
 
@@ -45,6 +48,25 @@ function resolveRoute(pathname: string) {
   const kitchenMatch = pathname.match(/^\/kitchen\/([^/]+)\/?$/);
   if (kitchenMatch) {
     return { name: "kitchen" as const, restaurantId: decodeURIComponent(kitchenMatch[1]) };
+  }
+
+  const waiterMatch = pathname.match(/^\/waiter\/([^/]+)\/?$/);
+  if (waiterMatch) {
+    return { name: "waiter" as const, restaurantSlug: decodeURIComponent(waiterMatch[1]) };
+  }
+
+  const waiterDashboardMatch = pathname.match(/^\/waiter\/([^/]+)\/dashboard\/?$/);
+  if (waiterDashboardMatch) {
+    return { name: "waiter-dashboard" as const, restaurantSlug: decodeURIComponent(waiterDashboardMatch[1]) };
+  }
+
+  const waiterOrderMatch = pathname.match(/^\/waiter\/([^/]+)\/order\/([^/]+)\/?$/);
+  if (waiterOrderMatch) {
+    return {
+      name: "waiter-order" as const,
+      restaurantSlug: decodeURIComponent(waiterOrderMatch[1]),
+      tableNumber: decodeURIComponent(waiterOrderMatch[2]),
+    };
   }
 
   const ownerMatch = pathname.match(/^\/owner\/([^/]+)\/?$/);
@@ -113,6 +135,18 @@ export function AppRouter() {
 
   if (route.name === "kitchen") {
     return <ProtectedKitchenRoute restaurantId={route.restaurantId} />;
+  }
+
+  if (route.name === "waiter") {
+    return <WaiterLoginPage restaurantSlug={route.restaurantSlug} />;
+  }
+
+  if (route.name === "waiter-dashboard") {
+    return <WaiterDashboardPage restaurantSlug={route.restaurantSlug} />;
+  }
+
+  if (route.name === "waiter-order") {
+    return <WaiterOrderPage restaurantSlug={route.restaurantSlug} tableNumber={route.tableNumber} />;
   }
 
   if (route.name === "owner") {

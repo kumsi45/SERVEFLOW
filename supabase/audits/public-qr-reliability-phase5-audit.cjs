@@ -254,8 +254,8 @@ async function auditSyntheticEndToEnd(client, results) {
       generatedRows.every((row) => {
         const parsed = normalizePath(row.qr_url);
         return row.qr_url.startsWith("https://phase5.example.test/r/")
-          && row.qr_path === `/r/${row.slug}?t=${row.table_number}&qr=${row.qr_token}`
-          && parsed.pathname === `/r/${row.slug}`
+          && row.qr_path === `/r/${row.slug}/order?t=${row.table_number}&qr=${row.qr_token}`
+          && parsed.pathname === `/r/${row.slug}/order`
           && parsed.tableNumber === String(row.table_number)
           && parsed.qrToken === String(row.qr_token)
           && parsed.extraParams.length === 0;

@@ -211,6 +211,14 @@ async function main() {
       values
         ($1, $3, 1, 'Table 1', $5, '/r/qr-payment-kitchen-routing-a/order?t=1', '/r/qr-payment-kitchen-routing-a/order?t=1', true),
         ($2, $4, 1, 'Table 1', $6, '/r/qr-payment-kitchen-routing-b/order?t=1', '/r/qr-payment-kitchen-routing-b/order?t=1', true)
+      on conflict (restaurant_id, table_number)
+      do update set
+        label = excluded.label,
+        qr_token = excluded.qr_token,
+        qr_url = excluded.qr_url,
+        qr_path = excluded.qr_path,
+        active = excluded.active,
+        updated_at = now()
     `, [ids.tableA, ids.tableB, ids.restaurantA, ids.restaurantB, ids.qrTokenA, ids.qrTokenB]);
     await asRole(client, "authenticated", ids.ownerA, `
       insert into public.menu_items (id, restaurant_id, category_id, name, price, available, kitchen_station_id)
