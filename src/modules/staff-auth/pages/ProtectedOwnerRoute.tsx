@@ -6,6 +6,7 @@ import { supabase } from "../../../core/database";
 
 type ProtectedOwnerRouteProps = {
   restaurantId: string;
+  section?: string;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -15,7 +16,7 @@ type AccessState =
   | { status: "unauthorized"; reason: "session" | "access" }
   | { status: "authorized"; restaurantId: string; restaurantName: string; ownerName: string; setupCompleted: boolean };
 
-export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) {
+export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRouteProps) {
   const authSession = useStaffAuthSession();
   const [accessState, setAccessState] = useState<AccessState>({ status: "loading" });
 
@@ -114,6 +115,7 @@ export function ProtectedOwnerRoute({ restaurantId }: ProtectedOwnerRouteProps) 
       restaurantId={accessState.restaurantId}
       restaurantName={accessState.restaurantName}
       ownerName={accessState.ownerName}
+      initialSection={section}
     />
   );
 }

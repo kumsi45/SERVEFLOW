@@ -9,7 +9,7 @@ type StaffRoleRow = {
 };
 
 function isStaffRole(value: unknown): value is StaffRole {
-  return value === "owner" || value === "cashier" || value === "kitchen";
+  return value === "owner" || value === "manager" || value === "cashier" || value === "kitchen";
 }
 
 function getRestaurant(
@@ -41,11 +41,15 @@ function getStaffRolePriority(role: StaffRole) {
     return 0;
   }
 
-  if (role === "cashier") {
+  if (role === "manager") {
     return 1;
   }
 
-  return 2;
+  if (role === "cashier") {
+    return 2;
+  }
+
+  return 3;
 }
 
 function sortStaffRestaurants(restaurants: StaffRestaurant[]) {
@@ -96,7 +100,7 @@ async function getStaffSessionForUser(userId: string): Promise<StaffSession | nu
     .select("role,active,restaurant_id,restaurants(id,name)")
     .eq("user_id", userId)
     .eq("active", true)
-    .in("role", ["owner", "cashier", "kitchen"]);
+    .in("role", ["owner", "manager", "cashier", "kitchen"]);
 
   if (error) {
     throw new Error(error.message);
@@ -174,6 +178,10 @@ export async function signInStaff(email: string, password: string): Promise<Staf
 }
 
 export async function signOutStaff() {
+  const session = await getCurrentStaffSession().catch(() => null);
+  if (session) {
+    await Promise.all(session.restaurants.map((restaurant) => supabase.rpc("record_staff_logout", { target_restaurant_id: restaurant.id })));
+  }
   // scope: "local" signs out only this tab — other open dashboards stay alive
   // until they naturally detect the session is gone via their own auth check.
   const { error } = await supabase.auth.signOut({ scope: "local" });
@@ -189,6 +197,14 @@ export function getStaffDestinations(staffSession: StaffSession): StaffDestinati
     if (restaurant.role === "owner") {
       destinations.push({
         dashboard: "owner",
+        restaurant,
+      });
+      continue;
+    }
+
+    if (restaurant.role === "manager") {
+      destinations.push({
+        dashboard: "manager",
         restaurant,
       });
       continue;
@@ -213,9 +229,10 @@ export function getStaffDestinations(staffSession: StaffSession): StaffDestinati
 }
 
 export function getStaffDestinationPath(destination: StaffDestination) {
-  return `/${destination.dashboard}/${encodeURIComponent(destination.restaurant.id)}`;
+  return `/${destination.dashboard}/dashboard`;
 }
 
 export function redirectToStaffDestination(destination: StaffDestination) {
+  window.sessionStorage.setItem(`serveflow.active-restaurant:${destination.dashboard}`, destination.restaurant.id);
   window.location.assign(getStaffDestinationPath(destination));
 }

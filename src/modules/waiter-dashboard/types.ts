@@ -48,14 +48,25 @@ export type WaiterSessionInvoice = {
   total: number;
   createdAt: string;
   creatorName: string | null;
-  items: Array<{ id: string; name: string; quantity: number; price: number; kitchenStatus: string }>;
+  source: string;
+  items: Array<{ id: string; name: string; quantity: number; price: number; notes: string | null; invoiceStatus: string; kitchenStatus: string; appendedAt: string | null; createdAt: string | null }>;
 };
 
 export type WaiterSessionDetail = {
   orderId: string;
   sessionNumber: string;
   openedAt: string;
+  orderStatus: string;
+  diningSessionStatus: string;
+  billRequestedAt: string | null;
+  billingStartedAt: string | null;
+  paymentVerifiedAt: string | null;
+  transferAllowed: boolean;
+  transferReason: string | null;
+  orderingAllowed: boolean;
+  orderingReason: string | null;
   customerName: string | null;
+  waiterName: string | null;
   source: string;
   creatorName: string | null;
   total: number;
@@ -67,4 +78,7 @@ export type WaiterTableMetric = {
   invoiceCount: number;
   sessionNumber: string;
   invoiceNumbers: string[];
+  readyItemCount: number;
+  itemCount: number;
+  lifecycleStatus: "serving" | "kitchen_waiting" | "ready_to_serve" | "needs_bill" | "billing" | "paid";
 };

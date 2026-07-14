@@ -85,6 +85,7 @@ function LeftPanel() {
 function DestinationPicker({ destinations }: { destinations: StaffDestination[] }) {
   function getDashboardLabel(destination: StaffDestination) {
     if (destination.dashboard === "owner") return "Owner Dashboard";
+    if (destination.dashboard === "manager") return "Manager Dashboard";
     if (destination.dashboard === "cashier") return "Cashier Dashboard";
     return "Kitchen Dashboard";
   }
@@ -107,7 +108,7 @@ function DestinationPicker({ destinations }: { destinations: StaffDestination[] 
               onClick={() => redirectToStaffDestination(dest)}
             >
               <div className={`sl-dest-icon ${dest.dashboard}`}>
-                {dest.dashboard === "cashier" ? "💳" : "🍳"}
+                {dest.dashboard === "manager" ? "MG" : dest.dashboard === "cashier" ? "💳" : "🍳"}
               </div>
               <div>
                 <div className="sl-dest-info-name">

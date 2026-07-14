@@ -865,7 +865,7 @@ function CheckoutReceiptPreview({ model }: { model: FinalDiningBillModel }) {
   </section>;
 }
 
-export function CashierDashboardPage({ restaurantId, restaurant: initialRestaurant, cashierName }: CashierDashboardPageProps) {
+export function CashierDashboardPage({ restaurantId, restaurant: initialRestaurant, cashierName, initialSection }: CashierDashboardPageProps & { initialSection?: string }) {
   const now = useNow();
   const [orders, setOrders] = useState<CashierOrder[]>([]);
   const [tables, setTables] = useState<RestaurantTable[]>([]);
@@ -883,7 +883,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const [restaurant, setRestaurant] = useState<CashierRestaurant>(initialRestaurant);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [queueTab, setQueueTab] = useState<QueueTab>("active");
+  const [queueTab, setQueueTab] = useState<QueueTab>(() => initialSection === "payments" ? "pending" : initialSection === "bills" ? "completed" : "active");
   const [drawerOrder, setDrawerOrder] = useState<CashierOrder | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState("");

@@ -466,9 +466,9 @@ function exportRowsAsExcel(filename: string, title: string, headers: string[], r
   );
 }
 
-export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: OwnerDashboardPageProps) {
+export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, initialSection }: OwnerDashboardPageProps & { initialSection?: string }) {
   const now = useNow();
-  const [nav, setNav] = useState<NavId>("overview");
+  const [nav, setNav] = useState<NavId>(() => ({ dashboard: "overview", orders: "orders", menu: "menu", staff: "staff", reports: "reports", settings: "settings", analytics: "analytics", tables: "qr" } as Record<string, NavId>)[initialSection ?? ""] ?? "overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orders, setOrders] = useState<OdOrder[]>([]);
   const [payments, setPayments] = useState<OdPayment[]>([]);
@@ -517,7 +517,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
               .limit(500),
             supabase
               .from("restaurant_staff")
-              .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
+              .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
               .eq("restaurant_id", restaurantId)
               .neq("role", "owner")
               .order("created_at", { ascending: true }),
@@ -900,7 +900,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   async function refreshStaff() {
     const { data, error: staffError } = await supabase
       .from("restaurant_staff")
-      .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
+      .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
       .order("created_at", { ascending: true });
@@ -965,6 +965,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
   const dashboardData = {
     restaurantName,
     orders,
+    payments,
     todayOrders,
     revenueOrders,
     activeOrders,
@@ -1163,7 +1164,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
             }}
           />
         )}
-        {nav === "customers" && <CustomersPage orders={orders} />}
+        {nav === "customers" && <CustomersPage restaurantId={restaurantId} />}
         {nav === "reports" && <ReportsPage restaurantId={restaurantId} restaurantName={restaurantName} />}
         {nav === "settings" && (
           <SettingsPage
@@ -1202,6 +1203,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName }: 
 type DashboardData = {
   restaurantName: string;
   orders: OdOrder[];
+  payments: OdPayment[];
   todayOrders: OdOrder[];
   revenueOrders: OdOrder[];
   activeOrders: OdOrder[];
@@ -1240,117 +1242,68 @@ type DashboardData = {
   dashboardReportsLoading: boolean;
 };
 
-function OverviewPage({ data, staff, ownerName, onNavigate, now }: { data: DashboardData; staff: OdStaff[]; ownerName?: string; onNavigate: (nav: NavId) => void; now: Date }) {
-  const staffById = new Map(staff.map((member) => [member.id, member]));
+type OverviewRange = "today" | "yesterday" | "week" | "month" | "custom";
+
+function OverviewPage({ data, now }: { data: DashboardData; staff: OdStaff[]; ownerName?: string; onNavigate: (nav: NavId) => void; now: Date }) {
+  const [range, setRange] = useState<OverviewRange>("today");
+  const [customStart, setCustomStart] = useState(() => now.toISOString().slice(0, 10));
+  const [customEnd, setCustomEnd] = useState(() => now.toISOString().slice(0, 10));
+
+  const { start, end, label } = useMemo(() => {
+    const endOfRange = new Date(now); endOfRange.setHours(23, 59, 59, 999);
+    const startOfRange = new Date(now); startOfRange.setHours(0, 0, 0, 0);
+    if (range === "yesterday") { startOfRange.setDate(startOfRange.getDate() - 1); endOfRange.setDate(endOfRange.getDate() - 1); }
+    if (range === "week") startOfRange.setDate(startOfRange.getDate() - ((startOfRange.getDay() + 6) % 7));
+    if (range === "month") startOfRange.setDate(1);
+    if (range === "custom") {
+      const selectedStart = new Date(`${customStart}T00:00:00`);
+      const selectedEnd = new Date(`${customEnd}T23:59:59.999`);
+      return { start: selectedStart.getTime(), end: selectedEnd.getTime(), label: `${selectedStart.toLocaleDateString()} – ${selectedEnd.toLocaleDateString()}` };
+    }
+    return { start: startOfRange.getTime(), end: endOfRange.getTime(), label: range === "today" ? "Today" : range === "yesterday" ? "Yesterday" : range === "week" ? "This Week" : "This Month" };
+  }, [customEnd, customStart, now, range]);
+
+  const inRange = (iso: string | null) => Boolean(iso) && new Date(iso!).getTime() >= start && new Date(iso!).getTime() <= end;
+  const rangeOrders = data.orders.filter((order) => inRange(order.created_at));
+  const rangePayments = data.payments.filter((payment) => inRange(payment.verified_at ?? payment.paid_at ?? payment.created_at));
+  const cashRevenue = rangePayments.filter((payment) => (payment.payment_method ?? "").toLowerCase() === "cash").reduce((sum, payment) => sum + payment.total_price, 0);
+  const digitalRevenue = rangePayments.filter((payment) => (payment.payment_method ?? "").toLowerCase() !== "cash").reduce((sum, payment) => sum + payment.total_price, 0);
+  const totalRevenue = cashRevenue + digitalRevenue;
+  const pendingPayments = rangeOrders.filter((order) => order.status === "pending_payment").length;
+  const kitchenWaiting = rangeOrders.filter((order) => order.status === "paid" || order.status === "preparing").length;
+  const ordersInProgress = rangeOrders.filter((order) => ["paid", "preparing", "ready"].includes(order.status)).length;
+  const activeRangeOrders = rangeOrders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status));
+  const activeTables = new Set(activeRangeOrders.map((order) => order.table_number).filter(Boolean)).size;
+  const namedCustomers = new Set(rangeOrders.map((order) => order.customer_name?.trim().toLowerCase()).filter(Boolean));
+  const anonymousCustomers = rangeOrders.filter((order) => !order.customer_name?.trim()).length;
+  const customers = namedCustomers.size + anonymousCustomers;
+  const averageBill = rangePayments.length ? totalRevenue / rangePayments.length : 0;
+  const kitchenDurations = rangeOrders.filter((order) => order.completed_at && order.payment_verified_at).map((order) => Math.max(0, new Date(order.completed_at!).getTime() - new Date(order.payment_verified_at!).getTime()));
+  const averageKitchenMinutes = kitchenDurations.length ? Math.round(kitchenDurations.reduce((sum, duration) => sum + duration, 0) / kitchenDurations.length / 60000) : 0;
   const kpis = [
-    { label: "Revenue Today", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayRevenue), badge: "Today", tone: "up" },
-    { label: "Current Week", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.weekRevenue), badge: "Week", tone: "up" },
-    { label: "Current Month", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.monthRevenue), badge: "Month", tone: "up" },
-    { label: "Bills Printed Today", value: data.dashboardReportsLoading ? "Loading..." : `${data.todayBillsPrinted}`, badge: "Bills", tone: "up" },
-    { label: "Bills Reprinted Today", value: data.dashboardReportsLoading ? "Loading..." : `${data.todayBillsReprinted}`, badge: "Reprints", tone: data.todayBillsReprinted > 0 ? "neutral" : "up" },
-    { label: "Average Bill", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(Math.round(data.todayAverageBill)), badge: "Bills", tone: "up" },
-    { label: "Largest Bill", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayLargestBill), badge: "Bills", tone: "up" },
-    { label: "VAT Collected", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayVatCollected), badge: "VAT", tone: "up" },
-    { label: "Pending Payment", value: `${data.pendingOrders.length}`, badge: "Action", tone: data.pendingOrders.length > 0 ? "down" : "neutral" },
-    { label: "Active Staff", value: `${data.activeStaff}`, badge: `${data.kitchenStaff.length} kitchen`, tone: "neutral" },
-    { label: "Menu Items", value: `${data.menuItems.length}`, badge: `${data.menuItems.filter((item) => item.available).length} live`, tone: "neutral" },
-    { label: "Completed Today", value: `${data.completedToday.length}`, badge: "Saved", tone: "up" },
+    { label: "Pending Payments", value: `${pendingPayments}`, detail: "Awaiting verification", urgent: pendingPayments > 0 },
+    { label: "Kitchen Waiting", value: `${kitchenWaiting}`, detail: "Paid or preparing", urgent: kitchenWaiting > 0 },
+    { label: "Orders In Progress", value: `${ordersInProgress}`, detail: "Live kitchen workflow" },
+    { label: "Active Tables", value: `${activeTables}`, detail: "Currently serving" },
+    { label: "Today's Customers", value: `${customers}`, detail: label },
+    { label: "Average Bill Today", value: fmtMoney(Math.round(averageBill)), detail: label },
+    { label: "Average Kitchen Time", value: `${averageKitchenMinutes} min`, detail: label },
+    { label: "Active Staff", value: `${data.activeStaff}`, detail: "Available now" },
   ];
 
-  return (
-    <div className="od-page">
-      <OwnerMobileOverview data={data} ownerName={ownerName} onNavigate={onNavigate} now={now} />
-
-      <div className="od-overview-desktop">
-      <div className="od-page-header">
-        <div>
-          <h1 className="od-page-title">Executive Overview</h1>
-          <p className="od-page-subtitle">Real-time operational performance for {data.restaurantName}</p>
-        </div>
-        <div className="od-header-actions">
-          <button className="od-btn-ghost">Today</button>
-          <button className="od-btn-primary">Export Report</button>
-        </div>
-      </div>
-
-      {data.loading ? (
-        <div className="od-kpi-grid">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div>
-      ) : (
-        <div className="od-kpi-grid">
-          {kpis.map((kpi) => (
-            <div key={kpi.label} className="od-kpi-card">
-              <div className="od-kpi-top">
-                <div className="od-kpi-label">{kpi.label}</div>
-                <span className={`od-kpi-badge ${kpi.tone}`}>{kpi.badge}</span>
-              </div>
-              <div className="od-kpi-value">{kpi.value}</div>
-              <div className="od-kpi-sparkline">
-                {data.sparkData.map((value, index) => (
-                  <div
-                    key={index}
-                    className={`od-spark-bar${index === data.sparkData.length - 1 ? " active" : ""}`}
-                    style={{ height: `${Math.max(18, (value / data.sparkMax) * 100)}%` }}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="od-two-col">
-        <div className="od-card">
-          <div className="od-card-header">
-            <div className="od-card-title">Today's Revenue Performance</div>
-            <div className="od-chart-tabs">
-              <button className="od-chart-tab active">Hourly</button>
-              <button className="od-chart-tab">Orders</button>
-            </div>
-          </div>
-          <RevenueBars data={data} />
-        </div>
-
-        <div className="od-side-stack">
-          <QuickActions />
-          <KitchenStatus data={data} />
-        </div>
-      </div>
-
-      <div className="od-card">
-        <div className="od-card-header">
-          <div>
-            <div className="od-card-title">Active Cashier Shifts</div>
-            <div className="od-card-subtitle">Open drawers currently visible to owner access.</div>
-          </div>
-        </div>
-        <div className="od-table-wrap">
-          <table className="od-table">
-            <thead>
-              <tr><th>Cashier</th><th>Opened</th><th>Opening Cash</th><th>Duration</th></tr>
-            </thead>
-            <tbody>
-              {data.activeShifts.length === 0 ? (
-                <tr><td colSpan={4}><div className="od-empty compact">No active cashier shifts</div></td></tr>
-              ) : data.activeShifts.map((shift) => {
-                const cashier = staffById.get(shift.opened_by);
-                return (
-                  <tr key={shift.id}>
-                    <td>{cashier?.display_name ?? "Cashier"}</td>
-                    <td>{fmtDateTime(shift.opened_at)}</td>
-                    <td>{fmtMoney(shift.opening_cash)}</td>
-                    <td>{fmtTimeAgo(shift.opened_at)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <RecentOrdersTable orders={data.orders.slice(0, 6)} title="Recent High-Value Orders" emptyLabel="No owner-visible orders yet" />
+  return <div className="od-page od-executive-overview">
+    <div className="od-page-header">
+      <div><h1 className="od-page-title">Executive Overview</h1><p className="od-page-subtitle">Live operational performance for {data.restaurantName} · {label}</p></div>
+      <div className="od-overview-filter" aria-label="Overview date range">
+        {(["today", "yesterday", "week", "month", "custom"] as OverviewRange[]).map((option) => <button key={option} type="button" className={range === option ? "active" : ""} onClick={() => setRange(option)}>{option === "week" ? "This Week" : option === "month" ? "This Month" : option.charAt(0).toUpperCase() + option.slice(1)}</button>)}
       </div>
     </div>
-  );
+    {range === "custom" ? <div className="od-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} onChange={(event) => setCustomEnd(event.target.value)} /></label></div> : null}
+    {data.loading ? <div className="od-executive-grid">{Array.from({ length: 9 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div> : <>
+      <section className="od-revenue-card" aria-label="Revenue for selected range"><header><div><span>Revenue</span><strong>{label}</strong></div><span className="od-live-indicator">Live</span></header><div><article><span>Cash</span><strong>{fmtMoney(cashRevenue)}</strong></article><article><span>Digital</span><strong>{fmtMoney(digitalRevenue)}</strong></article><article className="total"><span>Total</span><strong>{fmtMoney(totalRevenue)}</strong></article></div></section>
+      <section className="od-executive-grid">{kpis.map((kpi) => <article key={kpi.label} className={`od-executive-kpi${kpi.urgent ? " urgent" : ""}`}><div className="od-kpi-label">{kpi.label}</div><strong>{kpi.value}</strong><span>{kpi.detail}</span></article>)}</section>
+    </>}
+  </div>;
 }
 
 function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: DashboardData; ownerName?: string; onNavigate: (nav: NavId) => void; now: Date }) {
@@ -1680,11 +1633,24 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
   );
 }
 
+type FinancialPeriod = AnalyticsPeriod | "custom";
+type FinancialInvoice = { id: string; status: string; total: number; method: string; verifiedAt: string };
+
 function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurantId: string }) {
-  const [period, setPeriod] = useState<AnalyticsPeriod>("today");
-  const [periodReport, setPeriodReport] = useState<OwnerReportData>(emptyReportData());
+  const [period, setPeriod] = useState<FinancialPeriod>("today");
+  const [customStart, setCustomStart] = useState(() => toDateInputValue(new Date()));
+  const [customEnd, setCustomEnd] = useState(() => toDateInputValue(new Date()));
+  const [invoices, setInvoices] = useState<FinancialInvoice[]>([]);
   const [loadingPeriodReport, setLoadingPeriodReport] = useState(true);
   const [periodReportError, setPeriodReportError] = useState<string | null>(null);
+
+  const ranges = useMemo(() => {
+    const selected = period === "custom" ? getDateInputRange(customStart, customEnd) : getAnalyticsDateRange(period);
+    const start = new Date(selected.rangeStart); const end = new Date(selected.rangeEnd); const duration = end.getTime() - start.getTime();
+    const previousEnd = new Date(start); const previousStart = new Date(start.getTime() - duration);
+    if (period === "month") previousStart.setMonth(previousEnd.getMonth() - 1, 1);
+    return { selected, previous: { rangeStart: previousStart.toISOString(), rangeEnd: previousEnd.toISOString() } };
+  }, [customEnd, customStart, period]);
 
   useEffect(() => {
     let mounted = true;
@@ -1692,9 +1658,14 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
       try {
         setLoadingPeriodReport(true);
         setPeriodReportError(null);
-        const { rangeStart, rangeEnd } = getAnalyticsDateRange(period);
-        const reportPayload = await loadOwnerReportData(restaurantId, rangeStart, rangeEnd);
-        if (mounted) setPeriodReport(reportPayload);
+        const { data: rows, error } = await supabase.from("order_invoices")
+          .select("id,status,total_price,payment_method,verified_at")
+          .eq("restaurant_id", restaurantId)
+          .gte("verified_at", ranges.previous.rangeStart)
+          .lt("verified_at", ranges.selected.rangeEnd)
+          .order("verified_at", { ascending: true });
+        if (error) throw new Error(error.message);
+        if (mounted) setInvoices((rows ?? []).filter((row) => ["paid", "verified"].includes(String(row.status)) && Boolean(row.verified_at)).map((row) => ({ id: String(row.id), status: String(row.status), total: Number(row.total_price), method: String(row.payment_method ?? "Other Digital"), verifiedAt: String(row.verified_at) })));
       } catch (loadError) {
         if (mounted) setPeriodReportError(loadError instanceof Error ? loadError.message : "Could not load revenue report.");
       } finally {
@@ -1704,131 +1675,79 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
 
     void loadPeriodReport();
     return () => { mounted = false; };
-  }, [restaurantId, period]);
+  }, [data.payments, ranges, restaurantId]);
 
-  const periodSummary = periodReport.summary;
-  const periodLabel = period === "today" ? "Today" : period === "week" ? "Week" : "Month";
+  const selectedInvoices = invoices.filter((invoice) => isInRange(invoice.verifiedAt, ranges.selected.rangeStart, ranges.selected.rangeEnd));
+  const previousInvoices = invoices.filter((invoice) => isInRange(invoice.verifiedAt, ranges.previous.rangeStart, ranges.previous.rangeEnd));
+  const normalizeMethod = (method: string) => { const value = method.toLowerCase(); if (value === "cash") return "Cash"; if (value.includes("telebirr")) return "Telebirr"; if (value.includes("cbe")) return "CBE Birr"; if (value.includes("card") || value.includes("credit") || value.includes("debit")) return "Card"; return "Other Digital"; };
+  const methodNames = ["Cash", "Telebirr", "CBE Birr", "Card", "Other Digital"];
+  const methodTotals = methodNames.map((method) => ({ method, total: selectedInvoices.filter((invoice) => normalizeMethod(invoice.method) === method).reduce((sum, invoice) => sum + invoice.total, 0) }));
+  const grossRevenue = selectedInvoices.reduce((sum, invoice) => sum + invoice.total, 0);
+  const previousRevenue = previousInvoices.reduce((sum, invoice) => sum + invoice.total, 0);
+  const vat = grossRevenue - grossRevenue / 1.15;
+  const netRevenue = grossRevenue - vat;
+  const comparison = previousRevenue === 0 ? (grossRevenue === 0 ? 0 : 100) : ((grossRevenue - previousRevenue) / previousRevenue) * 100;
+  const periodLabel = period === "today" ? "Today" : period === "week" ? "This Week" : period === "month" ? "This Month" : "Custom";
+  const comparisonLabel = period === "today" ? "Today vs Yesterday" : period === "week" ? "Week vs Last Week" : period === "month" ? "Month vs Last Month" : "Custom vs Previous Period";
+  const bucket = (key: (date: Date) => string) => [...selectedInvoices.reduce((map, invoice) => { const label = key(new Date(invoice.verifiedAt)); map.set(label, (map.get(label) ?? 0) + invoice.total); return map; }, new Map<string, number>()).entries()].map(([label, value]) => ({ label, value }));
+  const hourly = bucket((date) => date.toLocaleTimeString([], { hour: "numeric" }));
+  const daily = bucket((date) => date.toLocaleDateString([], { month: "short", day: "numeric" }));
+  const weekly = bucket((date) => { const first = new Date(date); first.setDate(date.getDate() - ((date.getDay() + 6) % 7)); return `Week of ${first.toLocaleDateString([], { month: "short", day: "numeric" })}`; });
+  const monthly = bucket((date) => date.toLocaleDateString([], { month: "short", year: "numeric" }));
+  const trend = period === "today" ? hourly : period === "month" ? daily : daily;
+  const distributionTotal = Math.max(grossRevenue, 1);
 
   return (
     <div className="od-page">
       <div className="od-page-header">
         <div>
-          <h1 className="od-page-title">Performance Overview</h1>
-          <p className="od-page-subtitle">Real-time financial tracking for your restaurant branch.</p>
+          <h1 className="od-page-title">Revenue &amp; Analytics</h1>
+          <p className="od-page-subtitle">Verified paid invoice revenue for your restaurant branch.</p>
         </div>
         <div className="od-tabs">
-          {(["today", "week", "month"] as AnalyticsPeriod[]).map((option) => (
+          {(["today", "week", "month", "custom"] as FinancialPeriod[]).map((option) => (
             <button key={option} type="button" className={`od-tab${period === option ? " active" : ""}`} onClick={() => setPeriod(option)}>
-              {option === "today" ? "Today" : option === "week" ? "Week" : "Month"}
+              {option === "today" ? "Today" : option === "week" ? "Week" : option === "month" ? "Month" : "Custom"}
             </button>
           ))}
         </div>
       </div>
 
       {periodReportError && <div className="od-error-inline">{periodReportError}</div>}
+      {period === "custom" ? <div className="od-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} onChange={(event) => setCustomEnd(event.target.value)} /></label></div> : null}
 
-      <div className="od-kpi-grid analytics">
-        <div className="od-kpi-card">
-          <div className="od-kpi-top">
-            <div className="od-kpi-label">Net Revenue</div>
-            <span className="od-kpi-badge up">{periodLabel}</span>
-          </div>
-          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : fmtMoneyK(periodSummary.revenue)}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-top">
-            <div className="od-kpi-label">Avg Ticket</div>
-            <span className="od-kpi-badge neutral">{periodSummary.orders} orders</span>
-          </div>
-          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(periodSummary.average_order_value))}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-top">
-            <div className="od-kpi-label">Completed Orders</div>
-            <span className="od-kpi-badge up">{periodLabel}</span>
-          </div>
-          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : periodSummary.completed_orders}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-top">
-            <div className="od-kpi-label">Feedback</div>
-            <span className="od-kpi-badge neutral">{periodLabel}</span>
-          </div>
-          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : periodSummary.feedback_count}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-top">
-            <div className="od-kpi-label">Avg. Rating</div>
-            <span className="od-kpi-badge neutral">{periodSummary.feedback_count} responses</span>
-          </div>
-          <div className="od-kpi-value">{loadingPeriodReport ? "Loading..." : `${periodSummary.average_rating.toFixed(1)}/5`}</div>
-        </div>
-      </div>
+      <div className="od-financial-breakdown">{methodTotals.map((row) => <article key={row.method}><span>{row.method}</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(row.total)}</strong></article>)}<article className="total"><span>Total Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}</strong></article><article><span>VAT</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(vat))}</strong></article><article><span>Net Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(netRevenue))}</strong></article><article><span>Gross Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}</strong></article></div>
+
+      <section className="od-financial-comparison"><div><span>{comparisonLabel}</span><strong className={comparison >= 0 ? "positive" : "negative"}>{comparison >= 0 ? "+" : ""}{comparison.toFixed(1)}%</strong></div><div><span>{periodLabel}</span><strong>{fmtMoney(grossRevenue)}</strong></div><div><span>Previous period</span><strong>{fmtMoney(previousRevenue)}</strong></div></section>
 
       <div className="od-two-col">
-        <div className="od-card">
+        <div className="od-card od-financial-chart">
           <div className="od-card-header">
             <div>
-              <div className="od-card-title">Revenue vs Orders</div>
-              <div className="od-card-subtitle">Comparative performance across the current day.</div>
-            </div>
-            <div className="od-chart-legend">
-              <span><i className="od-dot revenue" />Revenue</span>
-              <span><i className="od-dot orders" />Orders</span>
+              <div className="od-card-title">Revenue Trend</div>
+              <div className="od-card-subtitle">{periodLabel} · verified invoices only</div>
             </div>
           </div>
-          <RevenueBars data={data} />
+          <FinancialBars rows={trend} />
         </div>
 
         <div className="od-card">
           <div className="od-card-header">
             <div>
-              <div className="od-card-title">Payment Methods</div>
-              <div className="od-card-subtitle">Distribution of transaction value.</div>
+              <div className="od-card-title">Payment Method Distribution</div>
+              <div className="od-card-subtitle">Share of verified revenue.</div>
             </div>
           </div>
-          <div className="od-donut-wrap">
-            <svg width="140" height="140" viewBox="0 0 140 140">
-              {data.donutSlices.map((slice, index) => (
-                <circle
-                  key={index}
-                  cx={data.cx}
-                  cy={data.cy}
-                  r={data.r}
-                  fill="none"
-                  stroke={slice.color}
-                  strokeWidth="20"
-                  strokeDasharray={`${slice.dash} ${slice.gap}`}
-                  strokeDashoffset={-slice.offset}
-                  transform={`rotate(-90 ${data.cx} ${data.cy})`}
-                />
-              ))}
-              <text x={data.cx} y={data.cy - 5} textAnchor="middle" fontSize="14" fill="var(--od-text)" fontWeight="800">
-                {fmtMoneyK(data.todayRevenue)}
-              </text>
-              <text x={data.cx} y={data.cy + 12} textAnchor="middle" fontSize="10" fill="var(--od-muted)" fontWeight="600">
-                Total
-              </text>
-            </svg>
-            <div className="od-legend">
-              {data.donutData.map((item) => (
-                <div key={item.label} className="od-legend-row">
-                  <div className="od-legend-dot-label">
-                    <div className="od-legend-dot" style={{ background: item.color }} />
-                    <span>{item.label}</span>
-                  </div>
-                  <span style={{ fontWeight: 700 }}>{item.pct}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div className="od-payment-distribution">{methodTotals.map((row) => <div key={row.method}><span>{row.method}</span><i><b style={{ width: `${row.total / distributionTotal * 100}%` }} /></i><strong>{grossRevenue ? Math.round(row.total / grossRevenue * 100) : 0}%</strong></div>)}</div>
         </div>
       </div>
-
-      <TopItemsTable topItems={data.topItems} menuItems={data.menuItems} />
+      <div className="od-financial-chart-grid"><FinancialChart title="Hourly Revenue" rows={hourly} /><FinancialChart title="Daily Revenue" rows={daily} /><FinancialChart title="Weekly Revenue" rows={weekly} /><FinancialChart title="Monthly Revenue" rows={monthly} /></div>
     </div>
   );
 }
+
+function FinancialBars({ rows }: { rows: { label: string; value: number }[] }) { const max = Math.max(...rows.map((row) => row.value), 1); return <div className="od-financial-bars">{rows.length ? rows.map((row) => <div key={row.label}><strong>{fmtMoneyK(row.value)}</strong><i style={{ height: `${Math.max(5, row.value / max * 130)}px` }} /><span>{row.label}</span></div>) : <div className="od-empty compact">No verified revenue in this period</div>}</div>; }
+function FinancialChart({ title, rows }: { title: string; rows: { label: string; value: number }[] }) { return <section className="od-card od-financial-chart"><div className="od-card-header"><div><div className="od-card-title">{title}</div><div className="od-card-subtitle">Verified paid invoices</div></div></div><FinancialBars rows={rows} /></section>; }
 
 function TopItemsTable({ topItems, menuItems }: { topItems: { name: string; quantity: number; revenue: number }[]; menuItems: OdMenuItem[] }) {
   const rows =
@@ -2006,6 +1925,14 @@ type StaffPageProps = {
   onStaffChanged: () => Promise<void>;
 };
 
+type ModuleReportRpc = "get_owner_menu_module_report" | "get_owner_kitchen_module_report" | "get_owner_staff_module_report" | "get_owner_tables_module_report" | "get_owner_customers_module_report";
+function IndependentModuleReport({ restaurantId, rpc, columns }: { restaurantId: string; rpc: ModuleReportRpc; columns: Array<{ key: string; label: string; money?: boolean; suffix?: string }> }) {
+  const [period, setPeriod] = useState<FinancialPeriod>("today"); const [startDate,setStartDate]=useState(toDateInputValue(new Date())); const [endDate,setEndDate]=useState(toDateInputValue(new Date())); const [payload,setPayload]=useState<Record<string,unknown>>({}); const [loading,setLoading]=useState(true); const [reportError,setReportError]=useState<string|null>(null);
+  useEffect(()=>{let mounted=true;void(async()=>{try{setLoading(true);setReportError(null);const range=period==="custom"?getDateInputRange(startDate,endDate):getAnalyticsDateRange(period);const {data,error}=await supabase.rpc(rpc,{target_restaurant_id:restaurantId,range_start:range.rangeStart,range_end:range.rangeEnd});if(error)throw new Error(error.message);if(mounted)setPayload(data&&typeof data==="object"?data as Record<string,unknown>:{});}catch(error){if(mounted)setReportError(error instanceof Error?error.message:"Module report unavailable.");}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false};},[endDate,period,restaurantId,rpc,startDate]);
+  const rows=Array.isArray(payload.rows)?payload.rows as Record<string,unknown>[]:[];
+  return <section className="od-module-report"><header><div><h2>Module Reporting</h2><p>Verified paid invoices only</p></div><div className="od-tabs">{(["today","week","month","custom"] as FinancialPeriod[]).map(option=><button key={option} className={`od-tab${period===option?" active":""}`} onClick={()=>setPeriod(option)}>{option==="week"?"Week":option==="month"?"Month":option.charAt(0).toUpperCase()+option.slice(1)}</button>)}</div></header>{period==="custom"?<div className="od-custom-range"><label>From<input type="date" value={startDate} max={endDate} onChange={event=>setStartDate(event.target.value)}/></label><label>To<input type="date" value={endDate} min={startDate} onChange={event=>setEndDate(event.target.value)}/></label></div>:null}{reportError?<div className="od-error-inline">{reportError}</div>:null}<div className="od-table-wrap"><table className="od-table"><thead><tr>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{loading?<tr><td colSpan={columns.length}>Loading report…</td></tr>:rows.length?rows.map((row,index)=><tr key={String(row.id??row.name??row.staff??row.table_number??index)}>{columns.map(column=><td key={column.key}>{column.money?fmtMoney(Number(row[column.key]??0)):`${String(row[column.key]??"—")}${column.suffix??""}`}</td>)}</tr>):<tr><td colSpan={columns.length}><div className="od-empty compact">No verified activity in this range</div></td></tr>}</tbody></table></div>{payload.top_seller||payload.bottom_seller||payload.most_used_table||payload.new_customers!==undefined||payload.returning_customers!==undefined?<footer>{payload.top_seller?<span><b>Top Seller</b>{String(payload.top_seller)}</span>:null}{payload.bottom_seller?<span><b>Bottom Seller</b>{String(payload.bottom_seller)}</span>:null}{payload.most_used_table?<span><b>Most Used Table</b>{String(payload.most_used_table)}</span>:null}{payload.new_customers!==undefined?<span><b>New Customers</b>{String(payload.new_customers)}</span>:null}{payload.returning_customers!==undefined?<span><b>Returning Customers</b>{String(payload.returning_customers)}</span>:null}</footer>:null}</section>;
+}
+
 type StaffModalState =
   | { mode: "create"; member?: undefined }
   | { mode: "view" | "edit"; member: OdStaff }
@@ -2013,7 +1940,7 @@ type StaffModalState =
 
 function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChanged }: StaffPageProps) {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "cashier" | "kitchen" | "waiter">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "cashier" | "kitchen" | "waiter">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [modal, setModal] = useState<StaffModalState>(null);
   const [formName, setFormName] = useState("");
@@ -2021,12 +1948,14 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
   const [formUsername, setFormUsername] = useState("");
   const [formPin, setFormPin] = useState("");
   const [formPhone, setFormPhone] = useState("");
-  const [formRole, setFormRole] = useState<"cashier" | "kitchen" | "waiter">("cashier");
+  const [formRole, setFormRole] = useState<"manager" | "cashier" | "kitchen" | "waiter">("cashier");
   const [formStationId, setFormStationId] = useState("");
   const [activity, setActivity] = useState<StaffActivityLog[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [staffError, setStaffError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [directoryMetrics, setDirectoryMetrics] = useState<Map<string,Record<string,unknown>>>(new Map());
+  const [averageShiftMinutes,setAverageShiftMinutes]=useState(0);
 
   const activeStations = useMemo(
     () => [...stations].filter((station) => station.active).sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name)),
@@ -2060,6 +1989,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       mounted = false;
     };
   }, [restaurantId, staff]);
+  useEffect(()=>{let mounted=true;const range=getAnalyticsDateRange("today");void supabase.rpc("get_owner_staff_module_report",{target_restaurant_id:restaurantId,range_start:range.rangeStart,range_end:range.rangeEnd}).then(({data})=>{if(!mounted)return;const payload=data&&typeof data==="object"?data as Record<string,unknown>:{};const rows=Array.isArray(payload.rows)?payload.rows as Record<string,unknown>[]:[];setDirectoryMetrics(new Map(rows.map(row=>[String(row.id),row])));setAverageShiftMinutes(Number(payload.average_shift_minutes??0));});return()=>{mounted=false};},[restaurantId,staff]);
 
   function openCreateModal() {
     setStaffError(null);
@@ -2082,7 +2012,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
     setFormUsername(member.username ?? "");
     setFormPin("");
     setFormPhone(member.phone_number ?? "");
-    setFormRole(member.role === "kitchen" ? "kitchen" : member.role === "waiter" ? "waiter" : "cashier");
+    setFormRole(member.role === "manager" ? "manager" : member.role === "kitchen" ? "kitchen" : member.role === "waiter" ? "waiter" : "cashier");
     setFormStationId(member.role === "kitchen" ? member.assigned_kitchen_station_id ?? "" : "");
     setModal({ mode, member });
   }
@@ -2158,26 +2088,23 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
   }
 
   const operationalStaff = staff.filter(isOperationalStaff);
-  const operationalStaffIds = new Set(operationalStaff.map((member) => member.id));
-  const operationalStaffEmails = new Set(operationalStaff.map((member) => member.email).filter((email): email is string => Boolean(email)));
-  const staffActivity = activity.filter((entry) =>
-    isKitchenStationAction(entry.action)
-    || isKitchenStaffStationAction(entry.action)
-    || isMenuStationAction(entry.action)
-    ||
-    (entry.target_staff_id !== null && operationalStaffIds.has(entry.target_staff_id))
-    || (entry.target_staff_email !== null && operationalStaffEmails.has(entry.target_staff_email))
-  );
+  const businessActivityActions = new Set(["staff_created","staff_deactivated","staff_reactivated","password_reset_sent","temporary_password_generated","waiter_created","waiter_updated","waiter_activated","waiter_deactivated","waiter_pin_reset","waiter_deleted","role_changed","staff_updated","kitchen_order_completed","shift_opened","shift_closed","verify_payment","final_bill_requested"]);
+  const staffActivity = activity.filter((entry) => businessActivityActions.has(String(entry.action)));
 
   const filtered = operationalStaff.filter((member) => {
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? member.active : !member.active);
-    const haystack = `${member.display_name} ${member.username ?? ""} ${member.email ?? ""} ${member.role}`.toLowerCase();
+    const shift = member.staff_session_active || member.waiter_session_active ? "on shift" : "off shift";
+    const haystack = `${member.display_name} ${member.username ?? ""} ${member.email ?? ""} ${member.role} ${member.active ? "active" : "inactive"} ${shift}`.toLowerCase();
     return matchesRole && matchesStatus && haystack.includes(search.trim().toLowerCase());
   });
 
   const totalStaff = operationalStaff.length;
   const activeStaff = operationalStaff.filter((member) => member.active).length;
+  const currentlyWorking = operationalStaff.filter((member) => Boolean(member.staff_session_active || member.waiter_session_active)).length;
+  const onBreak = 0;
+  const offlineStaff = totalStaff - currentlyWorking - onBreak;
+  const managerCount = operationalStaff.filter((member) => String(member.role) === "manager").length;
   const cashierCount = operationalStaff.filter((member) => member.role === "cashier").length;
   const kitchenCount = operationalStaff.filter((member) => member.role === "kitchen").length;
   const waiterCount = operationalStaff.filter((member) => member.role === "waiter").length;
@@ -2192,6 +2119,8 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
         <button className="od-btn-primary" onClick={openCreateModal}>Add Staff</button>
       </div>
 
+      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_staff_module_report" columns={[{key:"staff",label:"Employee"},{key:"orders_taken",label:"Orders"},{key:"revenue_generated",label:"Revenue",money:true},{key:"customers_served",label:"Customers Served"},{key:"average_bill",label:"Average Bill",money:true},{key:"kitchen_speed",label:"Kitchen Speed",suffix:" min"},{key:"attendance",label:"Attendance"}]} />
+
       {(staffError || notice) && (
         <div className={staffError ? "od-error-inline" : "od-success-inline"}>
           {staffError || notice}
@@ -2201,10 +2130,14 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       <div className="od-kpi-grid analytics">
         {[
           ["Total Staff", totalStaff, "All roles"],
-          ["Active Staff", activeStaff, `${totalStaff - activeStaff} inactive`],
+          ["Currently Working", currentlyWorking, "Live staff sessions"],
+          ["On Break", onBreak, "No active breaks"],
+          ["Offline", offlineStaff, "Not currently clocked in"],
+          ["Managers", managerCount, "Management access"],
           ["Cashiers", cashierCount, "POS access"],
           ["Kitchen Staff", kitchenCount, "KDS access"],
           ["Waiters", waiterCount, "Shared terminal access"],
+          ["Average Shift Length", averageShiftMinutes ? `${Math.floor(averageShiftMinutes/60)}h ${Math.round(averageShiftMinutes%60)}m` : "—", "Today's completed and active shifts"],
         ].map(([label, value, sub]) => (
           <div key={label} className="od-kpi-card">
             <div className="od-kpi-label">{label}</div>
@@ -2219,12 +2152,13 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
           <div className="od-card-header">
             <div>
               <div className="od-card-title">Staff Directory</div>
-              <div className="od-card-subtitle">Restaurant-scoped access records from restaurant_staff.</div>
+              <div className="od-card-subtitle">Profiles, live work status, shift context, and today's performance.</div>
             </div>
             <div className="od-staff-filters">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff" aria-label="Search staff" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, username, role, status or shift" aria-label="Search staff" />
               <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)} aria-label="Filter by role">
                 <option value="all">All roles</option>
+                <option value="manager">Manager</option>
                 <option value="cashier">Cashier</option>
                 <option value="kitchen">Kitchen</option>
                 <option value="waiter">Waiter</option>
@@ -2243,17 +2177,19 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   <th>Name</th>
                   <th>Username</th>
                   <th>Role</th>
-                  <th>Station</th>
                   <th>Status</th>
-                  <th>Created Date</th>
+                  <th>Shift</th>
                   <th>Last Login</th>
+                  <th>Orders Served Today</th>
+                  <th>Revenue Today</th>
+                  <th>Role Metric</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={10}>
                       <div className="od-empty">
                         <div className="od-empty-icon">--</div>
                         <div className="od-empty-msg">No staff match these filters</div>
@@ -2261,7 +2197,9 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((member) => (
+                  filtered.map((member) => {
+                    const metrics=directoryMetrics.get(member.id);
+                    return (
                     <tr key={member.id}>
                       <td>
                         <div className="od-staff-cell">
@@ -2273,8 +2211,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                         </div>
                       </td>
                       <td>{member.username || member.email || "Not stored"}</td>
-                      <td style={{ textTransform: "capitalize" }}>{member.role}</td>
-                      <td>{member.role === "kitchen" && member.assigned_kitchen_station_id ? stationById.get(member.assigned_kitchen_station_id)?.name ?? "Unassigned" : "-"}</td>
+                      <td><span className={`od-role-badge ${member.role}`}>{member.role}</span></td>
                       <td>
                         {member.active ? (
                           <span className="od-active-pill">
@@ -2285,12 +2222,17 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                           <span className="od-offline-pill">Inactive</span>
                         )}
                       </td>
-                      <td style={{ fontSize: 12, color: "var(--od-muted)" }}>{new Date(member.created_at).toLocaleDateString()}</td>
+                      <td>{member.staff_session_active || member.waiter_session_active ? <span className="od-active-pill"><span className="od-active-dot"/>On Shift</span> : <span className="od-offline-pill">Off Shift</span>}</td>
                       <td>{fmtLastActive(member.last_login_at)}</td>
+                      <td>{String(metrics?.orders_taken??0)}</td>
+                      <td>{fmtMoney(Number(metrics?.revenue_generated??0))}</td>
+                      <td>{member.role === "kitchen" ? `Tickets ${String(metrics?.kitchen_tickets_completed??0)}` : member.role === "waiter" ? `Tables ${String(metrics?.tables_served??0)}` : `Bills ${String(metrics?.bills_requested??0)}`}</td>
                       <td>
                         <div className="od-row-actions">
                           <button className="od-btn-ghost compact" onClick={() => openMemberModal("view", member)}>View</button>
                           <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)} disabled={member.role === "owner"}>Edit</button>
+                          <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)} disabled={member.role === "owner"}>Change Role</button>
+                          {member.role === "kitchen" ? <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)}>Assign Station</button> : null}
                           {member.active ? (
                             <button
                               className="od-btn-ghost compact danger"
@@ -2334,7 +2276,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                         </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
@@ -2344,12 +2286,12 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
 
         <div className="od-side-stack">
           <div className="od-performance-card dark">
-            <div className="od-performance-label">Access Boundary</div>
-            <div className="od-performance-person">{activeStaff}/{totalStaff}</div>
-            <div className="od-performance-sub">active staff records for this restaurant</div>
+            <div className="od-performance-label">Currently Working</div>
+            <div className="od-performance-person">{currentlyWorking}/{totalStaff}</div>
+            <div className="od-performance-sub">live restaurant staff sessions</div>
           </div>
           <div className="od-performance-card">
-            <div className="od-performance-label">Recent Activity</div>
+            <div className="od-performance-label">Business Staff Activity</div>
             <div className="od-audit-list">
               {staffActivity.length === 0 ? (
                 <div className="od-empty-sub">No staff activity yet</div>
@@ -2376,7 +2318,7 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                 <div className="od-card-title">
                   {modal.mode === "create" ? "Add Staff" : modal.mode === "edit" ? "Edit Staff" : "Staff Profile"}
                 </div>
-                <div className="od-card-subtitle">Cashier, kitchen, and waiter accounts are created through Supabase Auth.</div>
+                <div className="od-card-subtitle">Manager, cashier, kitchen, and waiter accounts use the same secured staff creation flow.</div>
               </div>
               <button className="od-icon-btn" onClick={() => setModal(null)} aria-label="Close">x</button>
             </div>
@@ -2434,9 +2376,22 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   </label>
                 </>
               )}
+              {formRole !== "waiter" && (
+                <label>
+                  Phone Number
+                  <input
+                    value={formPhone}
+                    onChange={(event) => setFormPhone(event.target.value)}
+                    disabled={modal.mode === "view" || isWorking}
+                    inputMode="tel"
+                    placeholder="Optional"
+                  />
+                </label>
+              )}
               <label>
                 Role
-                <select value={formRole} onChange={(event) => setFormRole(event.target.value as "cashier" | "kitchen" | "waiter")} disabled={modal.mode === "view" || isWorking}>
+                <select value={formRole} onChange={(event) => setFormRole(event.target.value as "manager" | "cashier" | "kitchen" | "waiter")} disabled={modal.mode === "view" || isWorking}>
+                  <option value="manager">Manager</option>
                   <option value="cashier">Cashier</option>
                   <option value="kitchen">Kitchen</option>
                   <option value="waiter">Waiter</option>
@@ -2638,6 +2593,8 @@ function KitchenStationsPage({
           <button className="od-btn-primary" type="button" onClick={openCreateModal}>Create Station</button>
         </div>
       </div>
+
+      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_kitchen_module_report" columns={[{key:"name",label:"Station"},{key:"orders",label:"Orders"},{key:"average_prep_time",label:"Average Prep Time",suffix:" min"},{key:"completed",label:"Completed"},{key:"cancelled",label:"Cancelled"},{key:"performance",label:"Performance",suffix:"%"}]} />
 
       {(stationError || notice) && (
         <div className={stationError ? "od-error-inline" : "od-success-inline"}>
@@ -3216,6 +3173,8 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
           <button className="od-btn-primary" onClick={openCreateModal}>Add Item</button>
         </div>
       </div>
+
+      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_menu_module_report" columns={[{key:"name",label:"Menu Item"},{key:"quantity_sold",label:"Quantity Sold"},{key:"revenue",label:"Revenue",money:true},{key:"average_price",label:"Average Price",money:true},{key:"refunds",label:"Refunds"}]} />
 
       {(menuError || notice) && (
         <div className={menuError ? "od-error-inline" : "od-success-inline"}>
@@ -4083,7 +4042,26 @@ function ReportTable({ title, subtitle, headers, rows }: { title: string; subtit
   );
 }
 
+type ReportsCenterRange = "today" | "yesterday" | "week" | "last_week" | "month" | "last_month" | "custom";
+const REPORT_MODULES = [
+  ["Sales Report","sales","summary"],["Revenue Report","financial","revenue"],["Menu Performance","menu","rows"],["Kitchen Performance","kitchen","rows"],["Staff Performance","staff","rows"],["Customer Insights","customers","rows"],["Table Performance","tables","rows"],["Inventory Reports","inventory","rows"],["Financial Reports","financial","payments"],
+] as const;
+
 function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
+  const [range,setRange]=useState<ReportsCenterRange>("today"); const [customStart,setCustomStart]=useState(toDateInputValue(new Date())); const [customEnd,setCustomEnd]=useState(toDateInputValue(new Date())); const [modules,setModules]=useState<Record<string,Record<string,unknown>>>({}); const [loading,setLoading]=useState(true); const [reportError,setReportError]=useState<string|null>(null);
+  const selectedRange=useMemo(()=>{if(range==="custom")return getDateInputRange(customStart,customEnd);const now=new Date();now.setHours(0,0,0,0);let start=new Date(now),end=new Date(now);end.setDate(end.getDate()+1);if(range==="yesterday"){start.setDate(start.getDate()-1);end=new Date(now)}if(range==="week"||range==="last_week"){start.setDate(start.getDate()-((start.getDay()+6)%7)-(range==="last_week"?7:0));end=new Date(start);end.setDate(end.getDate()+7)}if(range==="month"||range==="last_month"){start.setDate(1);if(range==="last_month")start.setMonth(start.getMonth()-1);end=new Date(start);end.setMonth(end.getMonth()+1)}return{rangeStart:start.toISOString(),rangeEnd:end.toISOString()};},[customEnd,customStart,range]);
+  useEffect(()=>{let mounted=true;void(async()=>{try{setLoading(true);setReportError(null);const args={target_restaurant_id:restaurantId,range_start:selectedRange.rangeStart,range_end:selectedRange.rangeEnd};const calls=[['sales','get_owner_sales_module_report'],['financial','get_owner_financial_module_report'],['menu','get_owner_menu_module_report'],['kitchen','get_owner_kitchen_module_report'],['staff','get_owner_staff_module_report'],['tables','get_owner_tables_module_report'],['customers','get_owner_customers_module_report'],['inventory','get_owner_inventory_module_report'],['ai','get_owner_ai_business_insights'],['audit','get_owner_audit_module_report']] as const;const results=await Promise.all(calls.map(async([key,rpc])=>{const{data,error}=await supabase.rpc(rpc,args);if(error)throw new Error(`${key}: ${error.message}`);return[key,data&&typeof data==="object"?data as Record<string,unknown>:{}] as const}));if(mounted)setModules(Object.fromEntries(results));}catch(error){if(mounted)setReportError(error instanceof Error?error.message:"Reports unavailable.");}finally{if(mounted)setLoading(false)}})();return()=>{mounted=false}},[restaurantId,selectedRange]);
+  const exportRows=REPORT_MODULES.flatMap(([title,moduleKey,payloadKey])=>{const value=modules[moduleKey]?.[payloadKey];const rows=Array.isArray(value)?value as Record<string,unknown>[]:[];return rows.flatMap(row=>Object.entries(row).map(([metric,result])=>[title,metric,String(result??"")]));});
+  const csv=()=>exportRowsAsCsv(`serveflow-reports-${range}.csv`,["Report","Metric","Value"],exportRows); const excel=()=>exportRowsAsExcel(`serveflow-reports-${range}.xls`,`${restaurantName} Reports Center`,["Report","Metric","Value"],exportRows);
+  const insights=Array.isArray(modules.ai?.insights)?modules.ai.insights as Record<string,unknown>[]:[];
+  return <div className="od-page od-print-area"><div className="od-page-header"><div><h1 className="od-page-title">Executive Business Intelligence</h1><p className="od-page-subtitle">What happened, why it happened, and what to do next.</p></div><div className="od-header-actions od-no-print"><button className="od-btn-ghost" onClick={()=>window.print()}>PDF</button><button className="od-btn-ghost" onClick={excel}>Excel</button><button className="od-btn-ghost" onClick={csv}>CSV</button><button className="od-btn-primary" onClick={()=>window.print()}>Print</button></div></div><div className="od-report-range od-no-print">{(["today","yesterday","week","last_week","month","last_month","custom"] as ReportsCenterRange[]).map(option=><button key={option} className={range===option?"active":""} onClick={()=>setRange(option)}>{({today:"Today",yesterday:"Yesterday",week:"Week",last_week:"Last Week",month:"Month",last_month:"Last Month",custom:"Custom"} as Record<ReportsCenterRange,string>)[option]}</button>)}</div>{range==="custom"?<div className="od-custom-range od-no-print"><label>From<input type="date" value={customStart} max={customEnd} onChange={event=>setCustomStart(event.target.value)}/></label><label>To<input type="date" value={customEnd} min={customStart} onChange={event=>setCustomEnd(event.target.value)}/></label></div>:null}{reportError?<div className="od-error-inline">{reportError}</div>:null}{loading?<div className="od-empty">Loading business intelligence…</div>:<><section className="od-ai-insights"><header><div><span>AI Business Insights</span><h2>Executive Briefing</h2></div><b>Report data only</b></header><div>{insights.map((insight,index)=><article key={index} className={String(insight.type??"")}><small>{String(insight.type??"Insight")}</small><strong>{String(insight.title??"Business insight")}</strong><p>{String(insight.detail??"")}</p></article>)}</div></section><div className="od-bi-chart-grid"><BiChart title="Hourly Revenue" rows={modules.sales?.top_hours}/><BiChart title="Payment Method Pie Chart" rows={modules.sales?.payment_breakdown}/><BiChart title="Top Menu Chart" rows={modules.menu?.rows}/><BiChart title="Kitchen Speed Chart" rows={modules.kitchen?.rows}/><BiChart title="Staff Performance Chart" rows={modules.staff?.rows}/><BiChart title="Customer Growth Chart" rows={modules.customers?.rows}/></div><div className="od-report-center-grid">{REPORT_MODULES.map(([title,moduleKey,payloadKey])=><ModuleExportSection key={title} title={title} value={modules[moduleKey]?.[payloadKey]}/>)}</div><section className="od-card"><div className="od-card-header"><div><div className="od-card-title">Export Center</div><div className="od-card-subtitle">PDF, Excel, CSV and print use the displayed module payloads.</div></div></div></section><details className="od-advanced-audit"><summary>Advanced <span>Audit Logs</span></summary><ModuleExportSection title="Advanced Audit Logs" value={modules.audit?.rows}/></details></>}</div>;
+}
+
+function BiChart({title,rows}:{title:string;rows:unknown}){const values=Array.isArray(rows)?rows as Record<string,unknown>[]:[];const numericKey=values.length?Object.keys(values[0]).find(key=>typeof values[0][key]==="number"&&/(revenue|quantity|orders|performance|spend|time)/.test(key)):undefined;const max=Math.max(...values.map(row=>Number(numericKey?row[numericKey]:0)),1);return <section className="od-card od-bi-chart"><div className="od-card-header"><div className="od-card-title">{title}</div></div><div>{values.slice(0,8).map((row,index)=>{const label=String(row.name??row.method??row.staff??row.customer_name??row.hour_of_day??index);const value=Number(numericKey?row[numericKey]:0);return <span key={index}><b>{label}</b><i><em style={{width:`${value/max*100}%`}}/></i><small>{value.toLocaleString()}</small></span>})}</div></section>}
+
+function ModuleExportSection({title,value}:{title:string;value:unknown}){const rows=Array.isArray(value)?value as Record<string,unknown>[]:[];const headers=[...new Set(rows.flatMap(row=>Object.keys(row)))];return <section className="od-card"><div className="od-card-header"><div><div className="od-card-title">{title}</div><div className="od-card-subtitle">Originating module values</div></div></div><div className="od-table-wrap"><table className="od-table"><thead><tr>{headers.map(header=><th key={header}>{header.replace(/_/g,' ')}</th>)}</tr></thead><tbody>{rows.length?rows.map((row,index)=><tr key={index}>{headers.map(header=><td key={header}>{typeof row[header]==="number"&&/(revenue|value|spend|bill|price)/.test(header)?fmtMoney(Number(row[header])):String(row[header]??"—")}</td>)}</tr>):<tr><td><div className="od-empty compact">No module values in this range</div></td></tr>}</tbody></table></div></section>}
+
+function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
   const defaultEnd = toDateInputValue(new Date());
   const defaultStartDate = new Date();
   defaultStartDate.setDate(defaultStartDate.getDate() - 30);
@@ -4284,18 +4262,7 @@ function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; r
   );
 }
 
-function CustomersPage({ orders }: { orders: OdOrder[] }) {
-  const customers = [...orders.reduce((map, order) => {
-    const key = order.customer_name?.trim() || "Guest";
-    const current = map.get(key) ?? { name: key, orders: 0, revenue: 0, last: order.created_at };
-    current.orders += 1;
-    current.revenue += isRevenueOrder(order) ? order.total_price : 0;
-    if (order.created_at > current.last) current.last = order.created_at;
-    map.set(key, current);
-    return map;
-  }, new Map<string, { name: string; orders: number; revenue: number; last: string }>()).values()]
-    .sort((a, b) => b.revenue - a.revenue);
-
+function CustomersPage({ restaurantId }: { restaurantId: string }) {
   return (
     <div className="od-page">
       <div className="od-page-header">
@@ -4304,17 +4271,7 @@ function CustomersPage({ orders }: { orders: OdOrder[] }) {
           <p className="od-page-subtitle">Customer frequency and value from captured order names.</p>
         </div>
       </div>
-      <ReportTable
-        title="Customer Reports"
-        subtitle="Visible customer history from real orders."
-        headers={["Customer", "Orders", "Revenue", "Last Order"]}
-        rows={customers.map((customer) => ({
-          Customer: customer.name,
-          Orders: customer.orders,
-          Revenue: fmtMoney(customer.revenue),
-          "Last Order": fmtDateTime(customer.last),
-        }))}
-      />
+      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_customers_module_report" columns={[{key:"customer_name",label:"Customer"},{key:"customer_type",label:"New / Returning"},{key:"average_spend",label:"Average Spend",money:true},{key:"most_ordered_item",label:"Most Ordered Item"},{key:"visit_frequency",label:"Visit Frequency"}]} />
     </div>
   );
 }
@@ -4749,6 +4706,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
           <button className="od-btn-primary" type="button" onClick={() => void printQrCards(rows)}>Print Entire Restaurant</button>
         </div>
       </div>
+      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_tables_module_report" columns={[{key:"table_number",label:"Table"},{key:"revenue_per_table",label:"Revenue Per Table",money:true},{key:"invoices",label:"Invoices"},{key:"average_stay",label:"Average Stay",suffix:" min"},{key:"table_turnover",label:"Table Turnover"}]} />
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
           <div className="od-kpi-label">Occupied Tables</div>

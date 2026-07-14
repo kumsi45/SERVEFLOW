@@ -19,6 +19,10 @@ export type WaiterOrderSession = PublicQrOrderSession & {
   customerPhone?: string | null;
   orderNote?: string | null;
 };
+const WAITER_QUEUE_KEY="serveflow.waiter.order-queue.v1";
+type QueuedWaiterOrder={clientRequestId:string;restaurantSlug:string;tableNumber:string;customerName?:string;customerPhone?:string;orderNote?:string;items:PublicQrCartItem[]};
+export function queueWaiterOrder(order:QueuedWaiterOrder){const current=JSON.parse(localStorage.getItem(WAITER_QUEUE_KEY)??"[]") as QueuedWaiterOrder[];if(!current.some(item=>item.clientRequestId===order.clientRequestId))localStorage.setItem(WAITER_QUEUE_KEY,JSON.stringify([...current,order]));}
+export async function syncWaiterOrderQueue(){const current=JSON.parse(localStorage.getItem(WAITER_QUEUE_KEY)??"[]") as QueuedWaiterOrder[];const remaining=[...current];for(const order of current){try{await submitWaiterOrder(order);remaining.splice(remaining.findIndex(item=>item.clientRequestId===order.clientRequestId),1);localStorage.setItem(WAITER_QUEUE_KEY,JSON.stringify(remaining));}catch{break}}return remaining.length;}
 
 function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
   if (!value || typeof value !== "object") return null;
@@ -174,6 +178,7 @@ export async function submitWaiterOrder({
   customerPhone,
   orderNote,
   items,
+  clientRequestId = crypto.randomUUID(),
 }: {
   restaurantSlug: string;
   tableNumber: string;
@@ -181,6 +186,7 @@ export async function submitWaiterOrder({
   customerPhone?: string;
   orderNote?: string;
   items: PublicQrCartItem[];
+  clientRequestId?: string;
 }) {
   const requestedItems = items.map((item) => ({
     menu_item_id: item.menuItemId,
@@ -188,13 +194,14 @@ export async function submitWaiterOrder({
     notes: item.notes ?? "",
   }));
 
-  const { data, error } = await waiterSupabase.rpc("create_waiter_order", {
+  const { data, error } = await waiterSupabase.rpc("submit_waiter_order_batch", {
     target_restaurant_slug: restaurantSlug,
     table_number: tableNumber,
     customer_name: customerName ?? "",
     customer_phone: customerPhone ?? "",
     order_note: orderNote ?? "",
     requested_items: requestedItems,
+    client_request_id: clientRequestId,
   });
 
   if (error) throw new Error(error.message);

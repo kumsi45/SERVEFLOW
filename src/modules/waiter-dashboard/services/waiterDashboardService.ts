@@ -52,43 +52,53 @@ function normalizeTable(row: WaiterDashboardRow): WaiterDashboardTable {
 }
 
 export async function loadWaiterSessionDetail(orderId: string): Promise<WaiterSessionDetail> {
-  const [{ data: order, error: orderError }, { data: invoices, error: invoiceError }, { data: items, error: itemError }] = await Promise.all([
-    waiterSupabase.from("orders").select("id,display_number,dining_session_display_number,created_at,customer_name,order_source,total_price,created_by_waiter_id,restaurant_staff!orders_created_by_waiter_same_restaurant(display_name)").eq("id", orderId).single(),
-    waiterSupabase.from("order_invoices").select("id,display_number,invoice_number,status,total_price,created_at,created_by_display_name,created_by_staff_id,restaurant_staff!order_invoices_created_by_staff_same_restaurant(display_name)").eq("order_id", orderId).order("created_at", { ascending: true }),
-    waiterSupabase.from("order_items").select("id,invoice_id,quantity,price,kitchen_status,menu_items!order_items_menu_item_same_restaurant(name)").eq("order_id", orderId).order("created_at", { ascending: true }),
-  ]);
-  if (orderError) throw new Error(orderError.message);
-  if (invoiceError) throw new Error(invoiceError.message);
-  if (itemError) throw new Error(itemError.message);
-  const itemRows = (items ?? []) as Array<Record<string, unknown>>;
-  const normalizedInvoices: WaiterSessionInvoice[] = ((invoices ?? []) as Array<Record<string, unknown>>).map((invoice) => {
-    const invoiceItems = itemRows.filter((item) => item.invoice_id === invoice.id).map((item) => {
-      const menu = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
-      return { id: String(item.id), name: String((menu as { name?: unknown } | null)?.name ?? "Menu item"), quantity: Number(item.quantity), price: Number(item.price), kitchenStatus: String(item.kitchen_status ?? "held") };
-    });
+  const [{data,error},{data:batchData,error:batchError},{data:policyData,error:policyError},{data:noteData,error:noteError},{data:orderingData,error:orderingError}]=await Promise.all([waiterSupabase.rpc("get_waiter_session_detail",{target_order_id:orderId}),waiterSupabase.rpc("get_waiter_session_batches",{target_order_id:orderId}),waiterSupabase.rpc("get_waiter_transfer_policy",{target_order_id:orderId}),waiterSupabase.rpc("get_waiter_item_notes",{target_order_id:orderId}),waiterSupabase.rpc("get_waiter_ordering_policy",{target_order_id:orderId})]);if(error)throw new Error(error.message);if(batchError)throw new Error(batchError.message);if(policyError)throw new Error(policyError.message);if(noteError)throw new Error(noteError.message);if(orderingError)throw new Error(orderingError.message);const boundaries=new Map(((batchData??[]) as Array<Record<string,unknown>>).map(row=>[String(row.item_id),row]));const notes=new Map(((noteData??[]) as Array<Record<string,unknown>>).map(row=>[String(row.item_id),typeof row.notes==="string"?row.notes:null]));const policy=(policyData??{}) as Record<string,unknown>;const ordering=(orderingData??{}) as Record<string,unknown>;const order=data as Record<string,unknown>;const normalizedInvoices:WaiterSessionInvoice[]=((order.invoices??[]) as Array<Record<string,unknown>>).map(invoice=>{const invoiceItems=((invoice.items??[]) as Array<Record<string,unknown>>).map(item=>{const boundary=boundaries.get(String(item.id));return{id:String(item.id),name:String(item.name??"Menu item"),quantity:Number(item.quantity),price:Number(item.price),notes:notes.get(String(item.id))??null,invoiceStatus:String(invoice.status??"pending"),kitchenStatus:String(item.kitchen_status??"held"),appendedAt:typeof boundary?.appended_at==="string"?boundary.appended_at:null,createdAt:typeof boundary?.created_at==="string"?boundary.created_at:null}});
     const statuses = invoiceItems.map((item) => item.kitchenStatus);
     const kitchenStatus = statuses.length > 0 && statuses.every((status) => status === "completed") ? "served" : statuses.includes("preparing") ? "preparing" : statuses.length > 0 && statuses.every((status) => status === "ready" || status === "completed") ? "ready" : statuses.includes("paid") ? "paid" : "pending_payment";
-    const creator = Array.isArray(invoice.restaurant_staff) ? invoice.restaurant_staff[0] : invoice.restaurant_staff;
-    return { id: String(invoice.id), displayNumber: String(invoice.display_number ?? `Invoice #${invoice.invoice_number ?? 1}`), status: String(invoice.status), kitchenStatus, total: Number(invoice.total_price), createdAt: String(invoice.created_at), creatorName: String((creator as { display_name?: unknown } | null)?.display_name ?? invoice.created_by_display_name ?? "") || null, items: invoiceItems };
+    return { id: String(invoice.id), displayNumber: String(invoice.display_number ?? "Batch"), status: String(invoice.status), kitchenStatus, total: Number(invoice.total), createdAt: String(invoice.created_at), creatorName:String(invoice.creator_name??"")||null,source:String(invoice.source??order.source??"unknown"),items:invoiceItems };
   });
-  const creator = Array.isArray(order.restaurant_staff) ? order.restaurant_staff[0] : order.restaurant_staff;
-  return { orderId: String(order.id), sessionNumber: String(order.dining_session_display_number ?? order.display_number ?? order.id), openedAt: String(order.created_at), customerName: order.customer_name ?? null, source: String(order.order_source ?? "unknown"), creatorName: String((creator as { display_name?: unknown } | null)?.display_name ?? "") || null, total: Number(order.total_price), invoices: normalizedInvoices };
+  return {orderId:String(order.order_id),sessionNumber:String(order.session_number),openedAt:String(order.opened_at),orderStatus:String(order.order_status??"pending"),diningSessionStatus:String(order.dining_session_status??"open"),billRequestedAt:typeof order.bill_requested_at==="string"?order.bill_requested_at:null,billingStartedAt:typeof order.billing_started_at==="string"?order.billing_started_at:null,paymentVerifiedAt:typeof order.payment_verified_at==="string"?order.payment_verified_at:null,transferAllowed:policy.allowed===true,transferReason:typeof policy.reason==="string"?policy.reason:null,orderingAllowed:ordering.allowed===true,orderingReason:typeof ordering.reason==="string"?ordering.reason:null,customerName:typeof order.customer_name==="string"?order.customer_name:null,waiterName:String(order.waiter_name??order.creator_name??"")||null,source:String(order.source??"unknown"),creatorName:String(order.creator_name??"")||null,total:Number(order.total),invoices:normalizedInvoices};
 }
 
 export async function loadWaiterTableMetrics(orderIds: string[]): Promise<Map<string, WaiterTableMetric>> {
   if (orderIds.length === 0) return new Map();
-  const [{ data: orders, error: orderError }, { data: invoices, error: invoiceError }] = await Promise.all([
-    waiterSupabase.from("orders").select("id,total_price,display_number,dining_session_display_number").in("id", orderIds),
-    waiterSupabase.from("order_invoices").select("id,order_id,display_number,invoice_number").in("order_id", orderIds),
-  ]);
-  if (orderError) throw new Error(orderError.message);
-  if (invoiceError) throw new Error(invoiceError.message);
-  const invoiceRows = (invoices ?? []) as Array<{ order_id: string; display_number: string | null; invoice_number: number }>;
-  return new Map((orders ?? []).map((order) => {
-    const related = invoiceRows.filter((invoice) => invoice.order_id === order.id);
-    return [String(order.id), { total: Number(order.total_price), invoiceCount: related.length, sessionNumber: String(order.dining_session_display_number ?? order.display_number ?? order.id), invoiceNumbers: related.map((invoice) => invoice.display_number ?? `Invoice ${invoice.invoice_number}`) }];
-  }));
+  const {data,error}=await waiterSupabase.rpc("get_waiter_order_metrics",{target_order_ids:orderIds});if(error)throw new Error(error.message);return new Map(((data??[]) as Array<Record<string,unknown>>).map(row=>{const lifecycleStatus=row.payment_verified_at?"paid":row.billing_started_at?"billing":row.bill_requested_at?"needs_bill":Number(row.ready_item_count)>0?"ready_to_serve":Number(row.item_count)>0?"kitchen_waiting":"serving";return[String(row.order_id),{total:Number(row.total),invoiceCount:Number(row.invoice_count),sessionNumber:String(row.session_number),invoiceNumbers:(row.invoice_numbers??[]) as string[],readyItemCount:Number(row.ready_item_count),itemCount:Number(row.item_count),lifecycleStatus}]}));
 }
+
+export async function markWaiterOrderServed(orderId: string) {
+  const { error } = await waiterSupabase.rpc("mark_order_completed", {
+    target_order_id: orderId,
+    target_station_id: null,
+    target_batch_key: null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function moveWaiterDiningSession(orderId: string, destinationTableId: string) {
+  const { error } = await waiterSupabase.rpc("move_waiter_dining_session", {
+    target_order_id: orderId,
+    destination_table_id: destinationTableId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function mergeWaiterDiningSessions(sourceOrderId: string, destinationOrderId: string) {
+  const { error } = await waiterSupabase.rpc("merge_waiter_dining_sessions", {
+    source_order_id: sourceOrderId,
+    destination_order_id: destinationOrderId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function splitWaiterParty(sourceOrderId: string, destinationTableId: string, customerNames: string[]) {
+  const { error } = await waiterSupabase.rpc("split_waiter_party", { source_order_id: sourceOrderId, destination_table_id: destinationTableId, selected_customer_names: customerNames });
+  if (error) throw new Error(error.message);
+}
+
+export async function requestWaiterFinalBill(orderId: string) { const {error}=await waiterSupabase.rpc("request_waiter_final_bill",{target_order_id:orderId});if(error)throw new Error(error.message); }
+export async function updateWaiterPendingItem(itemId:string,quantity:number){const{error}=await waiterSupabase.rpc("update_waiter_pending_item",{target_item_id:itemId,new_quantity:quantity});if(error)throw new Error(error.message)}
+export async function updateWaiterPendingItemNote(itemId:string,note:string){const{error}=await waiterSupabase.rpc("update_waiter_pending_item_note",{target_item_id:itemId,new_note:note});if(error)throw new Error(error.message)}
+export async function splitWaiterBill(orderId:string,items:Array<{itemId:string;quantity:number}>){const{error}=await waiterSupabase.rpc("split_waiter_bill_quantities",{target_order_id:orderId,requested_items:items.map(item=>({item_id:item.itemId,quantity:item.quantity}))});if(error)throw new Error(error.message)}
 
 export async function loadWaiterDashboardTables(
   restaurantSlug: string

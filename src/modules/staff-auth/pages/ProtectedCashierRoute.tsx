@@ -6,6 +6,7 @@ import type { CashierRestaurant } from "../../cashier/types";
 
 type ProtectedCashierRouteProps = {
   restaurantId: string;
+  section?: string;
 };
 
 type AccessState =
@@ -13,7 +14,7 @@ type AccessState =
   | { status: "unauthorized"; reason: "session" | "access" }
   | { status: "authorized"; restaurant: CashierRestaurant };
 
-export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRouteProps) {
+export function ProtectedCashierRoute({ restaurantId, section }: ProtectedCashierRouteProps) {
   const authSession = useStaffAuthSession();
   const [accessState, setAccessState] = useState<AccessState>({ status: "loading" });
 
@@ -109,6 +110,7 @@ export function ProtectedCashierRoute({ restaurantId }: ProtectedCashierRoutePro
     <CashierDashboardPage
       restaurantId={restaurantId}
       restaurant={accessState.restaurant}
+      initialSection={section}
     />
   );
 }

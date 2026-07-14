@@ -29,7 +29,7 @@ assert(ownerPage.includes("Reset PIN"), "Waiter rows must expose reset PIN actio
 assert(ownerPage.includes("deleteStaff(restaurantId, member.id)"), "Waiter rows must expose safe delete action.");
 assert(ownerPage.includes("member.role === \"waiter\""), "Waiter UI behavior must be role-scoped.");
 
-assert(manageStaff.includes('type StaffRole = "cashier" | "kitchen" | "waiter"'), "Edge function must support waiter role.");
+assert(manageStaff.includes('"cashier"') && manageStaff.includes('"kitchen"') && manageStaff.includes('"waiter"'), "Edge function must support cashier, kitchen, and waiter roles.");
 assert(manageStaff.includes("normalizeUsername"), "Edge function must validate waiter username.");
 assert(manageStaff.includes("normalizePinPassword"), "Edge function must validate waiter PIN.");
 assert(manageStaff.includes("waiterAuthEmail"), "Edge function must create auth identity for username-based waiter login.");

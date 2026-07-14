@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type StaffRole = "cashier" | "kitchen" | "waiter";
+type StaffRole = "manager" | "cashier" | "kitchen" | "waiter";
 type StaffAction =
   | "create-staff"
   | "update-staff"
@@ -80,11 +80,11 @@ function normalizeAction(action: unknown): StaffAction {
 }
 
 function normalizeRole(role: unknown): StaffRole {
-  if (role === "cashier" || role === "kitchen" || role === "waiter") {
+  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter") {
     return role;
   }
 
-  throw new Error("Role must be cashier, kitchen, or waiter.");
+  throw new Error("Role must be manager, cashier, kitchen, or waiter.");
 }
 
 function normalizeEmail(email: unknown) {
@@ -400,7 +400,7 @@ Deno.serve(async (request) => {
       const fullName = normalizeDisplayName(payload.fullName);
       const role = normalizeRole(payload.role);
       const username = role === "waiter" ? normalizeUsername(payload.username) : null;
-      const phoneNumber = role === "waiter" ? normalizeOptionalPhone(payload.phoneNumber) : null;
+      const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const pinPassword = role === "waiter" ? normalizePinPassword(payload.pinPassword) : null;
       const email = role === "waiter" ? waiterAuthEmail(restaurantId, username) : normalizeEmail(payload.email);
       const assignedKitchenStationId = role === "kitchen"
@@ -580,16 +580,14 @@ Deno.serve(async (request) => {
         details.username = username;
       }
 
-      if (nextRole === "waiter") {
-        const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
-        updates.phone_number = phoneNumber;
-        details.phone_number = phoneNumber;
-      } else {
+      const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
+      updates.phone_number = phoneNumber;
+      details.phone_number = phoneNumber;
+      if (nextRole !== "waiter") {
         updates.username = null;
-        updates.phone_number = null;
       }
 
-      if (payload.role) {
+      if (payload.role && nextRole !== previousRole) {
         updates.role = nextRole;
         details.previous_role = targetStaff.role;
         details.next_role = nextRole;
@@ -649,7 +647,7 @@ Deno.serve(async (request) => {
       const active = action === "reactivate-staff";
       const { error } = await serviceClient
         .from("restaurant_staff")
-        .update({ active, waiter_session_active: targetStaff.role === "waiter" && active ? targetStaff.waiter_session_active : false })
+        .update({ active, staff_session_active: false, waiter_session_active: targetStaff.role === "waiter" && active ? targetStaff.waiter_session_active : false })
         .eq("id", staffId)
         .eq("restaurant_id", restaurantId);
       if (error) throw new Error(error.message);

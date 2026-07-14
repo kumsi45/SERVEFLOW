@@ -1,16 +1,23 @@
+import { useEffect, useState } from "react";
 import { QRMenuPage } from "../../modules/qr-menu/pages/QRMenuPage";
 import { OrderingPage } from "../../modules/ordering/pages/OrderingPage";
-import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedCashierRoute";
-import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
-import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwnerRoute";
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
 import { ForgotPasswordPage } from "../../modules/staff-auth/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../../modules/staff-auth/pages/ResetPasswordPage";
 import { WaiterLoginPage } from "../../modules/waiter-auth/pages/WaiterLoginPage";
-import { WaiterDashboardPage } from "../../modules/waiter-dashboard/pages/WaiterDashboardPage";
 import { WaiterOrderPage } from "../../modules/waiter-order/pages/WaiterOrderPage";
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
+import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleNamespace } from "./RoleNamespaceRoute";
+
+const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
+  owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables"],
+  manager: ["dashboard"],
+  waiter: ["dashboard", "tables", "orders", "dining-sessions"],
+  cashier: ["dashboard", "payments", "checkout", "bills"],
+  kitchen: ["dashboard", "stations", "history"],
+  admin: ["dashboard", "restaurants", "subscriptions", "users"],
+};
 
 function resolveRoute(pathname: string) {
   if (pathname === "/" || pathname === "") {
@@ -40,14 +47,23 @@ function resolveRoute(pathname: string) {
     return { name: "reset-password" as const };
   }
 
+  const roleNamespaceMatch = pathname.match(/^\/(owner|manager|waiter|cashier|kitchen|admin)\/([^/]+)\/?$/);
+  if (roleNamespaceMatch) {
+    const namespace = roleNamespaceMatch[1] as RoleNamespace;
+    const section = roleNamespaceMatch[2];
+    if (ROLE_SECTIONS[namespace].includes(section)) return { name: "role-namespace" as const, namespace, section };
+  }
+
+  if (/^\/staff(?:\/.*)?\/?$/.test(pathname)) return { name: "legacy-staff" as const };
+
   const cashierMatch = pathname.match(/^\/cashier\/([^/]+)\/?$/);
   if (cashierMatch) {
-    return { name: "cashier" as const, restaurantId: decodeURIComponent(cashierMatch[1]) };
+    return { name: "legacy-cashier" as const, restaurantId: decodeURIComponent(cashierMatch[1]) };
   }
 
   const kitchenMatch = pathname.match(/^\/kitchen\/([^/]+)\/?$/);
   if (kitchenMatch) {
-    return { name: "kitchen" as const, restaurantId: decodeURIComponent(kitchenMatch[1]) };
+    return { name: "legacy-kitchen" as const, restaurantId: decodeURIComponent(kitchenMatch[1]) };
   }
 
   const waiterMatch = pathname.match(/^\/waiter\/([^/]+)\/?$/);
@@ -57,7 +73,7 @@ function resolveRoute(pathname: string) {
 
   const waiterDashboardMatch = pathname.match(/^\/waiter\/([^/]+)\/dashboard\/?$/);
   if (waiterDashboardMatch) {
-    return { name: "waiter-dashboard" as const, restaurantSlug: decodeURIComponent(waiterDashboardMatch[1]) };
+    return { name: "legacy-waiter-dashboard" as const, restaurantSlug: decodeURIComponent(waiterDashboardMatch[1]) };
   }
 
   const waiterOrderMatch = pathname.match(/^\/waiter\/([^/]+)\/order\/([^/]+)\/?$/);
@@ -71,7 +87,7 @@ function resolveRoute(pathname: string) {
 
   const ownerMatch = pathname.match(/^\/owner\/([^/]+)\/?$/);
   if (ownerMatch) {
-    return { name: "owner" as const, restaurantId: decodeURIComponent(ownerMatch[1]) };
+    return { name: "legacy-owner" as const, restaurantId: decodeURIComponent(ownerMatch[1]) };
   }
 
   const orderingMatch = pathname.match(/^\/r\/([^/]+)\/order\/?$/);
@@ -96,7 +112,9 @@ function resolveRoute(pathname: string) {
 }
 
 export function AppRouter() {
-  const route = resolveRoute(window.location.pathname);
+  const [locationKey,setLocationKey]=useState(()=>window.location.pathname+window.location.search);
+  useEffect(()=>{const update=()=>setLocationKey(window.location.pathname+window.location.search);window.addEventListener("popstate",update);return()=>window.removeEventListener("popstate",update)},[]);
+  const route = resolveRoute(locationKey.split("?")[0]);
 
   if (route.name === "home") {
     return <LandingPage />;
@@ -117,8 +135,16 @@ export function AppRouter() {
     return <OrderingPage restaurantSlug={route.restaurantSlug} />;
   }
 
-  if (route.name === "cashier") {
-    return <ProtectedCashierRoute restaurantId={route.restaurantId} />;
+  if (route.name === "role-namespace") {
+    return <RoleNamespaceRoute namespace={route.namespace} section={route.section} />;
+  }
+
+  if (route.name === "legacy-staff") {
+    return <LegacyStaffRedirect />;
+  }
+
+  if (route.name === "legacy-cashier") {
+    return <LegacyRoleRedirect role="cashier" restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "staff-login") {
@@ -133,24 +159,26 @@ export function AppRouter() {
     return <ResetPasswordPage />;
   }
 
-  if (route.name === "kitchen") {
-    return <ProtectedKitchenRoute restaurantId={route.restaurantId} />;
+  if (route.name === "legacy-kitchen") {
+    return <LegacyRoleRedirect role="kitchen" restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "waiter") {
     return <WaiterLoginPage restaurantSlug={route.restaurantSlug} />;
   }
 
-  if (route.name === "waiter-dashboard") {
-    return <WaiterDashboardPage restaurantSlug={route.restaurantSlug} />;
+  if (route.name === "legacy-waiter-dashboard") {
+    window.sessionStorage.setItem("serveflow.waiter.restaurant-slug", route.restaurantSlug);
+    window.location.replace("/waiter/dashboard");
+    return null;
   }
 
   if (route.name === "waiter-order") {
     return <WaiterOrderPage restaurantSlug={route.restaurantSlug} tableNumber={route.tableNumber} />;
   }
 
-  if (route.name === "owner") {
-    return <ProtectedOwnerRoute restaurantId={route.restaurantId} />;
+  if (route.name === "legacy-owner") {
+    return <LegacyRoleRedirect role="owner" restaurantId={route.restaurantId} />;
   }
 
   if (route.name === "qr-menu") {

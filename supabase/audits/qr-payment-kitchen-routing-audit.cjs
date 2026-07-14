@@ -4,8 +4,8 @@ const crypto = require("crypto");
 const { execSync } = require("child_process");
 const { Client } = require("pg");
 
-const supabaseRoot = __dirname;
-const sourceRoot = path.join(__dirname, "..");
+const supabaseRoot = path.resolve(__dirname, "..");
+const sourceRoot = path.resolve(__dirname, "../..");
 
 function readKeyValueFile(filePath) {
   return Object.fromEntries(

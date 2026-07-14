@@ -13,7 +13,8 @@ type WaiterLoginPageProps = {
 };
 
 function getWaiterDashboardPath(canonicalRestaurantSlug: string) {
-  return `/waiter/${encodeURIComponent(canonicalRestaurantSlug)}/dashboard`;
+  window.sessionStorage.setItem("serveflow.waiter.restaurant-slug", canonicalRestaurantSlug);
+  return "/waiter/dashboard";
 }
 
 export function WaiterLoginPage({ restaurantSlug }: WaiterLoginPageProps) {
@@ -68,7 +69,10 @@ export function WaiterLoginPage({ restaurantSlug }: WaiterLoginPageProps) {
     try {
       setSubmitting(true);
       setError(null);
-      const waiterSession = await signInWaiter(restaurantSlug, username, password);
+      if (!restaurant) {
+        throw new Error("This waiter terminal is not connected to an active restaurant.");
+      }
+      const waiterSession = await signInWaiter(restaurant.slug, username, password);
       setSession(waiterSession);
       setUsername("");
       setPassword("");

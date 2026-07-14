@@ -138,6 +138,7 @@ async function seed(client, ids) {
   );
 
   await client.query("insert into public.categories (id, restaurant_id, name) values ($1, $2, 'Audit')", [ids.category, ids.restaurant]);
+  await client.query("select set_config('request.jwt.claim.sub', $1, false)", [ids.ownerUser]);
   await client.query("insert into public.menu_items (id, restaurant_id, category_id, name, price, available) values ($1, $2, $3, 'Audit Item', 10, true)", [ids.menuItem, ids.restaurant, ids.category]);
   await client.query("insert into public.cashier_shifts (restaurant_id, opened_by, opening_cash, notes) values ($1, $2, 0, 'P7 audit')", [ids.restaurant, ids.cashierStaff]);
 }

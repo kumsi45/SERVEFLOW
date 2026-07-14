@@ -39,6 +39,9 @@ async function main() {
     const actor = staff.rows[0];
     const menu = (await db.query("select id, price from public.menu_items where restaurant_id=$1 and available limit 1", [actor.restaurant_id])).rows[0];
     const station = (await db.query("select public.ensure_main_kitchen_station_for_restaurant($1) id", [actor.restaurant_id])).rows[0].id;
+    const creatorRows = await db.query("select role,id from restaurant_staff where restaurant_id=$1 and active and role in ('waiter','cashier')", [actor.restaurant_id]);
+    const creatorByRole = new Map(creatorRows.rows.map((row) => [row.role, row.id]));
+    if (!creatorByRole.get("waiter") || !creatorByRole.get("cashier")) throw new Error("Audit requires active waiter and cashier creators.");
     const cases = ["public_qr", "waiter", "cashier"];
     const seeded = [];
     await db.query("begin");
@@ -46,8 +49,8 @@ async function main() {
       const order = id(), invoice = id(), item = id(); seeded.push({ source, order, invoice, item });
       await db.query(`insert into public.orders(id,restaurant_id,status,total_price,customer_name,table_number,payment_method,order_source)
         values($1,$2,'pending_payment',$3,'P7.8 Audit','1','Cash',$4)`, [order, actor.restaurant_id, menu.price, source]);
-      await db.query(`insert into public.order_invoices(id,restaurant_id,order_id,invoice_number,status,total_price,payment_method,invoice_source)
-        values($1,$2,$3,900,'pending',$4,'Cash',$5)`, [invoice, actor.restaurant_id, order, menu.price, source]);
+      await db.query(`insert into public.order_invoices(id,restaurant_id,order_id,invoice_number,status,total_price,payment_method,invoice_source,created_by_staff_id,created_by_display_name)
+        values($1,$2,$3,900,'pending',$4,'Cash',$5,$6,'P7.8 Creator')`, [invoice, actor.restaurant_id, order, menu.price, source, source === "public_qr" ? null : creatorByRole.get(source)]);
       await db.query(`insert into public.order_items(id,restaurant_id,order_id,invoice_id,menu_item_id,quantity,price,kitchen_status,kitchen_station_id)
         values($1,$2,$3,$4,$5,1,$6,'held',$7)`, [item, actor.restaurant_id, order, invoice, menu.id, menu.price, station]);
     }

@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const childProcess = require("child_process");
 
-const root = __dirname;
+const root = path.resolve(__dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
 const checks = [];
 

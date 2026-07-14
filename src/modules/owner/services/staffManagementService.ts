@@ -1,6 +1,6 @@
 import { supabase } from "../../../core/database";
 
-export type ManagedStaffRole = "owner" | "cashier" | "kitchen" | "waiter";
+export type ManagedStaffRole = "owner" | "manager" | "cashier" | "kitchen" | "waiter";
 
 export type ManagedStaffMember = {
   id: string;
@@ -14,6 +14,7 @@ export type ManagedStaffMember = {
   active: boolean;
   created_at: string;
   last_login_at: string | null;
+  staff_session_active: boolean | null;
   waiter_session_active: boolean | null;
 };
 
@@ -118,7 +119,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 export async function loadManagedStaff(restaurantId: string) {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,waiter_session_active")
+    .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
     .eq("restaurant_id", restaurantId)
     .neq("role", "owner")
     .order("created_at", { ascending: true });

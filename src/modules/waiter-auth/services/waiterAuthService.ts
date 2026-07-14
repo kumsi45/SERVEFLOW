@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { supabase } from "../../../core/database";
 import type { WaiterSession, WaiterTerminalContext } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -29,6 +28,12 @@ export const waiterSupabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: waiterAuthStorage,
     storageKey: WAITER_AUTH_STORAGE_KEY,
   },
+});
+
+// Public waiter discovery must never inherit an owner/cashier session from the
+// shared application client. Authentication happens only after identity lookup.
+const waiterPublicSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 });
 
 type WaiterContextRow = {
@@ -93,8 +98,12 @@ export function getStoredWaiterSession(restaurantSlug: string): WaiterSession | 
   return session;
 }
 
+export function getActiveWaiterSession(): WaiterSession | null {
+  return parseWaiterSession(sessionStorage.getItem(WAITER_SESSION_KEY));
+}
+
 export async function loadWaiterTerminalContext(restaurantSlug: string) {
-  const { data, error } = await supabase.rpc("get_waiter_terminal_context", {
+  const { data, error } = await waiterPublicSupabase.rpc("get_waiter_terminal_context", {
     target_restaurant_slug: restaurantSlug,
   });
 
@@ -120,7 +129,7 @@ export async function signInWaiter(
     throw new Error("Enter your username and PIN or password.");
   }
 
-  const { data: identityData, error: identityError } = await supabase.rpc(
+  const { data: identityData, error: identityError } = await waiterPublicSupabase.rpc(
     "resolve_waiter_login_identity",
     {
       target_restaurant_slug: restaurantSlug,
