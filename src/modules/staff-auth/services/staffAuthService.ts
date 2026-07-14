@@ -5,7 +5,7 @@ type StaffRoleRow = {
   role?: StaffRole | null;
   restaurant_id?: string | null;
   active?: boolean | null;
-  restaurants?: { id?: string | null; name?: string | null } | { id?: string | null; name?: string | null }[] | null;
+  restaurants?: { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null } | { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null }[] | null;
 };
 
 function isStaffRole(value: unknown): value is StaffRole {
@@ -14,7 +14,7 @@ function isStaffRole(value: unknown): value is StaffRole {
 
 function getRestaurant(
   restaurant: StaffRoleRow["restaurants"]
-): { id?: string | null; name?: string | null } | null {
+): { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null } | null {
   if (Array.isArray(restaurant)) {
     return restaurant[0] ?? null;
   }
@@ -33,6 +33,9 @@ function normalizeStaffRestaurant(row: StaffRoleRow): StaffRestaurant | null {
     id: row.restaurant_id,
     name: restaurant.name,
     role: row.role,
+    currencyCode: restaurant.currency_code ?? null,
+    currencySymbol: restaurant.currency_symbol ?? null,
+    locale: restaurant.locale ?? null,
   };
 }
 
@@ -97,7 +100,7 @@ async function clearSupabaseAuthSession() {
 async function getStaffSessionForUser(userId: string): Promise<StaffSession | null> {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("role,active,restaurant_id,restaurants(id,name)")
+    .select("role,active,restaurant_id,restaurants(id,name,currency_code,currency_symbol,locale)")
     .eq("user_id", userId)
     .eq("active", true)
     .in("role", ["owner", "manager", "cashier", "kitchen"]);

@@ -21,12 +21,12 @@ export function DashboardPreviewSection() {
             </div>
             <div className="lp-preview-card-body">
               <div className="lp-preview-stat-row">
-                <div className="lp-preview-stat"><div className="lp-preview-stat-val green">ETB 48,320</div><div className="lp-preview-stat-label">Today's Revenue</div></div>
+                <div className="lp-preview-stat"><div className="lp-preview-stat-val green">48,320</div><div className="lp-preview-stat-label">Today's Revenue</div></div>
                 <div className="lp-preview-stat"><div className="lp-preview-stat-val">247</div><div className="lp-preview-stat-label">Total Orders</div></div>
                 <div className="lp-preview-stat"><div className="lp-preview-stat-val yellow">12</div><div className="lp-preview-stat-label">Pending Payment</div></div>
               </div>
               <div className="lp-preview-orders">
-                {["#A14 · Doro Wat · ETB 280", "#A15 · Tibs · ETB 250", "#A16 · Beyaynetu · ETB 200"].map((o) => (
+                {["#A14 · Doro Wat · 280", "#A15 · Tibs · 250", "#A16 · Beyaynetu · 200"].map((o) => (
                   <div key={o} className="lp-preview-order-row">
                     <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{o}</span>
                     <span className="lp-hero-badge lp-badge-yellow">Pending</span>
@@ -90,3 +90,4 @@ export function DashboardPreviewSection() {
     </section>
   );
 }
+

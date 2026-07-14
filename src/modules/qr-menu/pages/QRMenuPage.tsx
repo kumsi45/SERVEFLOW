@@ -6,7 +6,7 @@ import { FoodInfoPanel } from "../components/FoodInfoPanel";
 import { MenuGroup } from "../components/MenuGroup";
 import { MenuSearch } from "../components/MenuSearch";
 import { RestaurantHeader } from "../components/RestaurantHeader";
-import { formatETBPrice } from "../components/menuPresentation";
+import { formatMenuPrice, setMenuCurrency } from "../components/menuPresentation";
 import { useQRMenu } from "../hooks/useQRMenu";
 import { logPublicQrScan } from "../services/qrMenuService";
 import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/PublicQrCheckoutPanel";
@@ -140,6 +140,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setActiveCategoryId,
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
+  setMenuCurrency(restaurant ? {
+    currencyCode: restaurant.currency_code,
+    currencySymbol: restaurant.currency_symbol,
+    locale: restaurant.locale,
+  } : null);
   const publicQrSession = useMemo(
     () => buildPublicQrSession(
       checkout,
@@ -578,7 +583,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             </span>
             <span className="tracker-topline">
               <strong>{getReadableOrderNumber(trackingOrderId, submittedOrder?.display_number ?? activeSession?.display_number, submittedOrder?.dining_session_display_number ?? activeSession?.dining_session_display_number)} · Bill {getReadableInvoiceNumber(trackingInvoice, submittedOrder)}</strong>
-              <span>{formatETBPrice(trackingTotal)}</span>
+              <span>{formatMenuPrice(trackingTotal)}</span>
             </span>
             <span className="tracker-meta">
               <span>{trackingEta}</span>
@@ -612,7 +617,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                       <strong>{item.name}</strong>
                       <span>Qty {item.quantity}</span>
                     </div>
-                    <span>{formatETBPrice(item.line_total)}</span>
+                    <span>{formatMenuPrice(item.line_total)}</span>
                   </div>
                 )) : (
                   <div className="tracker-empty">Items will appear here as soon as the order syncs.</div>
@@ -620,7 +625,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               </div>
               <div className="tracker-total-row">
                 <span>Total amount</span>
-                <strong>{formatETBPrice(trackingTotal)}</strong>
+                <strong>{formatMenuPrice(trackingTotal)}</strong>
               </div>
             </div>
           ) : null}
@@ -642,7 +647,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                   <h2>Before you leave, how was your meal?</h2>
                   <p>Order {servedFeedbackOrder.orderLabel} · Bill {servedFeedbackOrder.invoiceNumber}</p>
                 </div>
-                <strong>{formatETBPrice(servedFeedbackOrder.total)}</strong>
+                <strong>{formatMenuPrice(servedFeedbackOrder.total)}</strong>
               </div>
 
               <div className="feedback-stars" aria-label="Rate your experience">
@@ -814,7 +819,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           <span aria-hidden="true">Cart</span>
           <strong>
             {cart.itemCount} {cart.itemCount === 1 ? "Item" : "Items"} -{" "}
-            {formatETBPrice(cart.displaySubtotal)}
+            {formatMenuPrice(cart.displaySubtotal)}
           </strong>
         </button>
       ) : null}
@@ -830,3 +835,4 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     </main>
   );
 }
+

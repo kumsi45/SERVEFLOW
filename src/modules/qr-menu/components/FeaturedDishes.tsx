@@ -1,5 +1,5 @@
 import type { MenuItem } from "../types";
-import { formatETBPrice } from "./menuPresentation";
+import { formatMenuPrice } from "./menuPresentation";
 
 type FeaturedDishesProps = {
   items: MenuItem[];
@@ -51,7 +51,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               </div>
               <div className="featured-dish-footer">
                 <div>
-                  <strong>{formatETBPrice(Number(item.price))}</strong>
+                  <strong>{formatMenuPrice(Number(item.price))}</strong>
                 </div>
               </div>
               <div className="featured-dish-actions">
@@ -79,3 +79,4 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
     </section>
   );
 }
+

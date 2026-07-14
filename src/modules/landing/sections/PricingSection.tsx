@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const plans = [
   {
     name: "Starter",
-    price: "$49",
+    price: "49",
     period: "/mo",
     desc: "Perfect for single-location cafes and small restaurants.",
     features: ["1 Restaurant", "Up to 3 staff accounts", "QR ordering", "Cashier dashboard", "Kitchen dashboard", "Email support"],
@@ -12,7 +12,7 @@ const plans = [
   },
   {
     name: "Growth",
-    price: "$99",
+    price: "99",
     period: "/mo",
     desc: "For growing restaurants that need more power and flexibility.",
     features: ["Up to 3 Restaurants", "Unlimited staff accounts", "Everything in Starter", "Advanced analytics", "Real-time notifications", "Priority support"],

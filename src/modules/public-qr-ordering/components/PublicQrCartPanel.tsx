@@ -1,5 +1,5 @@
 import type { PublicQrCartItem, PublicQrOrderSession } from "../types";
-import { formatETBPrice } from "../../qr-menu/components/menuPresentation";
+import { formatMenuPrice } from "../../qr-menu/components/menuPresentation";
 
 type PublicQrCartPanelProps = {
   items: PublicQrCartItem[];
@@ -62,16 +62,16 @@ export function PublicQrCartPanel({
                 <div>
                   <strong>{item.name}</strong>
                   <span>
-                    {item.quantity} x {formatETBPrice(item.unit_price)}
+                    {item.quantity} x {formatMenuPrice(item.unit_price)}
                   </span>
                 </div>
-                <strong>{formatETBPrice(item.line_total)}</strong>
+                <strong>{formatMenuPrice(item.line_total)}</strong>
               </div>
             ))}
           </div>
           <div className="public-cart-total subtle">
             <span>Current subtotal</span>
-            <strong>{formatETBPrice(existingSubtotal)}</strong>
+            <strong>{formatMenuPrice(existingSubtotal)}</strong>
           </div>
         </div>
       ) : null}
@@ -87,7 +87,7 @@ export function PublicQrCartPanel({
                     <strong>{item.name}</strong>
                     {item.notes ? <p>{item.notes}</p> : null}
                   </div>
-                  <span>{formatETBPrice(item.price * item.quantity)}</span>
+                  <span>{formatMenuPrice(item.price * item.quantity)}</span>
                 </div>
                 <div className="public-cart-actions">
                   <button
@@ -115,7 +115,7 @@ export function PublicQrCartPanel({
           </div>
           <div className="public-cart-total">
             <span>{hasActiveSession ? "Grand total" : "Subtotal"}</span>
-            <strong>{formatETBPrice(hasActiveSession ? grandTotal : displaySubtotal)}</strong>
+            <strong>{formatMenuPrice(hasActiveSession ? grandTotal : displaySubtotal)}</strong>
           </div>
           <button className="public-cart-review-button" type="button" onClick={onReviewOrder}>
             {hasActiveSession ? "Continue Ordering" : "Review order"}
@@ -131,3 +131,4 @@ export function PublicQrCartPanel({
     </aside>
   );
 }
+

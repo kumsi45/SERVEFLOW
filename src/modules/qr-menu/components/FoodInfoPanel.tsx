@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
-import { formatETBPrice } from "./menuPresentation";
+import { formatMenuPrice } from "./menuPresentation";
 import { hasFullNutrition, NutritionSummary } from "./NutritionSummary";
 
 type FoodInfoPanelProps = {
@@ -119,7 +119,7 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
               <h2>{item.name}</h2>
               {item.description ? <p>{item.description}</p> : null}
             </div>
-            <strong>{formatETBPrice(Number(item.price))}</strong>
+            <strong>{formatMenuPrice(Number(item.price))}</strong>
           </div>
 
           <IngredientList ingredients={item.ingredients} />
@@ -200,10 +200,11 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
             onClick={() => onAddToCart?.(item, quantity, notes)}
           >
             <span>{item.available ? "Add to Order" : "Unavailable"}</span>
-            <strong>{formatETBPrice(Number(item.price) * quantity)}</strong>
+            <strong>{formatMenuPrice(Number(item.price) * quantity)}</strong>
           </button>
         </div>
       </aside>
     </div>
   );
 }
+

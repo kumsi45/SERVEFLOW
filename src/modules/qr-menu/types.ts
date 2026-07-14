@@ -7,6 +7,9 @@ export type Restaurant = {
   logo_url?: string | null;
   cover_url?: string | null;
   ordering_settings?: Record<string, unknown> | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
+  locale?: string | null;
 };
 
 export type MenuCategory = {

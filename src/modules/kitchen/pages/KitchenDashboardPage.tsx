@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
+import { formatCurrency } from "../../../core/format/currency";
 import { playNotificationTone, realtimeStateFromStatus, type RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { fetchKitchenDashboardContext, fetchStationKitchenOrders, markOrderCompleted, markOrderReady, startOrderPreparation } from "../services/kitchenOrderService";
 import type { KitchenDashboardContext, KitchenOrder, KitchenOrderItem, KitchenRestaurant } from "../types";
 import "../styles/kitchenDashboard.css";
 
+let activeKitchenCurrency: KitchenRestaurant | null = null;
+function fmtMoney(v: number) { return formatCurrency(v, activeKitchenCurrency); }
 // ─── helpers ─────────────────────────────────────────────────────────────────
-function fmtMoney(v: number) { return `ETB ${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`; }
 function fmtTicket(order: KitchenOrder) { return order.kitchenTicketNumber ?? order.displayNumber ?? "Kitchen ticket"; }
 function fmtTime(iso: string) { return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso)); }
 function elapsedMin(iso: string | null) {
@@ -216,6 +218,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
   const now = useNow();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [restaurant, setRestaurant] = useState<KitchenRestaurant>(initialRestaurant);
+  activeKitchenCurrency = restaurant;
   const [dashboardContext, setDashboardContext] = useState<KitchenDashboardContext | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<"all" | string>("all");
   const [loading, setLoading] = useState(true);
@@ -524,3 +527,7 @@ export function KitchenDashboardPage({ restaurantId, restaurant: initialRestaura
     </div>
   );
 }
+
+
+
+

@@ -42,7 +42,7 @@ export function HeroSection() {
             <div className="lp-hero-card-body">
               <div className="lp-hero-stat"><div className="lp-hero-stat-label">Today's Orders</div><div className="lp-hero-stat-value green">247</div></div>
               <div className="lp-hero-stat"><div className="lp-hero-stat-label">Avg. Scan Time</div><div className="lp-hero-stat-value">8s</div></div>
-              <div className="lp-hero-stat"><div className="lp-hero-stat-label">Revenue</div><div className="lp-hero-stat-value green">ETB 48,320</div></div>
+              <div className="lp-hero-stat"><div className="lp-hero-stat-label">Revenue</div><div className="lp-hero-stat-value green">48,320</div></div>
             </div>
           </div>
 
@@ -92,3 +92,4 @@ export function HeroSection() {
     </section>
   );
 }
+

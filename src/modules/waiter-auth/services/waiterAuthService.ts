@@ -41,6 +41,9 @@ type WaiterContextRow = {
   restaurant_slug: string;
   restaurant_name: string;
   logo_url: string | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
+  locale?: string | null;
 };
 
 type WaiterIdentityRow = WaiterContextRow & {
@@ -56,6 +59,9 @@ function normalizeRestaurant(row: WaiterContextRow): WaiterTerminalContext {
     slug: row.restaurant_slug,
     name: row.restaurant_name,
     logoUrl: row.logo_url ?? null,
+    currencyCode: row.currency_code ?? null,
+    currencySymbol: row.currency_symbol ?? null,
+    locale: row.locale ?? null,
   };
 }
 

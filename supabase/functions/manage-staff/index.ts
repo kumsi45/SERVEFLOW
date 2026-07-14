@@ -1,11 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type StaffRole = "manager" | "cashier" | "kitchen" | "waiter";
+type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception";
 type StaffAction =
   | "create-staff"
   | "update-staff"
   | "deactivate-staff"
   | "reactivate-staff"
+  | "suspend-staff"
+  | "mark-break"
+  | "end-break"
+  | "assign-waiter-tables"
+  | "send-announcement"
+  | "send-notification"
   | "send-password-reset"
   | "generate-temporary-password"
   | "delete-staff";
@@ -21,6 +27,8 @@ type ManageStaffPayload = {
   phoneNumber?: string;
   role?: StaffRole;
   assignedKitchenStationId?: string | null;
+  tableIds?: string[];
+  message?: string;
 };
 
 const STAFF_ACTIONS: StaffAction[] = [
@@ -28,6 +36,12 @@ const STAFF_ACTIONS: StaffAction[] = [
   "update-staff",
   "deactivate-staff",
   "reactivate-staff",
+  "suspend-staff",
+  "mark-break",
+  "end-break",
+  "assign-waiter-tables",
+  "send-announcement",
+  "send-notification",
   "send-password-reset",
   "generate-temporary-password",
   "delete-staff",
@@ -80,11 +94,15 @@ function normalizeAction(action: unknown): StaffAction {
 }
 
 function normalizeRole(role: unknown): StaffRole {
-  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter") {
+  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "reception") {
     return role;
   }
 
-  throw new Error("Role must be manager, cashier, kitchen, or waiter.");
+  if (role === "owner" || role === "super_admin") {
+    throw new Error("Managers cannot create owner or super admin accounts.");
+  }
+
+  throw new Error("Role must be waiter, cashier, kitchen, reception, or manager.");
 }
 
 function normalizeEmail(email: unknown) {
@@ -143,6 +161,11 @@ function normalizePinPassword(value: unknown) {
 function waiterAuthEmail(restaurantId: string, username: string) {
   const restaurantPart = restaurantId.replace(/-/g, "");
   return `${username}.${restaurantPart}@waiter.serveflow.local`;
+}
+
+function staffAuthEmail(restaurantId: string, username: string, role: StaffRole) {
+  const restaurantPart = restaurantId.replace(/-/g, "");
+  return `${username}.${restaurantPart}@${role}.serveflow.local`;
 }
 
 function generateWaiterPin() {
@@ -205,12 +228,26 @@ function generateTemporaryPassword(displayName: string) {
   return `${passwordNameBase(displayName)}${twoDigitSuffix()}`;
 }
 
+function normalizeTemporaryPassword(value: unknown) {
+  const password = requireString(value, "Temporary password");
+  if (password.length < 4 || password.length > 64) {
+    throw new Error("Temporary password must be 4-64 characters.");
+  }
+  return password;
+}
+
 function logInfo(requestId: string, message: string, details: Record<string, unknown> = {}) {
   console.info(JSON.stringify({ level: "info", requestId, message, ...details }));
 }
 
 function logError(requestId: string, message: string, details: Record<string, unknown> = {}) {
   console.error(JSON.stringify({ level: "error", requestId, message, ...details }));
+}
+
+class PermissionDeniedError extends Error {
+  constructor() {
+    super("Permission denied.");
+  }
 }
 
 Deno.serve(async (request) => {
@@ -252,12 +289,12 @@ Deno.serve(async (request) => {
       userId: userData.user.id,
     });
 
-    let { data: ownerStaff, error: ownerError } = await serviceClient
+    let { data: actingStaff, error: ownerError } = await serviceClient
       .from("restaurant_staff")
-      .select("id, restaurant_id, role, active")
+      .select("id, restaurant_id, role, active, display_name")
       .eq("restaurant_id", restaurantId)
       .eq("user_id", userData.user.id)
-      .eq("role", "owner")
+      .in("role", ["owner", "manager"])
       .eq("active", true)
       .limit(1)
       .maybeSingle();
@@ -267,7 +304,7 @@ Deno.serve(async (request) => {
       throw new Error(ownerError.message);
     }
 
-    if (!ownerStaff) {
+    if (!actingStaff) {
       logInfo(requestId, "owner membership missing; checking legacy owner user row", { restaurantId, userId: userData.user.id });
       const { data: ownerUser, error: ownerUserError } = await serviceClient
         .from("users")
@@ -302,7 +339,7 @@ Deno.serve(async (request) => {
             },
             { onConflict: "restaurant_id,user_id" }
           )
-          .select("id, restaurant_id, role, active")
+          .select("id, restaurant_id, role, active, display_name")
           .single();
 
         if (repairError) {
@@ -311,40 +348,46 @@ Deno.serve(async (request) => {
         }
 
         logInfo(requestId, "owner membership repaired", { restaurantId, userId: userData.user.id, staffId: repairedOwnerStaff.id });
-        ownerStaff = repairedOwnerStaff;
+        actingStaff = repairedOwnerStaff;
       }
     }
 
-    if (!ownerStaff) {
-      logInfo(requestId, "manage-staff forbidden: active owner membership not found", { restaurantId, userId: userData.user.id });
-      return jsonResponse(403, { error: "Only active restaurant owners can manage staff." });
+    if (!actingStaff) {
+      logInfo(requestId, "manage-staff forbidden: active owner/manager membership not found", { restaurantId, userId: userData.user.id });
+      return jsonResponse(403, { error: "Permission denied." });
     }
 
-    if (ownerStaff.restaurant_id !== restaurantId || ownerStaff.role !== "owner" || ownerStaff.active !== true) {
-      logInfo(requestId, "manage-staff forbidden: owner membership mismatch", {
+    if (actingStaff.restaurant_id !== restaurantId || !["owner", "manager"].includes(actingStaff.role) || actingStaff.active !== true) {
+      logInfo(requestId, "manage-staff forbidden: membership mismatch", {
         restaurantId,
         userId: userData.user.id,
-        ownerStaffId: ownerStaff.id,
-        ownerStaffRestaurantId: ownerStaff.restaurant_id,
-        ownerStaffRole: ownerStaff.role,
-        ownerStaffActive: ownerStaff.active,
+        actingStaffId: actingStaff.id,
+        actingStaffRestaurantId: actingStaff.restaurant_id,
+        actingStaffRole: actingStaff.role,
+        actingStaffActive: actingStaff.active,
       });
-      return jsonResponse(403, { error: "Owner membership does not match the requested restaurant." });
+      return jsonResponse(403, { error: "Permission denied." });
     }
 
     async function loadTargetStaff(staffId: string) {
       const { data, error } = await serviceClient
         .from("restaurant_staff")
-        .select("id, restaurant_id, user_id, email, username, phone_number, display_name, role, active, assigned_kitchen_station_id, waiter_session_active")
-        .eq("restaurant_id", restaurantId)
+        .select("id, restaurant_id, user_id, email, username, phone_number, display_name, role, active, assigned_kitchen_station_id, staff_session_active, waiter_session_active")
         .eq("id", staffId)
         .limit(1)
         .maybeSingle();
 
       if (error) throw new Error(error.message);
       if (!data) throw new Error("Staff member was not found for this restaurant.");
-      if (data.restaurant_id !== restaurantId) {
-        throw new Error("Staff member does not belong to this restaurant.");
+      if (data.restaurant_id !== restaurantId || data.restaurant_id !== actingStaff.restaurant_id) {
+        logInfo(requestId, "manage-staff denied: target staff restaurant mismatch", {
+          requestedRestaurantId: restaurantId,
+          actingStaffId: actingStaff.id,
+          actingStaffRestaurantId: actingStaff.restaurant_id,
+          targetStaffId: staffId,
+          targetStaffRestaurantId: data.restaurant_id,
+        });
+        throw new PermissionDeniedError();
       }
       return data;
     }
@@ -384,13 +427,26 @@ Deno.serve(async (request) => {
       targetStaffEmail: string | null,
       details: Record<string, unknown> = {}
     ) {
+      const auditTimestamp = new Date().toISOString();
+      const normalizedDetails = {
+        ...details,
+        manager_id: actingStaff.id,
+        manager_name: typeof actingStaff.display_name === "string" ? actingStaff.display_name : null,
+        target_staff_id: targetStaffId,
+        target_staff_name: typeof details.target_staff_name === "string" ? details.target_staff_name : null,
+        action,
+        previous_values: Object.prototype.hasOwnProperty.call(details, "previous_values") ? details.previous_values : null,
+        new_values: Object.prototype.hasOwnProperty.call(details, "new_values") ? details.new_values : null,
+        timestamp: auditTimestamp,
+      };
+
       const { error } = await serviceClient.from("staff_activity_log").insert({
         restaurant_id: restaurantId,
         action,
-        performed_by_staff_id: ownerStaff.id,
+        performed_by_staff_id: actingStaff.id,
         target_staff_id: targetStaffId,
         target_staff_email: targetStaffEmail,
-        details,
+        details: normalizedDetails,
       });
 
       if (error) throw new Error(error.message);
@@ -398,11 +454,25 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception"].includes(String(payload.role))) {
+        return jsonResponse(403, { error: "Permission denied." });
+      }
       const role = normalizeRole(payload.role);
-      const username = role === "waiter" ? normalizeUsername(payload.username) : null;
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception"].includes(role)) {
+        return jsonResponse(403, { error: "Permission denied." });
+      }
+      if (role === "manager" && actingStaff.role !== "owner") {
+        return jsonResponse(403, { error: "Only owners can create manager accounts." });
+      }
+      const username = normalizeUsername(payload.username);
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const pinPassword = role === "waiter" ? normalizePinPassword(payload.pinPassword) : null;
-      const email = role === "waiter" ? waiterAuthEmail(restaurantId, username) : normalizeEmail(payload.email);
+      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : normalizeTemporaryPassword(payload.pinPassword);
+      const email = typeof payload.email === "string" && payload.email.trim()
+        ? normalizeEmail(payload.email)
+        : role === "waiter"
+          ? waiterAuthEmail(restaurantId, username)
+          : staffAuthEmail(restaurantId, username, role);
       const assignedKitchenStationId = role === "kitchen"
         ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
         : null;
@@ -444,7 +514,6 @@ Deno.serve(async (request) => {
         }
       }
 
-      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : generateTemporaryPassword(fullName);
       const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
         email,
         password: temporaryPassword,
@@ -508,17 +577,29 @@ Deno.serve(async (request) => {
       }
 
       await audit(role === "waiter" ? "waiter_created" : "staff_created", staffData.id, email, {
+        target_staff_name: fullName,
         role,
         username,
         phone_number: phoneNumber,
+        previous_values: null,
+        new_values: {
+          active: true,
+          assigned_kitchen_station_id: assignedKitchenStationId,
+          email,
+          phone_number: phoneNumber,
+          role,
+          username,
+        },
       });
       if (role === "kitchen" && assignedStation) {
         await audit("kitchen_staff_station_assigned", staffData.id, email, {
-          staff_name: fullName,
+          target_staff_name: fullName,
           old_station: null,
           old_station_id: null,
           new_station: assignedStation.name,
           new_station_id: assignedStation.id,
+          previous_values: { assigned_kitchen_station_id: null },
+          new_values: { assigned_kitchen_station_id: assignedStation.id, assigned_kitchen_station: assignedStation.name },
         });
       }
       logInfo(requestId, "staff account created", {
@@ -537,19 +618,34 @@ Deno.serve(async (request) => {
     const staffId = requireUuid(payload.staffId, "Staff ID");
     const targetStaff = await loadTargetStaff(staffId);
 
-    if (targetStaff.id === ownerStaff.id) {
-      return jsonResponse(400, { error: "Owners cannot manage their own staff record from this endpoint." });
+    if (targetStaff.id === actingStaff.id) {
+      return jsonResponse(400, { error: "Staff cannot manage their own staff record from this endpoint." });
     }
 
     if (targetStaff.role === "owner") {
       return jsonResponse(400, { error: "Owner staff records cannot be modified from this action." });
     }
 
+    if (targetStaff.role === "manager" && actingStaff.role !== "owner") {
+      return jsonResponse(403, { error: "Permission denied." });
+    }
+
     if (action === "update-staff") {
       const updates: Record<string, unknown> = {};
       const details: Record<string, unknown> = {};
       const previousRole = targetStaff.role as StaffRole;
+      const previousValues = {
+        active: targetStaff.active,
+        assigned_kitchen_station_id: targetStaff.assigned_kitchen_station_id ?? null,
+        display_name: targetStaff.display_name,
+        phone_number: targetStaff.phone_number ?? null,
+        role: targetStaff.role,
+        username: targetStaff.username ?? null,
+      };
       const nextRole = payload.role ? normalizeRole(payload.role) : previousRole;
+      if ((previousRole === "manager" || nextRole === "manager") && actingStaff.role !== "owner") {
+        return jsonResponse(403, { error: "Permission denied." });
+      }
       const previousStationId = typeof targetStaff.assigned_kitchen_station_id === "string" ? targetStaff.assigned_kitchen_station_id : null;
       let nextStationId: string | null = previousStationId;
       let nextStation: { id: string; name: string } | null = null;
@@ -624,26 +720,38 @@ Deno.serve(async (request) => {
           .eq("id", targetStaff.user_id)
           .eq("restaurant_id", restaurantId);
         if (userRoleError) throw new Error(userRoleError.message);
-        await audit(nextRole === "waiter" ? "waiter_updated" : "role_changed", staffId, targetStaff.email, details);
+        await audit(nextRole === "waiter" ? "waiter_updated" : "role_changed", staffId, targetStaff.email, {
+          ...details,
+          target_staff_name: typeof updates.display_name === "string" ? updates.display_name : targetStaff.display_name,
+          previous_values: previousValues,
+          new_values: { ...previousValues, ...updates },
+        });
       } else {
-        await audit(targetStaff.role === "waiter" ? "waiter_updated" : "staff_updated", staffId, targetStaff.email, details);
+        await audit(targetStaff.role === "waiter" ? "waiter_updated" : "staff_updated", staffId, targetStaff.email, {
+          ...details,
+          target_staff_name: typeof updates.display_name === "string" ? updates.display_name : targetStaff.display_name,
+          previous_values: previousValues,
+          new_values: { ...previousValues, ...updates },
+        });
       }
 
       if (previousStationId !== nextStationId) {
         const previousStationName = typeof details.previous_station === "string" ? details.previous_station : null;
         await audit(previousStationId ? "kitchen_staff_station_changed" : "kitchen_staff_station_assigned", staffId, targetStaff.email, {
-          staff_name: typeof updates.display_name === "string" ? updates.display_name : targetStaff.display_name,
+          target_staff_name: typeof updates.display_name === "string" ? updates.display_name : targetStaff.display_name,
           old_station: previousStationName,
           old_station_id: previousStationId,
           new_station: nextStation?.name ?? null,
           new_station_id: nextStationId,
+          previous_values: { assigned_kitchen_station_id: previousStationId, assigned_kitchen_station: previousStationName },
+          new_values: { assigned_kitchen_station_id: nextStationId, assigned_kitchen_station: nextStation?.name ?? null },
         });
       }
 
       return jsonResponse(200, { ok: true });
     }
 
-    if (action === "deactivate-staff" || action === "reactivate-staff") {
+    if (action === "deactivate-staff" || action === "reactivate-staff" || action === "suspend-staff") {
       const active = action === "reactivate-staff";
       const { error } = await serviceClient
         .from("restaurant_staff")
@@ -654,8 +762,97 @@ Deno.serve(async (request) => {
 
       const auditAction = targetStaff.role === "waiter"
         ? active ? "waiter_activated" : "waiter_deactivated"
-        : active ? "staff_reactivated" : "staff_deactivated";
-      await audit(auditAction, staffId, targetStaff.email, { username: targetStaff.username ?? null });
+        : action === "suspend-staff" ? "staff_suspended" : active ? "staff_reactivated" : "staff_deactivated";
+      await audit(auditAction, staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
+        username: targetStaff.username ?? null,
+        previous_values: {
+          active: targetStaff.active,
+          staff_session_active: targetStaff.staff_session_active ?? false,
+          waiter_session_active: targetStaff.waiter_session_active ?? false,
+        },
+        new_values: {
+          active,
+          staff_session_active: false,
+          waiter_session_active: targetStaff.role === "waiter" && active ? targetStaff.waiter_session_active : false,
+        },
+      });
+      return jsonResponse(200, { ok: true });
+    }
+
+    if (action === "mark-break" || action === "end-break") {
+      await audit(action === "mark-break" ? "staff_break_started" : "staff_break_ended", staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
+        username: targetStaff.username ?? null,
+        role: targetStaff.role,
+        previous_values: { break_status: action === "mark-break" ? "active" : "on_break" },
+        new_values: { break_status: action === "mark-break" ? "on_break" : "active" },
+      });
+      return jsonResponse(200, { ok: true });
+    }
+
+    if (action === "send-announcement" || action === "send-notification") {
+      const message = requireString(payload.message, "Message");
+      await audit(action === "send-announcement" ? "staff_announcement_sent" : "staff_notification_sent", staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
+        message,
+        username: targetStaff.username ?? null,
+        role: targetStaff.role,
+        previous_values: null,
+        new_values: { message, delivery_type: action === "send-announcement" ? "announcement" : "notification" },
+      });
+      return jsonResponse(200, { ok: true });
+    }
+
+    if (action === "assign-waiter-tables") {
+      if (targetStaff.role !== "waiter") {
+        return jsonResponse(400, { error: "Only waiters can be assigned tables." });
+      }
+      const tableIds = Array.isArray(payload.tableIds) ? payload.tableIds.map((id) => requireUuid(id, "Table ID")) : [];
+      const { data: previousAssignments, error: previousAssignmentsError } = await serviceClient
+        .from("restaurant_table_waiter_assignments")
+        .select("table_id")
+        .eq("restaurant_id", restaurantId)
+        .eq("waiter_staff_id", staffId)
+        .eq("active", true);
+      if (previousAssignmentsError) throw new Error(previousAssignmentsError.message);
+      const previousTableIds = (previousAssignments ?? []).map((assignment) => assignment.table_id);
+      const { data: tables, error: tableError } = await serviceClient
+        .from("restaurant_tables")
+        .select("id, label, table_number")
+        .eq("restaurant_id", restaurantId)
+        .eq("active", true)
+        .in("id", tableIds.length > 0 ? tableIds : ["00000000-0000-0000-0000-000000000000"]);
+      if (tableError) throw new Error(tableError.message);
+      if ((tables ?? []).length !== tableIds.length) {
+        return jsonResponse(400, { error: "All selected tables must be active restaurant tables." });
+      }
+      const { error: deactivateError } = await serviceClient
+        .from("restaurant_table_waiter_assignments")
+        .update({ active: false })
+        .eq("restaurant_id", restaurantId)
+        .eq("waiter_staff_id", staffId)
+        .eq("active", true);
+      if (deactivateError) throw new Error(deactivateError.message);
+      if (tableIds.length > 0) {
+        const { error: assignError } = await serviceClient
+          .from("restaurant_table_waiter_assignments")
+          .upsert(tableIds.map((tableId) => ({
+            restaurant_id: restaurantId,
+            table_id: tableId,
+            waiter_staff_id: staffId,
+            assigned_by_staff_id: actingStaff.id,
+            active: true,
+          })), { onConflict: "restaurant_id,table_id,waiter_staff_id" });
+        if (assignError) throw new Error(assignError.message);
+      }
+      await audit("waiter_tables_assigned", staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
+        table_ids: tableIds,
+        table_count: tableIds.length,
+        previous_values: { table_ids: previousTableIds },
+        new_values: { table_ids: tableIds },
+      });
       return jsonResponse(200, { ok: true });
     }
 
@@ -677,7 +874,12 @@ Deno.serve(async (request) => {
 
       if (error) throw new Error(error.message);
 
-      await audit("password_reset_sent", staffId, email, { redirect_to_origin: new URL(redirectTo).origin });
+      await audit("password_reset_sent", staffId, email, {
+        target_staff_name: targetStaff.display_name,
+        redirect_to_origin: new URL(redirectTo).origin,
+        previous_values: null,
+        new_values: { password_reset_requested: true },
+      });
       return jsonResponse(200, { ok: true });
     }
 
@@ -690,7 +892,10 @@ Deno.serve(async (request) => {
       if (error) throw new Error(error.message);
 
       await audit(targetStaff.role === "waiter" ? "waiter_pin_reset" : "temporary_password_generated", staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
         username: targetStaff.username ?? null,
+        previous_values: null,
+        new_values: { temporary_password_generated: true, username: targetStaff.username ?? null },
       });
       return jsonResponse(200, { temporaryPassword });
     }
@@ -712,11 +917,19 @@ Deno.serve(async (request) => {
       }
 
       await audit("waiter_deleted", staffId, targetStaff.email, {
+        target_staff_name: targetStaff.display_name,
         deleted_staff_id: staffId,
         username: targetStaff.username ?? null,
         display_name: targetStaff.display_name,
         future_shift_check: futureShiftExists,
         future_assigned_tables_check: futureAssignedTablesExist,
+        previous_values: {
+          active: targetStaff.active,
+          display_name: targetStaff.display_name,
+          role: targetStaff.role,
+          username: targetStaff.username ?? null,
+        },
+        new_values: { deleted: true },
       });
 
       const { error } = await serviceClient.auth.admin.deleteUser(targetStaff.user_id);
@@ -727,6 +940,11 @@ Deno.serve(async (request) => {
 
     return jsonResponse(400, { error: "Unsupported staff action." });
   } catch (error) {
+    if (error instanceof PermissionDeniedError) {
+      logInfo(requestId, "manage-staff request denied", { error: error.message });
+      return jsonResponse(403, { error: "Permission denied.", requestId });
+    }
+
     logError(requestId, "manage-staff request failed", {
       error: error instanceof Error ? error.message : "Staff management request failed.",
     });

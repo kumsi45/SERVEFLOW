@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getStoredWaiterSession, signInWaiter, signOutWaiter, switchWaiter, waiterSupabase } from "../../waiter-auth/services/waiterAuthService";
+import { formatCurrency } from "../../../core/format/currency";
 import { loadWaiterDashboardTables, loadWaiterSessionDetail, loadWaiterTableMetrics, markWaiterOrderServed, moveWaiterDiningSession, requestWaiterFinalBill, splitWaiterBill, updateWaiterPendingItem, updateWaiterPendingItemNote } from "../services/waiterDashboardService";
 import type { WaiterDashboardSummary, WaiterDashboardTable, WaiterSessionDetail, WaiterTableMetric } from "../types";
 import "../styles/waiterDashboard.css";
@@ -13,12 +14,12 @@ const IDLE_LOCK_MS = 5 * 60 * 1000;
 
 function summaryFrom(tables: WaiterDashboardTable[], slug: string): WaiterDashboardSummary | null {
   const first = tables[0];
-  if (first) return { restaurantId: first.restaurantId, restaurantSlug: first.restaurantSlug, restaurantName: first.restaurantName, restaurantLogoUrl: first.restaurantLogoUrl, waiterStaffId: first.waiterStaffId, waiterDisplayName: first.waiterDisplayName, currentShift: first.currentShift, assignmentMode: first.assignmentMode };
   const stored = getStoredWaiterSession(slug);
-  return stored ? { restaurantId: stored.restaurant.id, restaurantSlug: stored.restaurant.slug, restaurantName: stored.restaurant.name, restaurantLogoUrl: stored.restaurant.logoUrl, waiterStaffId: stored.staffId, waiterDisplayName: stored.displayName, currentShift: "Current Shift", assignmentMode: "all_tables" } : null;
+  const currency = stored?.restaurant;
+  if (first) return { restaurantId: first.restaurantId, restaurantSlug: first.restaurantSlug, restaurantName: first.restaurantName, restaurantLogoUrl: first.restaurantLogoUrl, waiterStaffId: first.waiterStaffId, waiterDisplayName: first.waiterDisplayName, currentShift: first.currentShift, assignmentMode: first.assignmentMode, currencyCode: currency?.currencyCode, currencySymbol: currency?.currencySymbol, locale: currency?.locale };
+  return stored ? { restaurantId: stored.restaurant.id, restaurantSlug: stored.restaurant.slug, restaurantName: stored.restaurant.name, restaurantLogoUrl: stored.restaurant.logoUrl, waiterStaffId: stored.staffId, waiterDisplayName: stored.displayName, currentShift: "Current Shift", assignmentMode: "all_tables", currencyCode: stored.restaurant.currencyCode, currencySymbol: stored.restaurant.currencySymbol, locale: stored.restaurant.locale } : null;
 }
 function elapsed(iso: string | null, now: Date) { if (!iso) return "—"; const mins = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60000)); return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`; }
-function money(value: number) { return `ETB ${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`; }
 function paymentReady(table: WaiterDashboardTable) { return table.activeOrderStatus === "pending_payment"; }
 function visualStatus(table: WaiterDashboardTable) {
   if (table.tableStatus === "needs_attention") return "attention";
@@ -42,6 +43,7 @@ function navigateWaiter(path:string,replace=false){replace?window.history.replac
 export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [tables, setTables] = useState<WaiterDashboardTable[]>([]);
   const [summary, setSummary] = useState<WaiterDashboardSummary | null>(() => summaryFrom([], restaurantSlug));
+  const money = (value: number) => formatCurrency(value, summary);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(new Date());

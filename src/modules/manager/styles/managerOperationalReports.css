@@ -1,0 +1,296 @@
+.mor-page {
+  min-height: 100vh;
+  padding: 20px;
+  color: #172033;
+  background: #f5f7fa;
+}
+
+.mor-header,
+.mor-range,
+.mor-summary article,
+.mor-chart-card,
+.mor-table,
+.mor-error {
+  border: 1px solid #dce3eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.mor-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.mor-header span,
+.mor-chart-head span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mor-header h1,
+.mor-chart-head h2,
+.mor-table h2 {
+  margin: 4px 0 0;
+  color: #101828;
+}
+
+.mor-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mor-export,
+.mor-chart-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mor-export button,
+.mor-range button,
+.mor-chart-tabs button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #173f35;
+  border-radius: 8px;
+  color: #173f35;
+  background: #fff;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.mor-export button:first-child,
+.mor-range button.active,
+.mor-chart-tabs button.active {
+  color: #fff;
+  background: #173f35;
+}
+
+.mor-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.mor-range label {
+  display: grid;
+  gap: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mor-range input {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.mor-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  color: #9f1d1d;
+  background: #fff1f1;
+  font-weight: 850;
+}
+
+.mor-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mor-summary article {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.mor-summary span {
+  color: #64748b;
+  font-weight: 900;
+}
+
+.mor-summary strong {
+  display: block;
+  margin-top: 12px;
+  color: #101828;
+  font-size: clamp(22px, 3vw, 34px);
+}
+
+.mor-chart-card,
+.mor-table {
+  padding: 16px;
+}
+
+.mor-chart-card {
+  margin-bottom: 14px;
+}
+
+.mor-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mor-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  align-items: end;
+  gap: 10px;
+  min-height: 280px;
+}
+
+.mor-bars button {
+  display: grid;
+  grid-template-rows: auto 180px auto auto;
+  gap: 8px;
+  min-height: 250px;
+  padding: 10px;
+  border: 1px solid #dce3eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #172033;
+}
+
+.mor-bars button.selected {
+  outline: 3px solid rgba(23, 63, 53, 0.16);
+}
+
+.mor-bars span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mor-bars div {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-radius: 8px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.mor-bars i {
+  display: block;
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #22c55e, #173f35);
+}
+
+.mor-bars strong {
+  color: #101828;
+  font-size: 20px;
+}
+
+.mor-bars em {
+  color: #64748b;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.mor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mor-table {
+  overflow-x: visible;
+}
+
+.mor-table table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 12px;
+}
+
+.mor-table th,
+.mor-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.mor-table th {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mor-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+@media (max-width: 1100px) {
+  .mor-summary,
+  .mor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .mor-page {
+    padding: 10px;
+  }
+
+  .mor-header,
+  .mor-chart-head {
+    flex-direction: column;
+  }
+
+  .mor-summary,
+  .mor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mor-export button,
+  .mor-range button,
+  .mor-range label,
+  .mor-chart-tabs button {
+    width: 100%;
+  }
+
+  .mor-bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mor-table {
+    overflow-x: auto;
+  }
+}
+
+@media print {
+  .mor-range,
+  .mor-export,
+  .mor-chart-tabs {
+    display: none;
+  }
+
+  .mor-page {
+    background: #fff;
+  }
+}

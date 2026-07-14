@@ -53,7 +53,7 @@ type StationProgressRow = {
 
 type StaffRestaurantRow = {
   role: "kitchen" | "owner";
-  restaurants?: { id?: string | null; name?: string | null } | { id?: string | null; name?: string | null }[] | null;
+  restaurants?: { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null } | { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null }[] | null;
 };
 
 function isKitchenOrderStatus(value: unknown): value is KitchenOrderStatus {
@@ -93,7 +93,7 @@ function getRpcMenuItemName(row: OrderItemRow): string {
 
 function getStaffRestaurant(
   restaurant: StaffRestaurantRow["restaurants"]
-): { id?: string | null; name?: string | null } | null {
+): { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null } | null {
   if (Array.isArray(restaurant)) {
     return restaurant[0] ?? null;
   }
@@ -176,7 +176,7 @@ export async function fetchKitchenRestaurant(activeRestaurantId: string): Promis
 
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("role,restaurants(id,name)")
+    .select("role,restaurants(id,name,currency_code,currency_symbol,locale)")
     .eq("user_id", userData.user.id)
     .eq("restaurant_id", activeRestaurantId)
     .eq("active", true)
@@ -198,6 +198,9 @@ export async function fetchKitchenRestaurant(activeRestaurantId: string): Promis
   return {
     id: restaurant.id,
     name: restaurant.name,
+    currencyCode: restaurant.currency_code ?? null,
+    currencySymbol: restaurant.currency_symbol ?? null,
+    locale: restaurant.locale ?? null,
   };
 }
 

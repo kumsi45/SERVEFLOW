@@ -3,6 +3,9 @@ export type WaiterRestaurant = {
   slug: string;
   name: string;
   logoUrl: string | null;
+  currencyCode?: string | null;
+  currencySymbol?: string | null;
+  locale?: string | null;
 };
 
 export type WaiterSession = {

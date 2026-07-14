@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { assertAbsoluteQrPayload, buildAbsolutePublicUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { formatCurrency } from "../../../core/format/currency";
 import "./restaurantSetupWizard.css";
 
 type RestaurantType =
@@ -611,7 +612,7 @@ h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;color:#64748b;margin:0 0 14px
                   {selectedStarterTemplates.slice(0, 3).flatMap((template) => template.categories.slice(0, 2).map((category) => (
                     <section key={`${template.template_key}-${category.name}`}>
                       <h3>{category.name}</h3>
-                      {category.items.slice(0, 3).map((item) => <p key={item.name}>{item.name}<span>ETB 0</span></p>)}
+                      {category.items.slice(0, 3).map((item) => <p key={item.name}>{item.name}<span>{formatCurrency(0)}</span></p>)}
                     </section>
                   )))}
                   {selectedStarterTemplates.length === 0 && <p>No templates selected.</p>}

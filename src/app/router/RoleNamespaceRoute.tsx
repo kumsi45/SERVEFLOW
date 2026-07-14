@@ -61,7 +61,7 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   if (state.status === "waiter") return <WaiterDashboardPage restaurantSlug={state.restaurantSlug} />;
   if (state.status === "authorized") {
     if (state.role === "owner") return <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />;
-    if (state.role === "manager") return <ProtectedManagerRoute restaurantId={state.restaurantId} />;
+    if (state.role === "manager") return <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />;
     if (state.role === "cashier") return <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />;
     return <ProtectedKitchenRoute restaurantId={state.restaurantId} />;
   }

@@ -38,6 +38,9 @@ export type WaiterDashboardSummary = {
   waiterDisplayName: string;
   currentShift: string;
   assignmentMode: "assigned_tables" | "all_tables";
+  currencyCode?: string | null;
+  currencySymbol?: string | null;
+  locale?: string | null;
 };
 
 export type WaiterSessionInvoice = {

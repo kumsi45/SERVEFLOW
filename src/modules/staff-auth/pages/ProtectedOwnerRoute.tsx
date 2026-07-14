@@ -3,6 +3,7 @@ import { OwnerDashboardPage } from "../../owner/pages/OwnerDashboardPage";
 import { RestaurantSetupWizardPage } from "../../setup-wizard/pages/RestaurantSetupWizardPage";
 import { useStaffAuthSession } from "../hooks/useStaffAuthSession";
 import { supabase } from "../../../core/database";
+import type { CurrencyConfig } from "../../../core/format/currency";
 
 type ProtectedOwnerRouteProps = {
   restaurantId: string;
@@ -14,7 +15,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
-  | { status: "authorized"; restaurantId: string; restaurantName: string; ownerName: string; setupCompleted: boolean };
+  | { status: "authorized"; restaurantId: string; restaurantName: string; ownerName: string; setupCompleted: boolean; currency: CurrencyConfig };
 
 export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRouteProps) {
   const authSession = useStaffAuthSession();
@@ -53,7 +54,7 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
 
         const { data, error } = await supabase
           .from("restaurant_staff")
-          .select("role, display_name, restaurants(id, name, setup_status)")
+          .select("role, display_name, restaurants(id, name, setup_status, currency_code, currency_symbol, locale)")
           .eq("user_id", authSession.userId!)
           .eq("restaurant_id", resolvedRestaurantId)
           .eq("active", true)
@@ -76,6 +77,11 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
           restaurantName: restaurantData.name,
           ownerName: (data as { display_name?: string | null }).display_name || "Owner",
           setupCompleted: setupStatus.completed === true,
+          currency: {
+            currencyCode: restaurantData.currency_code,
+            currencySymbol: restaurantData.currency_symbol,
+            locale: restaurantData.locale,
+          },
         });
       } catch {
         if (isMounted) setAccessState({ status: "unauthorized", reason: "access" });
@@ -111,11 +117,12 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
   }
 
   return (
-    <OwnerDashboardPage
-      restaurantId={accessState.restaurantId}
-      restaurantName={accessState.restaurantName}
-      ownerName={accessState.ownerName}
-      initialSection={section}
-    />
+      <OwnerDashboardPage
+        restaurantId={accessState.restaurantId}
+        restaurantName={accessState.restaurantName}
+        ownerName={accessState.ownerName}
+        currency={accessState.currency}
+        initialSection={section}
+      />
   );
 }

@@ -56,4 +56,7 @@ export type CashierRestaurant = {
   id: string;
   name: string;
   logoUrl: string | null;
+  currencyCode?: string | null;
+  currencySymbol?: string | null;
+  locale?: string | null;
 };

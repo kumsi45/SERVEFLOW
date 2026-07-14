@@ -1,0 +1,363 @@
+.mcx-page {
+  min-height: 100vh;
+  padding: 20px;
+  color: #172033;
+  background: #f5f7fa;
+}
+
+.mcx-header,
+.mcx-message,
+.mcx-kpis article,
+.mcx-alert,
+.mcx-session,
+.mcx-detail,
+.mcx-panel,
+.mcx-complaint,
+.mcx-modal section {
+  border: 1px solid #dce3eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.mcx-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.mcx-header span,
+.mcx-detail-head span,
+.mcx-modal span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mcx-header h1,
+.mcx-detail-head h2,
+.mcx-modal h2 {
+  margin: 4px 0 0;
+  color: #101828;
+}
+
+.mcx-header p,
+.mcx-detail-head p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mcx-message {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  color: #0f513f;
+  background: #edf8f1;
+  font-weight: 850;
+}
+
+.mcx-message.error {
+  color: #9f1d1d;
+  background: #fff1f1;
+}
+
+.mcx-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mcx-kpis article {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.mcx-kpis span,
+.mcx-kpis small {
+  display: block;
+  color: #64748b;
+  font-weight: 900;
+}
+
+.mcx-kpis strong {
+  display: block;
+  margin-top: 12px;
+  color: #101828;
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.mcx-alerts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mcx-alert {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  color: #172033;
+  text-align: left;
+}
+
+.mcx-alert strong {
+  color: #8a4b12;
+}
+
+.mcx-alert.critical {
+  border-color: #fecaca;
+  background: #fff1f1;
+}
+
+.mcx-alert.critical strong {
+  color: #b42318;
+}
+
+.mcx-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.mcx-sessions {
+  display: grid;
+  gap: 10px;
+}
+
+.mcx-session {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  color: inherit;
+  text-align: left;
+}
+
+.mcx-session.selected {
+  outline: 3px solid rgba(23, 63, 53, 0.14);
+}
+
+.mcx-session.vip {
+  background: #fff8e8;
+}
+
+.mcx-session.complaint {
+  border-left: 4px solid #b42318;
+}
+
+.mcx-session > div,
+.mcx-detail-head,
+.mcx-complaint > div,
+.mcx-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mcx-session strong,
+.mcx-complaint strong {
+  color: #101828;
+}
+
+.mcx-session span,
+.mcx-complaint span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #0f513f;
+  background: #cfeedd;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.mcx-session p,
+.mcx-complaint p,
+.mcx-panel p {
+  margin: 0;
+  color: #64748b;
+}
+
+.mcx-session dl,
+.mcx-modal dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.mcx-modal dl {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mcx-session dt,
+.mcx-modal dt {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mcx-session dd,
+.mcx-modal dd {
+  margin: 3px 0 0;
+  color: #101828;
+  font-weight: 950;
+}
+
+.mcx-detail {
+  padding: 16px;
+}
+
+.mcx-detail-head {
+  margin-bottom: 14px;
+}
+
+.mcx-detail-head button,
+.mcx-actions button,
+.mcx-actions select,
+.mcx-complaint-actions button,
+.mcx-modal button {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #173f35;
+  border-radius: 8px;
+  color: #fff;
+  background: #173f35;
+  font-weight: 900;
+}
+
+.mcx-actions select {
+  color: #172033;
+  background: #fff;
+}
+
+.mcx-actions,
+.mcx-complaint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mcx-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.mcx-panel h3 {
+  margin: 0;
+  color: #101828;
+}
+
+.mcx-complaint {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.mcx-complaint.escalated {
+  background: #fff8e8;
+}
+
+.mcx-timeline {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.mcx-timeline li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.mcx-timeline time {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mcx-empty {
+  margin: 0;
+  padding: 18px;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.mcx-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.48);
+  z-index: 50;
+}
+
+.mcx-modal section {
+  display: grid;
+  gap: 14px;
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 16px;
+}
+
+@media (max-width: 1100px) {
+  .mcx-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mcx-alerts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .mcx-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .mcx-page {
+    padding: 10px;
+  }
+
+  .mcx-header,
+  .mcx-detail-head,
+  .mcx-session > div,
+  .mcx-complaint > div,
+  .mcx-modal header {
+    flex-direction: column;
+  }
+
+  .mcx-kpis,
+  .mcx-alerts,
+  .mcx-session dl,
+  .mcx-modal dl,
+  .mcx-timeline li {
+    grid-template-columns: 1fr;
+  }
+
+  .mcx-actions button,
+  .mcx-actions select,
+  .mcx-complaint-actions button,
+  .mcx-detail-head button {
+    width: 100%;
+  }
+}

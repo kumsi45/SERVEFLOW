@@ -35,6 +35,9 @@ export type KitchenOrder = {
 export type KitchenRestaurant = {
   id: string;
   name: string;
+  currencyCode?: string | null;
+  currencySymbol?: string | null;
+  locale?: string | null;
 };
 
 export type KitchenStation = {

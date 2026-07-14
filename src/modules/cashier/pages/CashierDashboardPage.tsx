@@ -1,13 +1,10 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
+import { formatCurrency } from "../../../core/format/currency";
 import { playNotificationTone, realtimeStateFromStatus, type RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import type { CashierOrder, CashierOrderItem, CashierRestaurant } from "../types";
 import "../styles/cashierDashboard.css";
-
-function fmtMoney(value: number) {
-  return `ETB ${value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-}
 
 function fmtOrderLabel(order: Pick<CashierOrder, "displayNumber" | "id">) {
   return order.displayNumber ?? "Current order";
@@ -729,6 +726,7 @@ function OrderDrawer({
   onPaymentScreenshotFileChange,
   onOwnerDuplicateOverrideChange,
   onPaymentNoteChange,
+  formatMoney,
 }: {
   order: CashierOrder;
   onClose: () => void;
@@ -748,6 +746,7 @@ function OrderDrawer({
   onPaymentScreenshotFileChange: (file: File | null) => void;
   onOwnerDuplicateOverrideChange: (value: boolean) => void;
   onPaymentNoteChange: (value: string) => void;
+  formatMoney: (value: number) => string;
 }) {
   const isPending = order.invoiceStatus === "pending";
   const isRejected = order.invoiceStatus === "rejected";
@@ -828,14 +827,14 @@ function OrderDrawer({
               ) : order.items.map((item) => (
                 <div key={item.id} className="cd-drawer-item">
                   <div><div className="cd-drawer-item-name">{item.name}</div><div className="cd-drawer-item-qty">Qty {item.quantity}</div></div>
-                  <div className="cd-drawer-item-price">{fmtMoney(item.price * item.quantity)}</div>
+                  <div className="cd-drawer-item-price">{formatMoney(item.price * item.quantity)}</div>
                 </div>
               ))}
             </div>
           </div>
           <div className="cd-drawer-total">
             <span className="cd-drawer-total-label">Total</span>
-            <span className="cd-drawer-total-value">{fmtMoney(order.totalPrice)}</span>
+            <span className="cd-drawer-total-value">{formatMoney(order.totalPrice)}</span>
           </div>
         </div>
         <div className="cd-drawer-footer">
@@ -881,6 +880,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
   const [activity, setActivity] = useState<ShiftActivity[]>([]);
   const [activeShift, setActiveShift] = useState<ActiveShift | null>(null);
   const [restaurant, setRestaurant] = useState<CashierRestaurant>(initialRestaurant);
+  const fmtMoney = (value: number) => formatCurrency(value, restaurant);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [queueTab, setQueueTab] = useState<QueueTab>(() => initialSection === "payments" ? "pending" : initialSection === "bills" ? "completed" : "active");
@@ -1013,7 +1013,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
       { data: activityRows },
       { data: billRows },
     ] = await Promise.all([
-      supabase.from("restaurant_staff").select("restaurants(id,name)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
+      supabase.from("restaurant_staff").select("restaurants(id,name,currency_code,currency_symbol,locale)").eq("restaurant_id", restaurantId).eq("active", true).limit(1).maybeSingle(),
       supabase.rpc("get_cashier_invoice_queue", { target_restaurant_id: restaurantId }),
       supabase.from("restaurant_tables").select("id,restaurant_id,table_number,label,active").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
       supabase.from("categories").select("id,restaurant_id,name").eq("restaurant_id", restaurantId).order("name", { ascending: true }),
@@ -1029,7 +1029,14 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
     if (shiftError) throw new Error(shiftError.message);
 
     const rest = Array.isArray(staffData?.restaurants) ? staffData.restaurants[0] : staffData?.restaurants;
-    if (rest?.name) setRestaurant({ id: rest.id, name: rest.name, logoUrl: null });
+    if (rest?.name) setRestaurant({
+      id: rest.id,
+      name: rest.name,
+      logoUrl: null,
+      currencyCode: rest.currency_code ?? null,
+      currencySymbol: rest.currency_symbol ?? null,
+      locale: rest.locale ?? null,
+    });
 
     const summary = shiftSummary as { active_shift?: ActiveShift | null } | null;
     const normalizedOrders = ((invoiceRows ?? []) as OrderRow[]).map(normalizeInvoiceRow);
@@ -1804,6 +1811,7 @@ export function CashierDashboardPage({ restaurantId, restaurant: initialRestaura
           onPaymentScreenshotFileChange={(file) => void handlePaymentScreenshotFileChange(file)}
           onOwnerDuplicateOverrideChange={setOwnerDuplicateOverride}
           onPaymentNoteChange={setPaymentNote}
+          formatMoney={fmtMoney}
         />
       )}
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { assertAbsoluteQrPayload, buildAbsolutePublicUrl } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { formatCompactCurrency, formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
@@ -18,12 +19,14 @@ import {
 } from "../services/staffManagementService";
 import "../styles/ownerDashboard.css";
 
+let activeOwnerCurrency: CurrencyConfig | null = null;
+
 function fmtMoney(value: number) {
-  return `ETB ${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return formatCurrency(value, activeOwnerCurrency);
 }
 
 function fmtMoneyK(value: number) {
-  return value >= 1000 ? `ETB ${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : fmtMoney(value);
+  return formatCompactCurrency(value, activeOwnerCurrency);
 }
 
 function fmtOrderLabel(order: Pick<OdOrder, "display_number" | "id">) {
@@ -171,6 +174,11 @@ type RestaurantConfig = {
   security_settings: JsonRecord;
   subscription_plan: string;
   billing_status: string;
+  currency_code: string;
+  currency_symbol: string;
+  locale: string;
+  date_format: string;
+  time_format: string;
 };
 
 type RestaurantTable = {
@@ -262,6 +270,7 @@ type OwnerDashboardPageProps = {
   restaurantId: string;
   restaurantName: string;
   ownerName?: string;
+  currency?: CurrencyConfig;
 };
 
 function statusLabel(status: string) {
@@ -379,6 +388,11 @@ function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: strin
     security_settings: toJsonRecord(row.security_settings),
     subscription_plan: typeof row.subscription_plan === "string" ? row.subscription_plan : "starter",
     billing_status: typeof row.billing_status === "string" ? row.billing_status : "trial",
+    currency_code: typeof row.currency_code === "string" ? row.currency_code : "ETB",
+    currency_symbol: typeof row.currency_symbol === "string" ? row.currency_symbol : "Br",
+    locale: typeof row.locale === "string" ? row.locale : "am-ET",
+    date_format: typeof row.date_format === "string" ? row.date_format : "medium",
+    time_format: typeof row.time_format === "string" ? row.time_format : "24h",
   };
 }
 
@@ -466,7 +480,7 @@ function exportRowsAsExcel(filename: string, title: string, headers: string[], r
   );
 }
 
-export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, initialSection }: OwnerDashboardPageProps & { initialSection?: string }) {
+export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, currency, initialSection }: OwnerDashboardPageProps & { initialSection?: string }) {
   const now = useNow();
   const [nav, setNav] = useState<NavId>(() => ({ dashboard: "overview", orders: "orders", menu: "menu", staff: "staff", reports: "reports", settings: "settings", analytics: "analytics", tables: "qr" } as Record<string, NavId>)[initialSection ?? ""] ?? "overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -478,6 +492,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, in
   const [orderItems, setOrderItems] = useState<OdOrderItem[]>([]);
   const [activeShifts, setActiveShifts] = useState<OwnerActiveShift[]>([]);
   const [restaurantConfig, setRestaurantConfig] = useState<RestaurantConfig | null>(null);
+  activeOwnerCurrency = restaurantConfig ? {
+    currencyCode: restaurantConfig.currency_code,
+    currencySymbol: restaurantConfig.currency_symbol,
+    locale: restaurantConfig.locale,
+  } : currency ?? null;
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
   const [kitchenStations, setKitchenStations] = useState<OdKitchenStation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -534,7 +553,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, in
               .order("name", { ascending: true }),
             supabase
               .from("restaurants")
-              .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+              .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format")
               .eq("id", restaurantId)
               .maybeSingle(),
             supabase
@@ -946,7 +965,7 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, in
     const [{ data: restaurantData, error: restaurantError }, { data: tableData, error: tableError }] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status")
+        .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format")
         .eq("id", restaurantId)
         .maybeSingle(),
       supabase
@@ -4824,6 +4843,10 @@ type SettingsFormState = {
   description: string;
   timezone: string;
   currency: string;
+  currencySymbol: string;
+  locale: string;
+  dateFormat: string;
+  timeFormat: "12h" | "24h";
   opensAt: string;
   closesAt: string;
   closedDays: string[];
@@ -4857,7 +4880,11 @@ function configToSettingsForm(config: RestaurantConfig | null, fallbackName: str
     address: jsonString(config?.profile ?? {}, "address"),
     description: jsonString(config?.profile ?? {}, "description"),
     timezone: jsonString(config?.profile ?? {}, "timezone", "Africa/Nairobi"),
-    currency: jsonString(config?.profile ?? {}, "currency", "ETB"),
+    currency: config?.currency_code ?? "ETB",
+    currencySymbol: config?.currency_symbol ?? "Br",
+    locale: config?.locale ?? "am-ET",
+    dateFormat: config?.date_format ?? "medium",
+    timeFormat: (config?.time_format === "12h" ? "12h" : "24h"),
     opensAt: jsonString(config?.business_hours ?? {}, "opens_at", "08:00"),
     closesAt: jsonString(config?.business_hours ?? {}, "closes_at", "22:00"),
     closedDays: jsonStringArray(config?.business_hours ?? {}, "closed_days"),
@@ -4998,9 +5025,15 @@ function SettingsPage({
       const totalTables = Number(form.totalTables);
       const serviceCharge = Number(form.serviceCharge);
       const sessionTimeout = Number(form.sessionTimeoutMinutes);
+      const currencyCode = form.currency.trim().toUpperCase();
+      const currencySymbol = form.currencySymbol.trim();
+      const locale = form.locale.trim();
       if (!Number.isInteger(totalTables) || totalTables < 1 || totalTables > 500) throw new Error("Total tables must be a whole number from 1 to 500.");
       if (!Number.isFinite(serviceCharge) || serviceCharge < 0 || serviceCharge > 30) throw new Error("Service charge must be between 0 and 30 percent.");
       if (!Number.isInteger(sessionTimeout) || sessionTimeout < 15 || sessionTimeout > 1440) throw new Error("Session timeout must be between 15 and 1440 minutes.");
+      if (!/^[A-Z]{3}$/.test(currencyCode)) throw new Error("Currency code must be a 3-letter ISO code.");
+      if (!currencySymbol) throw new Error("Currency symbol is required.");
+      if (!locale) throw new Error("Locale is required.");
 
       const { error } = await supabase.rpc("update_restaurant_configuration", {
         target_restaurant_id: restaurantId,
@@ -5012,7 +5045,7 @@ function SettingsPage({
           address: form.address.trim(),
           description: form.description.trim(),
           timezone: form.timezone.trim(),
-          currency: form.currency.trim(),
+          currency: currencyCode,
         },
         business_hours_payload: {
           version: 1,
@@ -5050,6 +5083,17 @@ function SettingsPage({
         },
       });
       if (error) throw new Error(error.message);
+      const { error: regionalError } = await supabase
+        .from("restaurants")
+        .update({
+          currency_code: currencyCode,
+          currency_symbol: currencySymbol,
+          locale,
+          date_format: form.dateFormat,
+          time_format: form.timeFormat,
+        })
+        .eq("id", restaurantId);
+      if (regionalError) throw new Error(regionalError.message);
       await onSettingsChanged();
       setNotice("Settings saved.");
     } catch (saveError) {
@@ -5128,10 +5172,27 @@ function SettingsPage({
                 <label>Restaurant Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} disabled={working} /></label>
                 <label>Phone<input value={form.phone} onChange={(event) => updateField("phone", event.target.value)} disabled={working} /></label>
                 <label>Email<input type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} disabled={working} /></label>
-                <label>Currency<input value={form.currency} onChange={(event) => updateField("currency", event.target.value)} disabled={working} /></label>
                 <label className="wide">Address<input value={form.address} onChange={(event) => updateField("address", event.target.value)} disabled={working} /></label>
                 <label className="wide">Description<textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} disabled={working} /></label>
                 <label>Timezone<input value={form.timezone} onChange={(event) => updateField("timezone", event.target.value)} disabled={working} /></label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header"><div><div className="od-card-title">Currency & Regional Settings</div><div className="od-card-subtitle">Controls how money, dates, and time are displayed for this restaurant only.</div></div></div>
+              <div className="od-settings-grid compact">
+                <label>Currency Code<input value={form.currency} maxLength={3} onChange={(event) => updateField("currency", event.target.value.toUpperCase())} disabled={working} /></label>
+                <label>Currency Symbol<input value={form.currencySymbol} maxLength={12} onChange={(event) => updateField("currencySymbol", event.target.value)} disabled={working} /></label>
+                <label>Locale<input value={form.locale} onChange={(event) => updateField("locale", event.target.value)} disabled={working} /></label>
+                <label>Date Format<select value={form.dateFormat} onChange={(event) => updateField("dateFormat", event.target.value)} disabled={working}>
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="long">Long</option>
+                </select></label>
+                <label>Time Format<select value={form.timeFormat} onChange={(event) => updateField("timeFormat", event.target.value as SettingsFormState["timeFormat"])} disabled={working}>
+                  <option value="24h">24-hour</option>
+                  <option value="12h">12-hour</option>
+                </select></label>
               </div>
             </section>
 

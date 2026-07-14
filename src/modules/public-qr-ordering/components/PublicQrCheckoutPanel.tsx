@@ -4,7 +4,7 @@ import {
   type PublicQrPaymentMethod,
   type PublicQrOrderSession,
 } from "../types";
-import { formatETBPrice } from "../../qr-menu/components/menuPresentation";
+import { formatMenuPrice } from "../../qr-menu/components/menuPresentation";
 
 type PublicQrCheckoutPanelProps = {
   customerName: string;
@@ -198,16 +198,16 @@ export function PublicQrCheckoutPanel({
                   <div>
                     <strong>{item.name}</strong>
                     <span>
-                      {item.quantity} x {formatETBPrice(item.unit_price)}
+                      {item.quantity} x {formatMenuPrice(item.unit_price)}
                     </span>
                   </div>
-                  <strong>{formatETBPrice(item.line_total)}</strong>
+                  <strong>{formatMenuPrice(item.line_total)}</strong>
                 </div>
               ))}
             </div>
             <div className="public-checkout-total subtle">
               <span>Current subtotal</span>
-              <strong>{formatETBPrice(existingSubtotal)}</strong>
+              <strong>{formatMenuPrice(existingSubtotal)}</strong>
             </div>
           </>
         ) : null}
@@ -218,10 +218,10 @@ export function PublicQrCheckoutPanel({
               <div>
                 <strong>{item.name}</strong>
                 <span>
-                  {item.quantity} x {formatETBPrice(item.price)}
+                  {item.quantity} x {formatMenuPrice(item.price)}
                 </span>
               </div>
-              <strong>{formatETBPrice(item.price * item.quantity)}</strong>
+              <strong>{formatMenuPrice(item.price * item.quantity)}</strong>
             </div>
           ))}
         </div>
@@ -231,7 +231,7 @@ export function PublicQrCheckoutPanel({
         </div>
         <div className="public-checkout-total">
           <span>{isContinuingOrder ? "Grand total" : "Subtotal"}</span>
-          <strong>{formatETBPrice(isContinuingOrder ? grandTotal : displaySubtotal)}</strong>
+          <strong>{formatMenuPrice(isContinuingOrder ? grandTotal : displaySubtotal)}</strong>
         </div>
       </div>
 
@@ -256,3 +256,4 @@ export function PublicQrCheckoutPanel({
     </section>
   );
 }
+

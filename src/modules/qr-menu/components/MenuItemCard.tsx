@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { MenuItem } from "../types";
-import { formatETBPrice } from "./menuPresentation";
+import { formatMenuPrice } from "./menuPresentation";
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -43,7 +43,7 @@ export const MenuItemCard = memo(function MenuItemCard({
             {item.description ? <p>{item.description}</p> : null}
           </div>
           <div className="menu-item-price">
-            <strong>{formatETBPrice(Number(item.price))}</strong>
+            <strong>{formatMenuPrice(Number(item.price))}</strong>
           </div>
         </div>
 
@@ -79,3 +79,4 @@ export const MenuItemCard = memo(function MenuItemCard({
     </article>
   );
 });
+
