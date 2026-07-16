@@ -1,5 +1,6 @@
-export type KitchenOrderStatus = "paid" | "preparing" | "ready" | "completed";
-export type KitchenStationStatus = "waiting" | "preparing" | "ready" | "completed";
+export type KitchenOrderStatus = "accepted" | "preparing" | "ready" | "served";
+export type KitchenStationStatus =
+  "accepted" | "preparing" | "ready" | "served";
 
 export type KitchenOrderItem = {
   id: string;
@@ -11,7 +12,6 @@ export type KitchenOrderItem = {
   appendedAt?: string | null;
   kitchenStationId?: string | null;
   kitchenStationName?: string | null;
-  kitchenStatus?: KitchenOrderStatus | null;
 };
 
 export type KitchenOrder = {
@@ -22,10 +22,8 @@ export type KitchenOrder = {
   status: KitchenOrderStatus;
   customerName: string | null;
   tableNumber: string | null;
-  paymentMethod: string | null;
   totalPrice: number;
   createdAt: string;
-  paymentVerifiedAt: string | null;
   preparationStartedAt: string | null;
   readyMarkedAt: string | null;
   items: KitchenOrderItem[];

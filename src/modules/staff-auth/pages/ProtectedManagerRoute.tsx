@@ -11,6 +11,7 @@ const ManagerKitchenSupervisionPage = lazy(() => import("../../manager/pages/Man
 const ManagerStaffOperationsPage = lazy(() => import("../../manager/pages/ManagerStaffOperationsPage").then((module) => ({ default: module.ManagerStaffOperationsPage })));
 const ManagerCustomerExperiencePage = lazy(() => import("../../manager/pages/ManagerCustomerExperiencePage").then((module) => ({ default: module.ManagerCustomerExperiencePage })));
 const ManagerOperationalReportsPage = lazy(() => import("../../manager/pages/ManagerOperationalReportsPage").then((module) => ({ default: module.ManagerOperationalReportsPage })));
+const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages/ManagerRestaurantIntelligencePage").then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
 const ManagerAiOperationsPage = lazy(() => import("../../manager/pages/ManagerAiOperationsPage").then((module) => ({ default: module.ManagerAiOperationsPage })));
 
 type AccessState =
@@ -70,6 +71,7 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "kitchen") page = <ManagerKitchenSupervisionPage {...props} />;
   if (section === "customers") page = <ManagerCustomerExperiencePage {...props} />;
   if (section === "reports") page = <ManagerOperationalReportsPage {...props} />;
+  if (section === "intelligence") page = <ManagerRestaurantIntelligencePage {...props} />;
   if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>

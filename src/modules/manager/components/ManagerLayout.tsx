@@ -10,14 +10,17 @@ type Props = {
 };
 
 const MANAGER_NAV = [
-  { key: "dashboard", label: "Overview", href: "/manager/dashboard", icon: "OV" },
-  { key: "tables", label: "Operations Center", href: "/manager/tables", icon: "OP" },
-  { key: "kitchen", label: "Kitchen", href: "/manager/kitchen", icon: "KI" },
-  { key: "staff", label: "Staff", href: "/manager/staff", icon: "ST" },
-  { key: "customers", label: "Customers", href: "/manager/customers", icon: "CU" },
-  { key: "reports", label: "Reports", href: "/manager/reports", icon: "RP" },
-  { key: "ai", label: "AI Advisor", href: "/manager/ai", icon: "AI" },
+  { key: "dashboard", label: "Dashboard", mobileLabel: "Overview", href: "/manager/dashboard", icon: "⌂" },
+  { key: "tables", label: "Operations", mobileLabel: "Operations", href: "/manager/tables", icon: "◎" },
+  { key: "kitchen", label: "Kitchen", mobileLabel: "Kitchen", href: "/manager/kitchen", icon: "◫" },
+  { key: "staff", label: "Staff", mobileLabel: "Staff", href: "/manager/staff", icon: "♙" },
+  { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: "♡" },
+  { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: "▥" },
+  { key: "intelligence", label: "Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
+  { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
 ];
+
+const MOBILE_NAV = MANAGER_NAV.filter((item) => ["dashboard", "tables", "kitchen", "staff"].includes(item.key));
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "SF";
@@ -57,8 +60,8 @@ export function ManagerLayout({ restaurantName, managerName, section, children }
     <main className="ml-shell">
       <aside className={`ml-sidebar ${sidebarOpen ? "is-open" : ""}`} aria-label="Manager navigation">
         <div className="ml-sidebar-brand">
-          <strong>Serveflow</strong>
-          <span>v2.1.0 Manager Terminal</span>
+          <strong>ServeFlow</strong>
+          <span>Manager operations</span>
         </div>
         <nav className="ml-sidebar-nav">
           {MANAGER_NAV.map((item) => (
@@ -81,10 +84,6 @@ export function ManagerLayout({ restaurantName, managerName, section, children }
               <small>General Manager</small>
             </div>
           </div>
-          <div className="ml-shift-card">
-            <small>Current shift</small>
-            <strong>Active Shift</strong>
-          </div>
           <button type="button" onClick={() => void logout()}>Logout</button>
         </div>
       </aside>
@@ -98,17 +97,12 @@ export function ManagerLayout({ restaurantName, managerName, section, children }
               <strong>{restaurantName}</strong>
             </div>
           </div>
-          <label className="ml-search">
-            <span>Search</span>
-            <input placeholder="Search operations..." />
-          </label>
+          <div className="ml-header-context"><span>Manager workspace</span><strong>{MANAGER_NAV.find((item) => item.key === activeSection)?.label ?? "Operations"}</strong></div>
           <div className="ml-header-meta">
             <div className="ml-clock">
               <strong>{formatTime(now)}</strong>
               <span>{formatDate(now)}</span>
             </div>
-            <span className="ml-shift">Active Shift</span>
-            <button className="ml-notification" type="button" aria-label="Notifications"><span>0</span></button>
             <button className="ml-menu-button" type="button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}>Menu</button>
             <div className="ml-profile">
               <span>{initials(managerName)}</span>
@@ -117,6 +111,9 @@ export function ManagerLayout({ restaurantName, managerName, section, children }
           </div>
         </header>
         <div className="ml-content">{children}</div>
+        <nav className="ml-bottom-nav" aria-label="Primary mobile navigation">
+          {MOBILE_NAV.map((item) => <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onClick={(event) => navigate(event, item.href)}><span>{item.icon}</span>{item.mobileLabel}</a>)}
+        </nav>
       </section>
     </main>
   );

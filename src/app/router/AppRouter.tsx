@@ -12,10 +12,11 @@ import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleN
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
   owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables"],
-  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "ai"],
+  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai"],
   waiter: ["dashboard", "tables", "orders", "dining-sessions"],
   cashier: ["dashboard", "payments", "checkout", "bills"],
   kitchen: ["dashboard", "stations", "history"],
+  inventory: ["dashboard", "requests"],
   admin: ["dashboard", "restaurants", "subscriptions", "users"],
 };
 
@@ -47,7 +48,7 @@ function resolveRoute(pathname: string) {
     return { name: "reset-password" as const };
   }
 
-  const roleNamespaceMatch = pathname.match(/^\/(owner|manager|waiter|cashier|kitchen|admin)\/([^/]+)\/?$/);
+  const roleNamespaceMatch = pathname.match(/^\/(owner|manager|waiter|cashier|kitchen|inventory|admin)\/([^/]+)\/?$/);
   if (roleNamespaceMatch) {
     const namespace = roleNamespaceMatch[1] as RoleNamespace;
     const section = roleNamespaceMatch[2];

@@ -29,7 +29,7 @@ type StaffTab = "directory" | "assignments" | "activity" | "create" | "analytics
 
 const STAFF_TABS: Array<[StaffTab, string]> = [
   ["directory", "Directory"],
-  ["assignments", "Assignments"],
+  ["assignments", "Assignment Center"],
   ["activity", "Activity"],
   ["create", "Create Staff"],
   ["analytics", "Analytics"],
@@ -39,6 +39,7 @@ const ROLE_OPTIONS: Array<{ value: ManagerDirectoryRole; label: string; enabled:
   { value: "waiter", label: "Waiters", enabled: true },
   { value: "cashier", label: "Cashiers", enabled: true },
   { value: "kitchen", label: "Kitchen Staff", enabled: true },
+  { value: "inventory", label: "Inventory Staff", enabled: true },
   { value: "supervisor", label: "Supervisors", enabled: false },
   { value: "reception", label: "Reception", enabled: false },
 ];
@@ -68,10 +69,11 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<StaffTab>("directory");
+  const [activeTab, setActiveTab] = useState<StaffTab>("assignments");
   const [createOpen, setCreateOpen] = useState(false);
   const [assignmentDraft, setAssignmentDraft] = useState({ waiterId: "", tableIds: [] as string[], kitchenStaffId: "", stationId: "", cashierId: "", cashierShift: "" });
   const [dragStaffId, setDragStaffId] = useState<string | null>(null);
+  const [dragTableId, setDragTableId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -121,7 +123,10 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
   const assignedTableIds = useMemo(() => new Set(staff.flatMap((member) => member.assignedTables.map((table) => table.id))), [staff]);
   const unassignedTables = (snapshot?.tables ?? []).filter((table) => !assignedTableIds.has(table.id));
   const waiters = staff.filter((member) => member.role === "waiter" && member.active);
+  const availableWaiters = waiters.filter((member) => member.assignedTables.length < 5);
+  const busyWaiters = waiters.filter((member) => member.assignedTables.length >= 5);
   const kitchenStaff = staff.filter((member) => member.role === "kitchen" && member.active);
+  const unassignedChefs = kitchenStaff.filter((member) => !member.assignedKitchenStationId);
   const stationWorkloads = (snapshot?.stations ?? []).map((station) => ({
     ...station,
     chefs: kitchenStaff.filter((member) => member.assignedKitchenStationId === station.id),
@@ -174,6 +179,11 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
     if (waiter?.role !== "waiter") return;
     const nextIds = Array.from(new Set([...(waiter?.assignedTables.map((table) => table.id) ?? []), tableId]));
     await runAction(() => assignWaiterTables(restaurantId, waiterId, nextIds), "Waiter table assignment updated.");
+  }
+
+  async function moveTableToWaiter(waiterId: string, tableId: string) {
+    await assignSingleTable(waiterId, tableId);
+    setDragTableId(null);
   }
 
   async function moveChefToStation(staffId: string, stationId: string) {
@@ -291,14 +301,23 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
 
         {activeTab === "assignments" && (
         <aside className="mso-side mso-assignment-workspace">
+          <section className="mso-assignment-kpis">
+            <article><span>Unassigned Tables</span><strong>{unassignedTables.length}</strong><small>{unassignedTables.length ? "Needs coverage" : "Fully covered"}</small></article>
+            <article><span>Available Waiters</span><strong>{availableWaiters.length}</strong><small>Fewer than 5 tables</small></article>
+            <article><span>Busy Waiters</span><strong>{busyWaiters.length}</strong><small>5 or more tables</small></article>
+            <article><span>Chefs On Shift</span><strong>{kitchenStaff.filter((member) => member.online).length}</strong><small>{unassignedChefs.length} without station</small></article>
+            <article><span>Station Coverage</span><strong>{stationWorkloads.filter((station) => station.chefs.length > 0).length}/{stationWorkloads.length}</strong><small>Stations with chefs</small></article>
+            <article><span>Shift Balance</span><strong>{staff.filter((member) => member.shiftStatus === "on_shift").length}/{staff.filter((member) => member.active).length}</strong><small>Active staff on shift</small></article>
+          </section>
           <section className="mso-panel mso-assignment-overview">
-            <div className="mso-card-heading"><div><span>Distribution</span><h2>Waiter Workload</h2></div></div>
+            <div className="mso-card-heading"><div><span>Floor Coverage</span><h2>Available & Busy Waiters</h2></div><small>Drag a waiter to a table, or a table between waiters</small></div>
             <div className="mso-workload-grid">
               {waiters.map((waiter) => (
-                <article key={waiter.id} draggable onDragStart={() => setDragStaffId(waiter.id)}>
-                  <strong>{waiter.fullName}</strong>
-                  <span>{waiter.assignedTables.length} tables · {waiter.activeOrders} orders</span>
+                <article key={waiter.id} className={waiter.assignedTables.length >= 5 ? "is-busy" : "is-available"} draggable onDragStart={() => { setDragStaffId(waiter.id); setDragTableId(null); }} onDragOver={(event) => event.preventDefault()} onDrop={() => dragTableId && void moveTableToWaiter(waiter.id, dragTableId)}>
+                  <div><strong>{waiter.fullName}</strong><b>{waiter.assignedTables.length >= 5 ? "Busy" : "Available"}</b></div>
+                  <span>{waiter.assignedTables.length} tables · {waiter.activeOrders} orders · {waiter.online ? "On shift" : "Off shift"}</span>
                   <progress max={8} value={Math.min(8, waiter.assignedTables.length)} />
+                  <div className="mso-waiter-tables">{waiter.assignedTables.map((table) => <button key={table.id} type="button" draggable onDragStart={(event) => { event.stopPropagation(); setDragTableId(table.id); setDragStaffId(null); }}>{table.label}</button>)}{waiter.assignedTables.length === 0 && <small>Drop a table here</small>}</div>
                 </article>
               ))}
               {waiters.length === 0 && <p className="mso-note">No active waiters available for assignment.</p>}
@@ -318,14 +337,10 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
           </section>
 
           <section className="mso-panel">
-            <div className="mso-card-heading"><div><span>Waiter Assignment</span><h2>Tables, areas, hall, terrace, VIP</h2></div></div>
+            <div className="mso-card-heading"><div><span>Waiter Assignment</span><h2>Assign or Move Tables</h2></div></div>
             <div className="mso-assignment-grid">
               <label>Waiter<select value={assignmentDraft.waiterId} onChange={(event) => setAssignmentDraft({ ...assignmentDraft, waiterId: event.target.value })}><option value="">Choose waiter</option>{staff.filter((member) => member.role === "waiter" && member.active).map((member) => <option key={member.id} value={member.id}>{member.fullName}</option>)}</select></label>
               <label>Tables<select multiple value={assignmentDraft.tableIds} onChange={(event) => setAssignmentDraft({ ...assignmentDraft, tableIds: Array.from(event.target.selectedOptions).map((option) => option.value) })}>{(snapshot?.tables ?? []).map((table) => <option key={table.id} value={table.id}>{table.label}</option>)}</select></label>
-              <label>Area<select onChange={(event) => {
-                const numbers = event.target.value === "vip" ? [1, 2] : event.target.value === "terrace" ? [7, 8, 9, 10] : event.target.value === "hall" ? [1, 2, 3, 4, 5, 6] : [];
-                setAssignmentDraft({ ...assignmentDraft, tableIds: (snapshot?.tables ?? []).filter((table) => numbers.includes(table.tableNumber)).map((table) => table.id) });
-              }}><option value="">Optional area preset</option><option value="hall">Hall</option><option value="terrace">Terrace</option><option value="vip">VIP room</option></select></label>
               <button type="button" onClick={() => void assignWaiterDraft()}>Assign Waiter</button>
             </div>
           </section>
@@ -340,13 +355,14 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
           </section>
 
           <section className="mso-panel">
-            <div className="mso-card-heading"><div><span>Station Workload</span><h2>Drag chefs between stations</h2></div></div>
+            <div className="mso-card-heading"><div><span>Kitchen Coverage</span><h2>Stations & Chef Workload</h2></div><small>Station capacity is not configured in the backend</small></div>
+            {unassignedChefs.length > 0 && <div className="mso-unassigned-chefs"><span>Unassigned chefs</span>{unassignedChefs.map((chef) => <button key={chef.id} type="button" draggable onDragStart={() => { setDragStaffId(chef.id); setDragTableId(null); }}>{chef.fullName}</button>)}</div>}
             <div className="mso-station-workload">
               {stationWorkloads.map((station) => (
                 <article key={station.id} onDragOver={(event) => event.preventDefault()} onDrop={() => dragStaffId && void moveChefToStation(dragStaffId, station.id)}>
-                  <div><strong>{station.name}</strong><span>{station.workload} queued · {station.chefs.length} chef{station.chefs.length === 1 ? "" : "s"}</span></div>
+                  <div><strong>{station.name}</strong><span>{station.workload} queued · {station.chefs.length} chef{station.chefs.length === 1 ? "" : "s"}</span><small>{station.chefs.length ? "Covered" : "No chef coverage"}</small></div>
                   <div className="mso-chef-list">
-                    {station.chefs.map((chef) => <button key={chef.id} type="button" draggable onDragStart={() => setDragStaffId(chef.id)}>{chef.fullName}</button>)}
+                    {station.chefs.map((chef) => <button key={chef.id} type="button" draggable onDragStart={() => { setDragStaffId(chef.id); setDragTableId(null); }}>{chef.fullName}<small>{chef.currentWorkload} queued</small></button>)}
                     {station.chefs.length === 0 && <small>No chef assigned</small>}
                   </div>
                 </article>
@@ -420,6 +436,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
               <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => setForm({ ...form, role: "waiter" })}>Waiter</button>
               <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => setForm({ ...form, role: "cashier" })}>Cashier</button>
               <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => setForm({ ...form, role: "kitchen" })}>Kitchen</button>
+              <button type="button" className={form.role === "inventory" ? "selected" : ""} onClick={() => setForm({ ...form, role: "inventory" })}>Inventory</button>
             </div>}
 
             {wizardStep === 2 && <>

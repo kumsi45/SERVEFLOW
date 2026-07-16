@@ -1,4 +1,5 @@
-export type CashierOrderStatus = "pending_payment" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
+import type { OperationalStatus, PaymentStatus } from "../../core/payment/lifecycle";
+export type CashierOrderStatus = OperationalStatus;
 
 export type CashierOrderItem = {
   id: string;
@@ -22,7 +23,7 @@ export type CashierOrder = {
   invoiceCreatorName?: string | null;
   invoiceKitchenStatus?: string | null;
   invoiceNumber?: number | null;
-  invoiceStatus?: "pending" | "verified" | "paid" | "rejected" | "cancelled" | "refunded" | string | null;
+  invoiceStatus?: PaymentStatus | null;
   invoicePaidAt?: string | null;
   invoiceLockedAt?: string | null;
   invoiceVerifiedAt?: string | null;

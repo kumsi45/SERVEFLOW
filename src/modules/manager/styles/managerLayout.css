@@ -1,4 +1,10 @@
 .ml-shell {
+  --manager-primary: #155eef;
+  --manager-ink: #17202f;
+  --manager-muted: #667085;
+  --manager-border: #e4e7ec;
+  --manager-surface: #ffffff;
+  --manager-radius: 14px;
   display: block;
   height: 100vh;
   color: #111827;
@@ -78,7 +84,7 @@
   border-radius: 8px;
   color: #1f2937;
   background: #eef2f7;
-  font-size: 10px;
+  font-size: 17px;
   font-weight: 950;
 }
 
@@ -168,7 +174,7 @@
   flex: 0 0 auto;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(220px, 380px) auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, 240px) auto;
   align-items: center;
   gap: 20px;
   min-height: 64px;
@@ -176,6 +182,28 @@
   border-bottom: 1px solid #d9dee8;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
+}
+
+.ml-header-context {
+  display: grid;
+  min-width: 0;
+}
+.ml-header-context span {
+  color: var(--manager-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ml-header-context strong {
+  overflow: hidden;
+  color: var(--manager-ink);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ml-bottom-nav {
+  display: none;
 }
 
 .ml-menu-button {
@@ -301,7 +329,7 @@
   width: 100%;
   max-width: 1680px;
   margin: 0 auto;
-  padding: 28px clamp(18px, 2.4vw, 34px) 40px;
+  padding: 16px clamp(16px, 2vw, 26px) 28px;
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
@@ -338,16 +366,12 @@
 }
 
 .manager-module-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
+  display: none;
 }
 
 .manager-module-header span,
 .manager-module-header p {
-  display: none;
+  display: block;
 }
 
 .manager-module-header span {
@@ -357,6 +381,127 @@
   text-transform: uppercase;
 }
 
+.manager-module-header p {
+  margin: 0 0 3px;
+  color: var(--manager-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.manager-quick-actions {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--manager-border);
+  border-radius: var(--manager-radius);
+  background: var(--manager-surface);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.manager-quick-actions > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.manager-quick-actions strong {
+  color: var(--manager-ink);
+  font-size: 13px;
+}
+.manager-quick-actions span {
+  color: var(--manager-muted);
+  font-size: 12px;
+}
+.manager-action-row {
+  display: flex;
+  gap: 8px;
+}
+.manager-action-row button,
+.manager-action-row a,
+.manager-actions-menu summary {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid var(--manager-border);
+  border-radius: 9px;
+  color: #344054;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+.manager-action-row a {
+  color: #fff;
+  border-color: var(--manager-primary);
+  background: var(--manager-primary);
+}
+.manager-actions-menu {
+  position: relative;
+}
+.manager-actions-menu summary {
+  list-style: none;
+}
+.manager-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+.manager-actions-menu > div {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  width: 150px;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--manager-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(16, 24, 40, 0.14);
+}
+.manager-actions-menu > div button {
+  width: 100%;
+  min-height: 38px;
+  text-align: left;
+}
+
+.ml-content article {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.ml-content button,
+.ml-content a,
+.ml-content select,
+.ml-content input {
+  touch-action: manipulation;
+}
+.ml-shell :where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid rgba(21, 94, 239, 0.28);
+  outline-offset: 2px;
+}
+.ml-shell :where(button, [role="button"]):disabled { cursor: not-allowed; opacity: .55; }
+.ml-shell button,
+.ml-shell a,
+.ml-shell summary {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.ml-shell button:not(:disabled):active,
+.ml-shell a:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .ml-shell * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .manager-module-header h1 {
   margin: 4px 0 0;
   color: #101828 !important;
@@ -364,6 +509,43 @@
   font-weight: 950;
   letter-spacing: -0.6px;
   text-shadow: none;
+}
+
+.ml-content .manager-module-header {
+  display: none !important;
+}
+.ml-content .mai-page {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+.ml-content .mai-header {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  margin: 0 0 8px;
+}
+.ml-content .mai-header > div:first-child {
+  display: none;
+}
+.ml-content .mai-health-pill {
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+}
+.ml-content .mai-health-pill strong {
+  font-size: 18px;
+}
+.ml-content .mai-health-pill small,
+.ml-content .mai-health-pill em {
+  font-size: 9px;
 }
 
 .ml-content .md-overview,
@@ -449,7 +631,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1023px) {
   .ml-shell {
     display: block;
   }
@@ -532,6 +714,27 @@
   }
 }
 
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .ml-sidebar {
+    width: 224px;
+  }
+  .ml-workspace {
+    margin-left: 224px;
+  }
+  .ml-sidebar-brand {
+    padding: 22px 18px 16px;
+  }
+  .ml-sidebar-brand strong {
+    font-size: 27px;
+  }
+  .ml-sidebar-nav {
+    padding: 6px 14px;
+  }
+  .ml-sidebar-footer {
+    padding: 16px;
+  }
+}
+
 @media (max-width: 760px) {
   .ml-shell {
     background: #f8fafc;
@@ -553,7 +756,7 @@
   }
 
   .ml-content {
-    padding: 10px 12px 24px;
+    padding: 14px 12px calc(92px + env(safe-area-inset-bottom));
   }
 
   .ml-sidebar {
@@ -595,18 +798,90 @@
     gap: 8px;
   }
 
+  .ml-header-left {
+    display: none;
+  }
+  .ml-header-context {
+    display: grid;
+    order: 2;
+    padding-left: 48px;
+  }
+  .ml-header-context span {
+    font-size: 9px;
+  }
+  .ml-header-context strong {
+    font-size: 15px;
+  }
+  .ml-header-meta {
+    order: 3;
+  }
+  .ml-menu-button {
+    position: absolute;
+    left: 12px;
+  }
+
+  .ml-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 32;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: calc(66px + env(safe-area-inset-bottom));
+    padding: 7px 4px env(safe-area-inset-bottom);
+    border-top: 1px solid var(--manager-border);
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.08);
+    backdrop-filter: blur(16px);
+  }
+  .ml-bottom-nav a,
+  .ml-bottom-nav button {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    min-width: 0;
+    border: 0;
+    color: #667085;
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 750;
+    text-decoration: none;
+  }
+  .ml-bottom-nav span {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .ml-bottom-nav .is-active {
+    color: var(--manager-primary);
+  }
+
   .ml-notification {
     width: 40px;
     height: 40px;
   }
 
   .manager-module-header {
-    display: grid;
-    margin-bottom: 8px;
+    display: none;
   }
 
   .manager-module-header h1 {
-    font-size: clamp(26px, 8vw, 34px);
+    font-size: 25px;
+  }
+  .manager-module-header p {
+    display: none;
+  }
+  .manager-quick-actions {
+    min-height: 54px;
+    padding: 8px 10px;
+  }
+  .manager-quick-actions > div:first-child span {
+    display: none;
+  }
+  .manager-action-row {
+    margin-left: auto;
   }
 
   .manager-tabs {
@@ -672,4 +947,3 @@
     grid-template-columns: 1fr;
   }
 }
-

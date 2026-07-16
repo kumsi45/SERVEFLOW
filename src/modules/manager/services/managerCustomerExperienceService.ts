@@ -1,6 +1,7 @@
 import { supabase } from "../../../core/database";
 
-export type CustomerExperienceAlertType = "long_wait" | "bill_wait" | "vip_wait" | "complaint" | "special_request";
+export type CustomerExperienceAlertType =
+  "long_wait" | "bill_wait" | "vip_wait" | "complaint" | "special_request";
 
 export type CustomerExperienceAlert = {
   id: string;
@@ -105,16 +106,18 @@ type ItemRow = {
 
 type InvoiceRow = {
   order_id: string;
-  status: string | null;
+  payment_status: string;
   created_at: string;
   paid_at?: string | null;
-  verified_at?: string | null;
 };
 
 type AssignmentRow = {
   table_id: string | null;
   waiter_staff_id?: string | null;
-  restaurant_staff?: { id?: string; display_name?: string | null } | Array<{ id?: string; display_name?: string | null }> | null;
+  restaurant_staff?:
+    | { id?: string; display_name?: string | null }
+    | Array<{ id?: string; display_name?: string | null }>
+    | null;
 };
 
 type ComplaintRow = {
@@ -141,7 +144,9 @@ function minutesSince(value: string | null | undefined, now: Date) {
 }
 
 function firstStaff(row: AssignmentRow) {
-  return Array.isArray(row.restaurant_staff) ? row.restaurant_staff[0] : row.restaurant_staff;
+  return Array.isArray(row.restaurant_staff)
+    ? row.restaurant_staff[0]
+    : row.restaurant_staff;
 }
 
 function groupByOrderId<T extends { order_id: string | null }>(rows: T[]) {
@@ -156,7 +161,8 @@ function groupByOrderId<T extends { order_id: string | null }>(rows: T[]) {
 }
 
 function isVip(order: OrderRow) {
-  const haystack = `${order.customer_name ?? ""} ${order.customer_phone ?? ""}`.toLowerCase();
+  const haystack =
+    `${order.customer_name ?? ""} ${order.customer_phone ?? ""}`.toLowerCase();
   return haystack.includes("vip");
 }
 
@@ -166,50 +172,85 @@ function itemSpecialRequests(items: ItemRow[]) {
     .filter((note): note is string => Boolean(note));
 }
 
-function timelineFor(order: OrderRow, items: ItemRow[], invoices: InvoiceRow[]): CustomerTimelineEvent[] {
+function timelineFor(
+  order: OrderRow,
+  items: ItemRow[],
+  invoices: InvoiceRow[],
+): CustomerTimelineEvent[] {
   const events: CustomerTimelineEvent[] = [];
   const push = (label: string, at: string | null | undefined) => {
-    if (at) events.push({ id: `${order.id}:${label}:${at}`, orderId: order.id, label, at });
+    if (at)
+      events.push({
+        id: `${order.id}:${label}:${at}`,
+        orderId: order.id,
+        label,
+        at,
+      });
   };
   push("Customer seated", order.dining_session_opened_at ?? order.created_at);
   push("Order placed", order.created_at);
-  const acceptedAt = items.find((item) => item.kitchen_preparation_started_at)?.kitchen_preparation_started_at;
+  const acceptedAt = items.find(
+    (item) => item.kitchen_preparation_started_at,
+  )?.kitchen_preparation_started_at;
   push("Kitchen accepted", acceptedAt);
-  const servedAt = items.find((item) => item.kitchen_completed_at || item.kitchen_status === "completed")?.kitchen_completed_at;
+  const servedAt = items.find(
+    (item) => item.kitchen_completed_at || item.kitchen_status === "completed",
+  )?.kitchen_completed_at;
   push("Served", servedAt);
   push("Bill requested", order.bill_requested_at);
-  const paidAt = invoices.find((invoice) => invoice.verified_at || invoice.paid_at)?.verified_at ?? invoices.find((invoice) => invoice.paid_at)?.paid_at;
+  const paidAt = invoices.find(
+    (invoice) => invoice.payment_status === "paid",
+  )?.paid_at;
   push("Paid", paidAt);
   push("Table released", order.table_released_at);
-  return events.sort((left, right) => new Date(left.at).getTime() - new Date(right.at).getTime());
+  return events.sort(
+    (left, right) => new Date(left.at).getTime() - new Date(right.at).getTime(),
+  );
 }
 
-export async function loadManagerCustomerExperience(restaurantId: string): Promise<ManagerCustomerExperienceSnapshot> {
-  const [ordersResult, itemsResult, invoicesResult, assignmentsResult, complaintsResult, waitersResult] = await Promise.all([
+export async function loadManagerCustomerExperience(
+  restaurantId: string,
+): Promise<ManagerCustomerExperienceSnapshot> {
+  const [
+    ordersResult,
+    itemsResult,
+    invoicesResult,
+    assignmentsResult,
+    complaintsResult,
+    waitersResult,
+  ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,display_number,table_id,table_number,status,order_source,customer_name,customer_phone,total_price,created_at,dining_session_opened_at,bill_requested_at,billing_started_at,payment_verified_at,table_released_at")
+      .select(
+        "id,display_number,table_id,table_number,status,order_source,customer_name,customer_phone,total_price,created_at,dining_session_opened_at,bill_requested_at,billing_started_at,payment_verified_at,table_released_at",
+      )
       .eq("restaurant_id", restaurantId)
       .eq("dining_session_status", "open")
       .order("created_at", { ascending: true }),
     supabase
       .from("order_items")
-      .select("id,order_id,quantity,notes,kitchen_status,created_at,kitchen_preparation_started_at,kitchen_ready_marked_at,kitchen_completed_at")
+      .select(
+        "id,order_id,quantity,notes,kitchen_status,created_at,kitchen_preparation_started_at,kitchen_ready_marked_at,kitchen_completed_at",
+      )
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: true }),
     supabase
       .from("order_invoices")
-      .select("order_id,status,created_at,paid_at,verified_at")
+      .select("order_id,payment_status,created_at,paid_at")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: true }),
     supabase
       .from("restaurant_table_waiter_assignments")
-      .select("table_id,waiter_staff_id,restaurant_staff!restaurant_table_waiter_assignments_waiter_staff_id_fkey(id,display_name)")
+      .select(
+        "table_id,waiter_staff_id,restaurant_staff!restaurant_table_waiter_assignments_waiter_staff_id_fkey(id,display_name)",
+      )
       .eq("restaurant_id", restaurantId)
       .eq("active", true),
     supabase
       .from("manager_customer_complaints")
-      .select("id,order_id,table_number,customer_name,category,description,status,severity,created_at,resolved_at")
+      .select(
+        "id,order_id,table_number,customer_name,category,description,status,severity,created_at,resolved_at",
+      )
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -232,27 +273,36 @@ export async function loadManagerCustomerExperience(restaurantId: string): Promi
   const now = new Date();
   const orders = (ordersResult.data ?? []) as OrderRow[];
   const itemsByOrder = groupByOrderId((itemsResult.data ?? []) as ItemRow[]);
-  const invoicesByOrder = groupByOrderId((invoicesResult.data ?? []) as InvoiceRow[]);
-  const complaints = ((complaintsResult.data ?? []) as ComplaintRow[]).map((row) => ({
-    id: row.id,
-    orderId: row.order_id,
-    tableNumber: row.table_number,
-    customerName: row.customer_name,
-    category: row.category ?? "Service",
-    description: row.description,
-    status: row.status,
-    severity: row.severity,
-    createdAt: row.created_at,
-    resolvedAt: row.resolved_at,
-  }));
-  const complaintsByOrder = groupByOrderId((complaintsResult.data ?? []) as ComplaintRow[]);
+  const invoicesByOrder = groupByOrderId(
+    (invoicesResult.data ?? []) as InvoiceRow[],
+  );
+  const complaints = ((complaintsResult.data ?? []) as ComplaintRow[]).map(
+    (row) => ({
+      id: row.id,
+      orderId: row.order_id,
+      tableNumber: row.table_number,
+      customerName: row.customer_name,
+      category: row.category ?? "Service",
+      description: row.description,
+      status: row.status,
+      severity: row.severity,
+      createdAt: row.created_at,
+      resolvedAt: row.resolved_at,
+    }),
+  );
+  const complaintsByOrder = groupByOrderId(
+    (complaintsResult.data ?? []) as ComplaintRow[],
+  );
   const assignmentsByTable = new Map<string, AssignmentRow>();
   for (const assignment of (assignmentsResult.data ?? []) as AssignmentRow[]) {
-    if (assignment.table_id) assignmentsByTable.set(assignment.table_id, assignment);
+    if (assignment.table_id)
+      assignmentsByTable.set(assignment.table_id, assignment);
   }
 
   const sessions = orders.map((order) => {
-    const assignment = order.table_id ? assignmentsByTable.get(order.table_id) : undefined;
+    const assignment = order.table_id
+      ? assignmentsByTable.get(order.table_id)
+      : undefined;
     const waiter = assignment ? firstStaff(assignment) : null;
     const orderItems = itemsByOrder.get(order.id) ?? [];
     const orderInvoices = invoicesByOrder.get(order.id) ?? [];
@@ -274,62 +324,175 @@ export async function loadManagerCustomerExperience(restaurantId: string): Promi
       assignedWaiter: waiter?.display_name ?? null,
       assignedWaiterId: waiter?.id ?? assignment?.waiter_staff_id ?? null,
       billRequestedAt: order.bill_requested_at ?? null,
-      billWaitingMinutes: order.bill_requested_at && !order.payment_verified_at ? minutesSince(order.bill_requested_at, now) : null,
+      billWaitingMinutes:
+        order.bill_requested_at &&
+        !orderInvoices.some((invoice) => invoice.payment_status === "paid")
+          ? minutesSince(order.bill_requested_at, now)
+          : null,
       specialRequests,
       vip: isVip(order),
       complaintCount: orderComplaints.length,
-      unresolvedComplaintCount: orderComplaints.filter((complaint) => complaint.status !== "resolved").length,
+      unresolvedComplaintCount: orderComplaints.filter(
+        (complaint) => complaint.status !== "resolved",
+      ).length,
       timeline: timelineFor(order, orderItems, orderInvoices),
     } satisfies ManagerCustomerSession;
   });
 
   const alerts: CustomerExperienceAlert[] = [];
   for (const session of sessions) {
-    if (session.waitingMinutes >= LONG_WAIT_MINUTES && session.status !== "completed") alerts.push({ id: `${session.orderId}:long-wait`, type: "long_wait", severity: session.waitingMinutes >= 30 ? "critical" : "warning", orderId: session.orderId, tableNumber: session.tableNumber, message: `Table ${session.tableNumber ?? "-"} has waited ${session.waitingMinutes}m.` });
-    if ((session.billWaitingMinutes ?? 0) >= BILL_WAIT_MINUTES) alerts.push({ id: `${session.orderId}:bill-wait`, type: "bill_wait", severity: (session.billWaitingMinutes ?? 0) >= 20 ? "critical" : "warning", orderId: session.orderId, tableNumber: session.tableNumber, message: `Bill has waited ${session.billWaitingMinutes}m for table ${session.tableNumber ?? "-"}.` });
-    if (session.vip && session.waitingMinutes >= 5) alerts.push({ id: `${session.orderId}:vip`, type: "vip_wait", severity: "critical", orderId: session.orderId, tableNumber: session.tableNumber, message: `VIP guest waiting at table ${session.tableNumber ?? "-"}.` });
-    if (session.unresolvedComplaintCount > 0) alerts.push({ id: `${session.orderId}:complaint`, type: "complaint", severity: "critical", orderId: session.orderId, tableNumber: session.tableNumber, message: `${session.unresolvedComplaintCount} unresolved complaint${session.unresolvedComplaintCount === 1 ? "" : "s"}.` });
-    if (session.specialRequests.length > 0 && !session.timeline.some((event) => event.label === "Served")) alerts.push({ id: `${session.orderId}:special`, type: "special_request", severity: "warning", orderId: session.orderId, tableNumber: session.tableNumber, message: `Special request pending for table ${session.tableNumber ?? "-"}.` });
+    if (
+      session.waitingMinutes >= LONG_WAIT_MINUTES &&
+      session.status !== "completed"
+    )
+      alerts.push({
+        id: `${session.orderId}:long-wait`,
+        type: "long_wait",
+        severity: session.waitingMinutes >= 30 ? "critical" : "warning",
+        orderId: session.orderId,
+        tableNumber: session.tableNumber,
+        message: `Table ${session.tableNumber ?? "-"} has waited ${session.waitingMinutes}m.`,
+      });
+    if ((session.billWaitingMinutes ?? 0) >= BILL_WAIT_MINUTES)
+      alerts.push({
+        id: `${session.orderId}:bill-wait`,
+        type: "bill_wait",
+        severity:
+          (session.billWaitingMinutes ?? 0) >= 20 ? "critical" : "warning",
+        orderId: session.orderId,
+        tableNumber: session.tableNumber,
+        message: `Bill has waited ${session.billWaitingMinutes}m for table ${session.tableNumber ?? "-"}.`,
+      });
+    if (session.vip && session.waitingMinutes >= 5)
+      alerts.push({
+        id: `${session.orderId}:vip`,
+        type: "vip_wait",
+        severity: "critical",
+        orderId: session.orderId,
+        tableNumber: session.tableNumber,
+        message: `VIP guest waiting at table ${session.tableNumber ?? "-"}.`,
+      });
+    if (session.unresolvedComplaintCount > 0)
+      alerts.push({
+        id: `${session.orderId}:complaint`,
+        type: "complaint",
+        severity: "critical",
+        orderId: session.orderId,
+        tableNumber: session.tableNumber,
+        message: `${session.unresolvedComplaintCount} unresolved complaint${session.unresolvedComplaintCount === 1 ? "" : "s"}.`,
+      });
+    if (
+      session.specialRequests.length > 0 &&
+      !session.timeline.some((event) => event.label === "Served")
+    )
+      alerts.push({
+        id: `${session.orderId}:special`,
+        type: "special_request",
+        severity: "warning",
+        orderId: session.orderId,
+        tableNumber: session.tableNumber,
+        message: `Special request pending for table ${session.tableNumber ?? "-"}.`,
+      });
   }
 
-  const timeline = sessions.flatMap((session) => session.timeline).sort((left, right) => new Date(right.at).getTime() - new Date(left.at).getTime()).slice(0, 80);
+  const timeline = sessions
+    .flatMap((session) => session.timeline)
+    .sort(
+      (left, right) =>
+        new Date(right.at).getTime() - new Date(left.at).getTime(),
+    )
+    .slice(0, 80);
 
   return {
     sessions,
     complaints,
-    waiters: ((waitersResult.data ?? []) as Array<{ id: string; display_name: string | null }>).map((waiter) => ({ id: waiter.id, displayName: waiter.display_name || "Waiter" })),
-    waitingCustomers: sessions.filter((session) => session.waitingMinutes >= LONG_WAIT_MINUTES).length,
-    tablesRequestingBill: sessions.filter((session) => session.billRequestedAt && session.billWaitingMinutes !== null).length,
-    specialRequests: sessions.reduce((sum, session) => sum + session.specialRequests.length, 0),
+    waiters: (
+      (waitersResult.data ?? []) as Array<{
+        id: string;
+        display_name: string | null;
+      }>
+    ).map((waiter) => ({
+      id: waiter.id,
+      displayName: waiter.display_name || "Waiter",
+    })),
+    waitingCustomers: sessions.filter(
+      (session) => session.waitingMinutes >= LONG_WAIT_MINUTES,
+    ).length,
+    tablesRequestingBill: sessions.filter(
+      (session) =>
+        session.billRequestedAt && session.billWaitingMinutes !== null,
+    ).length,
+    specialRequests: sessions.reduce(
+      (sum, session) => sum + session.specialRequests.length,
+      0,
+    ),
     vipGuests: sessions.filter((session) => session.vip).length,
-    customerComplaints: complaints.filter((complaint) => complaint.status !== "resolved").length,
+    customerComplaints: complaints.filter(
+      (complaint) => complaint.status !== "resolved",
+    ).length,
     reservationQueue: 0,
     alerts,
     timeline,
   };
 }
 
-export async function assignManagerCustomerWaiter(restaurantId: string, orderId: string, waiterStaffId: string) {
-  const { error } = await supabase.rpc("manager_assign_customer_waiter", { target_restaurant_id: restaurantId, target_order_id: orderId, waiter_staff_id: waiterStaffId });
+export async function assignManagerCustomerWaiter(
+  restaurantId: string,
+  orderId: string,
+  waiterStaffId: string,
+) {
+  const { error } = await supabase.rpc("manager_assign_customer_waiter", {
+    target_restaurant_id: restaurantId,
+    target_order_id: orderId,
+    waiter_staff_id: waiterStaffId,
+  });
   if (error) throw new Error(error.message);
 }
 
-export async function notifyManagerCustomerKitchen(restaurantId: string, orderId: string, message: string) {
-  const { error } = await supabase.rpc("manager_notify_customer_kitchen", { target_restaurant_id: restaurantId, target_order_id: orderId, message });
+export async function notifyManagerCustomerKitchen(
+  restaurantId: string,
+  orderId: string,
+  message: string,
+) {
+  const { error } = await supabase.rpc("manager_notify_customer_kitchen", {
+    target_restaurant_id: restaurantId,
+    target_order_id: orderId,
+    message,
+  });
   if (error) throw new Error(error.message);
 }
 
-export async function notifyManagerCustomerCashier(restaurantId: string, orderId: string, message: string) {
-  const { error } = await supabase.rpc("manager_notify_customer_cashier", { target_restaurant_id: restaurantId, target_order_id: orderId, message });
+export async function notifyManagerCustomerCashier(
+  restaurantId: string,
+  orderId: string,
+  message: string,
+) {
+  const { error } = await supabase.rpc("manager_notify_customer_cashier", {
+    target_restaurant_id: restaurantId,
+    target_order_id: orderId,
+    message,
+  });
   if (error) throw new Error(error.message);
 }
 
-export async function escalateManagerComplaint(restaurantId: string, complaintId: string) {
-  const { error } = await supabase.rpc("manager_escalate_customer_complaint", { target_restaurant_id: restaurantId, complaint_id: complaintId });
+export async function escalateManagerComplaint(
+  restaurantId: string,
+  complaintId: string,
+) {
+  const { error } = await supabase.rpc("manager_escalate_customer_complaint", {
+    target_restaurant_id: restaurantId,
+    complaint_id: complaintId,
+  });
   if (error) throw new Error(error.message);
 }
 
-export async function resolveManagerComplaint(restaurantId: string, complaintId: string) {
-  const { error } = await supabase.rpc("manager_resolve_customer_complaint", { target_restaurant_id: restaurantId, complaint_id: complaintId });
+export async function resolveManagerComplaint(
+  restaurantId: string,
+  complaintId: string,
+) {
+  const { error } = await supabase.rpc("manager_resolve_customer_complaint", {
+    target_restaurant_id: restaurantId,
+    complaint_id: complaintId,
+  });
   if (error) throw new Error(error.message);
 }

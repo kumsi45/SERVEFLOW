@@ -1,9 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { assertAbsoluteQrPayload, buildAbsolutePublicUrl } from "../../../core/config/appUrl";
+import {
+  assertAbsoluteQrPayload,
+  buildAbsolutePublicUrl,
+} from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
-import { formatCompactCurrency, formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  type CurrencyConfig,
+} from "../../../core/format/currency";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
+import {
+  canonicalPaymentMethod,
+  type PaymentPolicy,
+} from "../../../core/payment/lifecycle";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import {
   createStaff,
@@ -43,7 +54,10 @@ function fmtDateTime(iso: string) {
 }
 
 function fmtTimeAgo(iso: string) {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  const minutes = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(iso).getTime()) / 60000),
+  );
   if (minutes < 1) return "Just now";
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
@@ -66,7 +80,10 @@ function getOwnerGreeting(now: Date) {
     return { dashboardLabel: "Morning Dashboard", greeting: "Good morning" };
   }
   if (hour >= 12 && hour < 17) {
-    return { dashboardLabel: "Afternoon Dashboard", greeting: "Good afternoon" };
+    return {
+      dashboardLabel: "Afternoon Dashboard",
+      greeting: "Good afternoon",
+    };
   }
   if (hour >= 17 && hour < 21) {
     return { dashboardLabel: "Evening Dashboard", greeting: "Good evening" };
@@ -74,14 +91,21 @@ function getOwnerGreeting(now: Date) {
   return { dashboardLabel: "Night Dashboard", greeting: "Good night" };
 }
 
-type OwnerOrderStatus = "pending_payment" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
+type OwnerOrderStatus =
+  | "pending_payment"
+  | "paid"
+  | "preparing"
+  | "ready"
+  | "completed"
+  | "cancelled";
 type AnalyticsPeriod = "today" | "week" | "month";
 
 type OdOrder = {
   id: string;
   display_number: string | null;
   status: OwnerOrderStatus;
-  dining_session_status: "open" | "closed" | "abandoned" | "expired" | "checked_out" | string | null;
+  dining_session_status:
+    "open" | "closed" | "abandoned" | "expired" | "checked_out" | string | null;
   customer_name: string | null;
   table_number: string | null;
   payment_method: string | null;
@@ -151,6 +175,7 @@ type OdPayment = {
   id: string;
   order_id: string;
   status: string;
+  payment_status: string;
   total_price: number;
   payment_method: string | null;
   verified_at: string | null;
@@ -169,6 +194,8 @@ type RestaurantConfig = {
   business_hours: JsonRecord;
   kitchen_settings: JsonRecord;
   ordering_settings: JsonRecord;
+  payment_policy: PaymentPolicy;
+  mixed_waiter_payment_timing: "before_kitchen" | "after_meal";
   branding: JsonRecord;
   notification_settings: JsonRecord;
   security_settings: JsonRecord;
@@ -249,7 +276,17 @@ type OwnerCashVariance = {
 
 type OwnerReportSummary = OwnerReportData["summary"];
 
-type NavId = "overview" | "orders" | "analytics" | "menu" | "stations" | "staff" | "qr" | "customers" | "reports" | "settings";
+type NavId =
+  | "overview"
+  | "orders"
+  | "analytics"
+  | "menu"
+  | "stations"
+  | "staff"
+  | "qr"
+  | "customers"
+  | "reports"
+  | "settings";
 
 const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
   { id: "overview", icon: "OV", label: "Overview" },
@@ -264,7 +301,12 @@ const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
   { id: "settings", icon: "SE", label: "Settings" },
 ];
 
-const ACTIVE_ORDER_STATUSES: OwnerOrderStatus[] = ["pending_payment", "paid", "preparing", "ready"];
+const ACTIVE_ORDER_STATUSES: OwnerOrderStatus[] = [
+  "pending_payment",
+  "paid",
+  "preparing",
+  "ready",
+];
 
 type OwnerDashboardPageProps = {
   restaurantId: string;
@@ -351,7 +393,9 @@ function isRevenueOrder(order: OdOrder) {
 }
 
 function toJsonRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
 }
 
 function jsonString(value: JsonRecord, key: string, fallback = "") {
@@ -366,14 +410,22 @@ function jsonBool(value: JsonRecord, key: string, fallback = false) {
 
 function jsonStringArray(value: JsonRecord, key: string): string[] {
   const raw = value[key];
-  return Array.isArray(raw) ? raw.filter((entry): entry is string => typeof entry === "string") : [];
+  return Array.isArray(raw)
+    ? raw.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
 
-function buildBrandingAssetPath(restaurantId: string, assetType: "logo" | "cover") {
+function buildBrandingAssetPath(
+  restaurantId: string,
+  assetType: "logo" | "cover",
+) {
   return `${restaurantId}/branding/${assetType}`;
 }
 
-function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: string): RestaurantConfig {
+function buildRestaurantConfig(
+  row: Record<string, unknown>,
+  fallbackName: string,
+): RestaurantConfig {
   return {
     id: String(row.id),
     name: typeof row.name === "string" ? row.name : fallbackName,
@@ -383,41 +435,71 @@ function buildRestaurantConfig(row: Record<string, unknown>, fallbackName: strin
     business_hours: toJsonRecord(row.business_hours),
     kitchen_settings: toJsonRecord(row.kitchen_settings),
     ordering_settings: toJsonRecord(row.ordering_settings),
+    payment_policy: ["pay_before_kitchen", "hold_payment", "mixed"].includes(
+      String(row.payment_policy),
+    )
+      ? (row.payment_policy as PaymentPolicy)
+      : "pay_before_kitchen",
+    mixed_waiter_payment_timing:
+      row.mixed_waiter_payment_timing === "before_kitchen"
+        ? "before_kitchen"
+        : "after_meal",
     branding: toJsonRecord(row.branding),
     notification_settings: toJsonRecord(row.notification_settings),
     security_settings: toJsonRecord(row.security_settings),
-    subscription_plan: typeof row.subscription_plan === "string" ? row.subscription_plan : "starter",
-    billing_status: typeof row.billing_status === "string" ? row.billing_status : "trial",
-    currency_code: typeof row.currency_code === "string" ? row.currency_code : "ETB",
-    currency_symbol: typeof row.currency_symbol === "string" ? row.currency_symbol : "Br",
+    subscription_plan:
+      typeof row.subscription_plan === "string"
+        ? row.subscription_plan
+        : "starter",
+    billing_status:
+      typeof row.billing_status === "string" ? row.billing_status : "trial",
+    currency_code:
+      typeof row.currency_code === "string" ? row.currency_code : "ETB",
+    currency_symbol:
+      typeof row.currency_symbol === "string" ? row.currency_symbol : "Br",
     locale: typeof row.locale === "string" ? row.locale : "am-ET",
-    date_format: typeof row.date_format === "string" ? row.date_format : "medium",
+    date_format:
+      typeof row.date_format === "string" ? row.date_format : "medium",
     time_format: typeof row.time_format === "string" ? row.time_format : "24h",
   };
 }
 
-function normalizeRestaurantTable(row: Record<string, unknown>): RestaurantTable {
+function normalizeRestaurantTable(
+  row: Record<string, unknown>,
+): RestaurantTable {
   return {
     id: String(row.id),
     restaurant_id: String(row.restaurant_id),
     table_number: Number(row.table_number),
-    label: typeof row.label === "string" ? row.label : `Table ${Number(row.table_number)}`,
+    label:
+      typeof row.label === "string"
+        ? row.label
+        : `Table ${Number(row.table_number)}`,
     qr_path: typeof row.qr_path === "string" ? row.qr_path : "",
     qr_url: typeof row.qr_url === "string" ? row.qr_url : null,
-    qr_created_at: typeof row.qr_created_at === "string" ? row.qr_created_at : String(row.created_at ?? ""),
-    qr_regenerated_at: typeof row.qr_regenerated_at === "string" ? row.qr_regenerated_at : String(row.updated_at ?? row.created_at ?? ""),
+    qr_created_at:
+      typeof row.qr_created_at === "string"
+        ? row.qr_created_at
+        : String(row.created_at ?? ""),
+    qr_regenerated_at:
+      typeof row.qr_regenerated_at === "string"
+        ? row.qr_regenerated_at
+        : String(row.updated_at ?? row.created_at ?? ""),
     active: Boolean(row.active),
     created_at: typeof row.created_at === "string" ? row.created_at : "",
   };
 }
 
-function normalizeKitchenStation(row: Record<string, unknown>): OdKitchenStation {
+function normalizeKitchenStation(
+  row: Record<string, unknown>,
+): OdKitchenStation {
   return {
     id: String(row.id),
     restaurant_id: String(row.restaurant_id),
     name: String(row.name),
     description: typeof row.description === "string" ? row.description : null,
-    display_color: typeof row.display_color === "string" ? row.display_color : "#0f766e",
+    display_color:
+      typeof row.display_color === "string" ? row.display_color : "#0f766e",
     icon: typeof row.icon === "string" ? row.icon : "MK",
     priority: Number(row.priority ?? 100),
     active: Boolean(row.active),
@@ -461,28 +543,67 @@ function csvEscape(value: string | number | null | undefined) {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-function exportRowsAsCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+function exportRowsAsCsv(
+  filename: string,
+  headers: string[],
+  rows: (string | number | null | undefined)[][],
+) {
   downloadText(
     filename,
     [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n"),
-    "text/csv;charset=utf-8"
+    "text/csv;charset=utf-8",
   );
 }
 
-function exportRowsAsExcel(filename: string, title: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+function exportRowsAsExcel(
+  filename: string,
+  title: string,
+  headers: string[],
+  rows: (string | number | null | undefined)[][],
+) {
   const tableRows = [headers, ...rows]
-    .map((row, index) => `<tr>${row.map((cell) => `<${index === 0 ? "th" : "td"}>${String(cell ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</${index === 0 ? "th" : "td"}>`).join("")}</tr>`)
+    .map(
+      (row, index) =>
+        `<tr>${row
+          .map(
+            (cell) =>
+              `<${index === 0 ? "th" : "td"}>${String(cell ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")}</${index === 0 ? "th" : "td"}>`,
+          )
+          .join("")}</tr>`,
+    )
     .join("");
   downloadText(
     filename,
     `<html><head><meta charset="utf-8" /></head><body><h1>${title}</h1><table>${tableRows}</table></body></html>`,
-    "application/vnd.ms-excel;charset=utf-8"
+    "application/vnd.ms-excel;charset=utf-8",
   );
 }
 
-export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, currency, initialSection }: OwnerDashboardPageProps & { initialSection?: string }) {
+export function OwnerDashboardPage({
+  restaurantId,
+  restaurantName,
+  ownerName,
+  currency,
+  initialSection,
+}: OwnerDashboardPageProps & { initialSection?: string }) {
   const now = useNow();
-  const [nav, setNav] = useState<NavId>(() => ({ dashboard: "overview", orders: "orders", menu: "menu", staff: "staff", reports: "reports", settings: "settings", analytics: "analytics", tables: "qr" } as Record<string, NavId>)[initialSection ?? ""] ?? "overview");
+  const [nav, setNav] = useState<NavId>(
+    () =>
+      (
+        ({
+          dashboard: "overview",
+          orders: "orders",
+          menu: "menu",
+          staff: "staff",
+          reports: "reports",
+          settings: "settings",
+          analytics: "analytics",
+          tables: "qr",
+        }) as Record<string, NavId>
+      )[initialSection ?? ""] ?? "overview",
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orders, setOrders] = useState<OdOrder[]>([]);
   const [payments, setPayments] = useState<OdPayment[]>([]);
@@ -491,17 +612,26 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
   const [categories, setCategories] = useState<OdCategory[]>([]);
   const [orderItems, setOrderItems] = useState<OdOrderItem[]>([]);
   const [activeShifts, setActiveShifts] = useState<OwnerActiveShift[]>([]);
-  const [restaurantConfig, setRestaurantConfig] = useState<RestaurantConfig | null>(null);
-  activeOwnerCurrency = restaurantConfig ? {
-    currencyCode: restaurantConfig.currency_code,
-    currencySymbol: restaurantConfig.currency_symbol,
-    locale: restaurantConfig.locale,
-  } : currency ?? null;
-  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
-  const [kitchenStations, setKitchenStations] = useState<OdKitchenStation[]>([]);
+  const [restaurantConfig, setRestaurantConfig] =
+    useState<RestaurantConfig | null>(null);
+  activeOwnerCurrency = restaurantConfig
+    ? {
+        currencyCode: restaurantConfig.currency_code,
+        currencySymbol: restaurantConfig.currency_symbol,
+        locale: restaurantConfig.locale,
+      }
+    : (currency ?? null);
+  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(
+    [],
+  );
+  const [kitchenStations, setKitchenStations] = useState<OdKitchenStation[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dashboardReports, setDashboardReports] = useState<Record<AnalyticsPeriod, OwnerReportSummary>>({
+  const [dashboardReports, setDashboardReports] = useState<
+    Record<AnalyticsPeriod, OwnerReportSummary>
+  >({
     today: emptyReportData().summary,
     week: emptyReportData().summary,
     month: emptyReportData().summary,
@@ -526,59 +656,69 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
           { data: shiftData, error: shiftError },
           { data: paymentData, error: paymentError },
           { data: stationData, error: stationError },
-        ] =
-          await Promise.all([
-            supabase
-              .from("orders")
-              .select("id,display_number,status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at")
-              .eq("restaurant_id", restaurantId)
-              .order("created_at", { ascending: false })
-              .limit(500),
-            supabase
-              .from("restaurant_staff")
-              .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
-              .eq("restaurant_id", restaurantId)
-              .neq("role", "owner")
-              .order("created_at", { ascending: true }),
-            supabase
-              .from("menu_items")
-              .select("id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at")
-              .eq("restaurant_id", restaurantId)
-              .is("archived_at", null)
-              .order("name", { ascending: true }),
-            supabase
-              .from("categories")
-              .select("id,name")
-              .eq("restaurant_id", restaurantId)
-              .order("name", { ascending: true }),
-            supabase
-              .from("restaurants")
-              .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format")
-              .eq("id", restaurantId)
-              .maybeSingle(),
-            supabase
-              .from("restaurant_tables")
-              .select("id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at")
-              .eq("restaurant_id", restaurantId)
-              .order("table_number", { ascending: true }),
-            supabase
-              .from("cashier_shifts")
-              .select("id,restaurant_id,opened_by,opened_at,opening_cash")
-              .eq("restaurant_id", restaurantId)
-              .is("closed_at", null)
-              .order("opened_at", { ascending: false }),
-            supabase
-              .from("order_invoices")
-              .select("id,order_id,status,total_price,payment_method,verified_at,paid_at,created_at")
-              .eq("restaurant_id", restaurantId)
-              .in("status", ["paid", "verified"])
-              .not("verified_at", "is", null)
-              .order("verified_at", { ascending: false })
-              .limit(1000),
-            supabase.rpc("get_owner_kitchen_stations", {
-              target_restaurant_id: restaurantId,
-            }),
-          ]);
+        ] = await Promise.all([
+          supabase
+            .from("orders")
+            .select(
+              "id,display_number,status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at",
+            )
+            .eq("restaurant_id", restaurantId)
+            .order("created_at", { ascending: false })
+            .limit(500),
+          supabase
+            .from("restaurant_staff")
+            .select(
+              "id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+            )
+            .eq("restaurant_id", restaurantId)
+            .neq("role", "owner")
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("menu_items")
+            .select(
+              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at",
+            )
+            .eq("restaurant_id", restaurantId)
+            .is("archived_at", null)
+            .order("name", { ascending: true }),
+          supabase
+            .from("categories")
+            .select("id,name")
+            .eq("restaurant_id", restaurantId)
+            .order("name", { ascending: true }),
+          supabase
+            .from("restaurants")
+            .select(
+              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+            )
+            .eq("id", restaurantId)
+            .maybeSingle(),
+          supabase
+            .from("restaurant_tables")
+            .select(
+              "id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at",
+            )
+            .eq("restaurant_id", restaurantId)
+            .order("table_number", { ascending: true }),
+          supabase
+            .from("cashier_shifts")
+            .select("id,restaurant_id,opened_by,opened_at,opening_cash")
+            .eq("restaurant_id", restaurantId)
+            .is("closed_at", null)
+            .order("opened_at", { ascending: false }),
+          supabase
+            .from("order_invoices")
+            .select(
+              "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
+            )
+            .eq("restaurant_id", restaurantId)
+            .eq("payment_status", "paid")
+            .order("paid_at", { ascending: false })
+            .limit(1000),
+          supabase.rpc("get_owner_kitchen_stations", {
+            target_restaurant_id: restaurantId,
+          }),
+        ]);
 
         if (orderError) throw new Error(orderError.message);
         if (staffError) throw new Error(staffError.message);
@@ -593,9 +733,13 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
         const normalizedOrders = (orderData ?? []).map((row) => ({
           id: String(row.id),
-          display_number: typeof row.display_number === "string" ? row.display_number : null,
+          display_number:
+            typeof row.display_number === "string" ? row.display_number : null,
           status: String(row.status) as OwnerOrderStatus,
-          dining_session_status: typeof row.dining_session_status === "string" ? row.dining_session_status : null,
+          dining_session_status:
+            typeof row.dining_session_status === "string"
+              ? row.dining_session_status
+              : null,
           customer_name: row.customer_name ?? null,
           table_number: row.table_number ?? null,
           payment_method: row.payment_method ?? null,
@@ -612,7 +756,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
         if (orderIds.length > 0) {
           const { data: itemData, error: itemError } = await supabase
             .from("order_items")
-            .select("id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)")
+            .select(
+              "id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)",
+            )
             .eq("restaurant_id", restaurantId)
             .in("order_id", orderIds);
 
@@ -621,7 +767,8 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
           normalizedItems = (itemData ?? []).map((row) => ({
             id: String(row.id),
             order_id: String(row.order_id),
-            invoice_id: typeof row.invoice_id === "string" ? row.invoice_id : null,
+            invoice_id:
+              typeof row.invoice_id === "string" ? row.invoice_id : null,
             menu_item_id: row.menu_item_id ? String(row.menu_item_id) : null,
             quantity: Number(row.quantity),
             price: Number(row.price),
@@ -631,30 +778,70 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
         const itemCounts = new Map<string, number>();
         for (const item of normalizedItems) {
-          itemCounts.set(item.order_id, (itemCounts.get(item.order_id) ?? 0) + item.quantity);
+          itemCounts.set(
+            item.order_id,
+            (itemCounts.get(item.order_id) ?? 0) + item.quantity,
+          );
         }
 
-        setOrders(normalizedOrders.map((order) => ({ ...order, item_count: itemCounts.get(order.id) ?? 0 })));
-        setPayments((paymentData ?? []).map((row) => ({
-          id: String(row.id),
-          order_id: String(row.order_id),
-          status: String(row.status),
-          total_price: Number(row.total_price),
-          payment_method: row.payment_method ?? null,
-          verified_at: row.verified_at ?? row.paid_at ?? null,
-          paid_at: row.paid_at ?? null,
-          created_at: String(row.created_at),
-        })));
+        setOrders(
+          normalizedOrders.map((order) => ({
+            ...order,
+            item_count: itemCounts.get(order.id) ?? 0,
+          })),
+        );
+        setPayments(
+          (paymentData ?? []).map((row) => ({
+            id: String(row.id),
+            order_id: String(row.order_id),
+            status: String(row.status),
+            payment_status: String(row.payment_status),
+            total_price: Number(row.total_price),
+            payment_method: row.payment_method ?? null,
+            verified_at: row.paid_at ?? null,
+            paid_at: row.paid_at ?? null,
+            created_at: String(row.created_at),
+          })),
+        );
         setOrderItems(normalizedItems);
         setStaff((staffData ?? []) as OdStaff[]);
-        setMenuItems((menuData ?? []).map((row) => ({ ...row, price: Number(row.price) })) as OdMenuItem[]);
+        setMenuItems(
+          (menuData ?? []).map((row) => ({
+            ...row,
+            price: Number(row.price),
+          })) as OdMenuItem[],
+        );
         setCategories((categoryData ?? []) as OdCategory[]);
-        setActiveShifts((shiftData ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
-        if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
-        setRestaurantTables((tableData ?? []).map((row) => normalizeRestaurantTable(row as Record<string, unknown>)));
-        setKitchenStations(((stationData ?? []) as Record<string, unknown>[]).map((row) => normalizeKitchenStation(row)));
+        setActiveShifts(
+          (shiftData ?? []).map((row) => ({
+            ...row,
+            opening_cash: Number(row.opening_cash),
+          })) as OwnerActiveShift[],
+        );
+        if (restaurantData)
+          setRestaurantConfig(
+            buildRestaurantConfig(
+              restaurantData as Record<string, unknown>,
+              restaurantName,
+            ),
+          );
+        setRestaurantTables(
+          (tableData ?? []).map((row) =>
+            normalizeRestaurantTable(row as Record<string, unknown>),
+          ),
+        );
+        setKitchenStations(
+          ((stationData ?? []) as Record<string, unknown>[]).map((row) =>
+            normalizeKitchenStation(row),
+          ),
+        );
       } catch (loadError) {
-        if (mounted) setError(loadError instanceof Error ? loadError.message : "Failed to load owner dashboard.");
+        if (mounted)
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load owner dashboard.",
+          );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -673,158 +860,345 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
       try {
         setDashboardReportsLoading(true);
         const reports = await Promise.all(
-          (["today", "week", "month"] as AnalyticsPeriod[]).map(async (reportPeriod) => {
-            const { rangeStart, rangeEnd } = getAnalyticsDateRange(reportPeriod);
-            const [reportPayload, billPayload] = await Promise.all([
-              loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
-              loadOwnerDiningBillReportData(restaurantId, rangeStart, rangeEnd),
-            ]);
-            return [reportPeriod, mergeOwnerBillMetrics(reportPayload, billPayload).summary] as const;
-          })
+          (["today", "week", "month"] as AnalyticsPeriod[]).map(
+            async (reportPeriod) => {
+              const { rangeStart, rangeEnd } =
+                getAnalyticsDateRange(reportPeriod);
+              const [reportPayload, billPayload] = await Promise.all([
+                loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
+                loadOwnerDiningBillReportData(
+                  restaurantId,
+                  rangeStart,
+                  rangeEnd,
+                ),
+              ]);
+              return [
+                reportPeriod,
+                mergeOwnerBillMetrics(reportPayload, billPayload).summary,
+              ] as const;
+            },
+          ),
         );
-        if (mounted) setDashboardReports(Object.fromEntries(reports) as Record<AnalyticsPeriod, OwnerReportSummary>);
+        if (mounted)
+          setDashboardReports(
+            Object.fromEntries(reports) as Record<
+              AnalyticsPeriod,
+              OwnerReportSummary
+            >,
+          );
       } catch (reportError) {
-        if (mounted) setError(reportError instanceof Error ? reportError.message : "Failed to load revenue summaries.");
+        if (mounted)
+          setError(
+            reportError instanceof Error
+              ? reportError.message
+              : "Failed to load revenue summaries.",
+          );
       } finally {
         if (mounted) setDashboardReportsLoading(false);
       }
     }
 
     void loadDashboardReports();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [restaurantId, orders]);
 
   useEffect(() => {
     const channel = supabase
       .channel(`owner-${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, (payload) => {
-        const deletedId = String((payload.old as { id?: string } | null)?.id ?? "");
-        if (payload.eventType === "DELETE") {
-          setOrders((previous) => previous.filter((existing) => existing.id !== deletedId));
-          return;
-        }
-
-        const row = payload.new as Partial<OdOrder>;
-        if (!row?.id) return;
-        setOrders((previous) => {
-          const index = previous.findIndex((existing) => existing.id === row.id);
-          const existing = index >= 0 ? previous[index] : undefined;
-          const order: OdOrder = {
-            id: String(row.id),
-            display_number: typeof row.display_number === "string" ? row.display_number : existing?.display_number ?? null,
-            status: String(row.status) as OwnerOrderStatus,
-            dining_session_status: typeof row.dining_session_status === "string" ? row.dining_session_status : existing?.dining_session_status ?? null,
-            customer_name: row.customer_name ?? null,
-            table_number: row.table_number ?? null,
-            payment_method: row.payment_method ?? null,
-            total_price: Number(row.total_price),
-            created_at: String(row.created_at),
-            payment_verified_at: row.payment_verified_at ?? null,
-            completed_at: row.completed_at ?? null,
-            item_count: existing?.item_count ?? 0,
-          };
-          if (index >= 0) {
-            const next = [...previous];
-            next[index] = order;
-            return next;
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        (payload) => {
+          const deletedId = String(
+            (payload.old as { id?: string } | null)?.id ?? "",
+          );
+          if (payload.eventType === "DELETE") {
+            setOrders((previous) =>
+              previous.filter((existing) => existing.id !== deletedId),
+            );
+            return;
           }
-          return [order, ...previous];
-        });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, async (payload) => {
-        const oldRow = payload.old as Partial<OdOrderItem> & { order_id?: string; quantity?: number | string } | null;
-        const newRow = payload.new as Partial<OdOrderItem> & { order_id?: string; invoice_id?: string | null; quantity?: number | string; menu_item_id?: string | null } | null;
-        const orderId = String(newRow?.order_id ?? oldRow?.order_id ?? "");
-        if (!orderId) return;
 
-        if (payload.eventType === "INSERT" && newRow?.id) {
-          const menuItem = newRow.menu_item_id ? menuItems.find((item) => item.id === newRow.menu_item_id) : null;
-          setOrderItems((previous) => [
-            ...previous,
-            {
-              id: String(newRow.id),
-              order_id: orderId,
-              invoice_id: newRow.invoice_id ? String(newRow.invoice_id) : null,
-              menu_item_id: newRow.menu_item_id ? String(newRow.menu_item_id) : null,
-              quantity: Number(newRow.quantity ?? 0),
-              price: Number(newRow.price ?? 0),
-              name: menuItem?.name ?? "Menu item",
-            },
-          ]);
-          setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, item_count: order.item_count + Number(newRow.quantity ?? 0) } : order));
-        }
-
-        if (payload.eventType === "DELETE" && oldRow?.id) {
-          setOrderItems((previous) => previous.filter((item) => item.id !== oldRow.id));
-          setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, item_count: Math.max(0, order.item_count - Number(oldRow.quantity ?? 0)) } : order));
-        }
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void supabase
-          .from("order_invoices")
-          .select("id,order_id,status,total_price,payment_method,verified_at,paid_at,created_at")
-          .eq("restaurant_id", restaurantId)
-          .in("status", ["paid", "verified"])
-          .not("verified_at", "is", null)
-          .order("verified_at", { ascending: false })
-          .limit(1000)
-          .then(({ data, error: paymentError }) => {
-            if (paymentError) {
-              setError(paymentError.message);
-              return;
-            }
-            setPayments((data ?? []).map((row) => ({
+          const row = payload.new as Partial<OdOrder>;
+          if (!row?.id) return;
+          setOrders((previous) => {
+            const index = previous.findIndex(
+              (existing) => existing.id === row.id,
+            );
+            const existing = index >= 0 ? previous[index] : undefined;
+            const order: OdOrder = {
               id: String(row.id),
-              order_id: String(row.order_id),
-              status: String(row.status),
-              total_price: Number(row.total_price),
+              display_number:
+                typeof row.display_number === "string"
+                  ? row.display_number
+                  : (existing?.display_number ?? null),
+              status: String(row.status) as OwnerOrderStatus,
+              dining_session_status:
+                typeof row.dining_session_status === "string"
+                  ? row.dining_session_status
+                  : (existing?.dining_session_status ?? null),
+              customer_name: row.customer_name ?? null,
+              table_number: row.table_number ?? null,
               payment_method: row.payment_method ?? null,
-              verified_at: row.verified_at ?? null,
-              paid_at: row.paid_at ?? null,
+              total_price: Number(row.total_price),
               created_at: String(row.created_at),
-            })));
-          });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "cashier_shifts", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void supabase
-          .from("cashier_shifts")
-          .select("id,restaurant_id,opened_by,opened_at,opening_cash")
-          .eq("restaurant_id", restaurantId)
-          .is("closed_at", null)
-          .order("opened_at", { ascending: false })
-          .then(({ data, error: shiftError }) => {
-            if (shiftError) {
-              setError(shiftError.message);
-              return;
+              payment_verified_at: row.payment_verified_at ?? null,
+              completed_at: row.completed_at ?? null,
+              item_count: existing?.item_count ?? 0,
+            };
+            if (index >= 0) {
+              const next = [...previous];
+              next[index] = order;
+              return next;
             }
-            setActiveShifts((data ?? []).map((row) => ({ ...row, opening_cash: Number(row.opening_cash) })) as OwnerActiveShift[]);
+            return [order, ...previous];
           });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void refreshRestaurantConfig().catch((refreshError) => {
-          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh table configuration.");
-        });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void refreshMenu().catch((refreshError) => {
-          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh menu items.");
-        });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_stations", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void refreshKitchenStations().catch((refreshError) => {
-          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh kitchen stations.");
-        });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        void refreshStaff().catch((refreshError) => {
-          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh staff.");
-        });
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "restaurants", filter: `id=eq.${restaurantId}` }, () => {
-        void refreshRestaurantConfig().catch((refreshError) => {
-          setError(refreshError instanceof Error ? refreshError.message : "Failed to refresh restaurant configuration.");
-        });
-      })
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_items",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        async (payload) => {
+          const oldRow = payload.old as
+            | (Partial<OdOrderItem> & {
+                order_id?: string;
+                quantity?: number | string;
+              })
+            | null;
+          const newRow = payload.new as
+            | (Partial<OdOrderItem> & {
+                order_id?: string;
+                invoice_id?: string | null;
+                quantity?: number | string;
+                menu_item_id?: string | null;
+              })
+            | null;
+          const orderId = String(newRow?.order_id ?? oldRow?.order_id ?? "");
+          if (!orderId) return;
+
+          if (payload.eventType === "INSERT" && newRow?.id) {
+            const menuItem = newRow.menu_item_id
+              ? menuItems.find((item) => item.id === newRow.menu_item_id)
+              : null;
+            setOrderItems((previous) => [
+              ...previous,
+              {
+                id: String(newRow.id),
+                order_id: orderId,
+                invoice_id: newRow.invoice_id
+                  ? String(newRow.invoice_id)
+                  : null,
+                menu_item_id: newRow.menu_item_id
+                  ? String(newRow.menu_item_id)
+                  : null,
+                quantity: Number(newRow.quantity ?? 0),
+                price: Number(newRow.price ?? 0),
+                name: menuItem?.name ?? "Menu item",
+              },
+            ]);
+            setOrders((previous) =>
+              previous.map((order) =>
+                order.id === orderId
+                  ? {
+                      ...order,
+                      item_count:
+                        order.item_count + Number(newRow.quantity ?? 0),
+                    }
+                  : order,
+              ),
+            );
+          }
+
+          if (payload.eventType === "DELETE" && oldRow?.id) {
+            setOrderItems((previous) =>
+              previous.filter((item) => item.id !== oldRow.id),
+            );
+            setOrders((previous) =>
+              previous.map((order) =>
+                order.id === orderId
+                  ? {
+                      ...order,
+                      item_count: Math.max(
+                        0,
+                        order.item_count - Number(oldRow.quantity ?? 0),
+                      ),
+                    }
+                  : order,
+              ),
+            );
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_invoices",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void supabase
+            .from("order_invoices")
+            .select(
+              "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
+            )
+            .eq("restaurant_id", restaurantId)
+            .eq("payment_status", "paid")
+            .order("paid_at", { ascending: false })
+            .limit(1000)
+            .then(({ data, error: paymentError }) => {
+              if (paymentError) {
+                setError(paymentError.message);
+                return;
+              }
+              setPayments(
+                (data ?? []).map((row) => ({
+                  id: String(row.id),
+                  order_id: String(row.order_id),
+                  status: String(row.status),
+                  payment_status: String(row.payment_status),
+                  total_price: Number(row.total_price),
+                  payment_method: row.payment_method ?? null,
+                  verified_at: row.paid_at ?? null,
+                  paid_at: row.paid_at ?? null,
+                  created_at: String(row.created_at),
+                })),
+              );
+            });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cashier_shifts",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void supabase
+            .from("cashier_shifts")
+            .select("id,restaurant_id,opened_by,opened_at,opening_cash")
+            .eq("restaurant_id", restaurantId)
+            .is("closed_at", null)
+            .order("opened_at", { ascending: false })
+            .then(({ data, error: shiftError }) => {
+              if (shiftError) {
+                setError(shiftError.message);
+                return;
+              }
+              setActiveShifts(
+                (data ?? []).map((row) => ({
+                  ...row,
+                  opening_cash: Number(row.opening_cash),
+                })) as OwnerActiveShift[],
+              );
+            });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "restaurant_tables",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void refreshRestaurantConfig().catch((refreshError) => {
+            setError(
+              refreshError instanceof Error
+                ? refreshError.message
+                : "Failed to refresh table configuration.",
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "menu_items",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void refreshMenu().catch((refreshError) => {
+            setError(
+              refreshError instanceof Error
+                ? refreshError.message
+                : "Failed to refresh menu items.",
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "kitchen_stations",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void refreshKitchenStations().catch((refreshError) => {
+            setError(
+              refreshError instanceof Error
+                ? refreshError.message
+                : "Failed to refresh kitchen stations.",
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "restaurant_staff",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          void refreshStaff().catch((refreshError) => {
+            setError(
+              refreshError instanceof Error
+                ? refreshError.message
+                : "Failed to refresh staff.",
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "restaurants",
+          filter: `id=eq.${restaurantId}`,
+        },
+        () => {
+          void refreshRestaurantConfig().catch((refreshError) => {
+            setError(
+              refreshError instanceof Error
+                ? refreshError.message
+                : "Failed to refresh restaurant configuration.",
+            );
+          });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -833,52 +1207,135 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
   }, [restaurantId, menuItems]);
 
   const todayStart = startOfTodayIso();
-  const todayOrders = useMemo(() => orders.filter((order) => order.created_at >= todayStart), [orders, todayStart]);
-  const todayPayments = useMemo(() => payments.filter((payment) => Boolean(payment.verified_at) && payment.verified_at! >= todayStart), [payments, todayStart]);
-  const revenueOrders = useMemo(() => todayOrders.filter(isRevenueOrder), [todayOrders]);
-  const allRevenueOrders = useMemo(() => orders.filter(isRevenueOrder), [orders]);
-  const todayRevenue = dashboardReports.today.revenue;
-  const weekRevenue = dashboardReports.week.revenue;
-  const monthRevenue = dashboardReports.month.revenue;
+  const todayOrders = useMemo(
+    () => orders.filter((order) => order.created_at >= todayStart),
+    [orders, todayStart],
+  );
+  const todayPayments = useMemo(
+    () =>
+      payments.filter(
+        (payment) => Boolean(payment.paid_at) && payment.paid_at! >= todayStart,
+      ),
+    [payments, todayStart],
+  );
+  const revenueOrders = useMemo(
+    () => todayOrders.filter(isRevenueOrder),
+    [todayOrders],
+  );
+  const allRevenueOrders = useMemo(
+    () => orders.filter(isRevenueOrder),
+    [orders],
+  );
+  const revenueForPeriod = (period: AnalyticsPeriod) => {
+    const { rangeStart, rangeEnd } = getAnalyticsDateRange(period);
+    return payments
+      .filter(
+        (payment) =>
+          payment.payment_status === "paid" &&
+          Boolean(payment.paid_at) &&
+          payment.paid_at! >= rangeStart &&
+          payment.paid_at! < rangeEnd,
+      )
+      .reduce((sum, payment) => sum + payment.total_price, 0);
+  };
+  const todayRevenue = revenueForPeriod("today");
+  const weekRevenue = revenueForPeriod("week");
+  const monthRevenue = revenueForPeriod("month");
   const allRevenue = monthRevenue;
   const todayBillsPrinted = dashboardReports.today.bills_printed;
   const todayBillsReprinted = dashboardReports.today.bills_reprinted;
   const todayAverageBill = dashboardReports.today.average_bill;
   const todayLargestBill = dashboardReports.today.largest_bill;
   const todayVatCollected = dashboardReports.today.vat_collected;
-  const activeOrders = useMemo(() => orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status)), [orders]);
-  const pendingOrders = useMemo(() => orders.filter((order) => order.status === "pending_payment"), [orders]);
-  const completedToday = useMemo(() => orders.filter((order) => order.status === "completed" && (order.completed_at ?? order.created_at) >= todayStart), [orders, todayStart]);
+  const activeOrders = useMemo(
+    () =>
+      orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status)),
+    [orders],
+  );
+  const pendingOrders = useMemo(
+    () => orders.filter((order) => order.status === "pending_payment"),
+    [orders],
+  );
+  const completedToday = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status === "completed" &&
+          (order.completed_at ?? order.created_at) >= todayStart,
+      ),
+    [orders, todayStart],
+  );
   const avgOrderValue = Math.round(dashboardReports.today.average_order_value);
-  const activeStaff = staff.filter((member) => isOperationalStaff(member) && member.active).length;
-  const kitchenStaff = staff.filter((member) => member.role === "kitchen" && member.active);
-  const cashierStaff = staff.filter((member) => member.role === "cashier" && member.active);
+  const activeStaff = staff.filter(
+    (member) => isOperationalStaff(member) && member.active,
+  ).length;
+  const kitchenStaff = staff.filter(
+    (member) => member.role === "kitchen" && member.active,
+  );
+  const cashierStaff = staff.filter(
+    (member) => member.role === "cashier" && member.active,
+  );
 
   const sparkData = Array.from({ length: 7 }, (_, index) => {
     const hour = new Date();
     hour.setHours(hour.getHours() - (6 - index), 0, 0, 0);
-    return todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour.getHours())).reduce((sum, payment) => sum + payment.total_price, 0);
+    return todayPayments
+      .filter((payment) =>
+        sameHour(payment.paid_at ?? payment.created_at, hour.getHours()),
+      )
+      .reduce((sum, payment) => sum + payment.total_price, 0);
   });
   const sparkMax = Math.max(...sparkData, 1);
 
   const barHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
   const barData = barHours.map((hour) =>
-    todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour)).reduce((sum, payment) => sum + payment.total_price, 0)
+    todayPayments
+      .filter((payment) =>
+        sameHour(payment.paid_at ?? payment.created_at, hour),
+      )
+      .reduce((sum, payment) => sum + payment.total_price, 0),
   );
-  const orderBarData = barHours.map((hour) => todayPayments.filter((payment) => sameHour(payment.verified_at ?? payment.created_at, hour)).length);
+  const orderBarData = barHours.map(
+    (hour) =>
+      todayPayments.filter((payment) =>
+        sameHour(payment.paid_at ?? payment.created_at, hour),
+      ).length,
+  );
   const barMax = Math.max(...barData, 1);
   const orderBarMax = Math.max(...orderBarData, 1);
 
   const methods = ["Cash", "Telebirr", "CBE Birr", "Card", "Chapa"];
-  const colors = ["#0f766e", "#f59e0b", "#475569", "#7c3aed", "#ef4444", "#0891b2"];
+  const colors = [
+    "#0f766e",
+    "#f59e0b",
+    "#475569",
+    "#7c3aed",
+    "#ef4444",
+    "#0891b2",
+  ];
   const methodTotals = methods.map((method) =>
-    todayPayments.filter((payment) => (payment.payment_method === "Credit/Debit Card" ? "Card" : payment.payment_method) === method).reduce((sum, payment) => sum + payment.total_price, 0)
+    todayPayments
+      .filter(
+        (payment) =>
+          (payment.payment_method === "Credit/Debit Card"
+            ? "Card"
+            : payment.payment_method) === method,
+      )
+      .reduce((sum, payment) => sum + payment.total_price, 0),
   );
-  const methodTotal = Math.max(methodTotals.reduce((sum, value) => sum + value, 0), 1);
+  const methodTotal = Math.max(
+    methodTotals.reduce((sum, value) => sum + value, 0),
+    1,
+  );
   const donutData = methods
-    .map((method, index) => ({ label: method, pct: Math.round((methodTotals[index] / methodTotal) * 100), color: colors[index] }))
+    .map((method, index) => ({
+      label: method,
+      pct: Math.round((methodTotals[index] / methodTotal) * 100),
+      color: colors[index],
+    }))
     .filter((item) => item.pct > 0);
-  if (donutData.length === 0) donutData.push({ label: "No payments yet", pct: 100, color: "#e2e8f0" });
+  if (donutData.length === 0)
+    donutData.push({ label: "No payments yet", pct: 100, color: "#e2e8f0" });
 
   let donutOffset = 0;
   const r = 54;
@@ -892,21 +1349,37 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
     return slice;
   });
 
-  const revenueInvoiceIds = useMemo(() => new Set(payments.map((payment) => payment.id)), [payments]);
+  const revenueInvoiceIds = useMemo(
+    () => new Set(payments.map((payment) => payment.id)),
+    [payments],
+  );
   const topItems = useMemo(() => {
-    const totals = new Map<string, { name: string; quantity: number; revenue: number }>();
+    const totals = new Map<
+      string,
+      { name: string; quantity: number; revenue: number }
+    >();
     for (const item of orderItems) {
       if (!item.invoice_id || !revenueInvoiceIds.has(item.invoice_id)) continue;
       const key = item.menu_item_id ?? item.name;
-      const current = totals.get(key) ?? { name: item.name, quantity: 0, revenue: 0 };
+      const current = totals.get(key) ?? {
+        name: item.name,
+        quantity: 0,
+        revenue: 0,
+      };
       current.quantity += item.quantity;
       current.revenue += item.quantity * item.price;
       totals.set(key, current);
     }
-    return [...totals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 6);
+    return [...totals.values()]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 6);
   }, [orderItems, revenueInvoiceIds]);
 
-  const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const dateStr = now.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   async function handleSignOut() {
     try {
@@ -919,7 +1392,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
   async function refreshStaff() {
     const { data, error: staffError } = await supabase
       .from("restaurant_staff")
-      .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
+      .select(
+        "id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+      )
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
       .order("created_at", { ascending: true });
@@ -932,13 +1407,18 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
   }
 
   async function refreshMenu() {
-    const [{ data: menuData, error: menuError }, { data: categoryData, error: categoryError }] = await Promise.all([
+    const [
+      { data: menuData, error: menuError },
+      { data: categoryData, error: categoryError },
+    ] = await Promise.all([
       supabase
-      .from("menu_items")
-      .select("id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at")
-      .eq("restaurant_id", restaurantId)
-      .is("archived_at", null)
-      .order("name", { ascending: true }),
+        .from("menu_items")
+        .select(
+          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at",
+        )
+        .eq("restaurant_id", restaurantId)
+        .is("archived_at", null)
+        .order("name", { ascending: true }),
       supabase
         .from("categories")
         .select("id,name")
@@ -949,36 +1429,65 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
     if (menuError) throw new Error(menuError.message);
     if (categoryError) throw new Error(categoryError.message);
 
-    setMenuItems((menuData ?? []).map((row) => ({ ...row, price: Number(row.price) })) as OdMenuItem[]);
+    setMenuItems(
+      (menuData ?? []).map((row) => ({
+        ...row,
+        price: Number(row.price),
+      })) as OdMenuItem[],
+    );
     setCategories((categoryData ?? []) as OdCategory[]);
   }
 
   async function refreshKitchenStations() {
-    const { data, error: stationError } = await supabase.rpc("get_owner_kitchen_stations", {
-      target_restaurant_id: restaurantId,
-    });
+    const { data, error: stationError } = await supabase.rpc(
+      "get_owner_kitchen_stations",
+      {
+        target_restaurant_id: restaurantId,
+      },
+    );
     if (stationError) throw new Error(stationError.message);
-    setKitchenStations(((data ?? []) as Record<string, unknown>[]).map((row) => normalizeKitchenStation(row)));
+    setKitchenStations(
+      ((data ?? []) as Record<string, unknown>[]).map((row) =>
+        normalizeKitchenStation(row),
+      ),
+    );
   }
 
   async function refreshRestaurantConfig() {
-    const [{ data: restaurantData, error: restaurantError }, { data: tableData, error: tableError }] = await Promise.all([
+    const [
+      { data: restaurantData, error: restaurantError },
+      { data: tableData, error: tableError },
+    ] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format")
+        .select(
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+        )
         .eq("id", restaurantId)
         .maybeSingle(),
       supabase
         .from("restaurant_tables")
-        .select("id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at")
+        .select(
+          "id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at",
+        )
         .eq("restaurant_id", restaurantId)
         .order("table_number", { ascending: true }),
     ]);
 
     if (restaurantError) throw new Error(restaurantError.message);
     if (tableError) throw new Error(tableError.message);
-    if (restaurantData) setRestaurantConfig(buildRestaurantConfig(restaurantData as Record<string, unknown>, restaurantName));
-    setRestaurantTables((tableData ?? []).map((row) => normalizeRestaurantTable(row as Record<string, unknown>)));
+    if (restaurantData)
+      setRestaurantConfig(
+        buildRestaurantConfig(
+          restaurantData as Record<string, unknown>,
+          restaurantName,
+        ),
+      );
+    setRestaurantTables(
+      (tableData ?? []).map((row) =>
+        normalizeRestaurantTable(row as Record<string, unknown>),
+      ),
+    );
   }
 
   const dashboardData = {
@@ -1049,19 +1558,35 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
       {mobileMenuOpen && (
         <div className="od-mobile-menu-layer">
-          <button className="od-mobile-menu-backdrop" type="button" aria-label="Close dashboard menu" onClick={() => setMobileMenuOpen(false)} />
+          <button
+            className="od-mobile-menu-backdrop"
+            type="button"
+            aria-label="Close dashboard menu"
+            onClick={() => setMobileMenuOpen(false)}
+          />
           <aside className="od-mobile-menu" aria-label="Owner dashboard menu">
             <div className="od-mobile-menu-head">
               <div className="od-restaurant-badge">
-                <div className="od-restaurant-avatar">{restaurantName.charAt(0)}</div>
+                <div className="od-restaurant-avatar">
+                  {restaurantName.charAt(0)}
+                </div>
                 <div>
                   <div className="od-restaurant-name">{restaurantName}</div>
                   <div className="od-restaurant-role">Admin Access</div>
                 </div>
               </div>
-              <button type="button" aria-label="Close dashboard menu" onClick={() => setMobileMenuOpen(false)}>Close</button>
+              <button
+                type="button"
+                aria-label="Close dashboard menu"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Close
+              </button>
             </div>
-            <nav className="od-mobile-menu-nav" aria-label="All owner dashboard sections">
+            <nav
+              className="od-mobile-menu-nav"
+              aria-label="All owner dashboard sections"
+            >
               {NAV_ITEMS.map((item) => (
                 <button
                   key={item.id}
@@ -1074,7 +1599,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
                 </button>
               ))}
             </nav>
-            <button className="od-mobile-menu-signout" type="button" onClick={handleSignOut}>
+            <button
+              className="od-mobile-menu-signout"
+              type="button"
+              onClick={handleSignOut}
+            >
               Sign Out
             </button>
           </aside>
@@ -1092,7 +1621,11 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
         <nav className="od-nav" aria-label="Dashboard navigation">
           {NAV_ITEMS.map((item) => (
-            <button key={item.id} className={`od-nav-item${nav === item.id ? " active" : ""}`} onClick={() => setNav(item.id)}>
+            <button
+              key={item.id}
+              className={`od-nav-item${nav === item.id ? " active" : ""}`}
+              onClick={() => setNav(item.id)}
+            >
               <span className="od-nav-icon">{item.icon}</span>
               {item.label}
             </button>
@@ -1101,7 +1634,9 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
         <div className="od-sidebar-footer">
           <div className="od-restaurant-badge">
-            <div className="od-restaurant-avatar">{restaurantName.charAt(0)}</div>
+            <div className="od-restaurant-avatar">
+              {restaurantName.charAt(0)}
+            </div>
             <div>
               <div className="od-restaurant-name">{restaurantName}</div>
               <div className="od-restaurant-role">Admin Access</div>
@@ -1115,17 +1650,24 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
           <div className="od-branch-selector">{restaurantName}</div>
           <div className="od-topbar-search">
             <span className="od-search-icon">/</span>
-            <input placeholder="Search orders, tables, staff..." aria-label="Search" />
+            <input
+              placeholder="Search orders, tables, staff..."
+              aria-label="Search"
+            />
           </div>
           <div className="od-topbar-right">
             <span className="od-topbar-date">{dateStr}</span>
-            <span className="od-topbar-revenue">{fmtMoney(todayRevenue)} today</span>
+            <span className="od-topbar-revenue">
+              {fmtMoney(todayRevenue)} today
+            </span>
             <button className="od-icon-btn" aria-label="Notifications">
               !
               <span className="od-notif-dot" />
             </button>
             <div className="od-profile">
-              <div className="od-profile-avatar">{(ownerName ?? restaurantName).charAt(0).toUpperCase()}</div>
+              <div className="od-profile-avatar">
+                {(ownerName ?? restaurantName).charAt(0).toUpperCase()}
+              </div>
               <div className="od-profile-info">
                 <div className="od-profile-name">{ownerName || "Owner"}</div>
                 <div className="od-profile-role">Restaurant Owner</div>
@@ -1139,9 +1681,26 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
 
         {error && <div className="od-error">Warning: {error}</div>}
 
-        {nav === "overview" && <OverviewPage data={dashboardData} staff={staff} ownerName={ownerName} onNavigate={setNav} now={now} />}
-        {nav === "orders" && <OrdersPage orders={orders} activeOrders={activeOrders} loading={loading} restaurantName={restaurantName} />}
-        {nav === "analytics" && <AnalyticsPage data={dashboardData} restaurantId={restaurantId} />}
+        {nav === "overview" && (
+          <OverviewPage
+            data={dashboardData}
+            staff={staff}
+            ownerName={ownerName}
+            onNavigate={setNav}
+            now={now}
+          />
+        )}
+        {nav === "orders" && (
+          <OrdersPage
+            orders={orders}
+            activeOrders={activeOrders}
+            loading={loading}
+            restaurantName={restaurantName}
+          />
+        )}
+        {nav === "analytics" && (
+          <AnalyticsPage data={dashboardData} restaurantId={restaurantId} />
+        )}
         {nav === "staff" && (
           <StaffPage
             staff={staff}
@@ -1177,14 +1736,25 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
             orders={orders}
             tables={restaurantTables}
             onTableChanged={(updatedTable) => {
-              setRestaurantTables((previous) => previous
-                .map((table) => table.id === updatedTable.id ? updatedTable : table)
-                .sort((left, right) => left.table_number - right.table_number));
+              setRestaurantTables((previous) =>
+                previous
+                  .map((table) =>
+                    table.id === updatedTable.id ? updatedTable : table,
+                  )
+                  .sort(
+                    (left, right) => left.table_number - right.table_number,
+                  ),
+              );
             }}
           />
         )}
         {nav === "customers" && <CustomersPage restaurantId={restaurantId} />}
-        {nav === "reports" && <ReportsPage restaurantId={restaurantId} restaurantName={restaurantName} />}
+        {nav === "reports" && (
+          <ReportsPage
+            restaurantId={restaurantId}
+            restaurantName={restaurantName}
+          />
+        )}
         {nav === "settings" && (
           <SettingsPage
             restaurantId={restaurantId}
@@ -1196,14 +1766,17 @@ export function OwnerDashboardPage({ restaurantId, restaurantName, ownerName, cu
         )}
       </div>
 
-      <nav className="od-mobile-bottom-nav" aria-label="Owner mobile navigation">
-        {([
+      <nav
+        className="od-mobile-bottom-nav"
+        aria-label="Owner mobile navigation"
+      >
+        {[
           { id: "overview" as NavId, label: "Overview" },
           { id: "orders" as NavId, label: "Orders" },
           { id: "menu" as NavId, label: "Menu" },
           { id: "stations" as NavId, label: "Stations" },
           { id: "settings" as NavId, label: "Settings" },
-        ]).map((item) => (
+        ].map((item) => (
           <button
             key={item.id}
             type="button"
@@ -1246,7 +1819,14 @@ type DashboardData = {
   barMax: number;
   orderBarMax: number;
   barHours: number[];
-  donutSlices: { label: string; pct: number; color: string; dash: number; gap: number; offset: number }[];
+  donutSlices: {
+    label: string;
+    pct: number;
+    color: string;
+    dash: number;
+    gap: number;
+    offset: number;
+  }[];
   donutData: { label: string; pct: number; color: string }[];
   topItems: { name: string; quantity: number; revenue: number }[];
   todayBillsPrinted: number;
@@ -1263,77 +1843,309 @@ type DashboardData = {
 
 type OverviewRange = "today" | "yesterday" | "week" | "month" | "custom";
 
-function OverviewPage({ data, now }: { data: DashboardData; staff: OdStaff[]; ownerName?: string; onNavigate: (nav: NavId) => void; now: Date }) {
+function OverviewPage({
+  data,
+  now,
+}: {
+  data: DashboardData;
+  staff: OdStaff[];
+  ownerName?: string;
+  onNavigate: (nav: NavId) => void;
+  now: Date;
+}) {
   const [range, setRange] = useState<OverviewRange>("today");
-  const [customStart, setCustomStart] = useState(() => now.toISOString().slice(0, 10));
-  const [customEnd, setCustomEnd] = useState(() => now.toISOString().slice(0, 10));
+  const [customStart, setCustomStart] = useState(() =>
+    now.toISOString().slice(0, 10),
+  );
+  const [customEnd, setCustomEnd] = useState(() =>
+    now.toISOString().slice(0, 10),
+  );
 
   const { start, end, label } = useMemo(() => {
-    const endOfRange = new Date(now); endOfRange.setHours(23, 59, 59, 999);
-    const startOfRange = new Date(now); startOfRange.setHours(0, 0, 0, 0);
-    if (range === "yesterday") { startOfRange.setDate(startOfRange.getDate() - 1); endOfRange.setDate(endOfRange.getDate() - 1); }
-    if (range === "week") startOfRange.setDate(startOfRange.getDate() - ((startOfRange.getDay() + 6) % 7));
+    const endOfRange = new Date(now);
+    endOfRange.setHours(23, 59, 59, 999);
+    const startOfRange = new Date(now);
+    startOfRange.setHours(0, 0, 0, 0);
+    if (range === "yesterday") {
+      startOfRange.setDate(startOfRange.getDate() - 1);
+      endOfRange.setDate(endOfRange.getDate() - 1);
+    }
+    if (range === "week")
+      startOfRange.setDate(
+        startOfRange.getDate() - ((startOfRange.getDay() + 6) % 7),
+      );
     if (range === "month") startOfRange.setDate(1);
     if (range === "custom") {
       const selectedStart = new Date(`${customStart}T00:00:00`);
       const selectedEnd = new Date(`${customEnd}T23:59:59.999`);
-      return { start: selectedStart.getTime(), end: selectedEnd.getTime(), label: `${selectedStart.toLocaleDateString()} – ${selectedEnd.toLocaleDateString()}` };
+      return {
+        start: selectedStart.getTime(),
+        end: selectedEnd.getTime(),
+        label: `${selectedStart.toLocaleDateString()} – ${selectedEnd.toLocaleDateString()}`,
+      };
     }
-    return { start: startOfRange.getTime(), end: endOfRange.getTime(), label: range === "today" ? "Today" : range === "yesterday" ? "Yesterday" : range === "week" ? "This Week" : "This Month" };
+    return {
+      start: startOfRange.getTime(),
+      end: endOfRange.getTime(),
+      label:
+        range === "today"
+          ? "Today"
+          : range === "yesterday"
+            ? "Yesterday"
+            : range === "week"
+              ? "This Week"
+              : "This Month",
+    };
   }, [customEnd, customStart, now, range]);
 
-  const inRange = (iso: string | null) => Boolean(iso) && new Date(iso!).getTime() >= start && new Date(iso!).getTime() <= end;
+  const inRange = (iso: string | null) =>
+    Boolean(iso) &&
+    new Date(iso!).getTime() >= start &&
+    new Date(iso!).getTime() <= end;
   const rangeOrders = data.orders.filter((order) => inRange(order.created_at));
-  const rangePayments = data.payments.filter((payment) => inRange(payment.verified_at ?? payment.paid_at ?? payment.created_at));
-  const cashRevenue = rangePayments.filter((payment) => (payment.payment_method ?? "").toLowerCase() === "cash").reduce((sum, payment) => sum + payment.total_price, 0);
-  const digitalRevenue = rangePayments.filter((payment) => (payment.payment_method ?? "").toLowerCase() !== "cash").reduce((sum, payment) => sum + payment.total_price, 0);
+  const rangePayments = data.payments.filter((payment) =>
+    inRange(payment.paid_at ?? payment.created_at),
+  );
+  const cashRevenue = rangePayments
+    .filter(
+      (payment) => canonicalPaymentMethod(payment.payment_method) === "Cash",
+    )
+    .reduce((sum, payment) => sum + payment.total_price, 0);
+  const digitalRevenue = rangePayments
+    .filter(
+      (payment) => canonicalPaymentMethod(payment.payment_method) !== "Cash",
+    )
+    .reduce((sum, payment) => sum + payment.total_price, 0);
   const totalRevenue = cashRevenue + digitalRevenue;
-  const pendingPayments = rangeOrders.filter((order) => order.status === "pending_payment").length;
-  const kitchenWaiting = rangeOrders.filter((order) => order.status === "paid" || order.status === "preparing").length;
-  const ordersInProgress = rangeOrders.filter((order) => ["paid", "preparing", "ready"].includes(order.status)).length;
-  const activeRangeOrders = rangeOrders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status));
-  const activeTables = new Set(activeRangeOrders.map((order) => order.table_number).filter(Boolean)).size;
-  const namedCustomers = new Set(rangeOrders.map((order) => order.customer_name?.trim().toLowerCase()).filter(Boolean));
-  const anonymousCustomers = rangeOrders.filter((order) => !order.customer_name?.trim()).length;
+  const pendingPayments = rangeOrders.filter(
+    (order) => order.status === "pending_payment",
+  ).length;
+  const kitchenWaiting = rangeOrders.filter(
+    (order) => order.status === "paid" || order.status === "preparing",
+  ).length;
+  const ordersInProgress = rangeOrders.filter((order) =>
+    ["paid", "preparing", "ready"].includes(order.status),
+  ).length;
+  const activeRangeOrders = rangeOrders.filter((order) =>
+    ACTIVE_ORDER_STATUSES.includes(order.status),
+  );
+  const activeTables = new Set(
+    activeRangeOrders.map((order) => order.table_number).filter(Boolean),
+  ).size;
+  const namedCustomers = new Set(
+    rangeOrders
+      .map((order) => order.customer_name?.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const anonymousCustomers = rangeOrders.filter(
+    (order) => !order.customer_name?.trim(),
+  ).length;
   const customers = namedCustomers.size + anonymousCustomers;
-  const averageBill = rangePayments.length ? totalRevenue / rangePayments.length : 0;
-  const kitchenDurations = rangeOrders.filter((order) => order.completed_at && order.payment_verified_at).map((order) => Math.max(0, new Date(order.completed_at!).getTime() - new Date(order.payment_verified_at!).getTime()));
-  const averageKitchenMinutes = kitchenDurations.length ? Math.round(kitchenDurations.reduce((sum, duration) => sum + duration, 0) / kitchenDurations.length / 60000) : 0;
+  const averageBill = rangePayments.length
+    ? totalRevenue / rangePayments.length
+    : 0;
+  const kitchenDurations = rangeOrders
+    .filter((order) => order.completed_at && order.payment_verified_at)
+    .map((order) =>
+      Math.max(
+        0,
+        new Date(order.completed_at!).getTime() -
+          new Date(order.payment_verified_at!).getTime(),
+      ),
+    );
+  const averageKitchenMinutes = kitchenDurations.length
+    ? Math.round(
+        kitchenDurations.reduce((sum, duration) => sum + duration, 0) /
+          kitchenDurations.length /
+          60000,
+      )
+    : 0;
   const kpis = [
-    { label: "Pending Payments", value: `${pendingPayments}`, detail: "Awaiting verification", urgent: pendingPayments > 0 },
-    { label: "Kitchen Waiting", value: `${kitchenWaiting}`, detail: "Paid or preparing", urgent: kitchenWaiting > 0 },
-    { label: "Orders In Progress", value: `${ordersInProgress}`, detail: "Live kitchen workflow" },
-    { label: "Active Tables", value: `${activeTables}`, detail: "Currently serving" },
+    {
+      label: "Pending Payments",
+      value: `${pendingPayments}`,
+      detail: "Awaiting verification",
+      urgent: pendingPayments > 0,
+    },
+    {
+      label: "Kitchen Waiting",
+      value: `${kitchenWaiting}`,
+      detail: "Paid or preparing",
+      urgent: kitchenWaiting > 0,
+    },
+    {
+      label: "Orders In Progress",
+      value: `${ordersInProgress}`,
+      detail: "Live kitchen workflow",
+    },
+    {
+      label: "Active Tables",
+      value: `${activeTables}`,
+      detail: "Currently serving",
+    },
     { label: "Today's Customers", value: `${customers}`, detail: label },
-    { label: "Average Bill Today", value: fmtMoney(Math.round(averageBill)), detail: label },
-    { label: "Average Kitchen Time", value: `${averageKitchenMinutes} min`, detail: label },
-    { label: "Active Staff", value: `${data.activeStaff}`, detail: "Available now" },
+    {
+      label: "Average Bill Today",
+      value: fmtMoney(Math.round(averageBill)),
+      detail: label,
+    },
+    {
+      label: "Average Kitchen Time",
+      value: `${averageKitchenMinutes} min`,
+      detail: label,
+    },
+    {
+      label: "Active Staff",
+      value: `${data.activeStaff}`,
+      detail: "Available now",
+    },
   ];
 
-  return <div className="od-page od-executive-overview">
-    <div className="od-page-header">
-      <div><h1 className="od-page-title">Executive Overview</h1><p className="od-page-subtitle">Live operational performance for {data.restaurantName} · {label}</p></div>
-      <div className="od-overview-filter" aria-label="Overview date range">
-        {(["today", "yesterday", "week", "month", "custom"] as OverviewRange[]).map((option) => <button key={option} type="button" className={range === option ? "active" : ""} onClick={() => setRange(option)}>{option === "week" ? "This Week" : option === "month" ? "This Month" : option.charAt(0).toUpperCase() + option.slice(1)}</button>)}
+  return (
+    <div className="od-page od-executive-overview">
+      <div className="od-page-header">
+        <div>
+          <h1 className="od-page-title">Executive Overview</h1>
+          <p className="od-page-subtitle">
+            Live operational performance for {data.restaurantName} · {label}
+          </p>
+        </div>
+        <div className="od-overview-filter" aria-label="Overview date range">
+          {(
+            ["today", "yesterday", "week", "month", "custom"] as OverviewRange[]
+          ).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={range === option ? "active" : ""}
+              onClick={() => setRange(option)}
+            >
+              {option === "week"
+                ? "This Week"
+                : option === "month"
+                  ? "This Month"
+                  : option.charAt(0).toUpperCase() + option.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
+      {range === "custom" ? (
+        <div className="od-custom-range">
+          <label>
+            From
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd}
+              onChange={(event) => setCustomStart(event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart}
+              onChange={(event) => setCustomEnd(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
+      {data.loading ? (
+        <div className="od-executive-grid">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <div key={index} className="od-skeleton od-skel-kpi" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <section
+            className="od-revenue-card"
+            aria-label="Revenue for selected range"
+          >
+            <header>
+              <div>
+                <span>Revenue</span>
+                <strong>{label}</strong>
+              </div>
+              <span className="od-live-indicator">Live</span>
+            </header>
+            <div>
+              <article>
+                <span>Cash</span>
+                <strong>{fmtMoney(cashRevenue)}</strong>
+              </article>
+              <article>
+                <span>Digital</span>
+                <strong>{fmtMoney(digitalRevenue)}</strong>
+              </article>
+              <article className="total">
+                <span>Total</span>
+                <strong>{fmtMoney(totalRevenue)}</strong>
+              </article>
+            </div>
+          </section>
+          <section className="od-executive-grid">
+            {kpis.map((kpi) => (
+              <article
+                key={kpi.label}
+                className={`od-executive-kpi${kpi.urgent ? " urgent" : ""}`}
+              >
+                <div className="od-kpi-label">{kpi.label}</div>
+                <strong>{kpi.value}</strong>
+                <span>{kpi.detail}</span>
+              </article>
+            ))}
+          </section>
+        </>
+      )}
     </div>
-    {range === "custom" ? <div className="od-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} onChange={(event) => setCustomEnd(event.target.value)} /></label></div> : null}
-    {data.loading ? <div className="od-executive-grid">{Array.from({ length: 9 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div> : <>
-      <section className="od-revenue-card" aria-label="Revenue for selected range"><header><div><span>Revenue</span><strong>{label}</strong></div><span className="od-live-indicator">Live</span></header><div><article><span>Cash</span><strong>{fmtMoney(cashRevenue)}</strong></article><article><span>Digital</span><strong>{fmtMoney(digitalRevenue)}</strong></article><article className="total"><span>Total</span><strong>{fmtMoney(totalRevenue)}</strong></article></div></section>
-      <section className="od-executive-grid">{kpis.map((kpi) => <article key={kpi.label} className={`od-executive-kpi${kpi.urgent ? " urgent" : ""}`}><div className="od-kpi-label">{kpi.label}</div><strong>{kpi.value}</strong><span>{kpi.detail}</span></article>)}</section>
-    </>}
-  </div>;
+  );
 }
 
-function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: DashboardData; ownerName?: string; onNavigate: (nav: NavId) => void; now: Date }) {
+function OwnerMobileOverview({
+  data,
+  ownerName,
+  onNavigate,
+  now,
+}: {
+  data: DashboardData;
+  ownerName?: string;
+  onNavigate: (nav: NavId) => void;
+  now: Date;
+}) {
   const { dashboardLabel, greeting } = getOwnerGreeting(now);
   const recentOrders = [...data.orders]
-    .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+    .sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() -
+        new Date(left.created_at).getTime(),
+    )
     .slice(0, 3);
   const mobileKpis = [
-    { icon: "$", label: "Today's Revenue", value: data.dashboardReportsLoading ? "Loading..." : fmtMoney(data.todayRevenue), delta: "12%", tone: "up" },
-    { icon: "[]", label: "Active Orders", value: `${data.activeOrders.length}`, delta: "8%", tone: "up" },
-    { icon: "o", label: "New Customers", value: `${Math.max(data.completedToday.length, data.orders.filter((order) => order.customer_name).length)}`, delta: "0%", tone: "flat" },
+    {
+      icon: "$",
+      label: "Today's Revenue",
+      value: data.dashboardReportsLoading
+        ? "Loading..."
+        : fmtMoney(data.todayRevenue),
+      delta: "12%",
+      tone: "up",
+    },
+    {
+      icon: "[]",
+      label: "Active Orders",
+      value: `${data.activeOrders.length}`,
+      delta: "8%",
+      tone: "up",
+    },
+    {
+      icon: "o",
+      label: "New Customers",
+      value: `${Math.max(data.completedToday.length, data.orders.filter((order) => order.customer_name).length)}`,
+      delta: "0%",
+      tone: "flat",
+    },
   ];
   const quickActions = [
     { icon: "+", label: "New Order", nav: "orders" as NavId, primary: true },
@@ -1346,15 +2158,22 @@ function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: Dashb
     <section className="od-mobile-overview" aria-label="Mobile owner dashboard">
       <div className="od-mobile-greeting">
         <span>{dashboardLabel}</span>
-        <h2>{greeting}, {ownerName || "Admin"}</h2>
+        <h2>
+          {greeting}, {ownerName || "Admin"}
+        </h2>
       </div>
 
       <div className="od-mobile-kpis">
         {mobileKpis.map((kpi, index) => (
-          <article key={kpi.label} className={`od-mobile-kpi${index === 0 ? " featured" : ""}`}>
+          <article
+            key={kpi.label}
+            className={`od-mobile-kpi${index === 0 ? " featured" : ""}`}
+          >
             <div className="od-mobile-kpi-top">
               <span className="od-mobile-kpi-icon">{kpi.icon}</span>
-              <span className={`od-mobile-delta ${kpi.tone}`}>+ {kpi.delta}</span>
+              <span className={`od-mobile-delta ${kpi.tone}`}>
+                + {kpi.delta}
+              </span>
             </div>
             <span className="od-mobile-kpi-label">{kpi.label}</span>
             <strong>{kpi.value}</strong>
@@ -1367,7 +2186,12 @@ function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: Dashb
       </div>
       <div className="od-mobile-actions">
         {quickActions.map((action) => (
-          <button key={action.label} type="button" className={action.primary ? "primary" : ""} onClick={() => onNavigate(action.nav)}>
+          <button
+            key={action.label}
+            type="button"
+            className={action.primary ? "primary" : ""}
+            onClick={() => onNavigate(action.nav)}
+          >
             <span>{action.icon}</span>
             {action.label}
           </button>
@@ -1376,24 +2200,44 @@ function OwnerMobileOverview({ data, ownerName, onNavigate, now }: { data: Dashb
 
       <div className="od-mobile-section-heading inline">
         <h3>Recent Activity</h3>
-        <button type="button" onClick={() => onNavigate("orders")}>View All</button>
+        <button type="button" onClick={() => onNavigate("orders")}>
+          View All
+        </button>
       </div>
       <div className="od-mobile-activity">
         {recentOrders.length === 0 ? (
-          <div className="od-mobile-empty">No recent owner-visible orders yet.</div>
-        ) : recentOrders.map((order) => (
-          <button key={order.id} type="button" className="od-mobile-activity-row" onClick={() => onNavigate("orders")}>
-            <span className="od-mobile-activity-icon">[]</span>
-            <span className="od-mobile-activity-main">
-              <strong>{fmtOrderLabel(order)}</strong>
-              <span>{order.table_number ? `Table ${order.table_number}` : "Takeout"} - {order.item_count || 0} items</span>
-            </span>
-            <span className="od-mobile-activity-side">
-              <span className={`od-mobile-status ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
-              <strong>{fmtMoney(order.total_price)}</strong>
-            </span>
-          </button>
-        ))}
+          <div className="od-mobile-empty">
+            No recent owner-visible orders yet.
+          </div>
+        ) : (
+          recentOrders.map((order) => (
+            <button
+              key={order.id}
+              type="button"
+              className="od-mobile-activity-row"
+              onClick={() => onNavigate("orders")}
+            >
+              <span className="od-mobile-activity-icon">[]</span>
+              <span className="od-mobile-activity-main">
+                <strong>{fmtOrderLabel(order)}</strong>
+                <span>
+                  {order.table_number
+                    ? `Table ${order.table_number}`
+                    : "Takeout"}{" "}
+                  - {order.item_count || 0} items
+                </span>
+              </span>
+              <span className="od-mobile-activity-side">
+                <span
+                  className={`od-mobile-status ${statusClass(order.status)}`}
+                >
+                  {statusLabel(order.status)}
+                </span>
+                <strong>{fmtMoney(order.total_price)}</strong>
+              </span>
+            </button>
+          ))
+        )}
       </div>
     </section>
   );
@@ -1406,11 +2250,27 @@ function RevenueBars({ data }: { data: DashboardData }) {
         {data.barData.map((value, index) => (
           <div key={data.barHours[index]} className="od-bar-col">
             <div className="od-bar-pair">
-              <div className="od-bar" style={{ height: `${Math.max(4, (value / data.barMax) * 130)}px` }} title={fmtMoney(value)} />
-              <div className="od-bar orders" style={{ height: `${Math.max(4, (data.orderBarData[index] / data.orderBarMax) * 100)}px` }} title={`${data.orderBarData[index]} orders`} />
+              <div
+                className="od-bar"
+                style={{
+                  height: `${Math.max(4, (value / data.barMax) * 130)}px`,
+                }}
+                title={fmtMoney(value)}
+              />
+              <div
+                className="od-bar orders"
+                style={{
+                  height: `${Math.max(4, (data.orderBarData[index] / data.orderBarMax) * 100)}px`,
+                }}
+                title={`${data.orderBarData[index]} orders`}
+              />
             </div>
             <div className="od-bar-label">
-              {data.barHours[index] < 12 ? `${data.barHours[index]}AM` : data.barHours[index] === 12 ? "12PM" : `${data.barHours[index] - 12}PM`}
+              {data.barHours[index] < 12
+                ? `${data.barHours[index]}AM`
+                : data.barHours[index] === 12
+                  ? "12PM"
+                  : `${data.barHours[index] - 12}PM`}
             </div>
           </div>
         ))}
@@ -1447,18 +2307,28 @@ function QuickActions() {
 }
 
 function KitchenStatus({ data }: { data: DashboardData }) {
-  const preparing = data.activeOrders.filter((order) => order.status === "preparing").length;
-  const ready = data.activeOrders.filter((order) => order.status === "ready").length;
+  const preparing = data.activeOrders.filter(
+    (order) => order.status === "preparing",
+  ).length;
+  const ready = data.activeOrders.filter(
+    (order) => order.status === "ready",
+  ).length;
   return (
     <div className="od-kitchen-card">
       <div className="od-kitchen-title">Kitchen Status</div>
       <div className="od-kitchen-staff">
         {data.kitchenStaff.slice(0, 5).map((member) => (
-          <div key={member.id} className="od-staff-chip" title={member.display_name}>
+          <div
+            key={member.id}
+            className="od-staff-chip"
+            title={member.display_name}
+          >
             {member.display_name.charAt(0).toUpperCase()}
           </div>
         ))}
-        {data.kitchenStaff.length === 0 && <div className="od-kitchen-muted">No active kitchen staff</div>}
+        {data.kitchenStaff.length === 0 && (
+          <div className="od-kitchen-muted">No active kitchen staff</div>
+        )}
       </div>
       <div className="od-kitchen-metrics">
         <div>
@@ -1474,7 +2344,15 @@ function KitchenStatus({ data }: { data: DashboardData }) {
   );
 }
 
-function RecentOrdersTable({ orders, title, emptyLabel }: { orders: OdOrder[]; title: string; emptyLabel: string }) {
+function RecentOrdersTable({
+  orders,
+  title,
+  emptyLabel,
+}: {
+  orders: OdOrder[];
+  title: string;
+  emptyLabel: string;
+}) {
   const highValue = [...orders].sort((a, b) => b.total_price - a.total_price);
   return (
     <div className="od-card">
@@ -1512,14 +2390,24 @@ function RecentOrdersTable({ orders, title, emptyLabel }: { orders: OdOrder[]; t
                   <td>
                     <span className="od-order-id">{fmtOrderLabel(order)}</span>
                   </td>
-                  <td>{order.table_number ? `Table ${order.table_number}` : "No table"}</td>
+                  <td>
+                    {order.table_number
+                      ? `Table ${order.table_number}`
+                      : "No table"}
+                  </td>
                   <td>{order.customer_name || "Guest"}</td>
                   <td>{order.item_count || "-"}</td>
                   <td>
-                    <span className="od-amount">{fmtMoney(order.total_price)}</span>
+                    <span className="od-amount">
+                      {fmtMoney(order.total_price)}
+                    </span>
                   </td>
                   <td>
-                    <span className={`od-status-badge ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+                    <span
+                      className={`od-status-badge ${statusClass(order.status)}`}
+                    >
+                      {statusLabel(order.status)}
+                    </span>
                   </td>
                 </tr>
               ))
@@ -1531,7 +2419,17 @@ function RecentOrdersTable({ orders, title, emptyLabel }: { orders: OdOrder[]; t
   );
 }
 
-function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders: OdOrder[]; activeOrders: OdOrder[]; loading: boolean; restaurantName: string }) {
+function OrdersPage({
+  orders,
+  activeOrders,
+  loading,
+  restaurantName,
+}: {
+  orders: OdOrder[];
+  activeOrders: OdOrder[];
+  loading: boolean;
+  restaurantName: string;
+}) {
   const [tab, setTab] = useState<string>("active");
   const tabs = [
     ["active", "Active"],
@@ -1543,14 +2441,18 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
     ["cancelled", "Cancelled"],
   ];
   const filtered =
-    tab === "active" ? activeOrders : orders.filter((order) => order.status === tab);
+    tab === "active"
+      ? activeOrders
+      : orders.filter((order) => order.status === tab);
 
   return (
     <div className="od-page">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Live Order Center</h1>
-          <p className="od-page-subtitle">Real-time operational command center for {restaurantName}</p>
+          <p className="od-page-subtitle">
+            Real-time operational command center for {restaurantName}
+          </p>
         </div>
         <div className="od-active-pill-large">
           <strong>{activeOrders.length}</strong>
@@ -1559,11 +2461,20 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
       </div>
 
       <div className="od-kanban">
-        {(["pending_payment", "paid", "preparing", "ready"] as OwnerOrderStatus[]).map((status) => (
+        {(
+          [
+            "pending_payment",
+            "paid",
+            "preparing",
+            "ready",
+          ] as OwnerOrderStatus[]
+        ).map((status) => (
           <div key={status} className={`od-order-lane ${statusClass(status)}`}>
             <div className="od-lane-header">
               <span>{statusLabel(status)}</span>
-              <strong>{orders.filter((order) => order.status === status).length}</strong>
+              <strong>
+                {orders.filter((order) => order.status === status).length}
+              </strong>
             </div>
             {orders
               .filter((order) => order.status === status)
@@ -1574,23 +2485,39 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
                     <strong>{fmtOrderLabel(order)}</strong>
                     <span>{fmtTimeAgo(order.created_at)}</span>
                   </div>
-                  <div className="od-order-table">{order.table_number ? `Table ${order.table_number}` : "No table"}</div>
-                  <div className="od-order-customer">{order.customer_name || "Guest"}</div>
+                  <div className="od-order-table">
+                    {order.table_number
+                      ? `Table ${order.table_number}`
+                      : "No table"}
+                  </div>
+                  <div className="od-order-customer">
+                    {order.customer_name || "Guest"}
+                  </div>
                   <div className="od-order-card-bottom">
                     <strong>{fmtMoney(order.total_price)}</strong>
                     <span>{order.item_count || 0} items</span>
                   </div>
                 </div>
               ))}
-            {orders.filter((order) => order.status === status).length === 0 && <div className="od-lane-empty">No orders</div>}
+            {orders.filter((order) => order.status === status).length === 0 && (
+              <div className="od-lane-empty">No orders</div>
+            )}
           </div>
         ))}
       </div>
 
       <div className="od-tabs">
         {tabs.map(([value, label]) => (
-          <button key={value} className={`od-tab${tab === value ? " active" : ""}`} onClick={() => setTab(value)}>
-            {label} ({value === "active" ? activeOrders.length : orders.filter((order) => order.status === value).length})
+          <button
+            key={value}
+            className={`od-tab${tab === value ? " active" : ""}`}
+            onClick={() => setTab(value)}
+          >
+            {label} (
+            {value === "active"
+              ? activeOrders.length
+              : orders.filter((order) => order.status === value).length}
+            )
           </button>
         ))}
       </div>
@@ -1629,17 +2556,31 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
                 filtered.map((order) => (
                   <tr key={order.id}>
                     <td>
-                      <span className="od-order-id">{fmtOrderLabel(order)}</span>
+                      <span className="od-order-id">
+                        {fmtOrderLabel(order)}
+                      </span>
                     </td>
-                    <td>{order.table_number ? `Table ${order.table_number}` : "No table"}</td>
+                    <td>
+                      {order.table_number
+                        ? `Table ${order.table_number}`
+                        : "No table"}
+                    </td>
                     <td>{order.customer_name || "Guest"}</td>
                     <td>{order.payment_method || "-"}</td>
                     <td>
-                      <span className="od-amount">{fmtMoney(order.total_price)}</span>
+                      <span className="od-amount">
+                        {fmtMoney(order.total_price)}
+                      </span>
                     </td>
-                    <td style={{ fontSize: 12, color: "var(--od-muted)" }}>{fmtDateTime(order.created_at)}</td>
+                    <td style={{ fontSize: 12, color: "var(--od-muted)" }}>
+                      {fmtDateTime(order.created_at)}
+                    </td>
                     <td>
-                      <span className={`od-status-badge ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+                      <span
+                        className={`od-status-badge ${statusClass(order.status)}`}
+                      >
+                        {statusLabel(order.status)}
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -1653,22 +2594,53 @@ function OrdersPage({ orders, activeOrders, loading, restaurantName }: { orders:
 }
 
 type FinancialPeriod = AnalyticsPeriod | "custom";
-type FinancialInvoice = { id: string; status: string; total: number; method: string; verifiedAt: string };
+type FinancialInvoice = {
+  id: string;
+  status: string;
+  total: number;
+  method: string;
+  verifiedAt: string;
+};
 
-function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurantId: string }) {
+function AnalyticsPage({
+  data,
+  restaurantId,
+}: {
+  data: DashboardData;
+  restaurantId: string;
+}) {
   const [period, setPeriod] = useState<FinancialPeriod>("today");
-  const [customStart, setCustomStart] = useState(() => toDateInputValue(new Date()));
-  const [customEnd, setCustomEnd] = useState(() => toDateInputValue(new Date()));
+  const [customStart, setCustomStart] = useState(() =>
+    toDateInputValue(new Date()),
+  );
+  const [customEnd, setCustomEnd] = useState(() =>
+    toDateInputValue(new Date()),
+  );
   const [invoices, setInvoices] = useState<FinancialInvoice[]>([]);
   const [loadingPeriodReport, setLoadingPeriodReport] = useState(true);
-  const [periodReportError, setPeriodReportError] = useState<string | null>(null);
+  const [periodReportError, setPeriodReportError] = useState<string | null>(
+    null,
+  );
 
   const ranges = useMemo(() => {
-    const selected = period === "custom" ? getDateInputRange(customStart, customEnd) : getAnalyticsDateRange(period);
-    const start = new Date(selected.rangeStart); const end = new Date(selected.rangeEnd); const duration = end.getTime() - start.getTime();
-    const previousEnd = new Date(start); const previousStart = new Date(start.getTime() - duration);
-    if (period === "month") previousStart.setMonth(previousEnd.getMonth() - 1, 1);
-    return { selected, previous: { rangeStart: previousStart.toISOString(), rangeEnd: previousEnd.toISOString() } };
+    const selected =
+      period === "custom"
+        ? getDateInputRange(customStart, customEnd)
+        : getAnalyticsDateRange(period);
+    const start = new Date(selected.rangeStart);
+    const end = new Date(selected.rangeEnd);
+    const duration = end.getTime() - start.getTime();
+    const previousEnd = new Date(start);
+    const previousStart = new Date(start.getTime() - duration);
+    if (period === "month")
+      previousStart.setMonth(previousEnd.getMonth() - 1, 1);
+    return {
+      selected,
+      previous: {
+        rangeStart: previousStart.toISOString(),
+        rangeEnd: previousEnd.toISOString(),
+      },
+    };
   }, [customEnd, customStart, period]);
 
   useEffect(() => {
@@ -1677,43 +2649,139 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
       try {
         setLoadingPeriodReport(true);
         setPeriodReportError(null);
-        const { data: rows, error } = await supabase.from("order_invoices")
-          .select("id,status,total_price,payment_method,verified_at")
+        const { data: rows, error } = await supabase
+          .from("order_invoices")
+          .select("id,status,payment_status,total_price,payment_method,paid_at")
           .eq("restaurant_id", restaurantId)
-          .gte("verified_at", ranges.previous.rangeStart)
-          .lt("verified_at", ranges.selected.rangeEnd)
-          .order("verified_at", { ascending: true });
+          .eq("payment_status", "paid")
+          .gte("paid_at", ranges.previous.rangeStart)
+          .lt("paid_at", ranges.selected.rangeEnd)
+          .order("paid_at", { ascending: true });
         if (error) throw new Error(error.message);
-        if (mounted) setInvoices((rows ?? []).filter((row) => ["paid", "verified"].includes(String(row.status)) && Boolean(row.verified_at)).map((row) => ({ id: String(row.id), status: String(row.status), total: Number(row.total_price), method: String(row.payment_method ?? "Other Digital"), verifiedAt: String(row.verified_at) })));
+        if (mounted)
+          setInvoices(
+            (rows ?? [])
+              .filter(
+                (row) => row.payment_status === "paid" && Boolean(row.paid_at),
+              )
+              .map((row) => ({
+                id: String(row.id),
+                status: String(row.payment_status),
+                total: Number(row.total_price),
+                method: canonicalPaymentMethod(row.payment_method),
+                verifiedAt: String(row.paid_at),
+              })),
+          );
       } catch (loadError) {
-        if (mounted) setPeriodReportError(loadError instanceof Error ? loadError.message : "Could not load revenue report.");
+        if (mounted)
+          setPeriodReportError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Could not load revenue report.",
+          );
       } finally {
         if (mounted) setLoadingPeriodReport(false);
       }
     }
 
     void loadPeriodReport();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [data.payments, ranges, restaurantId]);
 
-  const selectedInvoices = invoices.filter((invoice) => isInRange(invoice.verifiedAt, ranges.selected.rangeStart, ranges.selected.rangeEnd));
-  const previousInvoices = invoices.filter((invoice) => isInRange(invoice.verifiedAt, ranges.previous.rangeStart, ranges.previous.rangeEnd));
-  const normalizeMethod = (method: string) => { const value = method.toLowerCase(); if (value === "cash") return "Cash"; if (value.includes("telebirr")) return "Telebirr"; if (value.includes("cbe")) return "CBE Birr"; if (value.includes("card") || value.includes("credit") || value.includes("debit")) return "Card"; return "Other Digital"; };
+  const selectedInvoices = invoices.filter((invoice) =>
+    isInRange(
+      invoice.verifiedAt,
+      ranges.selected.rangeStart,
+      ranges.selected.rangeEnd,
+    ),
+  );
+  const previousInvoices = invoices.filter((invoice) =>
+    isInRange(
+      invoice.verifiedAt,
+      ranges.previous.rangeStart,
+      ranges.previous.rangeEnd,
+    ),
+  );
+  const normalizeMethod = (method: string) => {
+    const value = method.toLowerCase();
+    if (value === "cash") return "Cash";
+    if (value.includes("telebirr")) return "Telebirr";
+    if (value.includes("cbe")) return "CBE Birr";
+    if (
+      value.includes("card") ||
+      value.includes("credit") ||
+      value.includes("debit")
+    )
+      return "Card";
+    return "Other Digital";
+  };
   const methodNames = ["Cash", "Telebirr", "CBE Birr", "Card", "Other Digital"];
-  const methodTotals = methodNames.map((method) => ({ method, total: selectedInvoices.filter((invoice) => normalizeMethod(invoice.method) === method).reduce((sum, invoice) => sum + invoice.total, 0) }));
-  const grossRevenue = selectedInvoices.reduce((sum, invoice) => sum + invoice.total, 0);
-  const previousRevenue = previousInvoices.reduce((sum, invoice) => sum + invoice.total, 0);
+  const methodTotals = methodNames.map((method) => ({
+    method,
+    total: selectedInvoices
+      .filter((invoice) => normalizeMethod(invoice.method) === method)
+      .reduce((sum, invoice) => sum + invoice.total, 0),
+  }));
+  const grossRevenue = selectedInvoices.reduce(
+    (sum, invoice) => sum + invoice.total,
+    0,
+  );
+  const previousRevenue = previousInvoices.reduce(
+    (sum, invoice) => sum + invoice.total,
+    0,
+  );
   const vat = grossRevenue - grossRevenue / 1.15;
   const netRevenue = grossRevenue - vat;
-  const comparison = previousRevenue === 0 ? (grossRevenue === 0 ? 0 : 100) : ((grossRevenue - previousRevenue) / previousRevenue) * 100;
-  const periodLabel = period === "today" ? "Today" : period === "week" ? "This Week" : period === "month" ? "This Month" : "Custom";
-  const comparisonLabel = period === "today" ? "Today vs Yesterday" : period === "week" ? "Week vs Last Week" : period === "month" ? "Month vs Last Month" : "Custom vs Previous Period";
-  const bucket = (key: (date: Date) => string) => [...selectedInvoices.reduce((map, invoice) => { const label = key(new Date(invoice.verifiedAt)); map.set(label, (map.get(label) ?? 0) + invoice.total); return map; }, new Map<string, number>()).entries()].map(([label, value]) => ({ label, value }));
-  const hourly = bucket((date) => date.toLocaleTimeString([], { hour: "numeric" }));
-  const daily = bucket((date) => date.toLocaleDateString([], { month: "short", day: "numeric" }));
-  const weekly = bucket((date) => { const first = new Date(date); first.setDate(date.getDate() - ((date.getDay() + 6) % 7)); return `Week of ${first.toLocaleDateString([], { month: "short", day: "numeric" })}`; });
-  const monthly = bucket((date) => date.toLocaleDateString([], { month: "short", year: "numeric" }));
-  const trend = period === "today" ? hourly : period === "month" ? daily : daily;
+  const comparison =
+    previousRevenue === 0
+      ? grossRevenue === 0
+        ? 0
+        : 100
+      : ((grossRevenue - previousRevenue) / previousRevenue) * 100;
+  const periodLabel =
+    period === "today"
+      ? "Today"
+      : period === "week"
+        ? "This Week"
+        : period === "month"
+          ? "This Month"
+          : "Custom";
+  const comparisonLabel =
+    period === "today"
+      ? "Today vs Yesterday"
+      : period === "week"
+        ? "Week vs Last Week"
+        : period === "month"
+          ? "Month vs Last Month"
+          : "Custom vs Previous Period";
+  const bucket = (key: (date: Date) => string) =>
+    [
+      ...selectedInvoices
+        .reduce((map, invoice) => {
+          const label = key(new Date(invoice.verifiedAt));
+          map.set(label, (map.get(label) ?? 0) + invoice.total);
+          return map;
+        }, new Map<string, number>())
+        .entries(),
+    ].map(([label, value]) => ({ label, value }));
+  const hourly = bucket((date) =>
+    date.toLocaleTimeString([], { hour: "numeric" }),
+  );
+  const daily = bucket((date) =>
+    date.toLocaleDateString([], { month: "short", day: "numeric" }),
+  );
+  const weekly = bucket((date) => {
+    const first = new Date(date);
+    first.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    return `Week of ${first.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+  });
+  const monthly = bucket((date) =>
+    date.toLocaleDateString([], { month: "short", year: "numeric" }),
+  );
+  const trend =
+    period === "today" ? hourly : period === "month" ? daily : daily;
   const distributionTotal = Math.max(grossRevenue, 1);
 
   return (
@@ -1721,30 +2789,121 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Revenue &amp; Analytics</h1>
-          <p className="od-page-subtitle">Verified paid invoice revenue for your restaurant branch.</p>
+          <p className="od-page-subtitle">
+            Paid invoice revenue for your restaurant branch.
+          </p>
         </div>
         <div className="od-tabs">
-          {(["today", "week", "month", "custom"] as FinancialPeriod[]).map((option) => (
-            <button key={option} type="button" className={`od-tab${period === option ? " active" : ""}`} onClick={() => setPeriod(option)}>
-              {option === "today" ? "Today" : option === "week" ? "Week" : option === "month" ? "Month" : "Custom"}
-            </button>
-          ))}
+          {(["today", "week", "month", "custom"] as FinancialPeriod[]).map(
+            (option) => (
+              <button
+                key={option}
+                type="button"
+                className={`od-tab${period === option ? " active" : ""}`}
+                onClick={() => setPeriod(option)}
+              >
+                {option === "today"
+                  ? "Today"
+                  : option === "week"
+                    ? "Week"
+                    : option === "month"
+                      ? "Month"
+                      : "Custom"}
+              </button>
+            ),
+          )}
         </div>
       </div>
 
-      {periodReportError && <div className="od-error-inline">{periodReportError}</div>}
-      {period === "custom" ? <div className="od-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} onChange={(event) => setCustomEnd(event.target.value)} /></label></div> : null}
+      {periodReportError && (
+        <div className="od-error-inline">{periodReportError}</div>
+      )}
+      {period === "custom" ? (
+        <div className="od-custom-range">
+          <label>
+            From
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd}
+              onChange={(event) => setCustomStart(event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart}
+              onChange={(event) => setCustomEnd(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
 
-      <div className="od-financial-breakdown">{methodTotals.map((row) => <article key={row.method}><span>{row.method}</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(row.total)}</strong></article>)}<article className="total"><span>Total Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}</strong></article><article><span>VAT</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(vat))}</strong></article><article><span>Net Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(netRevenue))}</strong></article><article><span>Gross Revenue</span><strong>{loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}</strong></article></div>
+      <div className="od-financial-breakdown">
+        {methodTotals.map((row) => (
+          <article key={row.method}>
+            <span>{row.method}</span>
+            <strong>
+              {loadingPeriodReport ? "Loading..." : fmtMoney(row.total)}
+            </strong>
+          </article>
+        ))}
+        <article className="total">
+          <span>Total Revenue</span>
+          <strong>
+            {loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}
+          </strong>
+        </article>
+        <article>
+          <span>VAT</span>
+          <strong>
+            {loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(vat))}
+          </strong>
+        </article>
+        <article>
+          <span>Net Revenue</span>
+          <strong>
+            {loadingPeriodReport
+              ? "Loading..."
+              : fmtMoney(Math.round(netRevenue))}
+          </strong>
+        </article>
+        <article>
+          <span>Gross Revenue</span>
+          <strong>
+            {loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}
+          </strong>
+        </article>
+      </div>
 
-      <section className="od-financial-comparison"><div><span>{comparisonLabel}</span><strong className={comparison >= 0 ? "positive" : "negative"}>{comparison >= 0 ? "+" : ""}{comparison.toFixed(1)}%</strong></div><div><span>{periodLabel}</span><strong>{fmtMoney(grossRevenue)}</strong></div><div><span>Previous period</span><strong>{fmtMoney(previousRevenue)}</strong></div></section>
+      <section className="od-financial-comparison">
+        <div>
+          <span>{comparisonLabel}</span>
+          <strong className={comparison >= 0 ? "positive" : "negative"}>
+            {comparison >= 0 ? "+" : ""}
+            {comparison.toFixed(1)}%
+          </strong>
+        </div>
+        <div>
+          <span>{periodLabel}</span>
+          <strong>{fmtMoney(grossRevenue)}</strong>
+        </div>
+        <div>
+          <span>Previous period</span>
+          <strong>{fmtMoney(previousRevenue)}</strong>
+        </div>
+      </section>
 
       <div className="od-two-col">
         <div className="od-card od-financial-chart">
           <div className="od-card-header">
             <div>
               <div className="od-card-title">Revenue Trend</div>
-              <div className="od-card-subtitle">{periodLabel} · verified invoices only</div>
+              <div className="od-card-subtitle">
+                {periodLabel} · paid invoices only
+              </div>
             </div>
           </div>
           <FinancialBars rows={trend} />
@@ -1754,32 +2913,105 @@ function AnalyticsPage({ data, restaurantId }: { data: DashboardData; restaurant
           <div className="od-card-header">
             <div>
               <div className="od-card-title">Payment Method Distribution</div>
-              <div className="od-card-subtitle">Share of verified revenue.</div>
+              <div className="od-card-subtitle">
+                Share of collected revenue.
+              </div>
             </div>
           </div>
-          <div className="od-payment-distribution">{methodTotals.map((row) => <div key={row.method}><span>{row.method}</span><i><b style={{ width: `${row.total / distributionTotal * 100}%` }} /></i><strong>{grossRevenue ? Math.round(row.total / grossRevenue * 100) : 0}%</strong></div>)}</div>
+          <div className="od-payment-distribution">
+            {methodTotals.map((row) => (
+              <div key={row.method}>
+                <span>{row.method}</span>
+                <i>
+                  <b
+                    style={{
+                      width: `${(row.total / distributionTotal) * 100}%`,
+                    }}
+                  />
+                </i>
+                <strong>
+                  {grossRevenue
+                    ? Math.round((row.total / grossRevenue) * 100)
+                    : 0}
+                  %
+                </strong>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="od-financial-chart-grid"><FinancialChart title="Hourly Revenue" rows={hourly} /><FinancialChart title="Daily Revenue" rows={daily} /><FinancialChart title="Weekly Revenue" rows={weekly} /><FinancialChart title="Monthly Revenue" rows={monthly} /></div>
+      <div className="od-financial-chart-grid">
+        <FinancialChart title="Hourly Revenue" rows={hourly} />
+        <FinancialChart title="Daily Revenue" rows={daily} />
+        <FinancialChart title="Weekly Revenue" rows={weekly} />
+        <FinancialChart title="Monthly Revenue" rows={monthly} />
+      </div>
     </div>
   );
 }
 
-function FinancialBars({ rows }: { rows: { label: string; value: number }[] }) { const max = Math.max(...rows.map((row) => row.value), 1); return <div className="od-financial-bars">{rows.length ? rows.map((row) => <div key={row.label}><strong>{fmtMoneyK(row.value)}</strong><i style={{ height: `${Math.max(5, row.value / max * 130)}px` }} /><span>{row.label}</span></div>) : <div className="od-empty compact">No verified revenue in this period</div>}</div>; }
-function FinancialChart({ title, rows }: { title: string; rows: { label: string; value: number }[] }) { return <section className="od-card od-financial-chart"><div className="od-card-header"><div><div className="od-card-title">{title}</div><div className="od-card-subtitle">Verified paid invoices</div></div></div><FinancialBars rows={rows} /></section>; }
+function FinancialBars({ rows }: { rows: { label: string; value: number }[] }) {
+  const max = Math.max(...rows.map((row) => row.value), 1);
+  return (
+    <div className="od-financial-bars">
+      {rows.length ? (
+        rows.map((row) => (
+          <div key={row.label}>
+            <strong>{fmtMoneyK(row.value)}</strong>
+            <i
+              style={{ height: `${Math.max(5, (row.value / max) * 130)}px` }}
+            />
+            <span>{row.label}</span>
+          </div>
+        ))
+      ) : (
+        <div className="od-empty compact">No paid revenue in this period</div>
+      )}
+    </div>
+  );
+}
+function FinancialChart({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: number }[];
+}) {
+  return (
+    <section className="od-card od-financial-chart">
+      <div className="od-card-header">
+        <div>
+          <div className="od-card-title">{title}</div>
+          <div className="od-card-subtitle">Paid invoices</div>
+        </div>
+      </div>
+      <FinancialBars rows={rows} />
+    </section>
+  );
+}
 
-function TopItemsTable({ topItems, menuItems }: { topItems: { name: string; quantity: number; revenue: number }[]; menuItems: OdMenuItem[] }) {
+function TopItemsTable({
+  topItems,
+  menuItems,
+}: {
+  topItems: { name: string; quantity: number; revenue: number }[];
+  menuItems: OdMenuItem[];
+}) {
   const rows =
     topItems.length > 0
       ? topItems
-      : menuItems.slice(0, 6).map((item) => ({ name: item.name, quantity: 0, revenue: 0 }));
+      : menuItems
+          .slice(0, 6)
+          .map((item) => ({ name: item.name, quantity: 0, revenue: 0 }));
 
   return (
     <div className="od-card">
       <div className="od-card-header">
         <div>
           <div className="od-card-title">Top Selling Items</div>
-          <div className="od-card-subtitle">Menu popularity based on persisted order items.</div>
+          <div className="od-card-subtitle">
+            Menu popularity based on persisted order items.
+          </div>
         </div>
         <button className="od-btn-ghost" style={{ fontSize: 12 }}>
           View Detailed Report
@@ -1817,8 +3049,14 @@ function TopItemsTable({ topItems, menuItems }: { topItems: { name: string; quan
                   </td>
                   <td>{item.quantity}</td>
                   <td>
-                    <span className={`od-item-badge ${index === 0 ? "bestseller" : index === 1 ? "trending" : "stable"}`}>
-                      {index === 0 ? "Best Seller" : index === 1 ? "Trending" : "Stable"}
+                    <span
+                      className={`od-item-badge ${index === 0 ? "bestseller" : index === 1 ? "trending" : "stable"}`}
+                    >
+                      {index === 0
+                        ? "Best Seller"
+                        : index === 1
+                          ? "Trending"
+                          : "Stable"}
                     </span>
                   </td>
                   <td>
@@ -1839,7 +3077,10 @@ function fmtLastActive(iso: string | null) {
 
   const now = new Date();
   const date = new Date(iso);
-  const minutes = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 60000));
+  const minutes = Math.max(
+    0,
+    Math.floor((now.getTime() - date.getTime()) / 60000),
+  );
   if (minutes < 2) return "Online Now";
   if (minutes < 60) return `${minutes} minutes ago`;
 
@@ -1851,7 +3092,10 @@ function fmtLastActive(iso: string | null) {
   if (date >= startToday) return "Today";
   if (date >= startYesterday) return "Yesterday";
 
-  const days = Math.max(1, Math.floor((startToday.getTime() - date.getTime()) / 86400000));
+  const days = Math.max(
+    1,
+    Math.floor((startToday.getTime() - date.getTime()) / 86400000),
+  );
   return `${days} days ago`;
 }
 
@@ -1906,15 +3150,23 @@ function staffActivityTargetLabel(entry: StaffActivityLog) {
     if (typeof displayName === "string" && displayName.trim()) {
       return displayName;
     }
-    return typeof username === "string" && username.trim() ? username : "Waiter record";
+    return typeof username === "string" && username.trim()
+      ? username
+      : "Waiter record";
   }
 
   if (isKitchenStaffStationAction(entry.action)) {
     const staffName = entry.details.staff_name;
     const oldStation = entry.details.old_station;
     const newStation = entry.details.new_station;
-    const nameLabel = typeof staffName === "string" && staffName.trim() ? staffName : entry.target_staff_email || "Kitchen staff";
-    const newLabel = typeof newStation === "string" && newStation.trim() ? newStation : "No station";
+    const nameLabel =
+      typeof staffName === "string" && staffName.trim()
+        ? staffName
+        : entry.target_staff_email || "Kitchen staff";
+    const newLabel =
+      typeof newStation === "string" && newStation.trim()
+        ? newStation
+        : "No station";
     if (typeof oldStation === "string" && oldStation.trim()) {
       return `${nameLabel}: ${oldStation} to ${newLabel}`;
     }
@@ -1923,14 +3175,21 @@ function staffActivityTargetLabel(entry: StaffActivityLog) {
 
   if (isKitchenStationAction(entry.action)) {
     const stationName = entry.details.station_name;
-    return typeof stationName === "string" && stationName.trim() ? stationName : "Kitchen station";
+    return typeof stationName === "string" && stationName.trim()
+      ? stationName
+      : "Kitchen station";
   }
 
   if (isMenuStationAction(entry.action)) {
     const menuItemName = entry.details.menu_item_name;
     const stationName = entry.details.station_name;
-    const itemLabel = typeof menuItemName === "string" && menuItemName.trim() ? menuItemName : "Menu item";
-    return typeof stationName === "string" && stationName.trim() ? `${itemLabel} - ${stationName}` : itemLabel;
+    const itemLabel =
+      typeof menuItemName === "string" && menuItemName.trim()
+        ? menuItemName
+        : "Menu item";
+    return typeof stationName === "string" && stationName.trim()
+      ? `${itemLabel} - ${stationName}`
+      : itemLabel;
   }
 
   return entry.target_staff_email || "Staff record";
@@ -1944,12 +3203,208 @@ type StaffPageProps = {
   onStaffChanged: () => Promise<void>;
 };
 
-type ModuleReportRpc = "get_owner_menu_module_report" | "get_owner_kitchen_module_report" | "get_owner_staff_module_report" | "get_owner_tables_module_report" | "get_owner_customers_module_report";
-function IndependentModuleReport({ restaurantId, rpc, columns }: { restaurantId: string; rpc: ModuleReportRpc; columns: Array<{ key: string; label: string; money?: boolean; suffix?: string }> }) {
-  const [period, setPeriod] = useState<FinancialPeriod>("today"); const [startDate,setStartDate]=useState(toDateInputValue(new Date())); const [endDate,setEndDate]=useState(toDateInputValue(new Date())); const [payload,setPayload]=useState<Record<string,unknown>>({}); const [loading,setLoading]=useState(true); const [reportError,setReportError]=useState<string|null>(null);
-  useEffect(()=>{let mounted=true;void(async()=>{try{setLoading(true);setReportError(null);const range=period==="custom"?getDateInputRange(startDate,endDate):getAnalyticsDateRange(period);const {data,error}=await supabase.rpc(rpc,{target_restaurant_id:restaurantId,range_start:range.rangeStart,range_end:range.rangeEnd});if(error)throw new Error(error.message);if(mounted)setPayload(data&&typeof data==="object"?data as Record<string,unknown>:{});}catch(error){if(mounted)setReportError(error instanceof Error?error.message:"Module report unavailable.");}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false};},[endDate,period,restaurantId,rpc,startDate]);
-  const rows=Array.isArray(payload.rows)?payload.rows as Record<string,unknown>[]:[];
-  return <section className="od-module-report"><header><div><h2>Module Reporting</h2><p>Verified paid invoices only</p></div><div className="od-tabs">{(["today","week","month","custom"] as FinancialPeriod[]).map(option=><button key={option} className={`od-tab${period===option?" active":""}`} onClick={()=>setPeriod(option)}>{option==="week"?"Week":option==="month"?"Month":option.charAt(0).toUpperCase()+option.slice(1)}</button>)}</div></header>{period==="custom"?<div className="od-custom-range"><label>From<input type="date" value={startDate} max={endDate} onChange={event=>setStartDate(event.target.value)}/></label><label>To<input type="date" value={endDate} min={startDate} onChange={event=>setEndDate(event.target.value)}/></label></div>:null}{reportError?<div className="od-error-inline">{reportError}</div>:null}<div className="od-table-wrap"><table className="od-table"><thead><tr>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{loading?<tr><td colSpan={columns.length}>Loading report…</td></tr>:rows.length?rows.map((row,index)=><tr key={String(row.id??row.name??row.staff??row.table_number??index)}>{columns.map(column=><td key={column.key}>{column.money?fmtMoney(Number(row[column.key]??0)):`${String(row[column.key]??"—")}${column.suffix??""}`}</td>)}</tr>):<tr><td colSpan={columns.length}><div className="od-empty compact">No verified activity in this range</div></td></tr>}</tbody></table></div>{payload.top_seller||payload.bottom_seller||payload.most_used_table||payload.new_customers!==undefined||payload.returning_customers!==undefined?<footer>{payload.top_seller?<span><b>Top Seller</b>{String(payload.top_seller)}</span>:null}{payload.bottom_seller?<span><b>Bottom Seller</b>{String(payload.bottom_seller)}</span>:null}{payload.most_used_table?<span><b>Most Used Table</b>{String(payload.most_used_table)}</span>:null}{payload.new_customers!==undefined?<span><b>New Customers</b>{String(payload.new_customers)}</span>:null}{payload.returning_customers!==undefined?<span><b>Returning Customers</b>{String(payload.returning_customers)}</span>:null}</footer>:null}</section>;
+type ModuleReportRpc =
+  | "get_owner_menu_module_report"
+  | "get_owner_kitchen_module_report"
+  | "get_owner_staff_module_report"
+  | "get_owner_tables_module_report"
+  | "get_owner_customers_module_report";
+function IndependentModuleReport({
+  restaurantId,
+  rpc,
+  columns,
+}: {
+  restaurantId: string;
+  rpc: ModuleReportRpc;
+  columns: Array<{
+    key: string;
+    label: string;
+    money?: boolean;
+    suffix?: string;
+  }>;
+}) {
+  const [period, setPeriod] = useState<FinancialPeriod>("today");
+  const [startDate, setStartDate] = useState(toDateInputValue(new Date()));
+  const [endDate, setEndDate] = useState(toDateInputValue(new Date()));
+  const [payload, setPayload] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [reportError, setReportError] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        setLoading(true);
+        setReportError(null);
+        const range =
+          period === "custom"
+            ? getDateInputRange(startDate, endDate)
+            : getAnalyticsDateRange(period);
+        const { data, error } = await supabase.rpc(rpc, {
+          target_restaurant_id: restaurantId,
+          range_start: range.rangeStart,
+          range_end: range.rangeEnd,
+        });
+        if (error) throw new Error(error.message);
+        if (mounted)
+          setPayload(
+            data && typeof data === "object"
+              ? (data as Record<string, unknown>)
+              : {},
+          );
+      } catch (error) {
+        if (mounted)
+          setReportError(
+            error instanceof Error
+              ? error.message
+              : "Module report unavailable.",
+          );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [endDate, period, restaurantId, rpc, startDate]);
+  const rows = Array.isArray(payload.rows)
+    ? (payload.rows as Record<string, unknown>[])
+    : [];
+  return (
+    <section className="od-module-report">
+      <header>
+        <div>
+          <h2>Module Reporting</h2>
+          <p>Paid invoices only</p>
+        </div>
+        <div className="od-tabs">
+          {(["today", "week", "month", "custom"] as FinancialPeriod[]).map(
+            (option) => (
+              <button
+                key={option}
+                className={`od-tab${period === option ? " active" : ""}`}
+                onClick={() => setPeriod(option)}
+              >
+                {option === "week"
+                  ? "Week"
+                  : option === "month"
+                    ? "Month"
+                    : option.charAt(0).toUpperCase() + option.slice(1)}
+              </button>
+            ),
+          )}
+        </div>
+      </header>
+      {period === "custom" ? (
+        <div className="od-custom-range">
+          <label>
+            From
+            <input
+              type="date"
+              value={startDate}
+              max={endDate}
+              onChange={(event) => setStartDate(event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={endDate}
+              min={startDate}
+              onChange={(event) => setEndDate(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
+      {reportError ? (
+        <div className="od-error-inline">{reportError}</div>
+      ) : null}
+      <div className="od-table-wrap">
+        <table className="od-table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key}>{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length}>Loading report…</td>
+              </tr>
+            ) : rows.length ? (
+              rows.map((row, index) => (
+                <tr
+                  key={String(
+                    row.id ??
+                      row.name ??
+                      row.staff ??
+                      row.table_number ??
+                      index,
+                  )}
+                >
+                  {columns.map((column) => (
+                    <td key={column.key}>
+                      {column.money
+                        ? fmtMoney(Number(row[column.key] ?? 0))
+                        : `${String(row[column.key] ?? "—")}${column.suffix ?? ""}`}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="od-empty compact">
+                    No paid activity in this range
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {payload.top_seller ||
+      payload.bottom_seller ||
+      payload.most_used_table ||
+      payload.new_customers !== undefined ||
+      payload.returning_customers !== undefined ? (
+        <footer>
+          {payload.top_seller ? (
+            <span>
+              <b>Top Seller</b>
+              {String(payload.top_seller)}
+            </span>
+          ) : null}
+          {payload.bottom_seller ? (
+            <span>
+              <b>Bottom Seller</b>
+              {String(payload.bottom_seller)}
+            </span>
+          ) : null}
+          {payload.most_used_table ? (
+            <span>
+              <b>Most Used Table</b>
+              {String(payload.most_used_table)}
+            </span>
+          ) : null}
+          {payload.new_customers !== undefined ? (
+            <span>
+              <b>New Customers</b>
+              {String(payload.new_customers)}
+            </span>
+          ) : null}
+          {payload.returning_customers !== undefined ? (
+            <span>
+              <b>Returning Customers</b>
+              {String(payload.returning_customers)}
+            </span>
+          ) : null}
+        </footer>
+      ) : null}
+    </section>
+  );
 }
 
 type StaffModalState =
@@ -1957,30 +3412,54 @@ type StaffModalState =
   | { mode: "view" | "edit"; member: OdStaff }
   | null;
 
-function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChanged }: StaffPageProps) {
+function StaffPage({
+  staff,
+  restaurantId,
+  restaurantName,
+  stations,
+  onStaffChanged,
+}: StaffPageProps) {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "cashier" | "kitchen" | "waiter">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [roleFilter, setRoleFilter] = useState<
+    "all" | "manager" | "cashier" | "kitchen" | "waiter"
+  >("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [modal, setModal] = useState<StaffModalState>(null);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formUsername, setFormUsername] = useState("");
   const [formPin, setFormPin] = useState("");
   const [formPhone, setFormPhone] = useState("");
-  const [formRole, setFormRole] = useState<"manager" | "cashier" | "kitchen" | "waiter">("cashier");
+  const [formRole, setFormRole] = useState<
+    "manager" | "cashier" | "kitchen" | "waiter"
+  >("cashier");
   const [formStationId, setFormStationId] = useState("");
   const [activity, setActivity] = useState<StaffActivityLog[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [staffError, setStaffError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
-  const [directoryMetrics, setDirectoryMetrics] = useState<Map<string,Record<string,unknown>>>(new Map());
-  const [averageShiftMinutes,setAverageShiftMinutes]=useState(0);
+  const [directoryMetrics, setDirectoryMetrics] = useState<
+    Map<string, Record<string, unknown>>
+  >(new Map());
+  const [averageShiftMinutes, setAverageShiftMinutes] = useState(0);
 
   const activeStations = useMemo(
-    () => [...stations].filter((station) => station.active).sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name)),
-    [stations]
+    () =>
+      [...stations]
+        .filter((station) => station.active)
+        .sort(
+          (left, right) =>
+            left.priority - right.priority ||
+            left.name.localeCompare(right.name),
+        ),
+    [stations],
   );
-  const stationById = useMemo(() => new Map(stations.map((station) => [station.id, station])), [stations]);
+  const stationById = useMemo(
+    () => new Map(stations.map((station) => [station.id, station])),
+    [stations],
+  );
 
   useEffect(() => {
     if (!modal || modal.mode === "view") return;
@@ -2000,7 +3479,12 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
         const rows = await loadStaffActivityLog(restaurantId);
         if (mounted) setActivity(rows);
       } catch (activityError) {
-        if (mounted) setStaffError(activityError instanceof Error ? activityError.message : "Could not load activity log.");
+        if (mounted)
+          setStaffError(
+            activityError instanceof Error
+              ? activityError.message
+              : "Could not load activity log.",
+          );
       }
     }
     void loadActivity();
@@ -2008,7 +3492,31 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       mounted = false;
     };
   }, [restaurantId, staff]);
-  useEffect(()=>{let mounted=true;const range=getAnalyticsDateRange("today");void supabase.rpc("get_owner_staff_module_report",{target_restaurant_id:restaurantId,range_start:range.rangeStart,range_end:range.rangeEnd}).then(({data})=>{if(!mounted)return;const payload=data&&typeof data==="object"?data as Record<string,unknown>:{};const rows=Array.isArray(payload.rows)?payload.rows as Record<string,unknown>[]:[];setDirectoryMetrics(new Map(rows.map(row=>[String(row.id),row])));setAverageShiftMinutes(Number(payload.average_shift_minutes??0));});return()=>{mounted=false};},[restaurantId,staff]);
+  useEffect(() => {
+    let mounted = true;
+    const range = getAnalyticsDateRange("today");
+    void supabase
+      .rpc("get_owner_staff_module_report", {
+        target_restaurant_id: restaurantId,
+        range_start: range.rangeStart,
+        range_end: range.rangeEnd,
+      })
+      .then(({ data }) => {
+        if (!mounted) return;
+        const payload =
+          data && typeof data === "object"
+            ? (data as Record<string, unknown>)
+            : {};
+        const rows = Array.isArray(payload.rows)
+          ? (payload.rows as Record<string, unknown>[])
+          : [];
+        setDirectoryMetrics(new Map(rows.map((row) => [String(row.id), row])));
+        setAverageShiftMinutes(Number(payload.average_shift_minutes ?? 0));
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [restaurantId, staff]);
 
   function openCreateModal() {
     setStaffError(null);
@@ -2031,12 +3539,27 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
     setFormUsername(member.username ?? "");
     setFormPin("");
     setFormPhone(member.phone_number ?? "");
-    setFormRole(member.role === "manager" ? "manager" : member.role === "kitchen" ? "kitchen" : member.role === "waiter" ? "waiter" : "cashier");
-    setFormStationId(member.role === "kitchen" ? member.assigned_kitchen_station_id ?? "" : "");
+    setFormRole(
+      member.role === "manager"
+        ? "manager"
+        : member.role === "kitchen"
+          ? "kitchen"
+          : member.role === "waiter"
+            ? "waiter"
+            : "cashier",
+    );
+    setFormStationId(
+      member.role === "kitchen"
+        ? (member.assigned_kitchen_station_id ?? "")
+        : "",
+    );
     setModal({ mode, member });
   }
 
-  async function runStaffAction(action: () => Promise<{ temporaryPassword?: string } | void>, success: string) {
+  async function runStaffAction(
+    action: () => Promise<{ temporaryPassword?: string } | void>,
+    success: string,
+  ) {
     try {
       setIsWorking(true);
       setStaffError(null);
@@ -2045,9 +3568,17 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       await onStaffChanged();
       const rows = await loadStaffActivityLog(restaurantId);
       setActivity(rows);
-      setNotice(result?.temporaryPassword ? `${success} Temporary password: ${result.temporaryPassword}` : success);
+      setNotice(
+        result?.temporaryPassword
+          ? `${success} Temporary password: ${result.temporaryPassword}`
+          : success,
+      );
     } catch (actionError) {
-      setStaffError(actionError instanceof Error ? actionError.message : "Staff action failed.");
+      setStaffError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Staff action failed.",
+      );
     } finally {
       setIsWorking(false);
     }
@@ -2058,7 +3589,8 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
 
     if (!modal || modal.mode === "view") return;
 
-    const assignedKitchenStationId = formRole === "kitchen" ? formStationId : null;
+    const assignedKitchenStationId =
+      formRole === "kitchen" ? formStationId : null;
     if (formRole === "kitchen" && !assignedKitchenStationId) {
       setStaffError("Choose a kitchen station for kitchen staff.");
       return;
@@ -2076,69 +3608,131 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
       }
     }
 
-    await runStaffAction(async () => {
-      if (modal.mode === "create") {
-        const result = await createStaff({
+    await runStaffAction(
+      async () => {
+        if (modal.mode === "create") {
+          const result = await createStaff({
+            restaurantId,
+            fullName: formName,
+            email: formEmail,
+            username: formUsername,
+            pinPassword: formPin,
+            phoneNumber: formPhone,
+            role: formRole,
+            assignedKitchenStationId,
+          });
+          setModal(null);
+          return result;
+        }
+
+        await updateStaff({
           restaurantId,
+          staffId: modal.member.id,
           fullName: formName,
-          email: formEmail,
           username: formUsername,
-          pinPassword: formPin,
           phoneNumber: formPhone,
           role: formRole,
           assignedKitchenStationId,
         });
         setModal(null);
-        return result;
-      }
-
-      await updateStaff({
-        restaurantId,
-        staffId: modal.member.id,
-        fullName: formName,
-        username: formUsername,
-        phoneNumber: formPhone,
-        role: formRole,
-        assignedKitchenStationId,
-      });
-      setModal(null);
-      return {};
-    }, modal.mode === "create" ? "Staff account created." : "Staff profile updated.");
+        return {};
+      },
+      modal.mode === "create"
+        ? "Staff account created."
+        : "Staff profile updated.",
+    );
   }
 
   const operationalStaff = staff.filter(isOperationalStaff);
-  const businessActivityActions = new Set(["staff_created","staff_deactivated","staff_reactivated","password_reset_sent","temporary_password_generated","waiter_created","waiter_updated","waiter_activated","waiter_deactivated","waiter_pin_reset","waiter_deleted","role_changed","staff_updated","kitchen_order_completed","shift_opened","shift_closed","verify_payment","final_bill_requested"]);
-  const staffActivity = activity.filter((entry) => businessActivityActions.has(String(entry.action)));
+  const businessActivityActions = new Set([
+    "staff_created",
+    "staff_deactivated",
+    "staff_reactivated",
+    "password_reset_sent",
+    "temporary_password_generated",
+    "waiter_created",
+    "waiter_updated",
+    "waiter_activated",
+    "waiter_deactivated",
+    "waiter_pin_reset",
+    "waiter_deleted",
+    "role_changed",
+    "staff_updated",
+    "kitchen_order_completed",
+    "shift_opened",
+    "shift_closed",
+    "verify_payment",
+    "final_bill_requested",
+  ]);
+  const staffActivity = activity.filter((entry) =>
+    businessActivityActions.has(String(entry.action)),
+  );
 
   const filtered = operationalStaff.filter((member) => {
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? member.active : !member.active);
-    const shift = member.staff_session_active || member.waiter_session_active ? "on shift" : "off shift";
-    const haystack = `${member.display_name} ${member.username ?? ""} ${member.email ?? ""} ${member.role} ${member.active ? "active" : "inactive"} ${shift}`.toLowerCase();
-    return matchesRole && matchesStatus && haystack.includes(search.trim().toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" ? member.active : !member.active);
+    const shift =
+      member.staff_session_active || member.waiter_session_active
+        ? "on shift"
+        : "off shift";
+    const haystack =
+      `${member.display_name} ${member.username ?? ""} ${member.email ?? ""} ${member.role} ${member.active ? "active" : "inactive"} ${shift}`.toLowerCase();
+    return (
+      matchesRole &&
+      matchesStatus &&
+      haystack.includes(search.trim().toLowerCase())
+    );
   });
 
   const totalStaff = operationalStaff.length;
   const activeStaff = operationalStaff.filter((member) => member.active).length;
-  const currentlyWorking = operationalStaff.filter((member) => Boolean(member.staff_session_active || member.waiter_session_active)).length;
+  const currentlyWorking = operationalStaff.filter((member) =>
+    Boolean(member.staff_session_active || member.waiter_session_active),
+  ).length;
   const onBreak = 0;
   const offlineStaff = totalStaff - currentlyWorking - onBreak;
-  const managerCount = operationalStaff.filter((member) => String(member.role) === "manager").length;
-  const cashierCount = operationalStaff.filter((member) => member.role === "cashier").length;
-  const kitchenCount = operationalStaff.filter((member) => member.role === "kitchen").length;
-  const waiterCount = operationalStaff.filter((member) => member.role === "waiter").length;
+  const managerCount = operationalStaff.filter(
+    (member) => String(member.role) === "manager",
+  ).length;
+  const cashierCount = operationalStaff.filter(
+    (member) => member.role === "cashier",
+  ).length;
+  const kitchenCount = operationalStaff.filter(
+    (member) => member.role === "kitchen",
+  ).length;
+  const waiterCount = operationalStaff.filter(
+    (member) => member.role === "waiter",
+  ).length;
 
   return (
     <div className="od-page">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Staff Management</h1>
-          <p className="od-page-subtitle">Create, secure, and audit staff access for {restaurantName}.</p>
+          <p className="od-page-subtitle">
+            Create, secure, and audit staff access for {restaurantName}.
+          </p>
         </div>
-        <button className="od-btn-primary" onClick={openCreateModal}>Add Staff</button>
+        <button className="od-btn-primary" onClick={openCreateModal}>
+          Add Staff
+        </button>
       </div>
 
-      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_staff_module_report" columns={[{key:"staff",label:"Employee"},{key:"orders_taken",label:"Orders"},{key:"revenue_generated",label:"Revenue",money:true},{key:"customers_served",label:"Customers Served"},{key:"average_bill",label:"Average Bill",money:true},{key:"kitchen_speed",label:"Kitchen Speed",suffix:" min"},{key:"attendance",label:"Attendance"}]} />
+      <IndependentModuleReport
+        restaurantId={restaurantId}
+        rpc="get_owner_staff_module_report"
+        columns={[
+          { key: "staff", label: "Employee" },
+          { key: "orders_taken", label: "Orders" },
+          { key: "revenue_generated", label: "Revenue", money: true },
+          { key: "customers_served", label: "Customers Served" },
+          { key: "average_bill", label: "Average Bill", money: true },
+          { key: "kitchen_speed", label: "Kitchen Speed", suffix: " min" },
+          { key: "attendance", label: "Attendance" },
+        ]}
+      />
 
       {(staffError || notice) && (
         <div className={staffError ? "od-error-inline" : "od-success-inline"}>
@@ -2156,7 +3750,13 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
           ["Cashiers", cashierCount, "POS access"],
           ["Kitchen Staff", kitchenCount, "KDS access"],
           ["Waiters", waiterCount, "Shared terminal access"],
-          ["Average Shift Length", averageShiftMinutes ? `${Math.floor(averageShiftMinutes/60)}h ${Math.round(averageShiftMinutes%60)}m` : "—", "Today's completed and active shifts"],
+          [
+            "Average Shift Length",
+            averageShiftMinutes
+              ? `${Math.floor(averageShiftMinutes / 60)}h ${Math.round(averageShiftMinutes % 60)}m`
+              : "—",
+            "Today's completed and active shifts",
+          ],
         ].map(([label, value, sub]) => (
           <div key={label} className="od-kpi-card">
             <div className="od-kpi-label">{label}</div>
@@ -2171,18 +3771,38 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
           <div className="od-card-header">
             <div>
               <div className="od-card-title">Staff Directory</div>
-              <div className="od-card-subtitle">Profiles, live work status, shift context, and today's performance.</div>
+              <div className="od-card-subtitle">
+                Profiles, live work status, shift context, and today's
+                performance.
+              </div>
             </div>
             <div className="od-staff-filters">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, username, role, status or shift" aria-label="Search staff" />
-              <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)} aria-label="Filter by role">
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search name, username, role, status or shift"
+                aria-label="Search staff"
+              />
+              <select
+                value={roleFilter}
+                onChange={(event) =>
+                  setRoleFilter(event.target.value as typeof roleFilter)
+                }
+                aria-label="Filter by role"
+              >
                 <option value="all">All roles</option>
                 <option value="manager">Manager</option>
                 <option value="cashier">Cashier</option>
                 <option value="kitchen">Kitchen</option>
                 <option value="waiter">Waiter</option>
               </select>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="Filter by status">
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as typeof statusFilter)
+                }
+                aria-label="Filter by status"
+              >
                 <option value="all">All statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -2211,103 +3831,208 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                     <td colSpan={10}>
                       <div className="od-empty">
                         <div className="od-empty-icon">--</div>
-                        <div className="od-empty-msg">No staff match these filters</div>
+                        <div className="od-empty-msg">
+                          No staff match these filters
+                        </div>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   filtered.map((member) => {
-                    const metrics=directoryMetrics.get(member.id);
+                    const metrics = directoryMetrics.get(member.id);
                     return (
-                    <tr key={member.id}>
-                      <td>
-                        <div className="od-staff-cell">
-                          <div className="od-staff-avatar-small">{member.display_name.charAt(0).toUpperCase()}</div>
-                          <div>
-                            <div className="od-staff-name">{member.display_name}</div>
-                            <div className="od-staff-email">{member.email || member.username || "Staff account"}</div>
+                      <tr key={member.id}>
+                        <td>
+                          <div className="od-staff-cell">
+                            <div className="od-staff-avatar-small">
+                              {member.display_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="od-staff-name">
+                                {member.display_name}
+                              </div>
+                              <div className="od-staff-email">
+                                {member.email ||
+                                  member.username ||
+                                  "Staff account"}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>{member.username || member.email || "Not stored"}</td>
-                      <td><span className={`od-role-badge ${member.role}`}>{member.role}</span></td>
-                      <td>
-                        {member.active ? (
-                          <span className="od-active-pill">
-                            <span className="od-active-dot" />
-                            Active
+                        </td>
+                        <td>
+                          {member.username || member.email || "Not stored"}
+                        </td>
+                        <td>
+                          <span className={`od-role-badge ${member.role}`}>
+                            {member.role}
                           </span>
-                        ) : (
-                          <span className="od-offline-pill">Inactive</span>
-                        )}
-                      </td>
-                      <td>{member.staff_session_active || member.waiter_session_active ? <span className="od-active-pill"><span className="od-active-dot"/>On Shift</span> : <span className="od-offline-pill">Off Shift</span>}</td>
-                      <td>{fmtLastActive(member.last_login_at)}</td>
-                      <td>{String(metrics?.orders_taken??0)}</td>
-                      <td>{fmtMoney(Number(metrics?.revenue_generated??0))}</td>
-                      <td>{member.role === "kitchen" ? `Tickets ${String(metrics?.kitchen_tickets_completed??0)}` : member.role === "waiter" ? `Tables ${String(metrics?.tables_served??0)}` : `Bills ${String(metrics?.bills_requested??0)}`}</td>
-                      <td>
-                        <div className="od-row-actions">
-                          <button className="od-btn-ghost compact" onClick={() => openMemberModal("view", member)}>View</button>
-                          <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)} disabled={member.role === "owner"}>Edit</button>
-                          <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)} disabled={member.role === "owner"}>Change Role</button>
-                          {member.role === "kitchen" ? <button className="od-btn-ghost compact" onClick={() => openMemberModal("edit", member)}>Assign Station</button> : null}
+                        </td>
+                        <td>
                           {member.active ? (
-                            <button
-                              className="od-btn-ghost compact danger"
-                              onClick={() => runStaffAction(() => deactivateStaff(restaurantId, member.id), "Staff deactivated.")}
-                              disabled={member.role === "owner" || isWorking}
-                            >
-                              Deactivate
-                            </button>
+                            <span className="od-active-pill">
+                              <span className="od-active-dot" />
+                              Active
+                            </span>
                           ) : (
+                            <span className="od-offline-pill">Inactive</span>
+                          )}
+                        </td>
+                        <td>
+                          {member.staff_session_active ||
+                          member.waiter_session_active ? (
+                            <span className="od-active-pill">
+                              <span className="od-active-dot" />
+                              On Shift
+                            </span>
+                          ) : (
+                            <span className="od-offline-pill">Off Shift</span>
+                          )}
+                        </td>
+                        <td>{fmtLastActive(member.last_login_at)}</td>
+                        <td>{String(metrics?.orders_taken ?? 0)}</td>
+                        <td>
+                          {fmtMoney(Number(metrics?.revenue_generated ?? 0))}
+                        </td>
+                        <td>
+                          {member.role === "kitchen"
+                            ? `Tickets ${String(metrics?.kitchen_tickets_completed ?? 0)}`
+                            : member.role === "waiter"
+                              ? `Tables ${String(metrics?.tables_served ?? 0)}`
+                              : `Bills ${String(metrics?.bills_requested ?? 0)}`}
+                        </td>
+                        <td>
+                          <div className="od-row-actions">
                             <button
                               className="od-btn-ghost compact"
-                              onClick={() => runStaffAction(() => reactivateStaff(restaurantId, member.id), "Staff reactivated.")}
+                              onClick={() => openMemberModal("view", member)}
+                            >
+                              View
+                            </button>
+                            <button
+                              className="od-btn-ghost compact"
+                              onClick={() => openMemberModal("edit", member)}
+                              disabled={member.role === "owner"}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="od-btn-ghost compact"
+                              onClick={() => openMemberModal("edit", member)}
+                              disabled={member.role === "owner"}
+                            >
+                              Change Role
+                            </button>
+                            {member.role === "kitchen" ? (
+                              <button
+                                className="od-btn-ghost compact"
+                                onClick={() => openMemberModal("edit", member)}
+                              >
+                                Assign Station
+                              </button>
+                            ) : null}
+                            {member.active ? (
+                              <button
+                                className="od-btn-ghost compact danger"
+                                onClick={() =>
+                                  runStaffAction(
+                                    () =>
+                                      deactivateStaff(restaurantId, member.id),
+                                    "Staff deactivated.",
+                                  )
+                                }
+                                disabled={member.role === "owner" || isWorking}
+                              >
+                                Deactivate
+                              </button>
+                            ) : (
+                              <button
+                                className="od-btn-ghost compact"
+                                onClick={() =>
+                                  runStaffAction(
+                                    () =>
+                                      reactivateStaff(restaurantId, member.id),
+                                    "Staff reactivated.",
+                                  )
+                                }
+                                disabled={isWorking}
+                              >
+                                Reactivate
+                              </button>
+                            )}
+                            <button
+                              className="od-btn-ghost compact"
+                              onClick={() =>
+                                runStaffAction(
+                                  () =>
+                                    sendStaffPasswordReset(
+                                      restaurantId,
+                                      member.id,
+                                    ),
+                                  "Password reset link sent.",
+                                )
+                              }
+                              disabled={isWorking || !member.email}
+                            >
+                              Reset Password
+                            </button>
+                            <button
+                              className="od-btn-ghost compact"
+                              onClick={() =>
+                                runStaffAction(
+                                  () =>
+                                    generateStaffTemporaryPassword(
+                                      restaurantId,
+                                      member.id,
+                                    ),
+                                  "Temporary password generated.",
+                                )
+                              }
                               disabled={isWorking}
                             >
-                              Reactivate
+                              {member.role === "waiter"
+                                ? "Reset PIN"
+                                : "Temp Password"}
                             </button>
-                          )}
-                          <button
-                            className="od-btn-ghost compact"
-                            onClick={() => runStaffAction(() => sendStaffPasswordReset(restaurantId, member.id), "Password reset link sent.")}
-                            disabled={isWorking || !member.email}
-                          >
-                            Reset Password
-                          </button>
-                          <button
-                            className="od-btn-ghost compact"
-                            onClick={() => runStaffAction(() => generateStaffTemporaryPassword(restaurantId, member.id), "Temporary password generated.")}
-                            disabled={isWorking}
-                          >
-                            {member.role === "waiter" ? "Reset PIN" : "Temp Password"}
-                          </button>
-                          {member.role === "waiter" && (
-                            <button
-                              className="od-btn-ghost compact danger"
-                              onClick={() => runStaffAction(() => deleteStaff(restaurantId, member.id), "Waiter deleted.")}
-                              disabled={isWorking || Boolean(member.waiter_session_active)}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )})
+                            {member.role === "waiter" && (
+                              <button
+                                className="od-btn-ghost compact danger"
+                                onClick={() =>
+                                  runStaffAction(
+                                    () => deleteStaff(restaurantId, member.id),
+                                    "Waiter deleted.",
+                                  )
+                                }
+                                disabled={
+                                  isWorking ||
+                                  Boolean(member.waiter_session_active)
+                                }
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
-          <div className="od-table-footer">Showing {filtered.length} of {operationalStaff.length} members</div>
+          <div className="od-table-footer">
+            Showing {filtered.length} of {operationalStaff.length} members
+          </div>
         </div>
 
         <div className="od-side-stack">
           <div className="od-performance-card dark">
             <div className="od-performance-label">Currently Working</div>
-            <div className="od-performance-person">{currentlyWorking}/{totalStaff}</div>
-            <div className="od-performance-sub">live restaurant staff sessions</div>
+            <div className="od-performance-person">
+              {currentlyWorking}/{totalStaff}
+            </div>
+            <div className="od-performance-sub">
+              live restaurant staff sessions
+            </div>
           </div>
           <div className="od-performance-card">
             <div className="od-performance-label">Business Staff Activity</div>
@@ -2317,9 +4042,12 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
               ) : (
                 staffActivity.slice(0, 8).map((entry) => (
                   <div key={entry.id} className="od-audit-row">
-                    <div className="od-audit-action">{staffActionLabel(entry.action)}</div>
+                    <div className="od-audit-action">
+                      {staffActionLabel(entry.action)}
+                    </div>
                     <div className="od-audit-meta">
-                      {staffActivityTargetLabel(entry)} - {fmtTimeAgo(entry.created_at)}
+                      {staffActivityTargetLabel(entry)} -{" "}
+                      {fmtTimeAgo(entry.created_at)}
                     </div>
                   </div>
                 ))
@@ -2331,21 +4059,44 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
 
       {modal && (
         <div className="od-modal-backdrop" role="presentation">
-          <div className="od-modal" role="dialog" aria-modal="true" aria-label="Staff details">
+          <div
+            className="od-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Staff details"
+          >
             <div className="od-modal-header">
               <div>
                 <div className="od-card-title">
-                  {modal.mode === "create" ? "Add Staff" : modal.mode === "edit" ? "Edit Staff" : "Staff Profile"}
+                  {modal.mode === "create"
+                    ? "Add Staff"
+                    : modal.mode === "edit"
+                      ? "Edit Staff"
+                      : "Staff Profile"}
                 </div>
-                <div className="od-card-subtitle">Manager, cashier, kitchen, and waiter accounts use the same secured staff creation flow.</div>
+                <div className="od-card-subtitle">
+                  Manager, cashier, kitchen, and waiter accounts use the same
+                  secured staff creation flow.
+                </div>
               </div>
-              <button className="od-icon-btn" onClick={() => setModal(null)} aria-label="Close">x</button>
+              <button
+                className="od-icon-btn"
+                onClick={() => setModal(null)}
+                aria-label="Close"
+              >
+                x
+              </button>
             </div>
 
             <form className="od-staff-form" onSubmit={handleSubmitStaff}>
               <label>
                 Full Name
-                <input value={formName} onChange={(event) => setFormName(event.target.value)} disabled={modal.mode === "view" || isWorking} required />
+                <input
+                  value={formName}
+                  onChange={(event) => setFormName(event.target.value)}
+                  disabled={modal.mode === "view" || isWorking}
+                  required
+                />
               </label>
               <label>
                 Email
@@ -2353,9 +4104,15 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   type="email"
                   value={formEmail}
                   onChange={(event) => setFormEmail(event.target.value)}
-                  disabled={modal.mode !== "create" || formRole === "waiter" || isWorking}
+                  disabled={
+                    modal.mode !== "create" ||
+                    formRole === "waiter" ||
+                    isWorking
+                  }
                   required={formRole !== "waiter"}
-                  placeholder={formRole === "waiter" ? "Not needed for waiter login" : ""}
+                  placeholder={
+                    formRole === "waiter" ? "Not needed for waiter login" : ""
+                  }
                 />
               </label>
               {formRole === "waiter" && (
@@ -2409,7 +4166,16 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
               )}
               <label>
                 Role
-                <select value={formRole} onChange={(event) => setFormRole(event.target.value as "manager" | "cashier" | "kitchen" | "waiter")} disabled={modal.mode === "view" || isWorking}>
+                <select
+                  value={formRole}
+                  onChange={(event) =>
+                    setFormRole(
+                      event.target.value as
+                        "manager" | "cashier" | "kitchen" | "waiter",
+                    )
+                  }
+                  disabled={modal.mode === "view" || isWorking}
+                >
                   <option value="manager">Manager</option>
                   <option value="cashier">Cashier</option>
                   <option value="kitchen">Kitchen</option>
@@ -2427,7 +4193,9 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   >
                     <option value="">Select station</option>
                     {activeStations.map((station) => (
-                      <option key={station.id} value={station.id}>{station.name}</option>
+                      <option key={station.id} value={station.id}>
+                        {station.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -2442,19 +4210,42 @@ function StaffPage({ staff, restaurantId, restaurantName, stations, onStaffChang
                   <span>Phone</span>
                   <strong>{modal.member.phone_number || "-"}</strong>
                   <span>Created</span>
-                  <strong>{new Date(modal.member.created_at).toLocaleDateString()}</strong>
+                  <strong>
+                    {new Date(modal.member.created_at).toLocaleDateString()}
+                  </strong>
                   <span>Last Active</span>
                   <strong>{fmtLastActive(modal.member.last_login_at)}</strong>
                   <span>Station</span>
-                  <strong>{modal.member.role === "kitchen" && modal.member.assigned_kitchen_station_id ? stationById.get(modal.member.assigned_kitchen_station_id)?.name ?? "Unassigned" : "-"}</strong>
+                  <strong>
+                    {modal.member.role === "kitchen" &&
+                    modal.member.assigned_kitchen_station_id
+                      ? (stationById.get(
+                          modal.member.assigned_kitchen_station_id,
+                        )?.name ?? "Unassigned")
+                      : "-"}
+                  </strong>
                 </div>
               )}
 
               <div className="od-modal-actions">
-                <button type="button" className="od-btn-ghost" onClick={() => setModal(null)}>Cancel</button>
+                <button
+                  type="button"
+                  className="od-btn-ghost"
+                  onClick={() => setModal(null)}
+                >
+                  Cancel
+                </button>
                 {modal.mode !== "view" && (
-                  <button type="submit" className="od-btn-primary" disabled={isWorking}>
-                    {isWorking ? "Saving..." : modal.mode === "create" ? "Create Staff" : "Save Changes"}
+                  <button
+                    type="submit"
+                    className="od-btn-primary"
+                    disabled={isWorking}
+                  >
+                    {isWorking
+                      ? "Saving..."
+                      : modal.mode === "create"
+                        ? "Create Staff"
+                        : "Save Changes"}
                   </button>
                 )}
               </div>
@@ -2487,7 +4278,16 @@ const KITCHEN_STATION_ICONS = [
   { value: "BR", label: "Bar" },
 ];
 
-const KITCHEN_STATION_COLORS = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#dc2626", "#0891b2", "#16a34a", "#475569"];
+const KITCHEN_STATION_COLORS = [
+  "#0f766e",
+  "#2563eb",
+  "#d97706",
+  "#7c3aed",
+  "#dc2626",
+  "#0891b2",
+  "#16a34a",
+  "#475569",
+];
 
 function KitchenStationsPage({
   restaurantId,
@@ -2510,8 +4310,12 @@ function KitchenStationsPage({
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const sortedStations = useMemo(
-    () => [...stations].sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name)),
-    [stations]
+    () =>
+      [...stations].sort(
+        (left, right) =>
+          left.priority - right.priority || left.name.localeCompare(right.name),
+      ),
+    [stations],
   );
   const activeCount = sortedStations.filter((station) => station.active).length;
 
@@ -2522,7 +4326,9 @@ function KitchenStationsPage({
     setFormDescription("");
     setFormColor(KITCHEN_STATION_COLORS[0]);
     setFormIcon(KITCHEN_STATION_ICONS[0].value);
-    setFormPriority(String((sortedStations[sortedStations.length - 1]?.priority ?? 0) + 10));
+    setFormPriority(
+      String((sortedStations[sortedStations.length - 1]?.priority ?? 0) + 10),
+    );
     setFormActive(true);
     setModal({ mode: "create" });
   }
@@ -2549,7 +4355,8 @@ function KitchenStationsPage({
       setNotice(null);
       const priority = Number(formPriority);
       if (!formName.trim()) throw new Error("Station name is required.");
-      if (!Number.isInteger(priority) || priority < 0 || priority > 10000) throw new Error("Priority must be a whole number from 0 to 10000.");
+      if (!Number.isInteger(priority) || priority < 0 || priority > 10000)
+        throw new Error("Priority must be a whole number from 0 to 10000.");
 
       const { error } = await supabase.rpc("manage_kitchen_station", {
         target_restaurant_id: restaurantId,
@@ -2563,18 +4370,33 @@ function KitchenStationsPage({
         station_active: formActive,
       });
       if (error) throw new Error(error.message);
-      setNotice(modal.mode === "create" ? "Kitchen station created." : "Kitchen station updated.");
+      setNotice(
+        modal.mode === "create"
+          ? "Kitchen station created."
+          : "Kitchen station updated.",
+      );
       setModal(null);
       await onStationsChanged();
     } catch (actionError) {
-      setStationError(actionError instanceof Error ? actionError.message : "Kitchen station action failed.");
+      setStationError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Kitchen station action failed.",
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  async function runStationAction(station: OdKitchenStation, action: "enable" | "disable" | "delete") {
-    if (action === "delete" && !window.confirm(`Delete ${station.name}? This cannot be undone.`)) return;
+  async function runStationAction(
+    station: OdKitchenStation,
+    action: "enable" | "disable" | "delete",
+  ) {
+    if (
+      action === "delete" &&
+      !window.confirm(`Delete ${station.name}? This cannot be undone.`)
+    )
+      return;
 
     try {
       setWorkingId(`${action}:${station.id}`);
@@ -2592,10 +4414,20 @@ function KitchenStationsPage({
         station_active: station.active,
       });
       if (error) throw new Error(error.message);
-      setNotice(action === "delete" ? "Kitchen station deleted." : action === "enable" ? "Kitchen station enabled." : "Kitchen station disabled.");
+      setNotice(
+        action === "delete"
+          ? "Kitchen station deleted."
+          : action === "enable"
+            ? "Kitchen station enabled."
+            : "Kitchen station disabled.",
+      );
       await onStationsChanged();
     } catch (actionError) {
-      setStationError(actionError instanceof Error ? actionError.message : "Kitchen station action failed.");
+      setStationError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Kitchen station action failed.",
+      );
     } finally {
       setWorkingId(null);
     }
@@ -2606,14 +4438,37 @@ function KitchenStationsPage({
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Kitchen Stations</h1>
-          <p className="od-page-subtitle">Create and manage kitchen station foundations for future routing.</p>
+          <p className="od-page-subtitle">
+            Create and manage kitchen station foundations for future routing.
+          </p>
         </div>
         <div className="od-header-actions">
-          <button className="od-btn-primary" type="button" onClick={openCreateModal}>Create Station</button>
+          <button
+            className="od-btn-primary"
+            type="button"
+            onClick={openCreateModal}
+          >
+            Create Station
+          </button>
         </div>
       </div>
 
-      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_kitchen_module_report" columns={[{key:"name",label:"Station"},{key:"orders",label:"Orders"},{key:"average_prep_time",label:"Average Prep Time",suffix:" min"},{key:"completed",label:"Completed"},{key:"cancelled",label:"Cancelled"},{key:"performance",label:"Performance",suffix:"%"}]} />
+      <IndependentModuleReport
+        restaurantId={restaurantId}
+        rpc="get_owner_kitchen_module_report"
+        columns={[
+          { key: "name", label: "Station" },
+          { key: "orders", label: "Orders" },
+          {
+            key: "average_prep_time",
+            label: "Average Prep Time",
+            suffix: " min",
+          },
+          { key: "completed", label: "Completed" },
+          { key: "cancelled", label: "Cancelled" },
+          { key: "performance", label: "Performance", suffix: "%" },
+        ]}
+      />
 
       {(stationError || notice) && (
         <div className={stationError ? "od-error-inline" : "od-success-inline"}>
@@ -2632,7 +4487,12 @@ function KitchenStationsPage({
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">Assigned Menu Items</div>
-          <div className="od-kpi-value">{sortedStations.reduce((sum, station) => sum + station.assigned_menu_items, 0)}</div>
+          <div className="od-kpi-value">
+            {sortedStations.reduce(
+              (sum, station) => sum + station.assigned_menu_items,
+              0,
+            )}
+          </div>
         </div>
       </section>
 
@@ -2641,75 +4501,169 @@ function KitchenStationsPage({
           <div className="od-card">
             <div className="od-empty">
               <div className="od-empty-msg">No kitchen stations yet</div>
-              <div className="od-empty-sub">Main Kitchen will be created automatically.</div>
+              <div className="od-empty-sub">
+                Main Kitchen will be created automatically.
+              </div>
             </div>
           </div>
-        ) : sortedStations.map((station) => {
-          const busy = workingId?.endsWith(station.id) || saving;
-          const deleteDisabled = busy;
-          return (
-            <article key={station.id} className={`od-station-card ${station.active ? "active" : "inactive"}`}>
-              <div className="od-station-head">
-                <div className="od-station-icon" style={{ background: station.display_color }}>{station.icon}</div>
-                <div className="od-station-title">
-                  <h2>{station.name}</h2>
-                  <span className={`od-status-badge ${station.active ? "paid" : "pending"}`}>{station.active ? "Active" : "Inactive"}</span>
+        ) : (
+          sortedStations.map((station) => {
+            const busy = workingId?.endsWith(station.id) || saving;
+            const deleteDisabled = busy;
+            return (
+              <article
+                key={station.id}
+                className={`od-station-card ${station.active ? "active" : "inactive"}`}
+              >
+                <div className="od-station-head">
+                  <div
+                    className="od-station-icon"
+                    style={{ background: station.display_color }}
+                  >
+                    {station.icon}
+                  </div>
+                  <div className="od-station-title">
+                    <h2>{station.name}</h2>
+                    <span
+                      className={`od-status-badge ${station.active ? "paid" : "pending"}`}
+                    >
+                      {station.active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              {station.description ? <p className="od-station-desc">{station.description}</p> : <p className="od-station-desc muted">No description added.</p>}
-              <div className="od-station-meta">
-                <span><strong>{station.priority}</strong> Priority</span>
-                <span><strong>{station.assigned_menu_items}</strong> Menu Items</span>
-              </div>
-              <div className="od-row-actions">
-                <button className="od-btn-ghost compact" type="button" onClick={() => openEditModal(station)} disabled={busy}>Edit</button>
-                <button className="od-btn-ghost compact" type="button" onClick={() => void runStationAction(station, station.active ? "disable" : "enable")} disabled={busy}>
-                  {station.active ? "Disable" : "Enable"}
-                </button>
-                <button
-                  className="od-btn-ghost compact danger"
-                  type="button"
-                  onClick={() => void runStationAction(station, "delete")}
-                  disabled={deleteDisabled}
-                  title={station.assigned_menu_items > 0 ? "This station is currently in use." : "Delete station"}
-                >
-                  Delete
-                </button>
-              </div>
-              {station.assigned_menu_items > 0 && <div className="od-station-hint">This station is currently in use.</div>}
-            </article>
-          );
-        })}
+                {station.description ? (
+                  <p className="od-station-desc">{station.description}</p>
+                ) : (
+                  <p className="od-station-desc muted">No description added.</p>
+                )}
+                <div className="od-station-meta">
+                  <span>
+                    <strong>{station.priority}</strong> Priority
+                  </span>
+                  <span>
+                    <strong>{station.assigned_menu_items}</strong> Menu Items
+                  </span>
+                </div>
+                <div className="od-row-actions">
+                  <button
+                    className="od-btn-ghost compact"
+                    type="button"
+                    onClick={() => openEditModal(station)}
+                    disabled={busy}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="od-btn-ghost compact"
+                    type="button"
+                    onClick={() =>
+                      void runStationAction(
+                        station,
+                        station.active ? "disable" : "enable",
+                      )
+                    }
+                    disabled={busy}
+                  >
+                    {station.active ? "Disable" : "Enable"}
+                  </button>
+                  <button
+                    className="od-btn-ghost compact danger"
+                    type="button"
+                    onClick={() => void runStationAction(station, "delete")}
+                    disabled={deleteDisabled}
+                    title={
+                      station.assigned_menu_items > 0
+                        ? "This station is currently in use."
+                        : "Delete station"
+                    }
+                  >
+                    Delete
+                  </button>
+                </div>
+                {station.assigned_menu_items > 0 && (
+                  <div className="od-station-hint">
+                    This station is currently in use.
+                  </div>
+                )}
+              </article>
+            );
+          })
+        )}
       </section>
 
       {modal && (
         <div className="od-modal-backdrop" role="presentation">
-          <div className="od-modal" role="dialog" aria-modal="true" aria-label="Kitchen station details">
+          <div
+            className="od-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Kitchen station details"
+          >
             <div className="od-modal-header">
               <div>
-                <div className="od-card-title">{modal.mode === "create" ? "Create Station" : "Edit Station"}</div>
-                <div className="od-card-subtitle">Station names must be unique inside this restaurant.</div>
+                <div className="od-card-title">
+                  {modal.mode === "create" ? "Create Station" : "Edit Station"}
+                </div>
+                <div className="od-card-subtitle">
+                  Station names must be unique inside this restaurant.
+                </div>
               </div>
-              <button className="od-icon-btn" type="button" onClick={() => setModal(null)} aria-label="Close">x</button>
+              <button
+                className="od-icon-btn"
+                type="button"
+                onClick={() => setModal(null)}
+                aria-label="Close"
+              >
+                x
+              </button>
             </div>
             <form className="od-staff-form" onSubmit={submitStation}>
               <label>
                 Station Name
-                <input value={formName} onChange={(event) => setFormName(event.target.value)} disabled={saving} required maxLength={80} />
+                <input
+                  value={formName}
+                  onChange={(event) => setFormName(event.target.value)}
+                  disabled={saving}
+                  required
+                  maxLength={80}
+                />
               </label>
               <label>
                 Description
-                <textarea value={formDescription} onChange={(event) => setFormDescription(event.target.value)} disabled={saving} rows={3} maxLength={240} />
+                <textarea
+                  value={formDescription}
+                  onChange={(event) => setFormDescription(event.target.value)}
+                  disabled={saving}
+                  rows={3}
+                  maxLength={240}
+                />
               </label>
               <label>
                 Icon
-                <select value={formIcon} onChange={(event) => setFormIcon(event.target.value)} disabled={saving}>
-                  {KITCHEN_STATION_ICONS.map((icon) => <option key={icon.value} value={icon.value}>{icon.value} - {icon.label}</option>)}
+                <select
+                  value={formIcon}
+                  onChange={(event) => setFormIcon(event.target.value)}
+                  disabled={saving}
+                >
+                  {KITCHEN_STATION_ICONS.map((icon) => (
+                    <option key={icon.value} value={icon.value}>
+                      {icon.value} - {icon.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
                 Priority
-                <input type="number" min="0" max="10000" step="1" value={formPriority} onChange={(event) => setFormPriority(event.target.value)} disabled={saving} required />
+                <input
+                  type="number"
+                  min="0"
+                  max="10000"
+                  step="1"
+                  value={formPriority}
+                  onChange={(event) => setFormPriority(event.target.value)}
+                  disabled={saving}
+                  required
+                />
               </label>
               <div className="od-color-field">
                 <span>Display Color</span>
@@ -2725,16 +4679,40 @@ function KitchenStationsPage({
                       aria-label={`Use color ${color}`}
                     />
                   ))}
-                  <input type="color" value={formColor} onChange={(event) => setFormColor(event.target.value)} disabled={saving} aria-label="Custom station color" />
+                  <input
+                    type="color"
+                    value={formColor}
+                    onChange={(event) => setFormColor(event.target.value)}
+                    disabled={saving}
+                    aria-label="Custom station color"
+                  />
                 </div>
               </div>
               <label className="od-check-row">
-                <input type="checkbox" checked={formActive} onChange={(event) => setFormActive(event.target.checked)} disabled={saving} />
+                <input
+                  type="checkbox"
+                  checked={formActive}
+                  onChange={(event) => setFormActive(event.target.checked)}
+                  disabled={saving}
+                />
                 Active
               </label>
               <div className="od-modal-actions">
-                <button type="button" className="od-btn-ghost" onClick={() => setModal(null)} disabled={saving}>Cancel</button>
-                <button type="submit" className="od-btn-primary" disabled={saving}>{saving ? "Saving..." : "Save Station"}</button>
+                <button
+                  type="button"
+                  className="od-btn-ghost"
+                  onClick={() => setModal(null)}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="od-btn-primary"
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Station"}
+                </button>
               </div>
             </form>
           </div>
@@ -2754,21 +4732,40 @@ type MenuPageProps = {
 };
 
 function getCategoryName(categories: OdCategory[], categoryId: string) {
-  return categories.find((category) => category.id === categoryId)?.name ?? "Uncategorized";
+  return (
+    categories.find((category) => category.id === categoryId)?.name ??
+    "Uncategorized"
+  );
 }
 
-function getStationName(stations: OdKitchenStation[], stationId: string | null) {
-  return stations.find((station) => station.id === stationId)?.name ?? "Main Kitchen";
+function getStationName(
+  stations: OdKitchenStation[],
+  stationId: string | null,
+) {
+  return (
+    stations.find((station) => station.id === stationId)?.name ?? "Main Kitchen"
+  );
 }
 
 function buildMenuPhotoPath(restaurantId: string, file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const extension =
+    file.name
+      .split(".")
+      .pop()
+      ?.toLowerCase()
+      .replace(/[^a-z0-9]/g, "") || "jpg";
   const token = crypto.randomUUID();
   return `${restaurantId}/${token}.${extension}`;
 }
 
 function buildMenuFilePath(restaurantId: string, file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || (file.type === "application/pdf" ? "pdf" : "jpg");
+  const extension =
+    file.name
+      .split(".")
+      .pop()
+      ?.toLowerCase()
+      .replace(/[^a-z0-9]/g, "") ||
+    (file.type === "application/pdf" ? "pdf" : "jpg");
   const token = crypto.randomUUID();
   return `${restaurantId}/${token}.${extension}`;
 }
@@ -2787,14 +4784,16 @@ function parseOptionalNutritionNumber(label: string, value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`${label} must be zero or greater.`);
+  if (!Number.isFinite(parsed) || parsed < 0)
+    throw new Error(`${label} must be zero or greater.`);
   return parsed;
 }
 
 function parseOptionalNutritionInteger(label: string, value: string) {
   const parsed = parseOptionalNutritionNumber(label, value);
   if (parsed === null) return null;
-  if (!Number.isInteger(parsed)) throw new Error(`${label} must be a whole number.`);
+  if (!Number.isInteger(parsed))
+    throw new Error(`${label} must be a whole number.`);
   return parsed;
 }
 
@@ -2802,7 +4801,8 @@ function parseOptionalPositiveInteger(label: string, value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 0) throw new Error(`${label} must be a whole number.`);
+  if (!Number.isInteger(parsed) || parsed < 0)
+    throw new Error(`${label} must be a whole number.`);
   return parsed;
 }
 
@@ -2811,22 +4811,33 @@ function formatIngredientInput(ingredients: string[] | null | undefined) {
 }
 
 function parseIngredientInput(value: string) {
-  const ingredients = Array.from(new Set(
-    value
-      .split(/\r?\n|,/)
-      .map((ingredient) => ingredient.trim())
-      .filter((ingredient) => ingredient.length > 0)
-  ));
+  const ingredients = Array.from(
+    new Set(
+      value
+        .split(/\r?\n|,/)
+        .map((ingredient) => ingredient.trim())
+        .filter((ingredient) => ingredient.length > 0),
+    ),
+  );
 
   return ingredients.length > 0 ? ingredients : null;
 }
 
-function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuChanged }: MenuPageProps) {
+function MenuPage({
+  restaurantId,
+  items,
+  categories,
+  stations,
+  topItems,
+  onMenuChanged,
+}: MenuPageProps) {
   const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [modal, setModal] = useState<MenuModalState>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "unavailable">("all");
+  const [availabilityFilter, setAvailabilityFilter] = useState<
+    "all" | "available" | "unavailable"
+  >("all");
   const [stationFilter, setStationFilter] = useState("all");
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -2851,20 +4862,36 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const activeStations = useMemo(
-    () => [...stations].filter((station) => station.active).sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name)),
-    [stations]
+    () =>
+      [...stations]
+        .filter((station) => station.active)
+        .sort(
+          (left, right) =>
+            left.priority - right.priority ||
+            left.name.localeCompare(right.name),
+        ),
+    [stations],
   );
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
     return items.filter((item) => {
-      const matchesSearch = !query
-        || item.name.toLowerCase().includes(query)
-        || (item.description ?? "").toLowerCase().includes(query);
-      const matchesCategory = categoryFilter === "all" || item.category_id === categoryFilter;
-      const matchesAvailability = availabilityFilter === "all"
-        || (availabilityFilter === "available" ? item.available : !item.available);
-      const matchesStation = stationFilter === "all" || item.kitchen_station_id === stationFilter;
-      return matchesSearch && matchesCategory && matchesAvailability && matchesStation;
+      const matchesSearch =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        (item.description ?? "").toLowerCase().includes(query);
+      const matchesCategory =
+        categoryFilter === "all" || item.category_id === categoryFilter;
+      const matchesAvailability =
+        availabilityFilter === "all" ||
+        (availabilityFilter === "available" ? item.available : !item.available);
+      const matchesStation =
+        stationFilter === "all" || item.kitchen_station_id === stationFilter;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesAvailability &&
+        matchesStation
+      );
     });
   }, [availabilityFilter, categoryFilter, items, search, stationFilter]);
 
@@ -2874,7 +4901,9 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     async function loadMenuUploads() {
       const { data, error } = await supabase
         .from("menu_uploads")
-        .select("id,file_name,file_path,file_url,mime_type,size_bytes,created_at")
+        .select(
+          "id,file_name,file_path,file_url,mime_type,size_bytes,created_at",
+        )
         .eq("restaurant_id", restaurantId)
         .order("created_at", { ascending: false });
 
@@ -2884,10 +4913,12 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         return;
       }
 
-      setMenuUploads((data ?? []).map((row) => ({
-        ...row,
-        size_bytes: Number(row.size_bytes),
-      })) as OdMenuUpload[]);
+      setMenuUploads(
+        (data ?? []).map((row) => ({
+          ...row,
+          size_bytes: Number(row.size_bytes),
+        })) as OdMenuUpload[],
+      );
     }
 
     void loadMenuUploads();
@@ -2904,7 +4935,12 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
-    setMenuUploads((data ?? []).map((row) => ({ ...row, size_bytes: Number(row.size_bytes) })) as OdMenuUpload[]);
+    setMenuUploads(
+      (data ?? []).map((row) => ({
+        ...row,
+        size_bytes: Number(row.size_bytes),
+      })) as OdMenuUpload[],
+    );
   }
 
   function openCreateModal() {
@@ -2936,7 +4972,12 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     setNotice(null);
     setFormName(item.name);
     setFormDescription(item.description ?? "");
-    setFormPreparationTime(item.preparation_time_minutes === null || typeof item.preparation_time_minutes === "undefined" ? "" : String(item.preparation_time_minutes));
+    setFormPreparationTime(
+      item.preparation_time_minutes === null ||
+        typeof item.preparation_time_minutes === "undefined"
+        ? ""
+        : String(item.preparation_time_minutes),
+    );
     setFormPrice(String(item.price));
     setFormCategoryId(item.category_id);
     setFormNewCategory("");
@@ -2964,7 +5005,9 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       return formCategoryId;
     }
 
-    const existing = categories.find((category) => category.name.toLowerCase() === newCategory.toLowerCase());
+    const existing = categories.find(
+      (category) => category.name.toLowerCase() === newCategory.toLowerCase(),
+    );
     if (existing) return existing.id;
 
     const { data, error } = await supabase
@@ -2988,11 +5031,13 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
     }
 
     const path = buildMenuPhotoPath(restaurantId, formImageFile);
-    const { error } = await supabase.storage.from("menu-photos").upload(path, formImageFile, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: formImageFile.type,
-    });
+    const { error } = await supabase.storage
+      .from("menu-photos")
+      .upload(path, formImageFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: formImageFile.type,
+      });
 
     if (error) {
       throw new Error(error.message);
@@ -3010,34 +5055,46 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       setMenuError(null);
       setNotice(null);
 
-      const isAllowedType = file.type.startsWith("image/") || file.type === "application/pdf";
+      const isAllowedType =
+        file.type.startsWith("image/") || file.type === "application/pdf";
       if (!isAllowedType) throw new Error("Upload a menu image or PDF file.");
-      if (file.size > 10 * 1024 * 1024) throw new Error("Menu file must be 10 MB or smaller.");
+      if (file.size > 10 * 1024 * 1024)
+        throw new Error("Menu file must be 10 MB or smaller.");
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
       if (userError || !userData.user) {
-        throw new Error(userError?.message || "You must be signed in as the owner to upload a menu.");
+        throw new Error(
+          userError?.message ||
+            "You must be signed in as the owner to upload a menu.",
+        );
       }
 
       const path = buildMenuFilePath(restaurantId, file);
-      const { error: uploadError } = await supabase.storage.from("menu-files").upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from("menu-files")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        });
 
       if (uploadError) throw new Error(uploadError.message);
 
-      const { data: publicUrlData } = supabase.storage.from("menu-files").getPublicUrl(path);
-      const { error: insertError } = await supabase.from("menu_uploads").insert({
-        restaurant_id: restaurantId,
-        uploaded_by: userData.user.id,
-        file_name: file.name,
-        file_path: path,
-        file_url: publicUrlData.publicUrl,
-        mime_type: file.type,
-        size_bytes: file.size,
-      });
+      const { data: publicUrlData } = supabase.storage
+        .from("menu-files")
+        .getPublicUrl(path);
+      const { error: insertError } = await supabase
+        .from("menu_uploads")
+        .insert({
+          restaurant_id: restaurantId,
+          uploaded_by: userData.user.id,
+          file_name: file.name,
+          file_path: path,
+          file_url: publicUrlData.publicUrl,
+          mime_type: file.type,
+          size_bytes: file.size,
+        });
 
       if (insertError) {
         await supabase.storage.from("menu-files").remove([path]);
@@ -3047,7 +5104,11 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       setNotice("Menu file uploaded.");
       await refreshMenuUploads();
     } catch (actionError) {
-      setMenuError(actionError instanceof Error ? actionError.message : "Could not upload menu file.");
+      setMenuError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Could not upload menu file.",
+      );
     } finally {
       if (menuUploadInputRef.current) menuUploadInputRef.current.value = "";
       setIsWorking(false);
@@ -3055,7 +5116,8 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
   }
 
   async function handleDeleteMenuUpload(upload: OdMenuUpload) {
-    if (!window.confirm(`Delete ${upload.file_name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${upload.file_name}? This cannot be undone.`))
+      return;
 
     try {
       setIsWorking(true);
@@ -3069,13 +5131,19 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         .eq("restaurant_id", restaurantId);
       if (deleteError) throw new Error(deleteError.message);
 
-      const { error: storageError } = await supabase.storage.from("menu-files").remove([upload.file_path]);
+      const { error: storageError } = await supabase.storage
+        .from("menu-files")
+        .remove([upload.file_path]);
       if (storageError) throw new Error(storageError.message);
 
       setNotice("Menu file deleted.");
       await refreshMenuUploads();
     } catch (actionError) {
-      setMenuError(actionError instanceof Error ? actionError.message : "Could not delete menu file.");
+      setMenuError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Could not delete menu file.",
+      );
     } finally {
       setIsWorking(false);
     }
@@ -3092,15 +5160,23 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
 
       const name = formName.trim();
       const price = Number(formPrice);
-      if (name.length < 2) throw new Error("Item name must be at least 2 characters.");
-      if (!Number.isFinite(price) || price <= 0) throw new Error("Price must be greater than zero.");
+      if (name.length < 2)
+        throw new Error("Item name must be at least 2 characters.");
+      if (!Number.isFinite(price) || price <= 0)
+        throw new Error("Price must be greater than zero.");
       const categoryId = await ensureCategory();
       const imageUrl = await uploadImageIfNeeded();
       const ingredients = parseIngredientInput(formIngredients);
-      const preparationTimeMinutes = parseOptionalPositiveInteger("Preparation time", formPreparationTime);
+      const preparationTimeMinutes = parseOptionalPositiveInteger(
+        "Preparation time",
+        formPreparationTime,
+      );
       const calories = parseOptionalNutritionInteger("Calories", formCalories);
       const proteinG = parseOptionalNutritionNumber("Protein", formProteinG);
-      const carbohydratesG = parseOptionalNutritionNumber("Carbs", formCarbohydratesG);
+      const carbohydratesG = parseOptionalNutritionNumber(
+        "Carbs",
+        formCarbohydratesG,
+      );
       const fatG = parseOptionalNutritionNumber("Fat", formFatG);
       const fiberG = parseOptionalNutritionNumber("Fiber", formFiberG);
       const sugarG = parseOptionalNutritionNumber("Sugar", formSugarG);
@@ -3142,7 +5218,11 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       setModal(null);
       await onMenuChanged();
     } catch (actionError) {
-      setMenuError(actionError instanceof Error ? actionError.message : "Menu action failed.");
+      setMenuError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Menu action failed.",
+      );
     } finally {
       setIsWorking(false);
     }
@@ -3155,16 +5235,30 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       setIsWorking(true);
       setMenuError(null);
       setNotice(null);
-      const { data, error } = await supabase.rpc("archive_or_delete_menu_item", {
-        target_restaurant_id: restaurantId,
-        target_menu_item_id: item.id,
-      });
+      const { data, error } = await supabase.rpc(
+        "archive_or_delete_menu_item",
+        {
+          target_restaurant_id: restaurantId,
+          target_menu_item_id: item.id,
+        },
+      );
       if (error) throw new Error(error.message);
-      const action = data && typeof data === "object" && "action" in data ? String((data as { action?: unknown }).action) : "deleted";
-      setNotice(action === "archived" ? "Menu item archived because it has order history." : "Menu item deleted.");
+      const action =
+        data && typeof data === "object" && "action" in data
+          ? String((data as { action?: unknown }).action)
+          : "deleted";
+      setNotice(
+        action === "archived"
+          ? "Menu item archived because it has order history."
+          : "Menu item deleted.",
+      );
       await onMenuChanged();
     } catch (actionError) {
-      setMenuError(actionError instanceof Error ? actionError.message : "Could not delete menu item.");
+      setMenuError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Could not delete menu item.",
+      );
     } finally {
       setIsWorking(false);
     }
@@ -3175,7 +5269,9 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Menu Management</h1>
-          <p className="od-page-subtitle">Manage your restaurant menu, categories, and pricing.</p>
+          <p className="od-page-subtitle">
+            Manage your restaurant menu, categories, and pricing.
+          </p>
         </div>
         <div className="od-header-actions">
           <input
@@ -3183,17 +5279,36 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
             className="od-hidden-file-input"
             type="file"
             accept="image/*,application/pdf"
-            onChange={(event) => void handleUploadMenuFile(event.target.files?.[0] ?? null)}
+            onChange={(event) =>
+              void handleUploadMenuFile(event.target.files?.[0] ?? null)
+            }
             disabled={isWorking}
           />
-          <button className="od-btn-ghost" type="button" onClick={() => menuUploadInputRef.current?.click()} disabled={isWorking}>
+          <button
+            className="od-btn-ghost"
+            type="button"
+            onClick={() => menuUploadInputRef.current?.click()}
+            disabled={isWorking}
+          >
             Upload Menu
           </button>
-          <button className="od-btn-primary" onClick={openCreateModal}>Add Item</button>
+          <button className="od-btn-primary" onClick={openCreateModal}>
+            Add Item
+          </button>
         </div>
       </div>
 
-      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_menu_module_report" columns={[{key:"name",label:"Menu Item"},{key:"quantity_sold",label:"Quantity Sold"},{key:"revenue",label:"Revenue",money:true},{key:"average_price",label:"Average Price",money:true},{key:"refunds",label:"Refunds"}]} />
+      <IndependentModuleReport
+        restaurantId={restaurantId}
+        rpc="get_owner_menu_module_report"
+        columns={[
+          { key: "name", label: "Menu Item" },
+          { key: "quantity_sold", label: "Quantity Sold" },
+          { key: "revenue", label: "Revenue", money: true },
+          { key: "average_price", label: "Average Price", money: true },
+          { key: "refunds", label: "Refunds" },
+        ]}
+      />
 
       {(menuError || notice) && (
         <div className={menuError ? "od-error-inline" : "od-success-inline"}>
@@ -3207,26 +5322,49 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         <div className="od-card-header">
           <div>
             <div className="od-card-title">Uploaded Menu Files</div>
-            <div className="od-card-subtitle">Image and PDF menus saved to owner-managed storage.</div>
+            <div className="od-card-subtitle">
+              Image and PDF menus saved to owner-managed storage.
+            </div>
           </div>
         </div>
         <div className="od-menu-upload-list">
           {menuUploads.length === 0 ? (
             <div className="od-empty compact">
               <div className="od-empty-msg">No menu files uploaded</div>
-              <div className="od-empty-sub">Upload a menu image or PDF from the button above.</div>
+              <div className="od-empty-sub">
+                Upload a menu image or PDF from the button above.
+              </div>
             </div>
           ) : (
             menuUploads.map((upload) => (
               <div className="od-menu-upload-row" key={upload.id}>
-                <div className="od-menu-upload-icon">{upload.mime_type === "application/pdf" ? "PDF" : "IMG"}</div>
+                <div className="od-menu-upload-icon">
+                  {upload.mime_type === "application/pdf" ? "PDF" : "IMG"}
+                </div>
                 <div className="od-menu-upload-info">
                   <strong>{upload.file_name}</strong>
-                  <span>{formatFileSize(upload.size_bytes)} - {fmtDateTime(upload.created_at)}</span>
+                  <span>
+                    {formatFileSize(upload.size_bytes)} -{" "}
+                    {fmtDateTime(upload.created_at)}
+                  </span>
                 </div>
                 <div className="od-row-actions">
-                  <a className="od-btn-ghost" href={upload.file_url} target="_blank" rel="noreferrer">View</a>
-                  <button className="od-btn-ghost danger" type="button" onClick={() => void handleDeleteMenuUpload(upload)} disabled={isWorking}>Delete</button>
+                  <a
+                    className="od-btn-ghost"
+                    href={upload.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View
+                  </a>
+                  <button
+                    className="od-btn-ghost danger"
+                    type="button"
+                    onClick={() => void handleDeleteMenuUpload(upload)}
+                    disabled={isWorking}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))
@@ -3238,19 +5376,48 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
         <div className="od-card-header">
           <div className="od-card-title">Menu Inventory</div>
           <div className="od-staff-filters">
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search menu" aria-label="Search menu items" />
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter menu by category">
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search menu"
+              aria-label="Search menu items"
+            />
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              aria-label="Filter menu by category"
+            >
               <option value="all">All Categories</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
-            <select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value as typeof availabilityFilter)} aria-label="Filter menu by availability">
+            <select
+              value={availabilityFilter}
+              onChange={(event) =>
+                setAvailabilityFilter(
+                  event.target.value as typeof availabilityFilter,
+                )
+              }
+              aria-label="Filter menu by availability"
+            >
               <option value="all">All Availability</option>
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
             </select>
-            <select value={stationFilter} onChange={(event) => setStationFilter(event.target.value)} aria-label="Filter menu by kitchen station">
+            <select
+              value={stationFilter}
+              onChange={(event) => setStationFilter(event.target.value)}
+              aria-label="Filter menu by kitchen station"
+            >
               <option value="all">All Stations</option>
-              {activeStations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
+              {activeStations.map((station) => (
+                <option key={station.id} value={station.id}>
+                  {station.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -3273,8 +5440,16 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
                   <td colSpan={7}>
                     <div className="od-empty">
                       <div className="od-empty-icon">--</div>
-                      <div className="od-empty-msg">{items.length === 0 ? "No menu items yet" : "No menu items match these filters"}</div>
-                      <div className="od-empty-sub">{items.length === 0 ? "Add your first item or upload a menu photo" : "Adjust search, category, availability, or station"}</div>
+                      <div className="od-empty-msg">
+                        {items.length === 0
+                          ? "No menu items yet"
+                          : "No menu items match these filters"}
+                      </div>
+                      <div className="od-empty-sub">
+                        {items.length === 0
+                          ? "Add your first item or upload a menu photo"
+                          : "Adjust search, category, availability, or station"}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -3283,24 +5458,60 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
                   <tr key={item.id}>
                     <td>
                       <div className="od-menu-item-cell">
-                        {item.image_url ? <img src={item.image_url} alt="" className="od-menu-thumb" /> : <div className="od-menu-thumb empty">MN</div>}
+                        {item.image_url ? (
+                          <img
+                            src={item.image_url}
+                            alt=""
+                            className="od-menu-thumb"
+                          />
+                        ) : (
+                          <div className="od-menu-thumb empty">MN</div>
+                        )}
                         <div>
                           <strong>{item.name}</strong>
-                          {item.description && <div className="od-menu-desc">{item.description}</div>}
+                          {item.description && (
+                            <div className="od-menu-desc">
+                              {item.description}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td>{getCategoryName(categories, item.category_id)}</td>
-                    <td><span className="od-station-badge">{getStationName(stations, item.kitchen_station_id)}</span></td>
-                    <td>{formatPreparationEstimate(item.preparation_time_minutes) ?? "Not set"}</td>
+                    <td>
+                      <span className="od-station-badge">
+                        {getStationName(stations, item.kitchen_station_id)}
+                      </span>
+                    </td>
+                    <td>
+                      {formatPreparationEstimate(
+                        item.preparation_time_minutes,
+                      ) ?? "Not set"}
+                    </td>
                     <td>{fmtMoney(item.price)}</td>
                     <td>
-                      <span className={`od-status-badge ${item.available ? "paid" : "pending"}`}>{item.available ? "Available" : "Unavailable"}</span>
+                      <span
+                        className={`od-status-badge ${item.available ? "paid" : "pending"}`}
+                      >
+                        {item.available ? "Available" : "Unavailable"}
+                      </span>
                     </td>
                     <td>
                       <div className="od-row-actions">
-                        <button className="od-btn-ghost" onClick={() => openEditModal(item)} disabled={isWorking}>Edit</button>
-                        <button className="od-btn-ghost danger" onClick={() => handleDeleteMenuItem(item)} disabled={isWorking}>Delete</button>
+                        <button
+                          className="od-btn-ghost"
+                          onClick={() => openEditModal(item)}
+                          disabled={isWorking}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="od-btn-ghost danger"
+                          onClick={() => handleDeleteMenuItem(item)}
+                          disabled={isWorking}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -3309,104 +5520,262 @@ function MenuPage({ restaurantId, items, categories, stations, topItems, onMenuC
             </tbody>
           </table>
         </div>
-        <div className="od-table-footer">Showing {filteredItems.length} of {items.length} items</div>
+        <div className="od-table-footer">
+          Showing {filteredItems.length} of {items.length} items
+        </div>
       </div>
 
       {modal && (
         <div className="od-modal-backdrop" role="presentation">
-          <div className="od-modal" role="dialog" aria-modal="true" aria-label="Menu item details">
+          <div
+            className="od-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu item details"
+          >
             <div className="od-modal-header">
               <div>
-                <div className="od-card-title">{modal.mode === "create" ? "Add Menu Item" : "Edit Menu Item"}</div>
-                <div className="od-card-subtitle">Menu items are visible on the QR menu when available.</div>
+                <div className="od-card-title">
+                  {modal.mode === "create" ? "Add Menu Item" : "Edit Menu Item"}
+                </div>
+                <div className="od-card-subtitle">
+                  Menu items are visible on the QR menu when available.
+                </div>
               </div>
-              <button className="od-icon-btn" onClick={() => setModal(null)} aria-label="Close">x</button>
+              <button
+                className="od-icon-btn"
+                onClick={() => setModal(null)}
+                aria-label="Close"
+              >
+                x
+              </button>
             </div>
 
             <form className="od-staff-form" onSubmit={handleSubmitMenuItem}>
               <label>
                 Item Name
-                <input value={formName} onChange={(event) => setFormName(event.target.value)} disabled={isWorking} required />
+                <input
+                  value={formName}
+                  onChange={(event) => setFormName(event.target.value)}
+                  disabled={isWorking}
+                  required
+                />
               </label>
               <label>
                 Description
-                <textarea value={formDescription} onChange={(event) => setFormDescription(event.target.value)} disabled={isWorking} rows={3} />
+                <textarea
+                  value={formDescription}
+                  onChange={(event) => setFormDescription(event.target.value)}
+                  disabled={isWorking}
+                  rows={3}
+                />
               </label>
               <label>
                 Ingredients
-                <textarea value={formIngredients} onChange={(event) => setFormIngredients(event.target.value)} disabled={isWorking} rows={4} placeholder={"Mozzarella\nTomato Sauce\nFresh Basil"} />
+                <textarea
+                  value={formIngredients}
+                  onChange={(event) => setFormIngredients(event.target.value)}
+                  disabled={isWorking}
+                  rows={4}
+                  placeholder={"Mozzarella\nTomato Sauce\nFresh Basil"}
+                />
               </label>
               <label>
                 Preparation Time (minutes)
-                <input type="number" min="0" step="1" value={formPreparationTime} onChange={(event) => setFormPreparationTime(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formPreparationTime}
+                  onChange={(event) =>
+                    setFormPreparationTime(event.target.value)
+                  }
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Price
-                <input type="number" min="0" step="0.01" value={formPrice} onChange={(event) => setFormPrice(event.target.value)} disabled={isWorking} required />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formPrice}
+                  onChange={(event) => setFormPrice(event.target.value)}
+                  disabled={isWorking}
+                  required
+                />
               </label>
               <label>
                 Calories
-                <input type="number" min="0" step="1" value={formCalories} onChange={(event) => setFormCalories(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formCalories}
+                  onChange={(event) => setFormCalories(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Protein (g)
-                <input type="number" min="0" step="0.1" value={formProteinG} onChange={(event) => setFormProteinG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formProteinG}
+                  onChange={(event) => setFormProteinG(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Carbs (g)
-                <input type="number" min="0" step="0.1" value={formCarbohydratesG} onChange={(event) => setFormCarbohydratesG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formCarbohydratesG}
+                  onChange={(event) =>
+                    setFormCarbohydratesG(event.target.value)
+                  }
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Fat (g)
-                <input type="number" min="0" step="0.1" value={formFatG} onChange={(event) => setFormFatG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formFatG}
+                  onChange={(event) => setFormFatG(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Fiber (g)
-                <input type="number" min="0" step="0.1" value={formFiberG} onChange={(event) => setFormFiberG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formFiberG}
+                  onChange={(event) => setFormFiberG(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Sugar (g)
-                <input type="number" min="0" step="0.1" value={formSugarG} onChange={(event) => setFormSugarG(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formSugarG}
+                  onChange={(event) => setFormSugarG(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Sodium (mg)
-                <input type="number" min="0" step="0.1" value={formSodiumMg} onChange={(event) => setFormSodiumMg(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formSodiumMg}
+                  onChange={(event) => setFormSodiumMg(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Category
-                <select value={formCategoryId} onChange={(event) => setFormCategoryId(event.target.value)} disabled={isWorking || categories.length === 0}>
-                  {categories.length === 0 ? <option value="">No categories yet</option> : categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
+                <select
+                  value={formCategoryId}
+                  onChange={(event) => setFormCategoryId(event.target.value)}
+                  disabled={isWorking || categories.length === 0}
+                >
+                  {categories.length === 0 ? (
+                    <option value="">No categories yet</option>
+                  ) : (
+                    categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </label>
               <label>
                 New Category
-                <input value={formNewCategory} onChange={(event) => setFormNewCategory(event.target.value)} disabled={isWorking} placeholder="Optional" />
+                <input
+                  value={formNewCategory}
+                  onChange={(event) => setFormNewCategory(event.target.value)}
+                  disabled={isWorking}
+                  placeholder="Optional"
+                />
               </label>
               <label>
                 Kitchen Station
-                <select value={formStationId} onChange={(event) => setFormStationId(event.target.value)} disabled={isWorking}>
+                <select
+                  value={formStationId}
+                  onChange={(event) => setFormStationId(event.target.value)}
+                  disabled={isWorking}
+                >
                   <option value="">Auto assign</option>
                   {activeStations.map((station) => (
-                    <option key={station.id} value={station.id}>{station.name}</option>
+                    <option key={station.id} value={station.id}>
+                      {station.name}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="od-check-row">
-                <input type="checkbox" checked={formAvailable} onChange={(event) => setFormAvailable(event.target.checked)} disabled={isWorking} />
+                <input
+                  type="checkbox"
+                  checked={formAvailable}
+                  onChange={(event) => setFormAvailable(event.target.checked)}
+                  disabled={isWorking}
+                />
                 Available
               </label>
               <label>
                 Menu Photo
-                <input type="file" accept="image/*" onChange={(event) => setFormImageFile(event.target.files?.[0] ?? null)} disabled={isWorking} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    setFormImageFile(event.target.files?.[0] ?? null)
+                  }
+                  disabled={isWorking}
+                />
               </label>
-              {formImageUrl && !formImageFile && <img className="od-menu-preview" src={formImageUrl} alt="" />}
+              {formImageUrl && !formImageFile && (
+                <img className="od-menu-preview" src={formImageUrl} alt="" />
+              )}
 
               <div className="od-modal-actions">
-                <button type="button" className="od-btn-ghost" onClick={() => setModal(null)}>Cancel</button>
-                <button type="submit" className="od-btn-primary" disabled={isWorking}>
-                  {isWorking ? "Saving..." : modal.mode === "create" ? "Create Item" : "Save Changes"}
+                <button
+                  type="button"
+                  className="od-btn-ghost"
+                  onClick={() => setModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="od-btn-primary"
+                  disabled={isWorking}
+                >
+                  {isWorking
+                    ? "Saving..."
+                    : modal.mode === "create"
+                      ? "Create Item"
+                      : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -3437,23 +5806,68 @@ type OwnerReportData = {
   };
   sales_by_day: { date: string; revenue: number; orders: number }[];
   orders_by_status: { status: string; orders: number }[];
-  menu_performance: { name: string; category: string; quantity: number; revenue: number }[];
+  menu_performance: {
+    name: string;
+    category: string;
+    quantity: number;
+    revenue: number;
+  }[];
   payment_methods: { method: string; payments: number; revenue: number }[];
-  staff_performance: { name: string; role: string; orders_completed: number; payments_verified: number }[];
+  staff_performance: {
+    name: string;
+    role: string;
+    orders_completed: number;
+    payments_verified: number;
+  }[];
   table_usage: { table_number: number; orders: number; revenue: number }[];
-  customers: { customer_name: string; orders: number; revenue: number; last_order_at: string | null }[];
+  customers: {
+    customer_name: string;
+    orders: number;
+    revenue: number;
+    last_order_at: string | null;
+  }[];
   shift_history: OwnerShiftHistory[];
   cash_variances: OwnerCashVariance[];
   feedback: OwnerFeedbackReportRow[];
-  daily_bill_counts: { date: string; bills: number; revenue: number; vat: number }[];
-  monthly_bill_counts: { month: string; bills: number; revenue: number; vat: number }[];
-  top_bills: { bill_number: string; printed_at: string; print_count: number; grand_total: number; vat_amount: number }[];
+  daily_bill_counts: {
+    date: string;
+    bills: number;
+    revenue: number;
+    vat: number;
+  }[];
+  monthly_bill_counts: {
+    month: string;
+    bills: number;
+    revenue: number;
+    vat: number;
+  }[];
+  top_bills: {
+    bill_number: string;
+    printed_at: string;
+    print_count: number;
+    grand_total: number;
+    vat_amount: number;
+  }[];
   ai_insights: { title: string; detail: string }[];
 };
 
 function emptyReportData(): OwnerReportData {
   return {
-    summary: { revenue: 0, orders: 0, average_order_value: 0, completed_orders: 0, cancelled_orders: 0, unique_customers: 0, feedback_count: 0, average_rating: 0, bills_printed: 0, bills_reprinted: 0, average_bill: 0, largest_bill: 0, vat_collected: 0 },
+    summary: {
+      revenue: 0,
+      orders: 0,
+      average_order_value: 0,
+      completed_orders: 0,
+      cancelled_orders: 0,
+      unique_customers: 0,
+      feedback_count: 0,
+      average_rating: 0,
+      bills_printed: 0,
+      bills_reprinted: 0,
+      average_bill: 0,
+      largest_bill: 0,
+      vat_collected: 0,
+    },
     sales_by_day: [],
     orders_by_status: [],
     menu_performance: [],
@@ -3472,7 +5886,10 @@ function emptyReportData(): OwnerReportData {
 }
 
 function normalizeReportData(value: unknown): OwnerReportData {
-  const data = value && typeof value === "object" ? (value as Partial<OwnerReportData>) : {};
+  const data =
+    value && typeof value === "object"
+      ? (value as Partial<OwnerReportData>)
+      : {};
   const summary = data.summary ?? emptyReportData().summary;
   return {
     summary: {
@@ -3490,20 +5907,51 @@ function normalizeReportData(value: unknown): OwnerReportData {
       largest_bill: Number(summary.largest_bill ?? 0),
       vat_collected: Number(summary.vat_collected ?? 0),
     },
-    sales_by_day: (data.sales_by_day ?? []).map((row) => ({ date: String(row.date), revenue: Number(row.revenue), orders: Number(row.orders) })),
-    orders_by_status: (data.orders_by_status ?? []).map((row) => ({ status: String(row.status), orders: Number(row.orders) })),
-    menu_performance: (data.menu_performance ?? []).map((row) => ({ name: String(row.name), category: String(row.category), quantity: Number(row.quantity), revenue: Number(row.revenue) })),
-    payment_methods: (data.payment_methods ?? []).map((row) => ({ method: String(row.method), payments: Number(row.payments), revenue: Number(row.revenue) })),
-    staff_performance: (data.staff_performance ?? []).map((row) => ({ name: String(row.name), role: String(row.role), orders_completed: Number(row.orders_completed), payments_verified: Number(row.payments_verified) })),
-    table_usage: (data.table_usage ?? []).map((row) => ({ table_number: Number(row.table_number), orders: Number(row.orders), revenue: Number(row.revenue) })),
-    customers: (data.customers ?? []).map((row) => ({ customer_name: String(row.customer_name), orders: Number(row.orders), revenue: Number(row.revenue), last_order_at: row.last_order_at ? String(row.last_order_at) : null })),
+    sales_by_day: (data.sales_by_day ?? []).map((row) => ({
+      date: String(row.date),
+      revenue: Number(row.revenue),
+      orders: Number(row.orders),
+    })),
+    orders_by_status: (data.orders_by_status ?? []).map((row) => ({
+      status: String(row.status),
+      orders: Number(row.orders),
+    })),
+    menu_performance: (data.menu_performance ?? []).map((row) => ({
+      name: String(row.name),
+      category: String(row.category),
+      quantity: Number(row.quantity),
+      revenue: Number(row.revenue),
+    })),
+    payment_methods: (data.payment_methods ?? []).map((row) => ({
+      method: String(row.method),
+      payments: Number(row.payments),
+      revenue: Number(row.revenue),
+    })),
+    staff_performance: (data.staff_performance ?? []).map((row) => ({
+      name: String(row.name),
+      role: String(row.role),
+      orders_completed: Number(row.orders_completed),
+      payments_verified: Number(row.payments_verified),
+    })),
+    table_usage: (data.table_usage ?? []).map((row) => ({
+      table_number: Number(row.table_number),
+      orders: Number(row.orders),
+      revenue: Number(row.revenue),
+    })),
+    customers: (data.customers ?? []).map((row) => ({
+      customer_name: String(row.customer_name),
+      orders: Number(row.orders),
+      revenue: Number(row.revenue),
+      last_order_at: row.last_order_at ? String(row.last_order_at) : null,
+    })),
     shift_history: (data.shift_history ?? []).map((row) => ({
       id: String(row.id),
       cashier_name: String(row.cashier_name ?? "Cashier"),
       opened_at: String(row.opened_at),
       closed_at: row.closed_at ? String(row.closed_at) : null,
       opening_cash: Number(row.opening_cash),
-      expected_cash: row.expected_cash === null ? null : Number(row.expected_cash),
+      expected_cash:
+        row.expected_cash === null ? null : Number(row.expected_cash),
       actual_cash: row.actual_cash === null ? null : Number(row.actual_cash),
       variance: row.variance === null ? null : Number(row.variance),
       variance_reason: row.variance_reason ? String(row.variance_reason) : null,
@@ -3548,7 +5996,10 @@ function normalizeReportData(value: unknown): OwnerReportData {
       grand_total: Number(row.grand_total),
       vat_amount: Number(row.vat_amount),
     })),
-    ai_insights: (data.ai_insights ?? []).map((row) => ({ title: String(row.title), detail: String(row.detail) })),
+    ai_insights: (data.ai_insights ?? []).map((row) => ({
+      title: String(row.title),
+      detail: String(row.detail),
+    })),
   };
 }
 
@@ -3581,6 +6032,7 @@ type OwnerReportInvoiceRow = {
   id: string;
   order_id: string;
   status: string;
+  payment_status: string;
   total_price: number | string;
   payment_method: string | null;
   verified_at?: string | null;
@@ -3623,7 +6075,11 @@ type OwnerFeedbackDbRow = {
   created_at: string;
 };
 
-function isInRange(iso: string | null | undefined, rangeStart: string, rangeEnd: string) {
+function isInRange(
+  iso: string | null | undefined,
+  rangeStart: string,
+  rangeEnd: string,
+) {
   return Boolean(iso && iso >= rangeStart && iso < rangeEnd);
 }
 
@@ -3631,10 +6087,14 @@ function dateKey(iso: string) {
   return toDateInputValue(new Date(iso));
 }
 
-function mergeFeedbackIntoReport(report: OwnerReportData, feedback: OwnerFeedbackReportRow[]): OwnerReportData {
-  const averageRating = feedback.length > 0
-    ? feedback.reduce((sum, row) => sum + row.rating, 0) / feedback.length
-    : 0;
+function mergeFeedbackIntoReport(
+  report: OwnerReportData,
+  feedback: OwnerFeedbackReportRow[],
+): OwnerReportData {
+  const averageRating =
+    feedback.length > 0
+      ? feedback.reduce((sum, row) => sum + row.rating, 0) / feedback.length
+      : 0;
 
   return {
     ...report,
@@ -3647,33 +6107,48 @@ function mergeFeedbackIntoReport(report: OwnerReportData, feedback: OwnerFeedbac
     ai_insights: [
       ...report.ai_insights,
       ...(feedback.length > 0
-        ? [{
-            title: "Customer feedback",
-            detail: `Average meal rating is ${averageRating.toFixed(1)}/5 from ${feedback.length} response${feedback.length === 1 ? "" : "s"}. Review comments for service and menu improvements.`,
-          }]
-        : [{
-            title: "Customer feedback",
-            detail: "No feedback was submitted in this range yet. Keep prompting guests after served orders.",
-          }]),
+        ? [
+            {
+              title: "Customer feedback",
+              detail: `Average meal rating is ${averageRating.toFixed(1)}/5 from ${feedback.length} response${feedback.length === 1 ? "" : "s"}. Review comments for service and menu improvements.`,
+            },
+          ]
+        : [
+            {
+              title: "Customer feedback",
+              detail:
+                "No feedback was submitted in this range yet. Keep prompting guests after served orders.",
+            },
+          ]),
     ],
   };
 }
 
-async function loadOwnerFeedbackReportRows(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerFeedbackReportRow[]> {
+async function loadOwnerFeedbackReportRows(
+  restaurantId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<OwnerFeedbackReportRow[]> {
   const { data: feedbackRows, error: feedbackError } = await supabase
     .from("public_order_feedback")
-    .select("id,order_id,table_number,rating,reactions,comment,photo_url,created_at")
+    .select(
+      "id,order_id,table_number,rating,reactions,comment,photo_url,created_at",
+    )
     .eq("restaurant_id", restaurantId)
     .gte("created_at", rangeStart)
     .lt("created_at", rangeEnd)
     .order("created_at", { ascending: false });
 
   if (feedbackError) {
-    throw new Error(`Could not load customer feedback: ${feedbackError.message}`);
+    throw new Error(
+      `Could not load customer feedback: ${feedbackError.message}`,
+    );
   }
 
   const feedback = (feedbackRows ?? []) as OwnerFeedbackDbRow[];
-  const orderIds = [...new Set(feedback.map((row) => row.order_id).filter(Boolean))];
+  const orderIds = [
+    ...new Set(feedback.map((row) => row.order_id).filter(Boolean)),
+  ];
   const orderCustomerById = new Map<string, string | null>();
 
   if (orderIds.length > 0) {
@@ -3687,7 +6162,10 @@ async function loadOwnerFeedbackReportRows(restaurantId: string, rangeStart: str
       throw new Error(`Could not load feedback orders: ${orderError.message}`);
     }
 
-    for (const order of (orderRows ?? []) as { id: string; customer_name: string | null }[]) {
+    for (const order of (orderRows ?? []) as {
+      id: string;
+      customer_name: string | null;
+    }[]) {
       orderCustomerById.set(order.id, order.customer_name);
     }
   }
@@ -3705,7 +6183,11 @@ async function loadOwnerFeedbackReportRows(restaurantId: string, rangeStart: str
   }));
 }
 
-async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
+async function buildOwnerReportDataFromTables(
+  restaurantId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<OwnerReportData> {
   const [
     { data: orderRows, error: orderError },
     { data: invoiceRows, error: invoiceError },
@@ -3716,13 +6198,17 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
   ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at,completed_by")
+      .select(
+        "id,status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at,completed_by",
+      )
       .eq("restaurant_id", restaurantId)
       .gte("created_at", rangeStart)
       .lt("created_at", rangeEnd),
     supabase
       .from("order_invoices")
-      .select("id,order_id,status,total_price,payment_method,verified_at,verified_by,paid_at,paid_by,created_by_staff_id,created_at")
+      .select(
+        "id,order_id,status,payment_status,total_price,payment_method,paid_at,paid_by,created_by_staff_id,created_at",
+      )
       .eq("restaurant_id", restaurantId),
     supabase
       .from("order_items")
@@ -3755,25 +6241,57 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
   const invoices = invoiceError
     ? []
     : ((invoiceRows ?? []) as OwnerReportInvoiceRow[])
-      .filter((invoice) => ["paid", "verified"].includes(invoice.status) && Boolean(invoice.verified_at) && isInRange(invoice.verified_at ?? "", rangeStart, rangeEnd))
-      .map((invoice) => ({ ...invoice, total_price: Number(invoice.total_price) }));
+        .filter(
+          (invoice) =>
+            invoice.payment_status === "paid" &&
+            Boolean(invoice.paid_at) &&
+            isInRange(invoice.paid_at ?? "", rangeStart, rangeEnd),
+        )
+        .map((invoice) => ({
+          ...invoice,
+          total_price: Number(invoice.total_price),
+        }));
   const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
   const revenueByOrderId = new Map<string, number>();
 
   for (const invoice of invoices) {
-    revenueByOrderId.set(invoice.order_id, (revenueByOrderId.get(invoice.order_id) ?? 0) + invoice.total_price);
+    revenueByOrderId.set(
+      invoice.order_id,
+      (revenueByOrderId.get(invoice.order_id) ?? 0) + invoice.total_price,
+    );
   }
 
-  const totalRevenue = [...revenueByOrderId.values()].reduce((sum, value) => sum + value, 0);
+  const totalRevenue = [...revenueByOrderId.values()].reduce(
+    (sum, value) => sum + value,
+    0,
+  );
   const revenueOrderIds = new Set(revenueByOrderId.keys());
   const orderById = new Map(orders.map((order) => [order.id, order]));
-  const menuById = new Map(((menuRows ?? []) as OwnerReportMenuRow[]).map((menuItem) => [menuItem.id, menuItem]));
-  const categoryById = new Map(((categoryRows ?? []) as OdCategory[]).map((category) => [category.id, category.name]));
-  const staffById = new Map(((staffRows ?? []) as OwnerReportStaffRow[]).map((staffMember) => [staffMember.id, staffMember]));
+  const menuById = new Map(
+    ((menuRows ?? []) as OwnerReportMenuRow[]).map((menuItem) => [
+      menuItem.id,
+      menuItem,
+    ]),
+  );
+  const categoryById = new Map(
+    ((categoryRows ?? []) as OdCategory[]).map((category) => [
+      category.id,
+      category.name,
+    ]),
+  );
+  const staffById = new Map(
+    ((staffRows ?? []) as OwnerReportStaffRow[]).map((staffMember) => [
+      staffMember.id,
+      staffMember,
+    ]),
+  );
 
-  const salesByDay = new Map<string, { date: string; revenue: number; orders: number }>();
+  const salesByDay = new Map<
+    string,
+    { date: string; revenue: number; orders: number }
+  >();
   for (const invoice of invoices) {
-    const key = dateKey(invoice.verified_at ?? invoice.created_at);
+    const key = dateKey(invoice.paid_at ?? invoice.created_at);
     const current = salesByDay.get(key) ?? { date: key, revenue: 0, orders: 0 };
     current.revenue += invoice.total_price;
     current.orders += 1;
@@ -3781,36 +6299,71 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
   }
 
   const ordersByStatus = new Map<string, number>();
-  const tableUsage = new Map<number, { table_number: number; orders: number; revenue: number }>();
-  const customerTotals = new Map<string, { customer_name: string; orders: number; revenue: number; last_order_at: string | null }>();
+  const tableUsage = new Map<
+    number,
+    { table_number: number; orders: number; revenue: number }
+  >();
+  const customerTotals = new Map<
+    string,
+    {
+      customer_name: string;
+      orders: number;
+      revenue: number;
+      last_order_at: string | null;
+    }
+  >();
   for (const order of orders) {
     if (!revenueOrderIds.has(order.id)) continue;
-    ordersByStatus.set(order.status, (ordersByStatus.get(order.status) ?? 0) + 1);
+    ordersByStatus.set(
+      order.status,
+      (ordersByStatus.get(order.status) ?? 0) + 1,
+    );
     const tableNumber = Number(order.table_number);
     if (Number.isFinite(tableNumber)) {
-      const current = tableUsage.get(tableNumber) ?? { table_number: tableNumber, orders: 0, revenue: 0 };
-      current.orders += invoices.filter((invoice) => invoice.order_id === order.id).length;
+      const current = tableUsage.get(tableNumber) ?? {
+        table_number: tableNumber,
+        orders: 0,
+        revenue: 0,
+      };
+      current.orders += invoices.filter(
+        (invoice) => invoice.order_id === order.id,
+      ).length;
       current.revenue += revenueByOrderId.get(order.id) ?? 0;
       tableUsage.set(tableNumber, current);
     }
     const customerName = order.customer_name?.trim() || "Guest";
-    const customer = customerTotals.get(customerName) ?? { customer_name: customerName, orders: 0, revenue: 0, last_order_at: null };
-    customer.orders += invoices.filter((invoice) => invoice.order_id === order.id).length;
+    const customer = customerTotals.get(customerName) ?? {
+      customer_name: customerName,
+      orders: 0,
+      revenue: 0,
+      last_order_at: null,
+    };
+    customer.orders += invoices.filter(
+      (invoice) => invoice.order_id === order.id,
+    ).length;
     customer.revenue += revenueByOrderId.get(order.id) ?? 0;
-    if (!customer.last_order_at || order.created_at > customer.last_order_at) customer.last_order_at = order.created_at;
+    if (!customer.last_order_at || order.created_at > customer.last_order_at)
+      customer.last_order_at = order.created_at;
     customerTotals.set(customerName, customer);
   }
 
-  const menuTotals = new Map<string, { name: string; category: string; quantity: number; revenue: number }>();
+  const menuTotals = new Map<
+    string,
+    { name: string; category: string; quantity: number; revenue: number }
+  >();
   for (const item of (itemRows ?? []) as OwnerReportItemRow[]) {
     const invoice = item.invoice_id ? invoiceById.get(item.invoice_id) : null;
     if (!invoice) continue;
 
-    const menuItem = item.menu_item_id ? menuById.get(item.menu_item_id) : undefined;
+    const menuItem = item.menu_item_id
+      ? menuById.get(item.menu_item_id)
+      : undefined;
     const key = item.menu_item_id ?? `${item.order_id}:${item.id}`;
     const current = menuTotals.get(key) ?? {
       name: menuItem?.name ?? "Menu item",
-      category: menuItem?.category_id ? categoryById.get(menuItem.category_id) ?? "Menu" : "Menu",
+      category: menuItem?.category_id
+        ? (categoryById.get(menuItem.category_id) ?? "Menu")
+        : "Menu",
       quantity: 0,
       revenue: 0,
     };
@@ -3819,16 +6372,31 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
     menuTotals.set(key, current);
   }
 
-  const paymentMethodTotals = new Map<string, { method: string; payments: number; revenue: number }>();
+  const paymentMethodTotals = new Map<
+    string,
+    { method: string; payments: number; revenue: number }
+  >();
   for (const invoice of invoices) {
-    const method = invoice.payment_method || "Unknown";
-    const current = paymentMethodTotals.get(method) ?? { method, payments: 0, revenue: 0 };
+    const method = canonicalPaymentMethod(invoice.payment_method);
+    const current = paymentMethodTotals.get(method) ?? {
+      method,
+      payments: 0,
+      revenue: 0,
+    };
     current.payments += 1;
     current.revenue += invoice.total_price;
     paymentMethodTotals.set(method, current);
   }
 
-  const staffTotals = new Map<string, { name: string; role: string; orders_completed: number; payments_verified: number }>();
+  const staffTotals = new Map<
+    string,
+    {
+      name: string;
+      role: string;
+      orders_completed: number;
+      payments_verified: number;
+    }
+  >();
   function staffTotal(staffId: string | null | undefined) {
     if (!staffId) return null;
     const staffMember = staffById.get(staffId);
@@ -3855,27 +6423,53 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
   }
 
   const paidOrderCount = invoices.length;
-  const uniqueCustomers = [...customerTotals.keys()].filter((name) => name !== "Guest").length;
+  const uniqueCustomers = [...customerTotals.keys()].filter(
+    (name) => name !== "Guest",
+  ).length;
 
   return {
     summary: {
       ...emptyReportData().summary,
       revenue: totalRevenue,
       orders: invoices.length,
-      average_order_value: paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0,
-      completed_orders: orders.filter((order) => revenueOrderIds.has(order.id) && order.status === "completed").length,
-      cancelled_orders: orders.filter((order) => revenueOrderIds.has(order.id) && order.status === "cancelled").length,
+      average_order_value:
+        paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0,
+      completed_orders: orders.filter(
+        (order) =>
+          revenueOrderIds.has(order.id) && order.status === "completed",
+      ).length,
+      cancelled_orders: orders.filter(
+        (order) =>
+          revenueOrderIds.has(order.id) && order.status === "cancelled",
+      ).length,
       unique_customers: uniqueCustomers,
       feedback_count: 0,
       average_rating: 0,
     },
-    sales_by_day: [...salesByDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
-    orders_by_status: [...ordersByStatus.entries()].map(([status, orderCount]) => ({ status, orders: orderCount })),
-    menu_performance: [...menuTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 20),
-    payment_methods: [...paymentMethodTotals.values()].sort((a, b) => b.revenue - a.revenue),
-    staff_performance: [...staffTotals.values()].sort((a, b) => (b.payments_verified + b.orders_completed) - (a.payments_verified + a.orders_completed)),
-    table_usage: [...tableUsage.values()].sort((a, b) => a.table_number - b.table_number),
-    customers: [...customerTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 50),
+    sales_by_day: [...salesByDay.values()].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    ),
+    orders_by_status: [...ordersByStatus.entries()].map(
+      ([status, orderCount]) => ({ status, orders: orderCount }),
+    ),
+    menu_performance: [...menuTotals.values()]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 20),
+    payment_methods: [...paymentMethodTotals.values()].sort(
+      (a, b) => b.revenue - a.revenue,
+    ),
+    staff_performance: [...staffTotals.values()].sort(
+      (a, b) =>
+        b.payments_verified +
+        b.orders_completed -
+        (a.payments_verified + a.orders_completed),
+    ),
+    table_usage: [...tableUsage.values()].sort(
+      (a, b) => a.table_number - b.table_number,
+    ),
+    customers: [...customerTotals.values()]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 50),
     shift_history: [],
     cash_variances: [],
     feedback: [],
@@ -3885,14 +6479,23 @@ async function buildOwnerReportDataFromTables(restaurantId: string, rangeStart: 
     ai_insights: [
       {
         title: "Report source",
-        detail: "Generated from persisted owner-visible orders, invoices, items, staff, and table data.",
+        detail:
+          "Generated from persisted owner-visible orders, invoices, items, staff, and table data.",
       },
     ],
   };
 }
 
-async function loadOwnerReportData(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
-  const feedbackRows = await loadOwnerFeedbackReportRows(restaurantId, rangeStart, rangeEnd);
+async function loadOwnerReportData(
+  restaurantId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<OwnerReportData> {
+  const feedbackRows = await loadOwnerFeedbackReportRows(
+    restaurantId,
+    rangeStart,
+    rangeEnd,
+  );
   const { data, error } = await supabase.rpc("get_owner_reporting_center", {
     target_restaurant_id: restaurantId,
     range_start: rangeStart,
@@ -3900,11 +6503,17 @@ async function loadOwnerReportData(restaurantId: string, rangeStart: string, ran
   });
 
   if (error) {
-    const tableReport = await buildOwnerReportDataFromTables(restaurantId, rangeStart, rangeEnd);
+    const tableReport = await buildOwnerReportDataFromTables(
+      restaurantId,
+      rangeStart,
+      rangeEnd,
+    );
     return mergeFeedbackIntoReport(tableReport, feedbackRows);
   }
 
-  const rpcReport = normalizeReportData(data && typeof data === "object" ? data as object : {});
+  const rpcReport = normalizeReportData(
+    data && typeof data === "object" ? (data as object) : {},
+  );
 
   if (
     rpcReport.summary.orders > 0 ||
@@ -3915,10 +6524,16 @@ async function loadOwnerReportData(restaurantId: string, rangeStart: string, ran
     return mergeFeedbackIntoReport(rpcReport, feedbackRows);
   }
 
-  const tableReport = await buildOwnerReportDataFromTables(restaurantId, rangeStart, rangeEnd);
+  const tableReport = await buildOwnerReportDataFromTables(
+    restaurantId,
+    rangeStart,
+    rangeEnd,
+  );
   return mergeFeedbackIntoReport(
-    tableReport.summary.orders > 0 || tableReport.summary.revenue > 0 ? tableReport : rpcReport,
-    feedbackRows
+    tableReport.summary.orders > 0 || tableReport.summary.revenue > 0
+      ? tableReport
+      : rpcReport,
+    feedbackRows,
   );
 }
 
@@ -3930,7 +6545,10 @@ type OwnerDiningBillRow = {
   vat_amount: number | string;
 };
 
-function mergeOwnerBillMetrics(report: OwnerReportData, billReport: OwnerReportData): OwnerReportData {
+function mergeOwnerBillMetrics(
+  report: OwnerReportData,
+  billReport: OwnerReportData,
+): OwnerReportData {
   return normalizeReportData({
     ...report,
     summary: {
@@ -3947,7 +6565,11 @@ function mergeOwnerBillMetrics(report: OwnerReportData, billReport: OwnerReportD
   });
 }
 
-async function loadOwnerDiningBillReportData(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<OwnerReportData> {
+async function loadOwnerDiningBillReportData(
+  restaurantId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<OwnerReportData> {
   const empty = emptyReportData();
   const { data, error } = await supabase
     .from("dining_session_bills")
@@ -3968,18 +6590,36 @@ async function loadOwnerDiningBillReportData(restaurantId: string, rangeStart: s
     vat_amount: Number(row.vat_amount ?? 0),
   }));
 
-  const daily = new Map<string, { date: string; bills: number; revenue: number; vat: number }>();
-  const monthly = new Map<string, { month: string; bills: number; revenue: number; vat: number }>();
+  const daily = new Map<
+    string,
+    { date: string; bills: number; revenue: number; vat: number }
+  >();
+  const monthly = new Map<
+    string,
+    { month: string; bills: number; revenue: number; vat: number }
+  >();
   for (const bill of rows) {
     const printedAt = new Date(bill.printed_at);
-    const dayKey = Number.isNaN(printedAt.getTime()) ? bill.printed_at.slice(0, 10) : printedAt.toISOString().slice(0, 10);
+    const dayKey = Number.isNaN(printedAt.getTime())
+      ? bill.printed_at.slice(0, 10)
+      : printedAt.toISOString().slice(0, 10);
     const monthKey = dayKey.slice(0, 7);
-    const day = daily.get(dayKey) ?? { date: dayKey, bills: 0, revenue: 0, vat: 0 };
+    const day = daily.get(dayKey) ?? {
+      date: dayKey,
+      bills: 0,
+      revenue: 0,
+      vat: 0,
+    };
     day.bills += 1;
     day.revenue += bill.grand_total;
     day.vat += bill.vat_amount;
     daily.set(dayKey, day);
-    const month = monthly.get(monthKey) ?? { month: monthKey, bills: 0, revenue: 0, vat: 0 };
+    const month = monthly.get(monthKey) ?? {
+      month: monthKey,
+      bills: 0,
+      revenue: 0,
+      vat: 0,
+    };
     month.bills += 1;
     month.revenue += bill.grand_total;
     month.vat += bill.vat_amount;
@@ -3989,7 +6629,10 @@ async function loadOwnerDiningBillReportData(restaurantId: string, rangeStart: s
   const billCount = rows.length;
   const totalRevenue = rows.reduce((sum, bill) => sum + bill.grand_total, 0);
   const totalVat = rows.reduce((sum, bill) => sum + bill.vat_amount, 0);
-  const reprintCount = rows.reduce((sum, bill) => sum + Math.max(0, bill.print_count - 1), 0);
+  const reprintCount = rows.reduce(
+    (sum, bill) => sum + Math.max(0, bill.print_count - 1),
+    0,
+  );
 
   return normalizeReportData({
     ...empty,
@@ -4001,14 +6644,23 @@ async function loadOwnerDiningBillReportData(restaurantId: string, rangeStart: s
       largest_bill: rows[0]?.grand_total ?? 0,
       vat_collected: totalVat,
     },
-    daily_bill_counts: [...daily.values()].sort((left, right) => left.date.localeCompare(right.date)),
-    monthly_bill_counts: [...monthly.values()].sort((left, right) => left.month.localeCompare(right.month)),
+    daily_bill_counts: [...daily.values()].sort((left, right) =>
+      left.date.localeCompare(right.date),
+    ),
+    monthly_bill_counts: [...monthly.values()].sort((left, right) =>
+      left.month.localeCompare(right.month),
+    ),
     top_bills: rows.slice(0, 10),
   });
 }
 
-function MiniLineChart({ rows }: { rows: { date: string; revenue: number; orders: number }[] }) {
-  const values = rows.length > 0 ? rows : [{ date: "No data", revenue: 0, orders: 0 }];
+function MiniLineChart({
+  rows,
+}: {
+  rows: { date: string; revenue: number; orders: number }[];
+}) {
+  const values =
+    rows.length > 0 ? rows : [{ date: "No data", revenue: 0, orders: 0 }];
   const max = Math.max(...values.map((row) => row.revenue), 1);
   const points = values
     .map((row, index) => {
@@ -4021,18 +6673,44 @@ function MiniLineChart({ rows }: { rows: { date: string; revenue: number; orders
   return (
     <div className="od-report-chart">
       <svg viewBox="0 0 560 190" role="img" aria-label="Sales trend">
-        <polyline points={points} fill="none" stroke="var(--od-primary)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline
+          points={points}
+          fill="none"
+          stroke="var(--od-primary)"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {values.map((row, index) => {
-          const x = values.length === 1 ? 280 : (index / (values.length - 1)) * 560;
+          const x =
+            values.length === 1 ? 280 : (index / (values.length - 1)) * 560;
           const y = 180 - (row.revenue / max) * 150;
-          return <circle key={`${row.date}-${index}`} cx={x} cy={y} r="5" fill="var(--od-primary)" />;
+          return (
+            <circle
+              key={`${row.date}-${index}`}
+              cx={x}
+              cy={y}
+              r="5"
+              fill="var(--od-primary)"
+            />
+          );
         })}
       </svg>
     </div>
   );
 }
 
-function ReportTable({ title, subtitle, headers, rows }: { title: string; subtitle: string; headers: string[]; rows: ReportRow[] }) {
+function ReportTable({
+  title,
+  subtitle,
+  headers,
+  rows,
+}: {
+  title: string;
+  subtitle: string;
+  headers: string[];
+  rows: ReportRow[];
+}) {
   return (
     <div className="od-card">
       <div className="od-card-header">
@@ -4044,16 +6722,30 @@ function ReportTable({ title, subtitle, headers, rows }: { title: string; subtit
       <div className="od-table-wrap">
         <table className="od-table">
           <thead>
-            <tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr>
+            <tr>
+              {headers.map((header) => (
+                <th key={header}>{header}</th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={headers.length}><div className="od-empty compact">No report data in this range</div></td></tr>
-            ) : rows.map((row, index) => (
-              <tr key={index}>
-                {headers.map((header) => <td key={header}>{row[header]}</td>)}
+              <tr>
+                <td colSpan={headers.length}>
+                  <div className="od-empty compact">
+                    No report data in this range
+                  </div>
+                </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((row, index) => (
+                <tr key={index}>
+                  {headers.map((header) => (
+                    <td key={header}>{row[header]}</td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -4061,32 +6753,420 @@ function ReportTable({ title, subtitle, headers, rows }: { title: string; subtit
   );
 }
 
-type ReportsCenterRange = "today" | "yesterday" | "week" | "last_week" | "month" | "last_month" | "custom";
+type ReportsCenterRange =
+  | "today"
+  | "yesterday"
+  | "week"
+  | "last_week"
+  | "month"
+  | "last_month"
+  | "custom";
 const REPORT_MODULES = [
-  ["Sales Report","sales","summary"],["Revenue Report","financial","revenue"],["Menu Performance","menu","rows"],["Kitchen Performance","kitchen","rows"],["Staff Performance","staff","rows"],["Customer Insights","customers","rows"],["Table Performance","tables","rows"],["Inventory Reports","inventory","rows"],["Financial Reports","financial","payments"],
+  ["Sales Report", "sales", "summary"],
+  ["Revenue Report", "financial", "revenue"],
+  ["Menu Performance", "menu", "rows"],
+  ["Kitchen Performance", "kitchen", "rows"],
+  ["Staff Performance", "staff", "rows"],
+  ["Customer Insights", "customers", "rows"],
+  ["Table Performance", "tables", "rows"],
+  ["Inventory Reports", "inventory", "rows"],
+  ["Financial Reports", "financial", "payments"],
 ] as const;
 
-function ReportsPage({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
-  const [range,setRange]=useState<ReportsCenterRange>("today"); const [customStart,setCustomStart]=useState(toDateInputValue(new Date())); const [customEnd,setCustomEnd]=useState(toDateInputValue(new Date())); const [modules,setModules]=useState<Record<string,Record<string,unknown>>>({}); const [loading,setLoading]=useState(true); const [reportError,setReportError]=useState<string|null>(null);
-  const selectedRange=useMemo(()=>{if(range==="custom")return getDateInputRange(customStart,customEnd);const now=new Date();now.setHours(0,0,0,0);let start=new Date(now),end=new Date(now);end.setDate(end.getDate()+1);if(range==="yesterday"){start.setDate(start.getDate()-1);end=new Date(now)}if(range==="week"||range==="last_week"){start.setDate(start.getDate()-((start.getDay()+6)%7)-(range==="last_week"?7:0));end=new Date(start);end.setDate(end.getDate()+7)}if(range==="month"||range==="last_month"){start.setDate(1);if(range==="last_month")start.setMonth(start.getMonth()-1);end=new Date(start);end.setMonth(end.getMonth()+1)}return{rangeStart:start.toISOString(),rangeEnd:end.toISOString()};},[customEnd,customStart,range]);
-  useEffect(()=>{let mounted=true;void(async()=>{try{setLoading(true);setReportError(null);const args={target_restaurant_id:restaurantId,range_start:selectedRange.rangeStart,range_end:selectedRange.rangeEnd};const calls=[['sales','get_owner_sales_module_report'],['financial','get_owner_financial_module_report'],['menu','get_owner_menu_module_report'],['kitchen','get_owner_kitchen_module_report'],['staff','get_owner_staff_module_report'],['tables','get_owner_tables_module_report'],['customers','get_owner_customers_module_report'],['inventory','get_owner_inventory_module_report'],['ai','get_owner_ai_business_insights'],['audit','get_owner_audit_module_report']] as const;const results=await Promise.all(calls.map(async([key,rpc])=>{const{data,error}=await supabase.rpc(rpc,args);if(error)throw new Error(`${key}: ${error.message}`);return[key,data&&typeof data==="object"?data as Record<string,unknown>:{}] as const}));if(mounted)setModules(Object.fromEntries(results));}catch(error){if(mounted)setReportError(error instanceof Error?error.message:"Reports unavailable.");}finally{if(mounted)setLoading(false)}})();return()=>{mounted=false}},[restaurantId,selectedRange]);
-  const exportRows=REPORT_MODULES.flatMap(([title,moduleKey,payloadKey])=>{const value=modules[moduleKey]?.[payloadKey];const rows=Array.isArray(value)?value as Record<string,unknown>[]:[];return rows.flatMap(row=>Object.entries(row).map(([metric,result])=>[title,metric,String(result??"")]));});
-  const csv=()=>exportRowsAsCsv(`serveflow-reports-${range}.csv`,["Report","Metric","Value"],exportRows); const excel=()=>exportRowsAsExcel(`serveflow-reports-${range}.xls`,`${restaurantName} Reports Center`,["Report","Metric","Value"],exportRows);
-  const insights=Array.isArray(modules.ai?.insights)?modules.ai.insights as Record<string,unknown>[]:[];
-  return <div className="od-page od-print-area"><div className="od-page-header"><div><h1 className="od-page-title">Executive Business Intelligence</h1><p className="od-page-subtitle">What happened, why it happened, and what to do next.</p></div><div className="od-header-actions od-no-print"><button className="od-btn-ghost" onClick={()=>window.print()}>PDF</button><button className="od-btn-ghost" onClick={excel}>Excel</button><button className="od-btn-ghost" onClick={csv}>CSV</button><button className="od-btn-primary" onClick={()=>window.print()}>Print</button></div></div><div className="od-report-range od-no-print">{(["today","yesterday","week","last_week","month","last_month","custom"] as ReportsCenterRange[]).map(option=><button key={option} className={range===option?"active":""} onClick={()=>setRange(option)}>{({today:"Today",yesterday:"Yesterday",week:"Week",last_week:"Last Week",month:"Month",last_month:"Last Month",custom:"Custom"} as Record<ReportsCenterRange,string>)[option]}</button>)}</div>{range==="custom"?<div className="od-custom-range od-no-print"><label>From<input type="date" value={customStart} max={customEnd} onChange={event=>setCustomStart(event.target.value)}/></label><label>To<input type="date" value={customEnd} min={customStart} onChange={event=>setCustomEnd(event.target.value)}/></label></div>:null}{reportError?<div className="od-error-inline">{reportError}</div>:null}{loading?<div className="od-empty">Loading business intelligence…</div>:<><section className="od-ai-insights"><header><div><span>AI Business Insights</span><h2>Executive Briefing</h2></div><b>Report data only</b></header><div>{insights.map((insight,index)=><article key={index} className={String(insight.type??"")}><small>{String(insight.type??"Insight")}</small><strong>{String(insight.title??"Business insight")}</strong><p>{String(insight.detail??"")}</p></article>)}</div></section><div className="od-bi-chart-grid"><BiChart title="Hourly Revenue" rows={modules.sales?.top_hours}/><BiChart title="Payment Method Pie Chart" rows={modules.sales?.payment_breakdown}/><BiChart title="Top Menu Chart" rows={modules.menu?.rows}/><BiChart title="Kitchen Speed Chart" rows={modules.kitchen?.rows}/><BiChart title="Staff Performance Chart" rows={modules.staff?.rows}/><BiChart title="Customer Growth Chart" rows={modules.customers?.rows}/></div><div className="od-report-center-grid">{REPORT_MODULES.map(([title,moduleKey,payloadKey])=><ModuleExportSection key={title} title={title} value={modules[moduleKey]?.[payloadKey]}/>)}</div><section className="od-card"><div className="od-card-header"><div><div className="od-card-title">Export Center</div><div className="od-card-subtitle">PDF, Excel, CSV and print use the displayed module payloads.</div></div></div></section><details className="od-advanced-audit"><summary>Advanced <span>Audit Logs</span></summary><ModuleExportSection title="Advanced Audit Logs" value={modules.audit?.rows}/></details></>}</div>;
+function ReportsPage({
+  restaurantId,
+  restaurantName,
+}: {
+  restaurantId: string;
+  restaurantName: string;
+}) {
+  const [range, setRange] = useState<ReportsCenterRange>("today");
+  const [customStart, setCustomStart] = useState(toDateInputValue(new Date()));
+  const [customEnd, setCustomEnd] = useState(toDateInputValue(new Date()));
+  const [modules, setModules] = useState<
+    Record<string, Record<string, unknown>>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const selectedRange = useMemo(() => {
+    if (range === "custom") return getDateInputRange(customStart, customEnd);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    let start = new Date(now),
+      end = new Date(now);
+    end.setDate(end.getDate() + 1);
+    if (range === "yesterday") {
+      start.setDate(start.getDate() - 1);
+      end = new Date(now);
+    }
+    if (range === "week" || range === "last_week") {
+      start.setDate(
+        start.getDate() -
+          ((start.getDay() + 6) % 7) -
+          (range === "last_week" ? 7 : 0),
+      );
+      end = new Date(start);
+      end.setDate(end.getDate() + 7);
+    }
+    if (range === "month" || range === "last_month") {
+      start.setDate(1);
+      if (range === "last_month") start.setMonth(start.getMonth() - 1);
+      end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+    }
+    return { rangeStart: start.toISOString(), rangeEnd: end.toISOString() };
+  }, [customEnd, customStart, range]);
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        setLoading(true);
+        setReportError(null);
+        const args = {
+          target_restaurant_id: restaurantId,
+          range_start: selectedRange.rangeStart,
+          range_end: selectedRange.rangeEnd,
+        };
+        const calls = [
+          ["sales", "get_owner_sales_module_report"],
+          ["financial", "get_owner_financial_module_report"],
+          ["menu", "get_owner_menu_module_report"],
+          ["kitchen", "get_owner_kitchen_module_report"],
+          ["staff", "get_owner_staff_module_report"],
+          ["tables", "get_owner_tables_module_report"],
+          ["customers", "get_owner_customers_module_report"],
+          ["inventory", "get_owner_inventory_module_report"],
+          ["ai", "get_owner_ai_business_insights"],
+          ["audit", "get_owner_audit_module_report"],
+        ] as const;
+        const results = await Promise.all(
+          calls.map(async ([key, rpc]) => {
+            const { data, error } = await supabase.rpc(rpc, args);
+            if (error) throw new Error(`${key}: ${error.message}`);
+            return [
+              key,
+              data && typeof data === "object"
+                ? (data as Record<string, unknown>)
+                : {},
+            ] as const;
+          }),
+        );
+        if (mounted) setModules(Object.fromEntries(results));
+      } catch (error) {
+        if (mounted)
+          setReportError(
+            error instanceof Error ? error.message : "Reports unavailable.",
+          );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [restaurantId, selectedRange]);
+  const exportRows = REPORT_MODULES.flatMap(
+    ([title, moduleKey, payloadKey]) => {
+      const value = modules[moduleKey]?.[payloadKey];
+      const rows = Array.isArray(value)
+        ? (value as Record<string, unknown>[])
+        : [];
+      return rows.flatMap((row) =>
+        Object.entries(row).map(([metric, result]) => [
+          title,
+          metric,
+          String(result ?? ""),
+        ]),
+      );
+    },
+  );
+  const csv = () =>
+    exportRowsAsCsv(
+      `serveflow-reports-${range}.csv`,
+      ["Report", "Metric", "Value"],
+      exportRows,
+    );
+  const excel = () =>
+    exportRowsAsExcel(
+      `serveflow-reports-${range}.xls`,
+      `${restaurantName} Reports Center`,
+      ["Report", "Metric", "Value"],
+      exportRows,
+    );
+  const insights = Array.isArray(modules.ai?.insights)
+    ? (modules.ai.insights as Record<string, unknown>[])
+    : [];
+  return (
+    <div className="od-page od-print-area">
+      <div className="od-page-header">
+        <div>
+          <h1 className="od-page-title">Executive Business Intelligence</h1>
+          <p className="od-page-subtitle">
+            What happened, why it happened, and what to do next.
+          </p>
+        </div>
+        <div className="od-header-actions od-no-print">
+          <button className="od-btn-ghost" onClick={() => window.print()}>
+            PDF
+          </button>
+          <button className="od-btn-ghost" onClick={excel}>
+            Excel
+          </button>
+          <button className="od-btn-ghost" onClick={csv}>
+            CSV
+          </button>
+          <button className="od-btn-primary" onClick={() => window.print()}>
+            Print
+          </button>
+        </div>
+      </div>
+      <div className="od-report-range od-no-print">
+        {(
+          [
+            "today",
+            "yesterday",
+            "week",
+            "last_week",
+            "month",
+            "last_month",
+            "custom",
+          ] as ReportsCenterRange[]
+        ).map((option) => (
+          <button
+            key={option}
+            className={range === option ? "active" : ""}
+            onClick={() => setRange(option)}
+          >
+            {
+              (
+                {
+                  today: "Today",
+                  yesterday: "Yesterday",
+                  week: "Week",
+                  last_week: "Last Week",
+                  month: "Month",
+                  last_month: "Last Month",
+                  custom: "Custom",
+                } as Record<ReportsCenterRange, string>
+              )[option]
+            }
+          </button>
+        ))}
+      </div>
+      {range === "custom" ? (
+        <div className="od-custom-range od-no-print">
+          <label>
+            From
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd}
+              onChange={(event) => setCustomStart(event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart}
+              onChange={(event) => setCustomEnd(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
+      {reportError ? (
+        <div className="od-error-inline">{reportError}</div>
+      ) : null}
+      {loading ? (
+        <div className="od-empty">Loading business intelligence…</div>
+      ) : (
+        <>
+          <section className="od-ai-insights">
+            <header>
+              <div>
+                <span>AI Business Insights</span>
+                <h2>Executive Briefing</h2>
+              </div>
+              <b>Report data only</b>
+            </header>
+            <div>
+              {insights.map((insight, index) => (
+                <article key={index} className={String(insight.type ?? "")}>
+                  <small>{String(insight.type ?? "Insight")}</small>
+                  <strong>{String(insight.title ?? "Business insight")}</strong>
+                  <p>{String(insight.detail ?? "")}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+          <div className="od-bi-chart-grid">
+            <BiChart title="Hourly Revenue" rows={modules.sales?.top_hours} />
+            <BiChart
+              title="Payment Method Pie Chart"
+              rows={modules.sales?.payment_breakdown}
+            />
+            <BiChart title="Top Menu Chart" rows={modules.menu?.rows} />
+            <BiChart title="Kitchen Speed Chart" rows={modules.kitchen?.rows} />
+            <BiChart
+              title="Staff Performance Chart"
+              rows={modules.staff?.rows}
+            />
+            <BiChart
+              title="Customer Growth Chart"
+              rows={modules.customers?.rows}
+            />
+          </div>
+          <div className="od-report-center-grid">
+            {REPORT_MODULES.map(([title, moduleKey, payloadKey]) => (
+              <ModuleExportSection
+                key={title}
+                title={title}
+                value={modules[moduleKey]?.[payloadKey]}
+              />
+            ))}
+          </div>
+          <section className="od-card">
+            <div className="od-card-header">
+              <div>
+                <div className="od-card-title">Export Center</div>
+                <div className="od-card-subtitle">
+                  PDF, Excel, CSV and print use the displayed module payloads.
+                </div>
+              </div>
+            </div>
+          </section>
+          <details className="od-advanced-audit">
+            <summary>
+              Advanced <span>Audit Logs</span>
+            </summary>
+            <ModuleExportSection
+              title="Advanced Audit Logs"
+              value={modules.audit?.rows}
+            />
+          </details>
+        </>
+      )}
+    </div>
+  );
 }
 
-function BiChart({title,rows}:{title:string;rows:unknown}){const values=Array.isArray(rows)?rows as Record<string,unknown>[]:[];const numericKey=values.length?Object.keys(values[0]).find(key=>typeof values[0][key]==="number"&&/(revenue|quantity|orders|performance|spend|time)/.test(key)):undefined;const max=Math.max(...values.map(row=>Number(numericKey?row[numericKey]:0)),1);return <section className="od-card od-bi-chart"><div className="od-card-header"><div className="od-card-title">{title}</div></div><div>{values.slice(0,8).map((row,index)=>{const label=String(row.name??row.method??row.staff??row.customer_name??row.hour_of_day??index);const value=Number(numericKey?row[numericKey]:0);return <span key={index}><b>{label}</b><i><em style={{width:`${value/max*100}%`}}/></i><small>{value.toLocaleString()}</small></span>})}</div></section>}
+function BiChart({ title, rows }: { title: string; rows: unknown }) {
+  const values = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+  const numericKey = values.length
+    ? Object.keys(values[0]).find(
+        (key) =>
+          typeof values[0][key] === "number" &&
+          /(revenue|quantity|orders|performance|spend|time)/.test(key),
+      )
+    : undefined;
+  const max = Math.max(
+    ...values.map((row) => Number(numericKey ? row[numericKey] : 0)),
+    1,
+  );
+  return (
+    <section className="od-card od-bi-chart">
+      <div className="od-card-header">
+        <div className="od-card-title">{title}</div>
+      </div>
+      <div>
+        {values.slice(0, 8).map((row, index) => {
+          const label = String(
+            row.name ??
+              row.method ??
+              row.staff ??
+              row.customer_name ??
+              row.hour_of_day ??
+              index,
+          );
+          const value = Number(numericKey ? row[numericKey] : 0);
+          return (
+            <span key={index}>
+              <b>{label}</b>
+              <i>
+                <em style={{ width: `${(value / max) * 100}%` }} />
+              </i>
+              <small>{value.toLocaleString()}</small>
+            </span>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
-function ModuleExportSection({title,value}:{title:string;value:unknown}){const rows=Array.isArray(value)?value as Record<string,unknown>[]:[];const headers=[...new Set(rows.flatMap(row=>Object.keys(row)))];return <section className="od-card"><div className="od-card-header"><div><div className="od-card-title">{title}</div><div className="od-card-subtitle">Originating module values</div></div></div><div className="od-table-wrap"><table className="od-table"><thead><tr>{headers.map(header=><th key={header}>{header.replace(/_/g,' ')}</th>)}</tr></thead><tbody>{rows.length?rows.map((row,index)=><tr key={index}>{headers.map(header=><td key={header}>{typeof row[header]==="number"&&/(revenue|value|spend|bill|price)/.test(header)?fmtMoney(Number(row[header])):String(row[header]??"—")}</td>)}</tr>):<tr><td><div className="od-empty compact">No module values in this range</div></td></tr>}</tbody></table></div></section>}
+function ModuleExportSection({
+  title,
+  value,
+}: {
+  title: string;
+  value: unknown;
+}) {
+  const rows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+  const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  return (
+    <section className="od-card">
+      <div className="od-card-header">
+        <div>
+          <div className="od-card-title">{title}</div>
+          <div className="od-card-subtitle">Originating module values</div>
+        </div>
+      </div>
+      <div className="od-table-wrap">
+        <table className="od-table">
+          <thead>
+            <tr>
+              {headers.map((header) => (
+                <th key={header}>{header.replace(/_/g, " ")}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length ? (
+              rows.map((row, index) => (
+                <tr key={index}>
+                  {headers.map((header) => (
+                    <td key={header}>
+                      {typeof row[header] === "number" &&
+                      /(revenue|value|spend|bill|price)/.test(header)
+                        ? fmtMoney(Number(row[header]))
+                        : String(row[header] ?? "—")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td>
+                  <div className="od-empty compact">
+                    No module values in this range
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
 
-function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
+function LegacyReportsPage({
+  restaurantId,
+  restaurantName,
+}: {
+  restaurantId: string;
+  restaurantName: string;
+}) {
   const defaultEnd = toDateInputValue(new Date());
   const defaultStartDate = new Date();
   defaultStartDate.setDate(defaultStartDate.getDate() - 30);
-  const [startDate, setStartDate] = useState(toDateInputValue(defaultStartDate));
+  const [startDate, setStartDate] = useState(
+    toDateInputValue(defaultStartDate),
+  );
   const [endDate, setEndDate] = useState(defaultEnd);
-  const [reportData, setReportData] = useState<OwnerReportData>(emptyReportData());
+  const [reportData, setReportData] =
+    useState<OwnerReportData>(emptyReportData());
   const [loadingReport, setLoadingReport] = useState(true);
   const [reportError, setReportError] = useState<string | null>(null);
 
@@ -4097,7 +7177,11 @@ function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: str
         setLoadingReport(true);
         setReportError(null);
         const { rangeStart, rangeEnd } = getDateInputRange(startDate, endDate);
-        const [reportPayload, billPayload, { data: shiftData, error: shiftError }] = await Promise.all([
+        const [
+          reportPayload,
+          billPayload,
+          { data: shiftData, error: shiftError },
+        ] = await Promise.all([
           loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
           loadOwnerDiningBillReportData(restaurantId, rangeStart, rangeEnd),
           supabase.rpc("get_owner_shift_visibility", {
@@ -4107,30 +7191,61 @@ function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: str
           }),
         ]);
         if (shiftError) throw new Error(shiftError.message);
-        const shiftPayload = shiftData && typeof shiftData === "object" ? shiftData as object : {};
-        const billMergedReport = mergeOwnerBillMetrics(reportPayload, billPayload);
+        const shiftPayload =
+          shiftData && typeof shiftData === "object"
+            ? (shiftData as object)
+            : {};
+        const billMergedReport = mergeOwnerBillMetrics(
+          reportPayload,
+          billPayload,
+        );
         if (mounted) {
-          setReportData(normalizeReportData({
-            ...billMergedReport,
-            ...shiftPayload,
-            summary: billMergedReport.summary,
-            feedback: reportPayload.feedback,
-          }));
+          setReportData(
+            normalizeReportData({
+              ...billMergedReport,
+              ...shiftPayload,
+              summary: billMergedReport.summary,
+              feedback: reportPayload.feedback,
+            }),
+          );
         }
       } catch (loadError) {
-        if (mounted) setReportError(loadError instanceof Error ? loadError.message : "Could not load reports.");
+        if (mounted)
+          setReportError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Could not load reports.",
+          );
       } finally {
         if (mounted) setLoadingReport(false);
       }
     }
     void loadReport();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [restaurantId, startDate, endDate]);
 
-  const salesRows = reportData.sales_by_day.map((row) => ({ Date: row.date.slice(0, 10), Revenue: fmtMoney(row.revenue), Orders: row.orders }));
-  const orderRows = reportData.orders_by_status.map((row) => ({ Status: statusLabel(row.status), Orders: row.orders }));
-  const menuRows = reportData.menu_performance.map((row) => ({ Item: row.name, Category: row.category, Quantity: row.quantity, Revenue: fmtMoney(row.revenue) }));
-  const paymentMethodRows = reportData.payment_methods.map((row) => ({ Method: row.method, Payments: row.payments, Revenue: fmtMoney(row.revenue) }));
+  const salesRows = reportData.sales_by_day.map((row) => ({
+    Date: row.date.slice(0, 10),
+    Revenue: fmtMoney(row.revenue),
+    Orders: row.orders,
+  }));
+  const orderRows = reportData.orders_by_status.map((row) => ({
+    Status: statusLabel(row.status),
+    Orders: row.orders,
+  }));
+  const menuRows = reportData.menu_performance.map((row) => ({
+    Item: row.name,
+    Category: row.category,
+    Quantity: row.quantity,
+    Revenue: fmtMoney(row.revenue),
+  }));
+  const paymentMethodRows = reportData.payment_methods.map((row) => ({
+    Method: row.method,
+    Payments: row.payments,
+    Revenue: fmtMoney(row.revenue),
+  }));
   const topBillRows = reportData.top_bills.map((row) => ({
     "Bill Number": row.bill_number,
     Printed: fmtDateTime(row.printed_at),
@@ -4138,11 +7253,35 @@ function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: str
     "Grand Total": fmtMoney(row.grand_total),
     VAT: fmtMoney(row.vat_amount),
   }));
-  const dailyBillRows = reportData.daily_bill_counts.map((row) => ({ Date: row.date, Bills: row.bills, Revenue: fmtMoney(row.revenue), VAT: fmtMoney(row.vat) }));
-  const monthlyBillRows = reportData.monthly_bill_counts.map((row) => ({ Month: row.month, Bills: row.bills, Revenue: fmtMoney(row.revenue), VAT: fmtMoney(row.vat) }));
-  const staffRows = reportData.staff_performance.map((row) => ({ Staff: row.name, Role: row.role, Completed: row.orders_completed, Payments: row.payments_verified }));
-  const tableRows = reportData.table_usage.map((row) => ({ Table: row.table_number, Orders: row.orders, Revenue: fmtMoney(row.revenue) }));
-  const customerRows = reportData.customers.map((row) => ({ Customer: row.customer_name, Orders: row.orders, Revenue: fmtMoney(row.revenue), "Last Order": row.last_order_at ? fmtDateTime(row.last_order_at) : "-" }));
+  const dailyBillRows = reportData.daily_bill_counts.map((row) => ({
+    Date: row.date,
+    Bills: row.bills,
+    Revenue: fmtMoney(row.revenue),
+    VAT: fmtMoney(row.vat),
+  }));
+  const monthlyBillRows = reportData.monthly_bill_counts.map((row) => ({
+    Month: row.month,
+    Bills: row.bills,
+    Revenue: fmtMoney(row.revenue),
+    VAT: fmtMoney(row.vat),
+  }));
+  const staffRows = reportData.staff_performance.map((row) => ({
+    Staff: row.name,
+    Role: row.role,
+    Completed: row.orders_completed,
+    Payments: row.payments_verified,
+  }));
+  const tableRows = reportData.table_usage.map((row) => ({
+    Table: row.table_number,
+    Orders: row.orders,
+    Revenue: fmtMoney(row.revenue),
+  }));
+  const customerRows = reportData.customers.map((row) => ({
+    Customer: row.customer_name,
+    Orders: row.orders,
+    Revenue: fmtMoney(row.revenue),
+    "Last Order": row.last_order_at ? fmtDateTime(row.last_order_at) : "-",
+  }));
   const feedbackRows = reportData.feedback.map((row) => ({
     Date: fmtDateTime(row.created_at),
     Customer: row.customer_name ?? "Guest",
@@ -4174,29 +7313,54 @@ function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: str
     ["Orders", "Total orders", reportData.summary.orders],
     ["Orders", "Completed orders", reportData.summary.completed_orders],
     ["Orders", "Cancelled orders", reportData.summary.cancelled_orders],
-    ["Sales", "Average order value", Math.round(reportData.summary.average_order_value)],
+    [
+      "Sales",
+      "Average order value",
+      Math.round(reportData.summary.average_order_value),
+    ],
     ["Customers", "Unique customers", reportData.summary.unique_customers],
     ["Feedback", "Responses", reportData.summary.feedback_count],
-    ["Feedback", "Average rating", reportData.summary.average_rating ? reportData.summary.average_rating.toFixed(1) : "0.0"],
+    [
+      "Feedback",
+      "Average rating",
+      reportData.summary.average_rating
+        ? reportData.summary.average_rating.toFixed(1)
+        : "0.0",
+    ],
     ["Bills", "Bills printed", reportData.summary.bills_printed],
     ["Bills", "Bills reprinted", reportData.summary.bills_reprinted],
     ["Bills", "Average bill", Math.round(reportData.summary.average_bill)],
     ["Bills", "Largest bill", reportData.summary.largest_bill],
     ["Bills", "VAT collected", reportData.summary.vat_collected],
-    ...reportData.payment_methods.map((row) => ["Payment Method", row.method, row.revenue] as [string, string, number]),
-    ...reportData.feedback.map((row) => [
-      "Feedback",
-      `${fmtDateTime(row.created_at)} | ${row.customer_name ?? "Guest"} | Table ${row.table_number ?? "-"}`,
-      `${row.rating}/5 | ${row.reactions.join(", ") || "No reactions"} | ${row.comment ?? "No comment"}${row.photo_url ? ` | Photo: ${row.photo_url}` : ""}`,
-    ] as [string, string, string]),
+    ...reportData.payment_methods.map(
+      (row) =>
+        ["Payment Method", row.method, row.revenue] as [string, string, number],
+    ),
+    ...reportData.feedback.map(
+      (row) =>
+        [
+          "Feedback",
+          `${fmtDateTime(row.created_at)} | ${row.customer_name ?? "Guest"} | Table ${row.table_number ?? "-"}`,
+          `${row.rating}/5 | ${row.reactions.join(", ") || "No reactions"} | ${row.comment ?? "No comment"}${row.photo_url ? ` | Photo: ${row.photo_url}` : ""}`,
+        ] as [string, string, string],
+    ),
   ];
 
   function handleCsvExport() {
-    exportRowsAsCsv(`serveflow-report-${startDate}-${endDate}.csv`, exportHeaders, exportRows);
+    exportRowsAsCsv(
+      `serveflow-report-${startDate}-${endDate}.csv`,
+      exportHeaders,
+      exportRows,
+    );
   }
 
   function handleExcelExport() {
-    exportRowsAsExcel(`serveflow-report-${startDate}-${endDate}.xls`, `${restaurantName} Reporting Center`, exportHeaders, exportRows);
+    exportRowsAsExcel(
+      `serveflow-report-${startDate}-${endDate}.xls`,
+      `${restaurantName} Reporting Center`,
+      exportHeaders,
+      exportRows,
+    );
   }
 
   function handlePrint() {
@@ -4208,64 +7372,250 @@ function LegacyReportsPage({ restaurantId, restaurantName }: { restaurantId: str
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Reporting Center</h1>
-          <p className="od-page-subtitle">Sales, operations, menu, staff, table, customer, and AI business reports.</p>
+          <p className="od-page-subtitle">
+            Sales, operations, menu, staff, table, customer, and AI business
+            reports.
+          </p>
         </div>
         <div className="od-header-actions od-no-print">
-          <button className="od-btn-ghost" type="button" onClick={handleCsvExport}>CSV Export</button>
-          <button className="od-btn-ghost" type="button" onClick={handleExcelExport}>Excel Export</button>
-          <button className="od-btn-ghost" type="button" onClick={handlePrint}>PDF / Print</button>
+          <button
+            className="od-btn-ghost"
+            type="button"
+            onClick={handleCsvExport}
+          >
+            CSV Export
+          </button>
+          <button
+            className="od-btn-ghost"
+            type="button"
+            onClick={handleExcelExport}
+          >
+            Excel Export
+          </button>
+          <button className="od-btn-ghost" type="button" onClick={handlePrint}>
+            PDF / Print
+          </button>
         </div>
       </div>
 
       <div className="od-card od-no-print">
         <div className="od-settings-grid compact">
-          <label>Start Date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
-          <label>End Date<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>
+          <label>
+            Start Date
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+            />
+          </label>
+          <label>
+            End Date
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+            />
+          </label>
         </div>
       </div>
 
       {reportError && <div className="od-error-inline">{reportError}</div>}
 
       <div className="od-kpi-grid analytics">
-        <div className="od-kpi-card"><div className="od-kpi-label">Bills Printed Today</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.bills_printed}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Bills Reprinted Today</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.summary.bills_reprinted}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Average Bill</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(Math.round(reportData.summary.average_bill))}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Largest Bill</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(reportData.summary.largest_bill)}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">VAT Collected</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoney(reportData.summary.vat_collected)}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Daily Bill Count</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.daily_bill_counts.reduce((sum, row) => sum + row.bills, 0)}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Monthly Bill Count</div><div className="od-kpi-value">{loadingReport ? "Loading..." : reportData.monthly_bill_counts.reduce((sum, row) => sum + row.bills, 0)}</div></div>
-        <div className="od-kpi-card"><div className="od-kpi-label">Bill Revenue</div><div className="od-kpi-value">{loadingReport ? "Loading..." : fmtMoneyK(reportData.top_bills.reduce((sum, row) => sum + row.grand_total, 0))}</div></div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Bills Printed Today</div>
+          <div className="od-kpi-value">
+            {loadingReport ? "Loading..." : reportData.summary.bills_printed}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Bills Reprinted Today</div>
+          <div className="od-kpi-value">
+            {loadingReport ? "Loading..." : reportData.summary.bills_reprinted}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Average Bill</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : fmtMoney(Math.round(reportData.summary.average_bill))}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Largest Bill</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : fmtMoney(reportData.summary.largest_bill)}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">VAT Collected</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : fmtMoney(reportData.summary.vat_collected)}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Daily Bill Count</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : reportData.daily_bill_counts.reduce(
+                  (sum, row) => sum + row.bills,
+                  0,
+                )}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Monthly Bill Count</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : reportData.monthly_bill_counts.reduce(
+                  (sum, row) => sum + row.bills,
+                  0,
+                )}
+          </div>
+        </div>
+        <div className="od-kpi-card">
+          <div className="od-kpi-label">Bill Revenue</div>
+          <div className="od-kpi-value">
+            {loadingReport
+              ? "Loading..."
+              : fmtMoneyK(
+                  reportData.top_bills.reduce(
+                    (sum, row) => sum + row.grand_total,
+                    0,
+                  ),
+                )}
+          </div>
+        </div>
       </div>
 
-      <ReportTable title="Top Bills" subtitle="Highest final dining bills from dining_session_bills only." headers={["Bill Number", "Printed", "Print Count", "Grand Total", "VAT"]} rows={topBillRows} />
-      <ReportTable title="Daily Bill Count" subtitle="Daily final bill counts from dining_session_bills only." headers={["Date", "Bills", "Revenue", "VAT"]} rows={dailyBillRows} />
-      <ReportTable title="Monthly Bill Count" subtitle="Monthly final bill counts from dining_session_bills only." headers={["Month", "Bills", "Revenue", "VAT"]} rows={monthlyBillRows} />
+      <ReportTable
+        title="Top Bills"
+        subtitle="Highest final dining bills from dining_session_bills only."
+        headers={[
+          "Bill Number",
+          "Printed",
+          "Print Count",
+          "Grand Total",
+          "VAT",
+        ]}
+        rows={topBillRows}
+      />
+      <ReportTable
+        title="Daily Bill Count"
+        subtitle="Daily final bill counts from dining_session_bills only."
+        headers={["Date", "Bills", "Revenue", "VAT"]}
+        rows={dailyBillRows}
+      />
+      <ReportTable
+        title="Monthly Bill Count"
+        subtitle="Monthly final bill counts from dining_session_bills only."
+        headers={["Month", "Bills", "Revenue", "VAT"]}
+        rows={monthlyBillRows}
+      />
 
       <div className="od-card">
         <div className="od-card-header">
           <div>
             <div className="od-card-title">Sales Reports</div>
-            <div className="od-card-subtitle">Revenue and order trend for the selected date range.</div>
+            <div className="od-card-subtitle">
+              Revenue and order trend for the selected date range.
+            </div>
           </div>
         </div>
         <MiniLineChart rows={reportData.sales_by_day} />
       </div>
 
-      <ReportTable title="Order Reports" subtitle="Order volume by workflow status." headers={["Status", "Orders"]} rows={orderRows} />
-      <ReportTable title="Menu Performance Reports" subtitle="Top menu items by persisted order item revenue." headers={["Item", "Category", "Quantity", "Revenue"]} rows={menuRows} />
-      <ReportTable title="Payment Method Reports" subtitle="Revenue by verified payment method." headers={["Method", "Payments", "Revenue"]} rows={paymentMethodRows} />
-      <ReportTable title="Staff Performance Reports" subtitle="Payment verification and completion activity by staff member." headers={["Staff", "Role", "Completed", "Payments"]} rows={staffRows} />
-      <ReportTable title="Cashier Shift History" subtitle="Read-only shift openings, closings, and reconciliation totals." headers={["Cashier", "Opened", "Closed", "Expected", "Actual", "Variance"]} rows={shiftRows} />
-      <ReportTable title="Cash Variance Reports" subtitle="Permanent reconciliation variances recorded at shift close." headers={["Cashier", "Closed", "Expected", "Actual", "Variance", "Reason"]} rows={varianceRows} />
-      <ReportTable title="Table Usage Reports" subtitle="Revenue and order volume by managed table." headers={["Table", "Orders", "Revenue"]} rows={tableRows} />
-      <ReportTable title="Customer Reports" subtitle="Repeat and high-value customers based on captured customer names." headers={["Customer", "Orders", "Revenue", "Last Order"]} rows={customerRows} />
-      <ReportTable title="Customer Feedback Reports" subtitle="Ratings, comments, reactions, and optional photos submitted after served orders." headers={["Date", "Customer", "Table", "Rating", "Reactions", "Comment", "Photo"]} rows={feedbackRows} />
+      <ReportTable
+        title="Order Reports"
+        subtitle="Order volume by workflow status."
+        headers={["Status", "Orders"]}
+        rows={orderRows}
+      />
+      <ReportTable
+        title="Menu Performance Reports"
+        subtitle="Top menu items by persisted order item revenue."
+        headers={["Item", "Category", "Quantity", "Revenue"]}
+        rows={menuRows}
+      />
+      <ReportTable
+        title="Payment Method Reports"
+        subtitle="Revenue by payment method."
+        headers={["Method", "Payments", "Revenue"]}
+        rows={paymentMethodRows}
+      />
+      <ReportTable
+        title="Staff Performance Reports"
+        subtitle="Payment collection and completion activity by staff member."
+        headers={["Staff", "Role", "Completed", "Payments"]}
+        rows={staffRows}
+      />
+      <ReportTable
+        title="Cashier Shift History"
+        subtitle="Read-only shift openings, closings, and reconciliation totals."
+        headers={[
+          "Cashier",
+          "Opened",
+          "Closed",
+          "Expected",
+          "Actual",
+          "Variance",
+        ]}
+        rows={shiftRows}
+      />
+      <ReportTable
+        title="Cash Variance Reports"
+        subtitle="Permanent reconciliation variances recorded at shift close."
+        headers={[
+          "Cashier",
+          "Closed",
+          "Expected",
+          "Actual",
+          "Variance",
+          "Reason",
+        ]}
+        rows={varianceRows}
+      />
+      <ReportTable
+        title="Table Usage Reports"
+        subtitle="Revenue and order volume by managed table."
+        headers={["Table", "Orders", "Revenue"]}
+        rows={tableRows}
+      />
+      <ReportTable
+        title="Customer Reports"
+        subtitle="Repeat and high-value customers based on captured customer names."
+        headers={["Customer", "Orders", "Revenue", "Last Order"]}
+        rows={customerRows}
+      />
+      <ReportTable
+        title="Customer Feedback Reports"
+        subtitle="Ratings, comments, reactions, and optional photos submitted after served orders."
+        headers={[
+          "Date",
+          "Customer",
+          "Table",
+          "Rating",
+          "Reactions",
+          "Comment",
+          "Photo",
+        ]}
+        rows={feedbackRows}
+      />
 
       <div className="od-card">
         <div className="od-card-header">
           <div>
             <div className="od-card-title">AI Business Reports</div>
-            <div className="od-card-subtitle">Operational recommendations derived from current report data.</div>
+            <div className="od-card-subtitle">
+              Operational recommendations derived from current report data.
+            </div>
           </div>
         </div>
         <div className="od-insight-grid">
@@ -4287,15 +7637,30 @@ function CustomersPage({ restaurantId }: { restaurantId: string }) {
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Customer Insights</h1>
-          <p className="od-page-subtitle">Customer frequency and value from captured order names.</p>
+          <p className="od-page-subtitle">
+            Customer frequency and value from captured order names.
+          </p>
         </div>
       </div>
-      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_customers_module_report" columns={[{key:"customer_name",label:"Customer"},{key:"customer_type",label:"New / Returning"},{key:"average_spend",label:"Average Spend",money:true},{key:"most_ordered_item",label:"Most Ordered Item"},{key:"visit_frequency",label:"Visit Frequency"}]} />
+      <IndependentModuleReport
+        restaurantId={restaurantId}
+        rpc="get_owner_customers_module_report"
+        columns={[
+          { key: "customer_name", label: "Customer" },
+          { key: "customer_type", label: "New / Returning" },
+          { key: "average_spend", label: "Average Spend", money: true },
+          { key: "most_ordered_item", label: "Most Ordered Item" },
+          { key: "visit_frequency", label: "Visit Frequency" },
+        ]}
+      />
     </div>
   );
 }
 
-function getOrderingUrl(qrUrl: string | null | undefined, qrPath?: string | null | undefined) {
+function getOrderingUrl(
+  qrUrl: string | null | undefined,
+  qrPath?: string | null | undefined,
+) {
   return buildAbsolutePublicUrl(qrUrl?.trim() || qrPath?.trim());
 }
 
@@ -4319,7 +7684,13 @@ type PrintableQrTable = {
 };
 
 function safeFilename(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "qr-code";
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "qr-code"
+  );
 }
 
 function escapeHtml(value: string) {
@@ -4335,7 +7706,8 @@ function dataUrlToBytes(dataUrl: string) {
   const base64 = dataUrl.split(",")[1] ?? "";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  for (let index = 0; index < binary.length; index += 1)
+    bytes[index] = binary.charCodeAt(index);
   return bytes;
 }
 
@@ -4350,13 +7722,25 @@ function downloadBlob(filename: string, blob: Blob) {
   URL.revokeObjectURL(url);
 }
 
-function drawRoundRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+function drawRoundRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
   context.beginPath();
   context.moveTo(x + radius, y);
   context.lineTo(x + width - radius, y);
   context.quadraticCurveTo(x + width, y, x + width, y + radius);
   context.lineTo(x + width, y + height - radius);
-  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - radius,
+    y + height,
+  );
   context.lineTo(x + radius, y + height);
   context.quadraticCurveTo(x, y + height, x, y + height - radius);
   context.lineTo(x, y + radius);
@@ -4426,7 +7810,10 @@ async function createQrCardCanvas({
   context.fillText(`Table ${table.table_number}`, 450, 388);
 
   assertAbsoluteQrPayload(orderingUrl);
-  const qrDataUrl = await QRCode.toDataURL(orderingUrl, { width: 560, margin: 1 });
+  const qrDataUrl = await QRCode.toDataURL(orderingUrl, {
+    width: 560,
+    margin: 1,
+  });
   const qrImage = await loadImage(qrDataUrl);
   if (!qrImage) throw new Error("QR image could not be generated.");
   context.drawImage(qrImage, 170, 450, 560, 560);
@@ -4441,7 +7828,9 @@ async function createQrCardCanvas({
   return canvas;
 }
 
-function buildPdfFromJpegs(images: { bytes: Uint8Array; width: number; height: number }[]) {
+function buildPdfFromJpegs(
+  images: { bytes: Uint8Array; width: number; height: number }[],
+) {
   const objects: (string | Uint8Array)[] = [];
   const addObject = (content: string | Uint8Array) => {
     objects.push(content);
@@ -4455,20 +7844,30 @@ function buildPdfFromJpegs(images: { bytes: Uint8Array; width: number; height: n
   images.forEach((image) => {
     const imageId = objects.length + 2;
     const contentId = objects.length + 3;
-    const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im${imageId} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+    const pageId = addObject(
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im${imageId} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+    );
     pageIds.push(pageId);
     const imageHeader = `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`;
     const imageFooter = "\nendstream";
-    const imageObject = new Uint8Array(imageHeader.length + image.bytes.length + imageFooter.length);
+    const imageObject = new Uint8Array(
+      imageHeader.length + image.bytes.length + imageFooter.length,
+    );
     imageObject.set(new TextEncoder().encode(imageHeader), 0);
     imageObject.set(image.bytes, imageHeader.length);
-    imageObject.set(new TextEncoder().encode(imageFooter), imageHeader.length + image.bytes.length);
+    imageObject.set(
+      new TextEncoder().encode(imageFooter),
+      imageHeader.length + image.bytes.length,
+    );
     addObject(imageObject);
     const contentStream = `q\n540 0 0 720 36 36 cm\n/Im${imageId} Do\nQ`;
-    addObject(`<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`);
+    addObject(
+      `<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`,
+    );
   });
 
-  objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
+  objects[pagesId - 1] =
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
 
   const chunks: Uint8Array[] = [new TextEncoder().encode("%PDF-1.4\n")];
   const offsets: number[] = [0];
@@ -4476,7 +7875,8 @@ function buildPdfFromJpegs(images: { bytes: Uint8Array; width: number; height: n
   objects.forEach((object, index) => {
     offsets.push(length);
     const header = new TextEncoder().encode(`${index + 1} 0 obj\n`);
-    const body = typeof object === "string" ? new TextEncoder().encode(object) : object;
+    const body =
+      typeof object === "string" ? new TextEncoder().encode(object) : object;
     const footer = new TextEncoder().encode("\nendobj\n");
     chunks.push(header, body, footer);
     length += header.length + body.length + footer.length;
@@ -4485,13 +7885,21 @@ function buildPdfFromJpegs(images: { bytes: Uint8Array; width: number; height: n
   const xref = [
     `xref\n0 ${objects.length + 1}`,
     "0000000000 65535 f ",
-    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
+    ...offsets
+      .slice(1)
+      .map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
     `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>`,
     `startxref\n${xrefOffset}`,
     "%%EOF",
   ].join("\n");
   chunks.push(new TextEncoder().encode(xref));
-  const blobParts = chunks.map((chunk) => chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength) as ArrayBuffer);
+  const blobParts = chunks.map(
+    (chunk) =>
+      chunk.buffer.slice(
+        chunk.byteOffset,
+        chunk.byteOffset + chunk.byteLength,
+      ) as ArrayBuffer,
+  );
   return new Blob(blobParts, { type: "application/pdf" });
 }
 
@@ -4513,30 +7921,53 @@ function QrTablesPage({
   onTableChanged: (table: RestaurantTable) => void;
 }) {
   const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
-  const [qrStats, setQrStats] = useState<Record<string, RestaurantTableQrStats>>({});
-  const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(null);
+  const [qrStats, setQrStats] = useState<
+    Record<string, RestaurantTableQrStats>
+  >({});
+  const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(
+    null,
+  );
   const [selectedTableIds, setSelectedTableIds] = useState<string[]>([]);
   const [workingTableId, setWorkingTableId] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const activeTableOrders = orders.filter((order) => order.dining_session_status === "open");
-  const activeTables = new Set(activeTableOrders.map((order) => order.table_number).filter(Boolean));
+  const activeTableOrders = orders.filter(
+    (order) => order.dining_session_status === "open",
+  );
+  const activeTables = new Set(
+    activeTableOrders.map((order) => order.table_number).filter(Boolean),
+  );
   const todayStart = startOfTodayIso();
   const rows = tables.map((restaurantTable) => {
     const number = String(restaurantTable.table_number);
-    const activeOrder = activeTableOrders.find((order) => order.table_number === number);
+    const activeOrder = activeTableOrders.find(
+      (order) => order.table_number === number,
+    );
     return {
       table: restaurantTable,
       occupied: Boolean(activeOrder),
-      ordersToday: qrStats[restaurantTable.id]?.orders_today ?? orders.filter((order) => order.table_number === number && order.created_at >= todayStart).length,
+      ordersToday:
+        qrStats[restaurantTable.id]?.orders_today ??
+        orders.filter(
+          (order) =>
+            order.table_number === number && order.created_at >= todayStart,
+        ).length,
       lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
-      lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? orders.find((order) => order.table_number === number)?.created_at ?? null,
+      lastOrderAt:
+        qrStats[restaurantTable.id]?.last_order_at ??
+        orders.find((order) => order.table_number === number)?.created_at ??
+        null,
       scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
-      orderingUrl: getOrderingUrl(restaurantTable.qr_url, restaurantTable.qr_path),
+      orderingUrl: getOrderingUrl(
+        restaurantTable.qr_url,
+        restaurantTable.qr_path,
+      ),
     };
   });
 
-  const selectedRows = rows.filter((row) => selectedTableIds.includes(row.table.id));
+  const selectedRows = rows.filter((row) =>
+    selectedTableIds.includes(row.table.id),
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -4554,12 +7985,14 @@ function QrTablesPage({
           assertAbsoluteQrPayload(url);
           const dataUrl = await QRCode.toDataURL(url, { width: 96, margin: 1 });
           return [table.id, dataUrl] as const;
-        })
+        }),
       );
       if (mounted) setQrCodes(Object.fromEntries(pairs));
     }
     void generateQrCodes();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [restaurantId, tables]);
 
   useEffect(() => {
@@ -4571,27 +8004,47 @@ function QrTablesPage({
         });
         if (error) throw new Error(error.message);
         const statRows = Array.isArray(data) ? data : [];
-        const normalizedStats = statRows.reduce<Record<string, RestaurantTableQrStats>>((accumulator, row) => {
+        const normalizedStats = statRows.reduce<
+          Record<string, RestaurantTableQrStats>
+        >((accumulator, row) => {
           if (!row || typeof row !== "object") return accumulator;
           const payload = row as Record<string, unknown>;
-          const tableId = typeof payload.table_id === "string" ? payload.table_id : "";
+          const tableId =
+            typeof payload.table_id === "string" ? payload.table_id : "";
           if (!tableId) return accumulator;
           accumulator[tableId] = {
             table_id: tableId,
             orders_today: Number(payload.orders_today ?? 0),
-            last_scan_at: typeof payload.last_scan_at === "string" ? payload.last_scan_at : null,
-            last_order_at: typeof payload.last_order_at === "string" ? payload.last_order_at : null,
-            scan_count: payload.scan_count === null || typeof payload.scan_count === "undefined" ? null : Number(payload.scan_count),
+            last_scan_at:
+              typeof payload.last_scan_at === "string"
+                ? payload.last_scan_at
+                : null,
+            last_order_at:
+              typeof payload.last_order_at === "string"
+                ? payload.last_order_at
+                : null,
+            scan_count:
+              payload.scan_count === null ||
+              typeof payload.scan_count === "undefined"
+                ? null
+                : Number(payload.scan_count),
           };
           return accumulator;
         }, {});
         if (mounted) setQrStats(normalizedStats);
       } catch (statsError) {
-        if (mounted) setQrError(statsError instanceof Error ? statsError.message : "Could not load QR statistics.");
+        if (mounted)
+          setQrError(
+            statsError instanceof Error
+              ? statsError.message
+              : "Could not load QR statistics.",
+          );
       }
     }
     void loadQrStats();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [restaurantId, tables, orders]);
 
   async function regenerateQr(table: RestaurantTable) {
@@ -4599,17 +8052,28 @@ function QrTablesPage({
       setWorkingTableId(table.id);
       setQrError(null);
       setNotice(null);
-      const { data, error } = await supabase.rpc("regenerate_restaurant_table_qr", {
-        target_restaurant_id: restaurantId,
-        target_table_id: table.id,
-      });
+      const { data, error } = await supabase.rpc(
+        "regenerate_restaurant_table_qr",
+        {
+          target_restaurant_id: restaurantId,
+          target_table_id: table.id,
+        },
+      );
       if (error) throw new Error(error.message);
-      const updatedTable = normalizeRestaurantTable(data as Record<string, unknown>);
+      const updatedTable = normalizeRestaurantTable(
+        data as Record<string, unknown>,
+      );
       onTableChanged(updatedTable);
-      setPreviewTable((current) => current?.id === updatedTable.id ? updatedTable : current);
+      setPreviewTable((current) =>
+        current?.id === updatedTable.id ? updatedTable : current,
+      );
       setNotice(`QR regenerated for ${updatedTable.label}.`);
     } catch (regenerateError) {
-      setQrError(regenerateError instanceof Error ? regenerateError.message : "Could not regenerate QR code.");
+      setQrError(
+        regenerateError instanceof Error
+          ? regenerateError.message
+          : "Could not regenerate QR code.",
+      );
     } finally {
       setWorkingTableId(null);
     }
@@ -4620,29 +8084,51 @@ function QrTablesPage({
       setWorkingTableId(table.id);
       setQrError(null);
       setNotice(null);
-      const { data, error } = await supabase.rpc("set_restaurant_table_active", {
-        target_restaurant_id: restaurantId,
-        target_table_id: table.id,
-        requested_active: active,
-      });
+      const { data, error } = await supabase.rpc(
+        "set_restaurant_table_active",
+        {
+          target_restaurant_id: restaurantId,
+          target_table_id: table.id,
+          requested_active: active,
+        },
+      );
       if (error) throw new Error(error.message);
-      const updatedTable = normalizeRestaurantTable(data as Record<string, unknown>);
+      const updatedTable = normalizeRestaurantTable(
+        data as Record<string, unknown>,
+      );
       onTableChanged(updatedTable);
-      setPreviewTable((current) => current?.id === updatedTable.id ? updatedTable : current);
+      setPreviewTable((current) =>
+        current?.id === updatedTable.id ? updatedTable : current,
+      );
       setNotice(`${updatedTable.label} ${active ? "enabled" : "disabled"}.`);
     } catch (activeError) {
-      setQrError(activeError instanceof Error ? activeError.message : "Could not update table status.");
+      setQrError(
+        activeError instanceof Error
+          ? activeError.message
+          : "Could not update table status.",
+      );
     } finally {
       setWorkingTableId(null);
     }
   }
 
-  const previewUrl = previewTable ? getOrderingUrl(previewTable.qr_url, previewTable.qr_path) : "";
-  const previewPrintable = previewTable && previewUrl ? { table: previewTable, orderingUrl: previewUrl } : null;
-  const allSelected = rows.length > 0 && rows.every((row) => selectedTableIds.includes(row.table.id));
+  const previewUrl = previewTable
+    ? getOrderingUrl(previewTable.qr_url, previewTable.qr_path)
+    : "";
+  const previewPrintable =
+    previewTable && previewUrl
+      ? { table: previewTable, orderingUrl: previewUrl }
+      : null;
+  const allSelected =
+    rows.length > 0 &&
+    rows.every((row) => selectedTableIds.includes(row.table.id));
 
   function toggleSelectedTable(tableId: string) {
-    setSelectedTableIds((previous) => previous.includes(tableId) ? previous.filter((id) => id !== tableId) : [...previous, tableId]);
+    setSelectedTableIds((previous) =>
+      previous.includes(tableId)
+        ? previous.filter((id) => id !== tableId)
+        : [...previous, tableId],
+    );
   }
 
   function toggleAllSelected() {
@@ -4650,15 +8136,28 @@ function QrTablesPage({
   }
 
   async function downloadQrPng(printable: PrintableQrTable) {
-    const canvas = await createQrCardCanvas({ restaurantName, logoUrl, table: printable.table, orderingUrl: printable.orderingUrl });
+    const canvas = await createQrCardCanvas({
+      restaurantName,
+      logoUrl,
+      table: printable.table,
+      orderingUrl: printable.orderingUrl,
+    });
     canvas.toBlob((blob) => {
-      if (blob) downloadBlob(`${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.png`, blob);
+      if (blob)
+        downloadBlob(
+          `${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.png`,
+          blob,
+        );
     }, "image/png");
   }
 
   async function downloadQrSvg(printable: PrintableQrTable) {
     assertAbsoluteQrPayload(printable.orderingUrl);
-    const qrSvg = await QRCode.toString(printable.orderingUrl, { type: "svg", width: 360, margin: 1 });
+    const qrSvg = await QRCode.toString(printable.orderingUrl, {
+      type: "svg",
+      width: 360,
+      margin: 1,
+    });
     const escapedName = escapeHtml(restaurantName);
     const escapedUrl = escapeHtml(printable.orderingUrl);
     const logoMarkup = logoUrl
@@ -4670,44 +8169,72 @@ function QrTablesPage({
 ${logoMarkup}
 <text x="250" y="158" text-anchor="middle" font-family="Arial" font-size="28" font-weight="800" fill="#0f172a">${escapedName}</text>
 <text x="250" y="196" text-anchor="middle" font-family="Arial" font-size="18" font-weight="800" fill="#64748b">Table ${printable.table.table_number}</text>
-<g transform="translate(70 230)">${qrSvg.replace(/<\?xml[^>]*>/, "").replace(/<svg[^>]*>/, "").replace("</svg>", "")}</g>
+<g transform="translate(70 230)">${qrSvg
+      .replace(/<\?xml[^>]*>/, "")
+      .replace(/<svg[^>]*>/, "")
+      .replace("</svg>", "")}</g>
 <text x="250" y="626" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#0f172a">Scan to Order</text>
 <text x="250" y="658" text-anchor="middle" font-family="Arial" font-size="11" font-weight="600" fill="#64748b">${escapedUrl}</text>
 </svg>`;
-    downloadBlob(`${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.svg`, new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    downloadBlob(
+      `${safeFilename(restaurantName)}-table-${printable.table.table_number}-qr.svg`,
+      new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
+    );
   }
 
-  async function downloadQrPdf(printables: PrintableQrTable[], filename: string) {
+  async function downloadQrPdf(
+    printables: PrintableQrTable[],
+    filename: string,
+  ) {
     if (printables.length === 0) return;
-    const images = await Promise.all(printables.map(async (printable) => {
-      const canvas = await createQrCardCanvas({ restaurantName, logoUrl, table: printable.table, orderingUrl: printable.orderingUrl });
-      return { bytes: dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)), width: canvas.width, height: canvas.height };
-    }));
+    const images = await Promise.all(
+      printables.map(async (printable) => {
+        const canvas = await createQrCardCanvas({
+          restaurantName,
+          logoUrl,
+          table: printable.table,
+          orderingUrl: printable.orderingUrl,
+        });
+        return {
+          bytes: dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)),
+          width: canvas.width,
+          height: canvas.height,
+        };
+      }),
+    );
     downloadBlob(filename, buildPdfFromJpegs(images));
   }
 
   async function printQrCards(printables: PrintableQrTable[]) {
     if (printables.length === 0) return;
-    const cards = await Promise.all(printables.map(async (printable) => {
-      assertAbsoluteQrPayload(printable.orderingUrl);
-      const qrDataUrl = await QRCode.toDataURL(printable.orderingUrl, { width: 320, margin: 1 });
-      const logo = logoUrl
-        ? `<img class="qr-logo" src="${escapeHtml(logoUrl)}" alt="" />`
-        : `<div class="qr-logo fallback">${escapeHtml(restaurantName.slice(0, 2).toUpperCase())}</div>`;
-      return `<section class="qr-print-card">
+    const cards = await Promise.all(
+      printables.map(async (printable) => {
+        assertAbsoluteQrPayload(printable.orderingUrl);
+        const qrDataUrl = await QRCode.toDataURL(printable.orderingUrl, {
+          width: 320,
+          margin: 1,
+        });
+        const logo = logoUrl
+          ? `<img class="qr-logo" src="${escapeHtml(logoUrl)}" alt="" />`
+          : `<div class="qr-logo fallback">${escapeHtml(restaurantName.slice(0, 2).toUpperCase())}</div>`;
+        return `<section class="qr-print-card">
 ${logo}
 <h1>${escapeHtml(restaurantName)}</h1>
 <h2>Table ${printable.table.table_number}</h2>
 <img class="qr-code" src="${qrDataUrl}" alt="" />
 <p class="scan">Scan to Order</p>
 </section>`;
-    }));
+      }),
+    );
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) {
-      setQrError("Could not open the print window. Please allow pop-ups for this site.");
+      setQrError(
+        "Could not open the print window. Please allow pop-ups for this site.",
+      );
       return;
     }
-    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(restaurantName)} QR Codes</title><style>
+    printWindow.document
+      .write(`<!doctype html><html><head><title>${escapeHtml(restaurantName)} QR Codes</title><style>
 body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-print-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:24px}.qr-print-card{break-inside:avoid;page-break-inside:avoid;background:#fff;border:1px solid #d8dee8;border-radius:14px;padding:28px;text-align:center;display:grid;justify-items:center;gap:10px}.qr-logo{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid #d8dee8}.qr-logo.fallback{display:grid;place-items:center;background:#0f766e;color:#fff;font-size:22px;font-weight:800}.qr-code{width:280px;height:280px}h1{font-size:24px;line-height:1.15;margin:0}h2{font-size:18px;color:#64748b;margin:0}.scan{font-size:24px;font-weight:800;margin:0}@media print{body{background:#fff}.qr-print-grid{padding:0;grid-template-columns:repeat(2,1fr)}.qr-print-card{border:0;min-height:46vh;page-break-inside:avoid}}@page{size:A4;margin:12mm}
 </style></head><body><main class="qr-print-grid">${cards.join("")}</main><script>window.addEventListener('load',()=>{const images=[...document.images];Promise.all(images.map((image)=>image.complete?Promise.resolve():new Promise((resolve)=>{image.onload=resolve;image.onerror=resolve;}))).then(()=>setTimeout(()=>window.print(),100));});<\/script></body></html>`);
     printWindow.document.close();
@@ -4718,14 +8245,39 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">QR & Table Management</h1>
-          <p className="od-page-subtitle">Restaurant floor management for {restaurantName}</p>
+          <p className="od-page-subtitle">
+            Restaurant floor management for {restaurantName}
+          </p>
         </div>
         <div className="od-header-actions">
-          <button className="od-btn-ghost" type="button" onClick={() => void printQrCards(selectedRows)} disabled={selectedRows.length === 0}>Print Selected</button>
-          <button className="od-btn-primary" type="button" onClick={() => void printQrCards(rows)}>Print Entire Restaurant</button>
+          <button
+            className="od-btn-ghost"
+            type="button"
+            onClick={() => void printQrCards(selectedRows)}
+            disabled={selectedRows.length === 0}
+          >
+            Print Selected
+          </button>
+          <button
+            className="od-btn-primary"
+            type="button"
+            onClick={() => void printQrCards(rows)}
+          >
+            Print Entire Restaurant
+          </button>
         </div>
       </div>
-      <IndependentModuleReport restaurantId={restaurantId} rpc="get_owner_tables_module_report" columns={[{key:"table_number",label:"Table"},{key:"revenue_per_table",label:"Revenue Per Table",money:true},{key:"invoices",label:"Invoices"},{key:"average_stay",label:"Average Stay",suffix:" min"},{key:"table_turnover",label:"Table Turnover"}]} />
+      <IndependentModuleReport
+        restaurantId={restaurantId}
+        rpc="get_owner_tables_module_report"
+        columns={[
+          { key: "table_number", label: "Table" },
+          { key: "revenue_per_table", label: "Revenue Per Table", money: true },
+          { key: "invoices", label: "Invoices" },
+          { key: "average_stay", label: "Average Stay", suffix: " min" },
+          { key: "table_turnover", label: "Table Turnover" },
+        ]}
+      />
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
           <div className="od-kpi-label">Occupied Tables</div>
@@ -4737,22 +8289,38 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">Disabled Tables</div>
-          <div className="od-kpi-value">{tables.filter((table) => !table.active).length}</div>
+          <div className="od-kpi-value">
+            {tables.filter((table) => !table.active).length}
+          </div>
         </div>
       </div>
-      {(qrError || notice) && <div className={qrError ? "od-error-inline" : "od-success-inline"}>{qrError || notice}</div>}
+      {(qrError || notice) && (
+        <div className={qrError ? "od-error-inline" : "od-success-inline"}>
+          {qrError || notice}
+        </div>
+      )}
       <div className="od-card">
         <div className="od-card-header">
           <div>
             <div className="od-card-title">Restaurant Tables</div>
-            <div className="od-card-subtitle">Owner QR controls for the direct /r/{restaurantSlug || ":slug"} digital menu route.</div>
+            <div className="od-card-subtitle">
+              Owner QR controls for the direct /r/{restaurantSlug || ":slug"}{" "}
+              digital menu route.
+            </div>
           </div>
         </div>
         <div className="od-table-wrap">
           <table className="od-table od-qr-table">
             <thead>
               <tr>
-                <th><input type="checkbox" checked={allSelected} onChange={toggleAllSelected} aria-label="Select all table QR codes" /></th>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAllSelected}
+                    aria-label="Select all table QR codes"
+                  />
+                </th>
                 <th>Table Number</th>
                 <th>Status</th>
                 <th>Occupancy</th>
@@ -4767,63 +8335,232 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ table, occupied, ordersToday, lastScanAt, lastOrderAt, scanCount, orderingUrl }) => (
-                <tr key={table.id}>
-                  <td><input type="checkbox" checked={selectedTableIds.includes(table.id)} onChange={() => toggleSelectedTable(table.id)} aria-label={`Select ${table.label}`} /></td>
-                  <td><strong>{table.label || `Table ${table.table_number}`}</strong></td>
-                  <td><span className={table.active ? "od-active-pill" : "od-offline-pill"}>{table.active ? "Active" : "Disabled"}</span></td>
-                  <td><span className={`od-status-badge ${occupied ? "paid" : "pending"}`}>{occupied ? "Occupied" : "Available"}</span></td>
-                  <td>
-                    <button className="od-qr-thumb-button" type="button" onClick={() => setPreviewTable(table)} disabled={!orderingUrl} aria-label={`View QR for ${table.label}`}>
-                      {qrCodes[table.id] ? <img className="od-qr-thumb" src={qrCodes[table.id]} alt={`QR for ${table.label}`} /> : <span className="od-qr-placeholder compact">QR</span>}
-                    </button>
-                  </td>
-                  <td>{table.created_at ? fmtDateTime(table.created_at) : "Not recorded"}</td>
-                  <td>{table.qr_regenerated_at ? fmtDateTime(table.qr_regenerated_at) : "Not recorded"}</td>
-                  <td><strong>{ordersToday}</strong></td>
-                  <td>{lastScanAt ? fmtTimeAgo(lastScanAt) : "No scans"}</td>
-                  <td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : "No orders"}</td>
-                  <td>{scanCount ?? "N/A"}</td>
-                  <td>
-                    <div className="od-row-actions">
-                      <button className="od-btn-ghost compact" type="button" onClick={() => setPreviewTable(table)} disabled={!orderingUrl}>View QR</button>
-                      <button className="od-btn-ghost compact" type="button" onClick={() => void regenerateQr(table)} disabled={workingTableId === table.id}>Regenerate QR</button>
-                      {table.active ? (
-                        <button className="od-btn-ghost compact danger" type="button" onClick={() => void setTableActive(table, false)} disabled={workingTableId === table.id}>Disable</button>
-                      ) : (
-                        <button className="od-btn-ghost compact" type="button" onClick={() => void setTableActive(table, true)} disabled={workingTableId === table.id}>Enable</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {rows.map(
+                ({
+                  table,
+                  occupied,
+                  ordersToday,
+                  lastScanAt,
+                  lastOrderAt,
+                  scanCount,
+                  orderingUrl,
+                }) => (
+                  <tr key={table.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedTableIds.includes(table.id)}
+                        onChange={() => toggleSelectedTable(table.id)}
+                        aria-label={`Select ${table.label}`}
+                      />
+                    </td>
+                    <td>
+                      <strong>
+                        {table.label || `Table ${table.table_number}`}
+                      </strong>
+                    </td>
+                    <td>
+                      <span
+                        className={
+                          table.active ? "od-active-pill" : "od-offline-pill"
+                        }
+                      >
+                        {table.active ? "Active" : "Disabled"}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`od-status-badge ${occupied ? "paid" : "pending"}`}
+                      >
+                        {occupied ? "Occupied" : "Available"}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="od-qr-thumb-button"
+                        type="button"
+                        onClick={() => setPreviewTable(table)}
+                        disabled={!orderingUrl}
+                        aria-label={`View QR for ${table.label}`}
+                      >
+                        {qrCodes[table.id] ? (
+                          <img
+                            className="od-qr-thumb"
+                            src={qrCodes[table.id]}
+                            alt={`QR for ${table.label}`}
+                          />
+                        ) : (
+                          <span className="od-qr-placeholder compact">QR</span>
+                        )}
+                      </button>
+                    </td>
+                    <td>
+                      {table.created_at
+                        ? fmtDateTime(table.created_at)
+                        : "Not recorded"}
+                    </td>
+                    <td>
+                      {table.qr_regenerated_at
+                        ? fmtDateTime(table.qr_regenerated_at)
+                        : "Not recorded"}
+                    </td>
+                    <td>
+                      <strong>{ordersToday}</strong>
+                    </td>
+                    <td>{lastScanAt ? fmtTimeAgo(lastScanAt) : "No scans"}</td>
+                    <td>
+                      {lastOrderAt ? fmtTimeAgo(lastOrderAt) : "No orders"}
+                    </td>
+                    <td>{scanCount ?? "N/A"}</td>
+                    <td>
+                      <div className="od-row-actions">
+                        <button
+                          className="od-btn-ghost compact"
+                          type="button"
+                          onClick={() => setPreviewTable(table)}
+                          disabled={!orderingUrl}
+                        >
+                          View QR
+                        </button>
+                        <button
+                          className="od-btn-ghost compact"
+                          type="button"
+                          onClick={() => void regenerateQr(table)}
+                          disabled={workingTableId === table.id}
+                        >
+                          Regenerate QR
+                        </button>
+                        {table.active ? (
+                          <button
+                            className="od-btn-ghost compact danger"
+                            type="button"
+                            onClick={() => void setTableActive(table, false)}
+                            disabled={workingTableId === table.id}
+                          >
+                            Disable
+                          </button>
+                        ) : (
+                          <button
+                            className="od-btn-ghost compact"
+                            type="button"
+                            onClick={() => void setTableActive(table, true)}
+                            disabled={workingTableId === table.id}
+                          >
+                            Enable
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
-          {rows.length === 0 && <div className="od-empty compact">No restaurant tables found. Save table settings to synchronize QR records.</div>}
+          {rows.length === 0 && (
+            <div className="od-empty compact">
+              No restaurant tables found. Save table settings to synchronize QR
+              records.
+            </div>
+          )}
         </div>
       </div>
       {previewTable && (
-        <div className="od-modal-backdrop" role="presentation" onClick={() => setPreviewTable(null)}>
-          <div className="od-modal od-qr-modal" role="dialog" aria-modal="true" aria-labelledby="od-qr-modal-title" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="od-modal-backdrop"
+          role="presentation"
+          onClick={() => setPreviewTable(null)}
+        >
+          <div
+            className="od-modal od-qr-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="od-qr-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="od-modal-header">
               <div>
-                <div className="od-card-title" id="od-qr-modal-title">Table QR Code</div>
+                <div className="od-card-title" id="od-qr-modal-title">
+                  Table QR Code
+                </div>
                 <div className="od-card-subtitle">{restaurantName}</div>
               </div>
-              <button className="od-icon-btn" type="button" aria-label="Close QR preview" onClick={() => setPreviewTable(null)}>X</button>
+              <button
+                className="od-icon-btn"
+                type="button"
+                aria-label="Close QR preview"
+                onClick={() => setPreviewTable(null)}
+              >
+                X
+              </button>
             </div>
             <div className="od-qr-preview">
-              {logoUrl ? <img className="od-qr-logo" src={logoUrl} alt={`${restaurantName} logo`} /> : <div className="od-qr-logo fallback">{restaurantName.slice(0, 2).toUpperCase()}</div>}
+              {logoUrl ? (
+                <img
+                  className="od-qr-logo"
+                  src={logoUrl}
+                  alt={`${restaurantName} logo`}
+                />
+              ) : (
+                <div className="od-qr-logo fallback">
+                  {restaurantName.slice(0, 2).toUpperCase()}
+                </div>
+              )}
               <div className="od-qr-restaurant">{restaurantName}</div>
-              <div className="od-qr-table-number">Table {previewTable.table_number}</div>
-              {qrCodes[previewTable.id] ? <img className="od-qr-large" src={qrCodes[previewTable.id]} alt={`QR code for table ${previewTable.table_number}`} /> : <div className="od-qr-large od-qr-placeholder">QR</div>}
-              <a className="od-qr-url" href={previewUrl} target="_blank" rel="noreferrer">{previewUrl}</a>
+              <div className="od-qr-table-number">
+                Table {previewTable.table_number}
+              </div>
+              {qrCodes[previewTable.id] ? (
+                <img
+                  className="od-qr-large"
+                  src={qrCodes[previewTable.id]}
+                  alt={`QR code for table ${previewTable.table_number}`}
+                />
+              ) : (
+                <div className="od-qr-large od-qr-placeholder">QR</div>
+              )}
+              <a
+                className="od-qr-url"
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {previewUrl}
+              </a>
               {previewPrintable && (
                 <div className="od-qr-export-actions">
-                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrPng(previewPrintable)}>Download PNG</button>
-                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrSvg(previewPrintable)}>Download SVG</button>
-                  <button className="od-btn-ghost" type="button" onClick={() => void downloadQrPdf([previewPrintable], `${safeFilename(restaurantName)}-table-${previewTable.table_number}-qr.pdf`)}>Download PDF</button>
-                  <button className="od-btn-primary" type="button" onClick={() => void printQrCards([previewPrintable])}>Print</button>
+                  <button
+                    className="od-btn-ghost"
+                    type="button"
+                    onClick={() => void downloadQrPng(previewPrintable)}
+                  >
+                    Download PNG
+                  </button>
+                  <button
+                    className="od-btn-ghost"
+                    type="button"
+                    onClick={() => void downloadQrSvg(previewPrintable)}
+                  >
+                    Download SVG
+                  </button>
+                  <button
+                    className="od-btn-ghost"
+                    type="button"
+                    onClick={() =>
+                      void downloadQrPdf(
+                        [previewPrintable],
+                        `${safeFilename(restaurantName)}-table-${previewTable.table_number}-qr.pdf`,
+                      )
+                    }
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    className="od-btn-primary"
+                    type="button"
+                    onClick={() => void printQrCards([previewPrintable])}
+                  >
+                    Print
+                  </button>
                 </div>
               )}
             </div>
@@ -4853,6 +8590,8 @@ type SettingsFormState = {
   kitchenMode: "single" | "advanced" | "skipped";
   acceptsQrOrders: boolean;
   autoAcceptOrders: boolean;
+  paymentPolicy: PaymentPolicy;
+  mixedWaiterPaymentTiming: "before_kitchen" | "after_meal";
   serviceCharge: string;
   primaryColor: string;
   logoUrl: string;
@@ -4863,12 +8602,24 @@ type SettingsFormState = {
   sessionTimeoutMinutes: string;
 };
 
-const BUSINESS_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const BUSINESS_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
-function configToSettingsForm(config: RestaurantConfig | null, fallbackName: string): SettingsFormState {
+function configToSettingsForm(
+  config: RestaurantConfig | null,
+  fallbackName: string,
+): SettingsFormState {
   const kitchenMode = jsonBool(config?.kitchen_settings ?? {}, "skipped", false)
     ? "skipped"
-    : jsonString(config?.kitchen_settings ?? {}, "mode", "single") === "advanced"
+    : jsonString(config?.kitchen_settings ?? {}, "mode", "single") ===
+        "advanced"
       ? "advanced"
       : "single";
 
@@ -4884,21 +8635,54 @@ function configToSettingsForm(config: RestaurantConfig | null, fallbackName: str
     currencySymbol: config?.currency_symbol ?? "Br",
     locale: config?.locale ?? "am-ET",
     dateFormat: config?.date_format ?? "medium",
-    timeFormat: (config?.time_format === "12h" ? "12h" : "24h"),
+    timeFormat: config?.time_format === "12h" ? "12h" : "24h",
     opensAt: jsonString(config?.business_hours ?? {}, "opens_at", "08:00"),
     closesAt: jsonString(config?.business_hours ?? {}, "closes_at", "22:00"),
     closedDays: jsonStringArray(config?.business_hours ?? {}, "closed_days"),
     kitchenMode,
-    acceptsQrOrders: jsonBool(config?.ordering_settings ?? {}, "accepts_qr_orders", true),
-    autoAcceptOrders: jsonBool(config?.ordering_settings ?? {}, "auto_accept_orders", false),
-    serviceCharge: String((config?.ordering_settings?.service_charge_percent as number | undefined) ?? 0),
-    primaryColor: jsonString(config?.branding ?? {}, "primary_color", "#0f766e"),
+    acceptsQrOrders: jsonBool(
+      config?.ordering_settings ?? {},
+      "accepts_qr_orders",
+      true,
+    ),
+    autoAcceptOrders: jsonBool(
+      config?.ordering_settings ?? {},
+      "auto_accept_orders",
+      false,
+    ),
+    paymentPolicy: config?.payment_policy ?? "pay_before_kitchen",
+    mixedWaiterPaymentTiming:
+      config?.mixed_waiter_payment_timing ?? "after_meal",
+    serviceCharge: String(
+      (config?.ordering_settings?.service_charge_percent as
+        number | undefined) ?? 0,
+    ),
+    primaryColor: jsonString(
+      config?.branding ?? {},
+      "primary_color",
+      "#0f766e",
+    ),
     logoUrl: jsonString(config?.branding ?? {}, "logo_url"),
     coverUrl: jsonString(config?.branding ?? {}, "cover_url"),
-    emailNotifications: jsonBool(config?.notification_settings ?? {}, "email_notifications", true),
-    smsNotifications: jsonBool(config?.notification_settings ?? {}, "sms_notifications", false),
-    requireStrongPasswords: jsonBool(config?.security_settings ?? {}, "require_strong_passwords", true),
-    sessionTimeoutMinutes: String((config?.security_settings?.session_timeout_minutes as number | undefined) ?? 480),
+    emailNotifications: jsonBool(
+      config?.notification_settings ?? {},
+      "email_notifications",
+      true,
+    ),
+    smsNotifications: jsonBool(
+      config?.notification_settings ?? {},
+      "sms_notifications",
+      false,
+    ),
+    requireStrongPasswords: jsonBool(
+      config?.security_settings ?? {},
+      "require_strong_passwords",
+      true,
+    ),
+    sessionTimeoutMinutes: String(
+      (config?.security_settings?.session_timeout_minutes as
+        number | undefined) ?? 480,
+    ),
   };
 }
 
@@ -4915,15 +8699,22 @@ function SettingsPage({
   tables: RestaurantTable[];
   onSettingsChanged: () => Promise<void>;
 }) {
-  const [form, setForm] = useState<SettingsFormState>(() => configToSettingsForm(config, fallbackRestaurantName));
+  const [form, setForm] = useState<SettingsFormState>(() =>
+    configToSettingsForm(config, fallbackRestaurantName),
+  );
   const [working, setWorking] = useState(false);
-  const [assetUploading, setAssetUploading] = useState<"logo" | "cover" | null>(null);
+  const [assetUploading, setAssetUploading] = useState<"logo" | "cover" | null>(
+    null,
+  );
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
   const [appUrl, setAppUrl] = useState("");
   const [appUrlWorking, setAppUrlWorking] = useState(false);
-  const activeTables = useMemo(() => tables.filter((table) => table.active), [tables]);
+  const activeTables = useMemo(
+    () => tables.filter((table) => table.active),
+    [tables],
+  );
 
   useEffect(() => {
     setForm(configToSettingsForm(config, fallbackRestaurantName));
@@ -4939,11 +8730,18 @@ function SettingsPage({
           setAppUrl(data);
         }
       } catch (error) {
-        if (mounted) setSettingsError(error instanceof Error ? error.message : "Could not load application URL.");
+        if (mounted)
+          setSettingsError(
+            error instanceof Error
+              ? error.message
+              : "Could not load application URL.",
+          );
       }
     }
     void loadAppUrl();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -4961,20 +8759,33 @@ function SettingsPage({
               tableNumber: table.table_number,
             });
             assertAbsoluteQrPayload(url);
-            const dataUrl = await QRCode.toDataURL(url, { width: 132, margin: 1 });
+            const dataUrl = await QRCode.toDataURL(url, {
+              width: 132,
+              margin: 1,
+            });
             return [table.table_number, dataUrl] as const;
-          })
+          }),
         );
         if (mounted) setQrCodes(Object.fromEntries(pairs));
       } catch (error) {
-        if (mounted) setSettingsError(error instanceof Error ? error.message : "Could not generate QR codes.");
+        if (mounted)
+          setSettingsError(
+            error instanceof Error
+              ? error.message
+              : "Could not generate QR codes.",
+          );
       }
     }
     void generateQrCodes();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [activeTables]);
 
-  function updateField<K extends keyof SettingsFormState>(key: K, value: SettingsFormState[K]) {
+  function updateField<K extends keyof SettingsFormState>(
+    key: K,
+    value: SettingsFormState[K],
+  ) {
     setForm((previous) => ({ ...previous, [key]: value }));
   }
 
@@ -4987,7 +8798,10 @@ function SettingsPage({
     }));
   }
 
-  async function uploadBrandingAsset(assetType: "logo" | "cover", file: File | null) {
+  async function uploadBrandingAsset(
+    assetType: "logo" | "cover",
+    file: File | null,
+  ) {
     if (!file) return;
 
     try {
@@ -4995,22 +8809,30 @@ function SettingsPage({
       setSettingsError(null);
       setNotice(null);
 
-      if (!file.type.startsWith("image/")) throw new Error("Branding asset must be an image file.");
-      if (file.size > 5 * 1024 * 1024) throw new Error("Branding asset must be 5 MB or smaller.");
+      if (!file.type.startsWith("image/"))
+        throw new Error("Branding asset must be an image file.");
+      if (file.size > 5 * 1024 * 1024)
+        throw new Error("Branding asset must be 5 MB or smaller.");
 
       const path = buildBrandingAssetPath(restaurantId, assetType);
-      const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, file, {
-        cacheControl: "0",
-        upsert: true,
-        contentType: file.type,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from("menu-photos")
+        .upload(path, file, {
+          cacheControl: "0",
+          upsert: true,
+          contentType: file.type,
+        });
       if (uploadError) throw new Error(uploadError.message);
 
       const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
       if (assetType === "logo") updateField("logoUrl", data.publicUrl);
       if (assetType === "cover") updateField("coverUrl", data.publicUrl);
     } catch (uploadError) {
-      setSettingsError(uploadError instanceof Error ? uploadError.message : "Could not upload branding asset.");
+      setSettingsError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload branding asset.",
+      );
     } finally {
       setAssetUploading(null);
     }
@@ -5028,10 +8850,26 @@ function SettingsPage({
       const currencyCode = form.currency.trim().toUpperCase();
       const currencySymbol = form.currencySymbol.trim();
       const locale = form.locale.trim();
-      if (!Number.isInteger(totalTables) || totalTables < 1 || totalTables > 500) throw new Error("Total tables must be a whole number from 1 to 500.");
-      if (!Number.isFinite(serviceCharge) || serviceCharge < 0 || serviceCharge > 30) throw new Error("Service charge must be between 0 and 30 percent.");
-      if (!Number.isInteger(sessionTimeout) || sessionTimeout < 15 || sessionTimeout > 1440) throw new Error("Session timeout must be between 15 and 1440 minutes.");
-      if (!/^[A-Z]{3}$/.test(currencyCode)) throw new Error("Currency code must be a 3-letter ISO code.");
+      if (
+        !Number.isInteger(totalTables) ||
+        totalTables < 1 ||
+        totalTables > 500
+      )
+        throw new Error("Total tables must be a whole number from 1 to 500.");
+      if (
+        !Number.isFinite(serviceCharge) ||
+        serviceCharge < 0 ||
+        serviceCharge > 30
+      )
+        throw new Error("Service charge must be between 0 and 30 percent.");
+      if (
+        !Number.isInteger(sessionTimeout) ||
+        sessionTimeout < 15 ||
+        sessionTimeout > 1440
+      )
+        throw new Error("Session timeout must be between 15 and 1440 minutes.");
+      if (!/^[A-Z]{3}$/.test(currencyCode))
+        throw new Error("Currency code must be a 3-letter ISO code.");
       if (!currencySymbol) throw new Error("Currency symbol is required.");
       if (!locale) throw new Error("Locale is required.");
 
@@ -5052,12 +8890,14 @@ function SettingsPage({
           opens_at: form.opensAt,
           closes_at: form.closesAt,
           closed_days: form.closedDays,
-          schedules: [{
-            name: "Default",
-            opens_at: form.opensAt,
-            closes_at: form.closesAt,
-            closed_days: form.closedDays,
-          }],
+          schedules: [
+            {
+              name: "Default",
+              opens_at: form.opensAt,
+              closes_at: form.closesAt,
+              closed_days: form.closedDays,
+            },
+          ],
         },
         kitchen_settings_payload: {
           mode: form.kitchenMode === "advanced" ? "advanced" : "single",
@@ -5094,10 +8934,30 @@ function SettingsPage({
         })
         .eq("id", restaurantId);
       if (regionalError) throw new Error(regionalError.message);
+      const { error: policyError } = await supabase.rpc(
+        "set_restaurant_payment_policy",
+        {
+          target_restaurant_id: restaurantId,
+          requested_policy: form.paymentPolicy,
+        },
+      );
+      if (policyError) throw new Error(policyError.message);
+      const { error: mixedTimingError } = await supabase.rpc(
+        "set_mixed_waiter_payment_timing",
+        {
+          target_restaurant_id: restaurantId,
+          requested_timing: form.mixedWaiterPaymentTiming,
+        },
+      );
+      if (mixedTimingError) throw new Error(mixedTimingError.message);
       await onSettingsChanged();
       setNotice("Settings saved.");
     } catch (saveError) {
-      setSettingsError(saveError instanceof Error ? saveError.message : "Could not save settings.");
+      setSettingsError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save settings.",
+      );
     } finally {
       setWorking(false);
     }
@@ -5116,7 +8976,11 @@ function SettingsPage({
       await onSettingsChanged();
       setNotice("Application URL saved and QR codes regenerated.");
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : "Could not save application URL.");
+      setSettingsError(
+        error instanceof Error
+          ? error.message
+          : "Could not save application URL.",
+      );
     } finally {
       setAppUrlWorking(false);
     }
@@ -5127,14 +8991,23 @@ function SettingsPage({
       setAppUrlWorking(true);
       setSettingsError(null);
       setNotice(null);
-      const { error } = await supabase.rpc("regenerate_all_restaurant_table_qr", {
-        target_restaurant_id: restaurantId,
-      });
+      const { error } = await supabase.rpc(
+        "regenerate_all_restaurant_table_qr",
+        {
+          target_restaurant_id: restaurantId,
+        },
+      );
       if (error) throw new Error(error.message);
       await onSettingsChanged();
-      setNotice("All table QR codes regenerated with the configured application URL.");
+      setNotice(
+        "All table QR codes regenerated with the configured application URL.",
+      );
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : "Could not regenerate QR codes.");
+      setSettingsError(
+        error instanceof Error
+          ? error.message
+          : "Could not regenerate QR codes.",
+      );
     } finally {
       setAppUrlWorking(false);
     }
@@ -5151,69 +9024,271 @@ function SettingsPage({
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Business Configuration</h1>
-          <p className="od-page-subtitle">Restaurant profile, tables, QR codes, ordering, branding, notifications, billing, and security.</p>
+          <p className="od-page-subtitle">
+            Restaurant profile, tables, QR codes, ordering, branding,
+            notifications, billing, and security.
+          </p>
         </div>
       </div>
 
-      {!config && <div className="od-card"><div className="od-empty compact">Loading settings...</div></div>}
-      {(settingsError || notice) && <div className={settingsError ? "od-error-inline" : "od-success-inline"}>{settingsError || notice}</div>}
+      {!config && (
+        <div className="od-card">
+          <div className="od-empty compact">Loading settings...</div>
+        </div>
+      )}
+      {(settingsError || notice) && (
+        <div
+          className={settingsError ? "od-error-inline" : "od-success-inline"}
+        >
+          {settingsError || notice}
+        </div>
+      )}
 
       <form className="od-settings-form" onSubmit={handleSave}>
         <div className="od-settings-actions">
-          <button className="od-btn-ghost" type="button" onClick={handleCancel} disabled={working}>Cancel</button>
-          <button className="od-btn-primary" type="submit" disabled={working}>{working ? "Saving..." : "Save Changes"}</button>
+          <button
+            className="od-btn-ghost"
+            type="button"
+            onClick={handleCancel}
+            disabled={working}
+          >
+            Cancel
+          </button>
+          <button className="od-btn-primary" type="submit" disabled={working}>
+            {working ? "Saving..." : "Save Changes"}
+          </button>
         </div>
 
         <div className="od-settings-layout">
           <div className="od-settings-main">
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Restaurant Profile</div><div className="od-card-subtitle">Core information used across owner and public experiences.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Restaurant Profile</div>
+                  <div className="od-card-subtitle">
+                    Core information used across owner and public experiences.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid">
-                <label>Restaurant Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} disabled={working} /></label>
-                <label>Phone<input value={form.phone} onChange={(event) => updateField("phone", event.target.value)} disabled={working} /></label>
-                <label>Email<input type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} disabled={working} /></label>
-                <label className="wide">Address<input value={form.address} onChange={(event) => updateField("address", event.target.value)} disabled={working} /></label>
-                <label className="wide">Description<textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} disabled={working} /></label>
-                <label>Timezone<input value={form.timezone} onChange={(event) => updateField("timezone", event.target.value)} disabled={working} /></label>
+                <label>
+                  Restaurant Name
+                  <input
+                    value={form.name}
+                    onChange={(event) =>
+                      updateField("name", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Phone
+                  <input
+                    value={form.phone}
+                    onChange={(event) =>
+                      updateField("phone", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) =>
+                      updateField("email", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label className="wide">
+                  Address
+                  <input
+                    value={form.address}
+                    onChange={(event) =>
+                      updateField("address", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label className="wide">
+                  Description
+                  <textarea
+                    value={form.description}
+                    onChange={(event) =>
+                      updateField("description", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Timezone
+                  <input
+                    value={form.timezone}
+                    onChange={(event) =>
+                      updateField("timezone", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Currency & Regional Settings</div><div className="od-card-subtitle">Controls how money, dates, and time are displayed for this restaurant only.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">
+                    Currency & Regional Settings
+                  </div>
+                  <div className="od-card-subtitle">
+                    Controls how money, dates, and time are displayed for this
+                    restaurant only.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label>Currency Code<input value={form.currency} maxLength={3} onChange={(event) => updateField("currency", event.target.value.toUpperCase())} disabled={working} /></label>
-                <label>Currency Symbol<input value={form.currencySymbol} maxLength={12} onChange={(event) => updateField("currencySymbol", event.target.value)} disabled={working} /></label>
-                <label>Locale<input value={form.locale} onChange={(event) => updateField("locale", event.target.value)} disabled={working} /></label>
-                <label>Date Format<select value={form.dateFormat} onChange={(event) => updateField("dateFormat", event.target.value)} disabled={working}>
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
-                </select></label>
-                <label>Time Format<select value={form.timeFormat} onChange={(event) => updateField("timeFormat", event.target.value as SettingsFormState["timeFormat"])} disabled={working}>
-                  <option value="24h">24-hour</option>
-                  <option value="12h">12-hour</option>
-                </select></label>
+                <label>
+                  Currency Code
+                  <input
+                    value={form.currency}
+                    maxLength={3}
+                    onChange={(event) =>
+                      updateField("currency", event.target.value.toUpperCase())
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Currency Symbol
+                  <input
+                    value={form.currencySymbol}
+                    maxLength={12}
+                    onChange={(event) =>
+                      updateField("currencySymbol", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Locale
+                  <input
+                    value={form.locale}
+                    onChange={(event) =>
+                      updateField("locale", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Date Format
+                  <select
+                    value={form.dateFormat}
+                    onChange={(event) =>
+                      updateField("dateFormat", event.target.value)
+                    }
+                    disabled={working}
+                  >
+                    <option value="short">Short</option>
+                    <option value="medium">Medium</option>
+                    <option value="long">Long</option>
+                  </select>
+                </label>
+                <label>
+                  Time Format
+                  <select
+                    value={form.timeFormat}
+                    onChange={(event) =>
+                      updateField(
+                        "timeFormat",
+                        event.target.value as SettingsFormState["timeFormat"],
+                      )
+                    }
+                    disabled={working}
+                  >
+                    <option value="24h">24-hour</option>
+                    <option value="12h">12-hour</option>
+                  </select>
+                </label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Table Management</div><div className="od-card-subtitle">Updates the configured table count used for table validation.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Table Management</div>
+                  <div className="od-card-subtitle">
+                    Updates the configured table count used for table
+                    validation.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label>Total Tables<input type="number" min="1" max="500" value={form.totalTables} onChange={(event) => updateField("totalTables", event.target.value)} disabled={working} /></label>
-                <div className="od-setting-stat"><strong>{activeTables.length}</strong><span>Active table records</span></div>
-                <div className="od-setting-stat"><strong>{config?.total_tables ?? form.totalTables}</strong><span>Configured tables</span></div>
+                <label>
+                  Total Tables
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={form.totalTables}
+                    onChange={(event) =>
+                      updateField("totalTables", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <div className="od-setting-stat">
+                  <strong>{activeTables.length}</strong>
+                  <span>Active table records</span>
+                </div>
+                <div className="od-setting-stat">
+                  <strong>{config?.total_tables ?? form.totalTables}</strong>
+                  <span>Configured tables</span>
+                </div>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Business Hours</div><div className="od-card-subtitle">Default operating window for ordering and reports.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Business Hours</div>
+                  <div className="od-card-subtitle">
+                    Default operating window for ordering and reports.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label>Opens At<input type="time" value={form.opensAt} onChange={(event) => updateField("opensAt", event.target.value)} disabled={working} /></label>
-                <label>Closes At<input type="time" value={form.closesAt} onChange={(event) => updateField("closesAt", event.target.value)} disabled={working} /></label>
+                <label>
+                  Opens At
+                  <input
+                    type="time"
+                    value={form.opensAt}
+                    onChange={(event) =>
+                      updateField("opensAt", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Closes At
+                  <input
+                    type="time"
+                    value={form.closesAt}
+                    onChange={(event) =>
+                      updateField("closesAt", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
                 <div className="od-settings-day-group">
                   {BUSINESS_DAYS.map((day) => (
                     <label className="od-toggle-row" key={day}>
-                      <input type="checkbox" checked={form.closedDays.includes(day)} onChange={() => toggleClosedDay(day)} disabled={working} />
+                      <input
+                        type="checkbox"
+                        checked={form.closedDays.includes(day)}
+                        onChange={() => toggleClosedDay(day)}
+                        disabled={working}
+                      />
                       {day} closed
                     </label>
                   ))}
@@ -5222,81 +9297,340 @@ function SettingsPage({
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Kitchen Configuration</div><div className="od-card-subtitle">Stores the onboarding kitchen preference only.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Kitchen Configuration</div>
+                  <div className="od-card-subtitle">
+                    Stores the onboarding kitchen preference only.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label>Kitchen Setup<select value={form.kitchenMode} onChange={(event) => updateField("kitchenMode", event.target.value as SettingsFormState["kitchenMode"])} disabled={working}>
-                  <option value="single">Single Kitchen</option>
-                  <option value="advanced">Multiple Kitchen Stations Preference</option>
-                  <option value="skipped">Skipped</option>
-                </select></label>
+                <label>
+                  Kitchen Setup
+                  <select
+                    value={form.kitchenMode}
+                    onChange={(event) =>
+                      updateField(
+                        "kitchenMode",
+                        event.target.value as SettingsFormState["kitchenMode"],
+                      )
+                    }
+                    disabled={working}
+                  >
+                    <option value="single">Single Kitchen</option>
+                    <option value="advanced">
+                      Multiple Kitchen Stations Preference
+                    </option>
+                    <option value="skipped">Skipped</option>
+                  </select>
+                </label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Ordering Settings</div><div className="od-card-subtitle">Customer ordering behavior and payment workflow defaults.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Ordering Settings</div>
+                  <div className="od-card-subtitle">
+                    Customer ordering behavior and payment workflow defaults.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label className="od-toggle-row"><input type="checkbox" checked={form.acceptsQrOrders} onChange={(event) => updateField("acceptsQrOrders", event.target.checked)} disabled={working} />QR orders enabled</label>
-                <label className="od-toggle-row"><input type="checkbox" checked={form.autoAcceptOrders} onChange={(event) => updateField("autoAcceptOrders", event.target.checked)} disabled={working} />Auto-accept paid orders</label>
-                <label>Service Charge %<input type="number" min="0" max="30" step="0.1" value={form.serviceCharge} onChange={(event) => updateField("serviceCharge", event.target.value)} disabled={working} /></label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.acceptsQrOrders}
+                    onChange={(event) =>
+                      updateField("acceptsQrOrders", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  QR orders enabled
+                </label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.autoAcceptOrders}
+                    onChange={(event) =>
+                      updateField("autoAcceptOrders", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  Auto-accept paid orders
+                </label>
+                <label>
+                  Payment Policy
+                  <select
+                    value={form.paymentPolicy}
+                    onChange={(event) =>
+                      updateField(
+                        "paymentPolicy",
+                        event.target.value as PaymentPolicy,
+                      )
+                    }
+                    disabled={working}
+                  >
+                    <option value="pay_before_kitchen">
+                      Pay Before Kitchen
+                    </option>
+                    <option value="hold_payment">Hold Payment</option>
+                    <option value="mixed">Mixed Mode</option>
+                  </select>
+                </label>
+                {form.paymentPolicy === "mixed" && (
+                  <label>
+                    Mixed Mode · Waiter Orders
+                    <select
+                      value={form.mixedWaiterPaymentTiming}
+                      onChange={(event) =>
+                        updateField(
+                          "mixedWaiterPaymentTiming",
+                          event.target.value as "before_kitchen" | "after_meal",
+                        )
+                      }
+                      disabled={working}
+                    >
+                      <option value="before_kitchen">Pay Before Kitchen</option>
+                      <option value="after_meal">Hold Payment</option>
+                    </select>
+                    <small>QR customer orders always require payment first.</small>
+                  </label>
+                )}
+                <label>
+                  Service Charge %
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    step="0.1"
+                    value={form.serviceCharge}
+                    onChange={(event) =>
+                      updateField("serviceCharge", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Branding</div><div className="od-card-subtitle">Public menu visual identity.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Branding</div>
+                  <div className="od-card-subtitle">
+                    Public menu visual identity.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-grid compact">
-                <label>Primary Color<input type="color" value={form.primaryColor} onChange={(event) => updateField("primaryColor", event.target.value)} disabled={working} /></label>
-                <label>Logo Image<input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
-                <label>Cover Image<input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
-                <label className="wide">Logo URL<input value={form.logoUrl} onChange={(event) => updateField("logoUrl", event.target.value)} disabled={working} /></label>
-                <label className="wide">Cover URL<input value={form.coverUrl} onChange={(event) => updateField("coverUrl", event.target.value)} disabled={working} /></label>
+                <label>
+                  Primary Color
+                  <input
+                    type="color"
+                    value={form.primaryColor}
+                    onChange={(event) =>
+                      updateField("primaryColor", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label>
+                  Logo Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      void uploadBrandingAsset(
+                        "logo",
+                        event.target.files?.[0] ?? null,
+                      )
+                    }
+                    disabled={working || assetUploading !== null}
+                  />
+                </label>
+                <label>
+                  Cover Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      void uploadBrandingAsset(
+                        "cover",
+                        event.target.files?.[0] ?? null,
+                      )
+                    }
+                    disabled={working || assetUploading !== null}
+                  />
+                </label>
+                <label className="wide">
+                  Logo URL
+                  <input
+                    value={form.logoUrl}
+                    onChange={(event) =>
+                      updateField("logoUrl", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
+                <label className="wide">
+                  Cover URL
+                  <input
+                    value={form.coverUrl}
+                    onChange={(event) =>
+                      updateField("coverUrl", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
               </div>
             </section>
           </div>
 
           <div className="od-settings-side">
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">QR Code Management</div><div className="od-card-subtitle">Shows existing active table ordering codes.</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">QR Code Management</div>
+                  <div className="od-card-subtitle">
+                    Shows existing active table ordering codes.
+                  </div>
+                </div>
+              </div>
               <div className="od-settings-stack">
-                <label>Application URL<input value={appUrl} onChange={(event) => setAppUrl(event.target.value)} disabled={appUrlWorking || working} placeholder="http://10.61.145.181:5173" /></label>
-                <button className="od-btn-primary" type="button" onClick={() => void saveApplicationUrl()} disabled={appUrlWorking || working}>
+                <label>
+                  Application URL
+                  <input
+                    value={appUrl}
+                    onChange={(event) => setAppUrl(event.target.value)}
+                    disabled={appUrlWorking || working}
+                    placeholder="http://10.61.145.181:5173"
+                  />
+                </label>
+                <button
+                  className="od-btn-primary"
+                  type="button"
+                  onClick={() => void saveApplicationUrl()}
+                  disabled={appUrlWorking || working}
+                >
                   {appUrlWorking ? "Updating..." : "Save Application URL"}
                 </button>
-                <button className="od-btn-ghost" type="button" onClick={() => void regenerateAllQrCodes()} disabled={appUrlWorking || working || activeTables.length === 0}>
+                <button
+                  className="od-btn-ghost"
+                  type="button"
+                  onClick={() => void regenerateAllQrCodes()}
+                  disabled={
+                    appUrlWorking || working || activeTables.length === 0
+                  }
+                >
                   Regenerate All QR Codes
                 </button>
               </div>
               <div className="od-qr-list">
-                {activeTables.length === 0 ? <div className="od-empty compact">No active table QR codes yet.</div> : activeTables.slice(0, 12).map((table) => (
-                  <div className="od-qr-row" key={table.id}>
-                    {qrCodes[table.table_number] ? <img src={qrCodes[table.table_number]} alt="" /> : <div className="od-qr-placeholder">QR</div>}
-                    <div><strong>{table.label}</strong><span>{table.qr_path}</span></div>
+                {activeTables.length === 0 ? (
+                  <div className="od-empty compact">
+                    No active table QR codes yet.
                   </div>
-                ))}
+                ) : (
+                  activeTables.slice(0, 12).map((table) => (
+                    <div className="od-qr-row" key={table.id}>
+                      {qrCodes[table.table_number] ? (
+                        <img src={qrCodes[table.table_number]} alt="" />
+                      ) : (
+                        <div className="od-qr-placeholder">QR</div>
+                      )}
+                      <div>
+                        <strong>{table.label}</strong>
+                        <span>{table.qr_path}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Notification Settings</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Notification Settings</div>
+                </div>
+              </div>
               <div className="od-settings-stack">
-                <label className="od-toggle-row"><input type="checkbox" checked={form.emailNotifications} onChange={(event) => updateField("emailNotifications", event.target.checked)} disabled={working} />Email notifications</label>
-                <label className="od-toggle-row"><input type="checkbox" checked={form.smsNotifications} onChange={(event) => updateField("smsNotifications", event.target.checked)} disabled={working} />SMS notifications</label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.emailNotifications}
+                    onChange={(event) =>
+                      updateField("emailNotifications", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  Email notifications
+                </label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.smsNotifications}
+                    onChange={(event) =>
+                      updateField("smsNotifications", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  SMS notifications
+                </label>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Subscription & Billing</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Subscription & Billing</div>
+                </div>
+              </div>
               <div className="od-billing-box">
                 <strong>{config?.subscription_plan ?? "starter"}</strong>
                 <span>{config?.billing_status ?? "trial"}</span>
-                <button className="od-btn-ghost" type="button" disabled>Manage Billing</button>
+                <button className="od-btn-ghost" type="button" disabled>
+                  Manage Billing
+                </button>
               </div>
             </section>
 
             <section className="od-card">
-              <div className="od-card-header"><div><div className="od-card-title">Security</div></div></div>
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Security</div>
+                </div>
+              </div>
               <div className="od-settings-stack">
-                <label className="od-toggle-row"><input type="checkbox" checked={form.requireStrongPasswords} onChange={(event) => updateField("requireStrongPasswords", event.target.checked)} disabled={working} />Strong passwords</label>
-                <label>Session Timeout<input type="number" min="15" max="1440" value={form.sessionTimeoutMinutes} onChange={(event) => updateField("sessionTimeoutMinutes", event.target.value)} disabled={working} /></label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.requireStrongPasswords}
+                    onChange={(event) =>
+                      updateField(
+                        "requireStrongPasswords",
+                        event.target.checked,
+                      )
+                    }
+                    disabled={working}
+                  />
+                  Strong passwords
+                </label>
+                <label>
+                  Session Timeout
+                  <input
+                    type="number"
+                    min="15"
+                    max="1440"
+                    value={form.sessionTimeoutMinutes}
+                    onChange={(event) =>
+                      updateField("sessionTimeoutMinutes", event.target.value)
+                    }
+                    disabled={working}
+                  />
+                </label>
               </div>
             </section>
           </div>

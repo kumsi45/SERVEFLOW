@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../core/database";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
-import { fetchManagerDashboardSnapshot } from "../services/managerDashboardService";
+import {
+  fetchManagerDashboardSnapshot,
+  releaseManagerDiningSession,
+} from "../services/managerDashboardService";
 import { assignWaiterTables, loadManagerStaffOperations, type ManagerStaffMember, type ManagerStaffOperationsSnapshot } from "../services/managerStaffOperationsService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
+import { loadInventoryItems,loadInventoryRequests,type InventoryItem,type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
 import "../styles/managerOperationsCenter.css";
 
 type Props = {
@@ -18,7 +22,7 @@ function duration(minutes: number | null) {
 
 function tableStatus(table: ManagerFloorTable) {
   if (!table.active) return "Cleaning";
-  if (table.cashierStatus === "waiting_payment" || table.status === "waiting_payment") return "Waiting Payment";
+  if (table.cashierStatus === "waiting_payment" || table.status === "waiting_payment") return "Payment Due";
   if (table.status === "kitchen_delay" || table.alerts.length > 0) return "Needs Attention";
   if (table.status === "occupied" || table.activeOrderId) return "Occupied";
   return "Available";
@@ -30,6 +34,9 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
+  const [inventoryRequests,setInventoryRequests]=useState<InventoryRequest[]>([]);
+  const [inventoryItems,setInventoryItems]=useState<InventoryItem[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -37,8 +44,10 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
         fetchManagerDashboardSnapshot(restaurantId),
         loadManagerStaffOperations(restaurantId),
       ]);
+      const [nextInventoryRequests,nextInventoryItems]=await Promise.all([loadInventoryRequests(restaurantId),loadInventoryItems(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
+      setInventoryRequests(nextInventoryRequests);setInventoryItems(nextInventoryItems);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Operations Center unavailable.");
@@ -58,6 +67,8 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
       .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_inventory_requests", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [refresh, restaurantId]);
@@ -74,6 +85,9 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const vipGuests = tables.filter((table) => (table.customerName || "").toLowerCase().includes("vip")).length;
   const unassignedTables = tables.filter((table) => table.activeOrderId && !table.assignedWaiterName).length;
   const staffMissing = (staffOps?.staff ?? []).filter((member) => member.active && !member.online).length;
+  const pendingInventory=inventoryRequests.filter(request=>request.status==="pending");
+  const delayedInventory=inventoryRequests.filter(request=>(request.status==="pending"||request.status==="accepted")&&Date.now()-new Date(request.requestedAt).getTime()>30*60_000);
+  const criticalStock=inventoryItems.filter(item=>item.currentQuantity<=item.reorderLevel);
   const taskItems = [
     { label: "Kitchen Delays", value: kitchenDelays, tone: kitchenDelays > 0 ? "critical" : "ok" },
     { label: "Pending Payments", value: paymentQueue, tone: paymentQueue > 0 ? "warning" : "ok" },
@@ -83,7 +97,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     { label: "Staff Missing", value: staffMissing, tone: staffMissing > 0 ? "warning" : "ok" },
     { label: "Tables Waiting", value: unassignedTables, tone: unassignedTables > 0 ? "warning" : "ok" },
     { label: "Shift Issues", value: dashboard?.notifications.some((item) => item.toLowerCase().includes("shift")) ? 1 : 0, tone: "warning" },
-    { label: "Inventory Alerts", value: 0, tone: "ok" },
+    { label: "Inventory Alerts", value: pendingInventory.length+criticalStock.length, tone: pendingInventory.length+criticalStock.length>0?"warning":"ok" },
     { label: "System Alerts", value: dashboard?.notifications.length ?? 0, tone: (dashboard?.notifications.length ?? 0) > 0 ? "warning" : "ok" },
   ];
 
@@ -101,14 +115,32 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     }
   }
 
+  async function releaseTable(orderId: string, tableLabel: string) {
+    if (!window.confirm(`Release ${tableLabel}? Confirm payment is complete and the customer has left.`)) return;
+    try {
+      setReleasingOrderId(orderId);
+      setNotice(null);
+      setError(null);
+      await releaseManagerDiningSession(orderId);
+      setNotice(`${tableLabel} released successfully.`);
+      await refresh();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Could not release table.");
+    } finally {
+      setReleasingOrderId(null);
+    }
+  }
+
   return (
     <main className="moc-page">
+      <header className="manager-module-header"><div><span>Attention center</span><h1>Operations</h1></div><p>Live floor, service, kitchen, and payment exceptions</p></header>
+      <section className="manager-quick-actions"><div><strong>Action queue</strong><span>Prioritized from live restaurant activity</span></div><div className="manager-action-row"><button type="button" onClick={() => void refresh()}>Refresh</button></div></section>
       {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`}>{error || notice}</div>}
 
       <section className="moc-kpis" aria-label="Operations Center summary">
         <article><span>Current Shift</span><strong>Active</strong></article>
         <article><span>Open Orders</span><strong>{openOrders}</strong></article>
-        <article><span>Waiting Payment</span><strong>{paymentQueue}</strong></article>
+        <article><span>Payment Due</span><strong>{paymentQueue}</strong></article>
         <article><span>Kitchen Delays</span><strong>{kitchenDelays}</strong></article>
         <article><span>Staff Online</span><strong>{staffOnline}</strong></article>
         <article><span>Current Revenue</span><strong>{formatCurrency(currentRevenue, currency)}</strong></article>
@@ -124,6 +156,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
       </section>
 
       <section className="moc-grid">
+        <article className="moc-card moc-inventory-alerts"><div className="moc-card-head"><div><span>Inventory Workflow</span><h2>Requests & Critical Stock</h2></div><strong>{pendingInventory.length} pending</strong></div><div className="moc-queue">{pendingInventory.slice(0,5).map(request=><p key={request.id}><strong>{request.itemName} · {request.quantity} {request.unit}</strong><span>{request.urgency} · {request.stationName??"Kitchen"}</span></p>)}{criticalStock.slice(0,5).map(item=><p key={item.id}><strong>{item.name}</strong><span>Critical: {item.currentQuantity} {item.unit}</span></p>)}{pendingInventory.length===0&&criticalStock.length===0&&<p className="moc-empty">No inventory alerts.</p>}{delayedInventory.length>0&&<p><strong>{delayedInventory.length} delayed request(s)</strong><span>Waiting more than 30 minutes</span></p>}</div></article>
         <article className="moc-card moc-floor">
           <div className="moc-card-head">
             <div><span>Dining Room</span><h2>Table Command Center</h2></div>
@@ -167,6 +200,24 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
                   {waiters.map((waiter) => <option key={waiter.id} value={waiter.id}>{waiter.fullName}</option>)}
                 </select>
               </label>
+              {selectedTable.activeOrderId &&
+                selectedTable.cashierStatus === "paid" &&
+                selectedTable.kitchenStatus === "completed" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void releaseTable(
+                        selectedTable.activeOrderId!,
+                        selectedTable.label,
+                      )
+                    }
+                    disabled={releasingOrderId === selectedTable.activeOrderId}
+                  >
+                    {releasingOrderId === selectedTable.activeOrderId
+                      ? "Releasing..."
+                      : "Release Table"}
+                  </button>
+                )}
             </>
           ) : <p className="moc-empty">Select a table to manage waiter assignment.</p>}
         </article>

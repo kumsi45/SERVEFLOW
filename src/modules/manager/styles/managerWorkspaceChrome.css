@@ -89,7 +89,7 @@
   display: none;
 }
 
-@media (min-width: 761px) and (max-width: 1180px) and (orientation: landscape) {
+@media (min-width: 761px) and (max-width: 1023px) and (orientation: landscape) {
   .mwc-shell .md-main-grid,
   .mwc-shell .mks-layout,
   .mwc-shell .mcx-layout,
@@ -105,10 +105,11 @@
 }
 
 @media (max-width: 760px) {
+  .mwc-status-dot { right: 16px; bottom: 82px; width: 16px; height: 16px; }
   .mwc-status {
     left: 10px;
     right: 10px;
-    bottom: 14px;
+    bottom: 80px;
     justify-content: center;
     border-radius: 16px;
   }

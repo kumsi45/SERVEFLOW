@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception";
+type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception" | "inventory";
 type StaffAction =
   | "create-staff"
   | "update-staff"
@@ -94,7 +94,7 @@ function normalizeAction(action: unknown): StaffAction {
 }
 
 function normalizeRole(role: unknown): StaffRole {
-  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "reception") {
+  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "reception" || role === "inventory") {
     return role;
   }
 
@@ -454,11 +454,11 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception"].includes(String(payload.role))) {
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception", "inventory"].includes(String(payload.role))) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       const role = normalizeRole(payload.role);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception"].includes(role)) {
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception", "inventory"].includes(role)) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       if (role === "manager" && actingStaff.role !== "owner") {
@@ -676,9 +676,11 @@ Deno.serve(async (request) => {
         details.username = username;
       }
 
-      const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
-      updates.phone_number = phoneNumber;
-      details.phone_number = phoneNumber;
+      if (Object.prototype.hasOwnProperty.call(payload, "phoneNumber")) {
+        const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
+        updates.phone_number = phoneNumber;
+        details.phone_number = phoneNumber;
+      }
       if (nextRole !== "waiter") {
         updates.username = null;
       }
@@ -835,6 +837,15 @@ Deno.serve(async (request) => {
         .eq("active", true);
       if (deactivateError) throw new Error(deactivateError.message);
       if (tableIds.length > 0) {
+        const { error: releaseError } = await serviceClient
+          .from("restaurant_table_waiter_assignments")
+          .update({ active: false })
+          .eq("restaurant_id", restaurantId)
+          .in("table_id", tableIds)
+          .neq("waiter_staff_id", staffId)
+          .eq("active", true);
+        if (releaseError) throw new Error(releaseError.message);
+
         const { error: assignError } = await serviceClient
           .from("restaurant_table_waiter_assignments")
           .upsert(tableIds.map((tableId) => ({

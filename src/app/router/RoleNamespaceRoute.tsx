@@ -3,20 +3,21 @@ import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedC
 import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
 import { ProtectedManagerRoute } from "../../modules/staff-auth/pages/ProtectedManagerRoute";
 import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwnerRoute";
+import { ProtectedInventoryRoute } from "../../modules/staff-auth/pages/ProtectedInventoryRoute";
 import { getCurrentStaffSession } from "../../modules/staff-auth/services/staffAuthService";
 import { getActiveWaiterSession } from "../../modules/waiter-auth/services/waiterAuthService";
 import { WaiterDashboardPage } from "../../modules/waiter-dashboard/pages/WaiterDashboardPage";
 
-export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitchen" | "admin";
+export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitchen" | "inventory" | "admin";
 
 type State =
   | { status: "loading" }
-  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen"; restaurantId: string }
+  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen" | "inventory"; restaurantId: string }
   | { status: "waiter"; restaurantSlug: string }
   | { status: "unavailable" };
 
 function dashboardPath(role: string) {
-  return role === "owner" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "manager" || role === "admin"
+  return role === "owner" || role === "cashier" || role === "kitchen" || role === "inventory" || role === "waiter" || role === "manager" || role === "admin"
     ? `/${role}/dashboard`
     : "/staff-login";
 }
@@ -63,6 +64,7 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
     if (state.role === "owner") return <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />;
     if (state.role === "manager") return <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />;
     if (state.role === "cashier") return <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />;
+    if (state.role === "inventory") return <ProtectedInventoryRoute restaurantId={state.restaurantId} />;
     return <ProtectedKitchenRoute restaurantId={state.restaurantId} />;
   }
   return <main className="route-message"><p>This role workspace is not configured for this account.</p></main>;

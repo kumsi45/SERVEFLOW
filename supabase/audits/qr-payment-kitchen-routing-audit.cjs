@@ -205,7 +205,8 @@ async function main() {
       ids.restaurantA, ids.restaurantB, ids.ownerA, ids.ownerB, ids.cashierA, ids.mainKitchenUser, ids.beverageKitchenUser, ids.tenantKitchenUser,
       ids.mainStationA, ids.beverageStationA, ids.tenantStationB,
     ]);
-    await client.query("insert into public.categories (id, restaurant_id, name) values ($1, $3, 'Menu'), ($2, $4, 'Menu')", [ids.categoryA, ids.categoryB, ids.restaurantA, ids.restaurantB]);
+    await asRole(client, "authenticated", ids.ownerA, "insert into public.categories (id, restaurant_id, name) values ($1, $2, 'Menu')", [ids.categoryA, ids.restaurantA]);
+    await asRole(client, "authenticated", ids.ownerB, "insert into public.categories (id, restaurant_id, name) values ($1, $2, 'Menu')", [ids.categoryB, ids.restaurantB]);
     await client.query(`
       insert into public.restaurant_tables (id, restaurant_id, table_number, label, qr_token, qr_url, qr_path, active)
       values

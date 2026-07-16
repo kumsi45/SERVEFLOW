@@ -296,6 +296,29 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.mso-assignment-kpis { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 8px; }
+.mso-assignment-kpis article { min-width: 0; padding: 11px; border: 1px solid #dce3eb; border-radius: 10px; background: #fff; }
+.mso-assignment-kpis span { display: block; color: #64748b; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.mso-assignment-kpis strong { display: block; margin: 5px 0 2px; color: #101828; font-size: 21px; }
+.mso-assignment-kpis small { color: #64748b; font-size: 9px; }
+.mso-assignment-overview { grid-column: 1 / -1; }
+.mso-card-heading > small { color: #64748b; font-size: 10px; font-weight: 750; }
+.mso-workload-grid article > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mso-workload-grid article > div:first-child b { padding: 3px 7px; border-radius: 99px; color: #067647; background: #ecfdf3; font-size: 8px; text-transform: uppercase; }
+.mso-workload-grid article.is-busy { border-color: #fedf89; background: #fffaeb; }
+.mso-workload-grid article.is-busy > div:first-child b { color: #b54708; background: #fef0c7; }
+.mso-waiter-tables { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; min-height: 28px; padding: 5px; border: 1px dashed #cbd5e1; border-radius: 7px; }
+.mso-waiter-tables button { min-height: 25px; padding: 0 7px; border: 1px solid #b2ccff; border-radius: 6px; color: #1849a9; background: #eff4ff; font-size: 9px; font-weight: 850; cursor: grab; }
+.mso-waiter-tables small { align-self: center; color: #94a3b8; font-size: 9px; }
+.mso-unassigned-chefs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; padding: 8px; border: 1px dashed #fdb022; border-radius: 8px; background: #fffaeb; }
+.mso-unassigned-chefs > span { color: #b54708; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.mso-unassigned-chefs button { min-height: 28px; padding: 0 8px; border: 1px solid #fedf89; border-radius: 6px; background: #fff; font-size: 9px; font-weight: 800; cursor: grab; }
+.mso-station-workload article > div:first-child > small { display: block; margin-top: 4px; color: #667085; font-size: 9px; font-weight: 750; }
+.mso-chef-list button small { display: block; margin-top: 2px; color: #64748b; font-size: 8px; }
+
+@media (max-width: 1199px) { .mso-assignment-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 700px) { .mso-assignment-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); } .mso-assignment-workspace { grid-template-columns: 1fr; } .mso-card-heading > small { display: none; } }
+
 .mso-assignment-grid {
   display: grid;
   gap: 12px;

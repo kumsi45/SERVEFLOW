@@ -187,6 +187,19 @@ export async function fetchPublicQrOrderSession({
   }
 
   const session = normalizeSession(data);
+  if (session) {
+    const { data: lifecycle, error: lifecycleError } = await supabase.rpc("get_public_qr_canonical_lifecycle", {
+      target_restaurant_slug: restaurantSlug,
+      table_number: tableNumber,
+      qr_token: qrToken,
+      target_order_id: session.order_id,
+    });
+    if (lifecycleError) throw new Error(lifecycleError.message);
+    const canonical = lifecycle as { operational_status?: string; invoices?: Array<{ id: string; payment_status: string }> } | null;
+    if (canonical?.operational_status) session.status = canonical.operational_status;
+    const paymentById = new Map((canonical?.invoices ?? []).map((invoice) => [invoice.id, invoice.payment_status]));
+    session.invoices = session.invoices.map((invoice) => ({ ...invoice, status: paymentById.get(invoice.id) ?? invoice.status }));
+  }
   logPublicQrContext("publicQrOrderService:sessionLookup:result", {
     restaurantSlug,
     tableNumber,

@@ -1,4 +1,4 @@
-export type StaffRole = "owner" | "manager" | "cashier" | "kitchen";
+export type StaffRole = "owner" | "manager" | "cashier" | "kitchen" | "inventory";
 
 export type StaffRestaurant = {
   id: string;
@@ -14,7 +14,7 @@ export type StaffSession = {
   restaurants: StaffRestaurant[];
 };
 
-export type StaffDashboard = "cashier" | "kitchen" | "manager" | "owner";
+export type StaffDashboard = "cashier" | "kitchen" | "manager" | "owner" | "inventory";
 
 export type StaffDestination = {
   dashboard: StaffDashboard;

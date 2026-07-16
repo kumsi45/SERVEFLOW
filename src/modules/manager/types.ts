@@ -24,9 +24,14 @@ export type ManagerLiveMetrics = {
   ordersCompleted: number;
   ordersCancelled: number;
   pendingPayments: number;
+  paymentDueAmount: number;
+  refunds: number;
+  averageCollectionMinutes: number;
   cashCollected: number;
   cardPayments: number;
   mobilePayments: number;
+  digitalCollected: number;
+  paymentMethodTotals: Record<string, number>;
   averageOrder: number;
 };
 
@@ -41,8 +46,10 @@ export type ManagerFloorTableStatus =
   | "long_session"
   | "inactive";
 
-export type ManagerKitchenStatus = "idle" | "waiting" | "preparing" | "ready" | "completed";
-export type ManagerCashierStatus = "open" | "waiting_payment" | "billing" | "paid" | "none";
+export type ManagerKitchenStatus =
+  "idle" | "waiting" | "preparing" | "ready" | "completed";
+export type ManagerCashierStatus =
+  "open" | "waiting_payment" | "billing" | "paid" | "none";
 export type ManagerOperationAlertType =
   | "waiting"
   | "kitchen_delay"

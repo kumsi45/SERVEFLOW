@@ -46,6 +46,12 @@ export type ManagerOperationalReport = {
     cancelledOrders: number;
     averageCustomerWaitMinutes: number;
     peakHour: string | null;
+    collected: number;
+    paymentDue: number;
+    pendingPayments: number;
+    refunds: number;
+    averagePaymentDelayMinutes: number;
+    paymentConversionRate: number;
   };
   ordersPerHour: ChartRow[];
   peakHours: ChartRow[];
@@ -58,7 +64,11 @@ export type ManagerOperationalReport = {
   customerWaitTime: ChartRow[];
 };
 
-export function managerReportDateRange(range: ManagerReportRange, customStart: string, customEnd: string) {
+export function managerReportDateRange(
+  range: ManagerReportRange,
+  customStart: string,
+  customEnd: string,
+) {
   const now = new Date();
   const start = new Date(now);
   const end = new Date(now);
@@ -80,7 +90,8 @@ export function managerReportDateRange(range: ManagerReportRange, customStart: s
   } else {
     const customStartDate = new Date(`${customStart}T00:00:00`);
     const customEndDate = new Date(`${customEnd}T00:00:00`);
-    if (!Number.isNaN(customStartDate.getTime())) start.setTime(customStartDate.getTime());
+    if (!Number.isNaN(customStartDate.getTime()))
+      start.setTime(customStartDate.getTime());
     if (!Number.isNaN(customEndDate.getTime())) {
       end.setTime(customEndDate.getTime());
       end.setDate(end.getDate() + 1);
@@ -93,7 +104,12 @@ function chartRows(value: unknown): ChartRow[] {
   return Array.isArray(value)
     ? value.map((row) => {
         const record = row as Record<string, unknown>;
-        return { label: String(record.label ?? ""), value: Number(record.value ?? 0), secondary: record.secondary == null ? undefined : Number(record.secondary) };
+        return {
+          label: String(record.label ?? ""),
+          value: Number(record.value ?? 0),
+          secondary:
+            record.secondary == null ? undefined : Number(record.secondary),
+        };
       })
     : [];
 }
@@ -102,7 +118,13 @@ function tableRows(value: unknown): TableTurnoverRow[] {
   return Array.isArray(value)
     ? value.map((row) => {
         const record = row as Record<string, unknown>;
-        return { tableNumber: String(record.table_number ?? record.tableNumber ?? "-"), sessions: Number(record.sessions ?? 0), averageStayMinutes: Number(record.average_stay_minutes ?? record.averageStayMinutes ?? 0) };
+        return {
+          tableNumber: String(record.table_number ?? record.tableNumber ?? "-"),
+          sessions: Number(record.sessions ?? 0),
+          averageStayMinutes: Number(
+            record.average_stay_minutes ?? record.averageStayMinutes ?? 0,
+          ),
+        };
       })
     : [];
 }
@@ -111,7 +133,13 @@ function waiterRows(value: unknown): WaiterPerformanceRow[] {
   return Array.isArray(value)
     ? value.map((row) => {
         const record = row as Record<string, unknown>;
-        return { staffId: String(record.staff_id ?? ""), waiter: String(record.waiter ?? "Waiter"), orders: Number(record.orders ?? 0), averageWaitMinutes: Number(record.average_wait_minutes ?? 0), delayedOrders: Number(record.delayed_orders ?? 0) };
+        return {
+          staffId: String(record.staff_id ?? ""),
+          waiter: String(record.waiter ?? "Waiter"),
+          orders: Number(record.orders ?? 0),
+          averageWaitMinutes: Number(record.average_wait_minutes ?? 0),
+          delayedOrders: Number(record.delayed_orders ?? 0),
+        };
       })
     : [];
 }
@@ -120,35 +148,110 @@ function kitchenRows(value: unknown): KitchenEfficiencyRow[] {
   return Array.isArray(value)
     ? value.map((row) => {
         const record = row as Record<string, unknown>;
-        return { stationId: String(record.station_id ?? ""), station: String(record.station ?? "Station"), tickets: Number(record.tickets ?? 0), completed: Number(record.completed ?? 0), delayed: Number(record.delayed ?? 0), averagePrepMinutes: Number(record.average_prep_minutes ?? 0), efficiency: Number(record.efficiency ?? 0) };
+        return {
+          stationId: String(record.station_id ?? ""),
+          station: String(record.station ?? "Station"),
+          tickets: Number(record.tickets ?? 0),
+          completed: Number(record.completed ?? 0),
+          delayed: Number(record.delayed ?? 0),
+          averagePrepMinutes: Number(record.average_prep_minutes ?? 0),
+          efficiency: Number(record.efficiency ?? 0),
+        };
       })
     : [];
 }
 
-export async function loadManagerOperationalReport(restaurantId: string, rangeStart: string, rangeEnd: string): Promise<ManagerOperationalReport> {
-  const { data, error } = await supabase.rpc("get_manager_operational_report", {
-    target_restaurant_id: restaurantId,
-    range_start: rangeStart,
-    range_end: rangeEnd,
-  });
+export async function loadManagerOperationalReport(
+  restaurantId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<ManagerOperationalReport> {
+  const [{ data, error }, invoiceResult, paidInvoiceResult] = await Promise.all(
+    [
+      supabase.rpc("get_manager_operational_report", {
+        target_restaurant_id: restaurantId,
+        range_start: rangeStart,
+        range_end: rangeEnd,
+      }),
+      supabase
+        .from("order_invoices")
+        .select("payment_status,total_price,created_at,paid_at")
+        .eq("restaurant_id", restaurantId)
+        .gte("created_at", rangeStart)
+        .lt("created_at", rangeEnd),
+      supabase
+        .from("order_invoices")
+        .select("payment_status,total_price,created_at,paid_at,payment_method")
+        .eq("restaurant_id", restaurantId)
+        .eq("payment_status", "paid")
+        .gte("paid_at", rangeStart)
+        .lt("paid_at", rangeEnd),
+    ],
+  );
   if (error) throw new Error(error.message);
-  const payload = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  if (invoiceResult.error) throw new Error(invoiceResult.error.message);
+  if (paidInvoiceResult.error) throw new Error(paidInvoiceResult.error.message);
+  const invoices = invoiceResult.data ?? [];
+  const paid = paidInvoiceResult.data ?? [];
+  const collected = paid.reduce(
+    (sum, invoice) => sum + Number(invoice.total_price ?? 0),
+    0,
+  );
+  const paymentDue = invoices
+    .filter((invoice) => invoice.payment_status === "held")
+    .reduce((sum, invoice) => sum + Number(invoice.total_price ?? 0), 0);
+  const pendingPayments = invoices.filter(
+    (invoice) => invoice.payment_status === "pending",
+  ).length;
+  const refunds = invoices
+    .filter((invoice) => invoice.payment_status === "refunded")
+    .reduce((sum, invoice) => sum + Number(invoice.total_price ?? 0), 0);
+  const delays = paid.map((invoice) =>
+    Math.max(
+      0,
+      (new Date(invoice.paid_at ?? invoice.created_at).getTime() -
+        new Date(invoice.created_at).getTime()) /
+        60000,
+    ),
+  );
+  const payload =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   if (typeof payload.error === "string") throw new Error(payload.error);
-  const summary = payload.summary && typeof payload.summary === "object" ? payload.summary as Record<string, unknown> : {};
+  const summary =
+    payload.summary && typeof payload.summary === "object"
+      ? (payload.summary as Record<string, unknown>)
+      : {};
   return {
     rangeStart: String(payload.range_start ?? rangeStart),
     rangeEnd: String(payload.range_end ?? rangeEnd),
     generatedAt: String(payload.generated_at ?? new Date().toISOString()),
     summary: {
       orders: Number(summary.orders ?? 0),
-      revenue: Number(summary.revenue ?? summary.current_revenue ?? 0),
-      averageTicket: Number(summary.average_ticket ?? summary.average_ticket_value ?? 0),
-      averagePreparationMinutes: Number(summary.average_preparation_minutes ?? 0),
+      revenue: collected,
+      averageTicket: Number(
+        summary.average_ticket ?? summary.average_ticket_value ?? 0,
+      ),
+      averagePreparationMinutes: Number(
+        summary.average_preparation_minutes ?? 0,
+      ),
       tableTurnover: Number(summary.table_turnover ?? 0),
       delayedOrders: Number(summary.delayed_orders ?? 0),
       cancelledOrders: Number(summary.cancelled_orders ?? 0),
-      averageCustomerWaitMinutes: Number(summary.average_customer_wait_minutes ?? 0),
-      peakHour: typeof summary.peak_hour === "string" ? summary.peak_hour : null,
+      averageCustomerWaitMinutes: Number(
+        summary.average_customer_wait_minutes ?? 0,
+      ),
+      peakHour:
+        typeof summary.peak_hour === "string" ? summary.peak_hour : null,
+      collected,
+      paymentDue,
+      pendingPayments,
+      refunds,
+      averagePaymentDelayMinutes: delays.length
+        ? delays.reduce((sum, value) => sum + value, 0) / delays.length
+        : 0,
+      paymentConversionRate: invoices.length
+        ? (paid.length / invoices.length) * 100
+        : 0,
     },
     ordersPerHour: chartRows(payload.orders_per_hour),
     peakHours: chartRows(payload.peak_hours),
@@ -162,25 +265,72 @@ export async function loadManagerOperationalReport(restaurantId: string, rangeSt
   };
 }
 
-export function exportOperationalReportCsv(report: ManagerOperationalReport, filename = "serveflow-manager-operational-report.csv") {
+export function exportOperationalReportCsv(
+  report: ManagerOperationalReport,
+  filename = "serveflow-manager-operational-report.csv",
+) {
   const rows: Array<Array<string | number>> = [
     ["Section", "Metric", "Value", "Secondary"],
     ["Summary", "Orders", report.summary.orders, ""],
     ["Summary", "Revenue", report.summary.revenue, ""],
     ["Summary", "Average ticket", report.summary.averageTicket, ""],
-    ["Summary", "Average preparation time", report.summary.averagePreparationMinutes, "minutes"],
+    [
+      "Summary",
+      "Average preparation time",
+      report.summary.averagePreparationMinutes,
+      "minutes",
+    ],
     ["Summary", "Table turnover", report.summary.tableTurnover, "sessions"],
     ["Summary", "Delayed orders", report.summary.delayedOrders, ""],
     ["Summary", "Cancelled orders", report.summary.cancelledOrders, ""],
-    ["Summary", "Customer wait time", report.summary.averageCustomerWaitMinutes, "minutes"],
-    ...report.ordersPerHour.map((row) => ["Orders Per Hour", row.label, row.value, row.secondary ?? ""]),
-    ...report.peakHours.map((row) => ["Peak Hours", row.label, row.value, row.secondary ?? ""]),
-    ...report.tableTurnover.map((row) => ["Table Turnover", row.tableNumber, row.sessions, `${row.averageStayMinutes} min avg stay`]),
-    ...report.waiterPerformance.map((row) => ["Waiter Performance", row.waiter, row.orders, `${row.averageWaitMinutes} min avg wait / ${row.delayedOrders} delayed`]),
-    ...report.kitchenEfficiency.map((row) => ["Kitchen Efficiency", row.station, row.tickets, `${row.averagePrepMinutes} min prep / ${row.efficiency}% efficiency`]),
-    ...report.stationUtilization.map((row) => ["Station Utilization", row.label, row.value, row.secondary ?? ""]),
+    [
+      "Summary",
+      "Customer wait time",
+      report.summary.averageCustomerWaitMinutes,
+      "minutes",
+    ],
+    ...report.ordersPerHour.map((row) => [
+      "Orders Per Hour",
+      row.label,
+      row.value,
+      row.secondary ?? "",
+    ]),
+    ...report.peakHours.map((row) => [
+      "Peak Hours",
+      row.label,
+      row.value,
+      row.secondary ?? "",
+    ]),
+    ...report.tableTurnover.map((row) => [
+      "Table Turnover",
+      row.tableNumber,
+      row.sessions,
+      `${row.averageStayMinutes} min avg stay`,
+    ]),
+    ...report.waiterPerformance.map((row) => [
+      "Waiter Performance",
+      row.waiter,
+      row.orders,
+      `${row.averageWaitMinutes} min avg wait / ${row.delayedOrders} delayed`,
+    ]),
+    ...report.kitchenEfficiency.map((row) => [
+      "Kitchen Efficiency",
+      row.station,
+      row.tickets,
+      `${row.averagePrepMinutes} min prep / ${row.efficiency}% efficiency`,
+    ]),
+    ...report.stationUtilization.map((row) => [
+      "Station Utilization",
+      row.label,
+      row.value,
+      row.secondary ?? "",
+    ]),
   ];
-  const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const csv = rows
+    .map((row) =>
+      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+    )
+    .join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -189,19 +339,47 @@ export function exportOperationalReportCsv(report: ManagerOperationalReport, fil
   URL.revokeObjectURL(link.href);
 }
 
-export function exportOperationalReportExcel(report: ManagerOperationalReport, filename = "serveflow-manager-operational-report.xls") {
+export function exportOperationalReportExcel(
+  report: ManagerOperationalReport,
+  filename = "serveflow-manager-operational-report.xls",
+) {
   const tableRows = [
     ["Section", "Metric", "Value", "Secondary"],
     ["Summary", "Orders", report.summary.orders, ""],
     ["Summary", "Revenue", report.summary.revenue, ""],
     ["Summary", "Average ticket", report.summary.averageTicket, ""],
-    ["Summary", "Average preparation time", report.summary.averagePreparationMinutes, "minutes"],
-    ...report.ordersPerHour.map((row) => ["Orders Per Hour", row.label, row.value, row.secondary ?? ""]),
-    ...report.tableTurnover.map((row) => ["Table Turnover", row.tableNumber, row.sessions, `${row.averageStayMinutes} min avg stay`]),
-    ...report.waiterPerformance.map((row) => ["Waiter Performance", row.waiter, row.orders, `${row.averageWaitMinutes} min avg wait`]),
-    ...report.kitchenEfficiency.map((row) => ["Kitchen Efficiency", row.station, row.tickets, `${row.averagePrepMinutes} min prep`]),
+    [
+      "Summary",
+      "Average preparation time",
+      report.summary.averagePreparationMinutes,
+      "minutes",
+    ],
+    ...report.ordersPerHour.map((row) => [
+      "Orders Per Hour",
+      row.label,
+      row.value,
+      row.secondary ?? "",
+    ]),
+    ...report.tableTurnover.map((row) => [
+      "Table Turnover",
+      row.tableNumber,
+      row.sessions,
+      `${row.averageStayMinutes} min avg stay`,
+    ]),
+    ...report.waiterPerformance.map((row) => [
+      "Waiter Performance",
+      row.waiter,
+      row.orders,
+      `${row.averageWaitMinutes} min avg wait`,
+    ]),
+    ...report.kitchenEfficiency.map((row) => [
+      "Kitchen Efficiency",
+      row.station,
+      row.tickets,
+      `${row.averagePrepMinutes} min prep`,
+    ]),
   ];
-  const html = `<table>${tableRows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell).replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[char] ?? char))}</td>`).join("")}</tr>`).join("")}</table>`;
+  const html = `<table>${tableRows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell).replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char)}</td>`).join("")}</tr>`).join("")}</table>`;
   const blob = new Blob([html], { type: "application/vnd.ms-excel" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);

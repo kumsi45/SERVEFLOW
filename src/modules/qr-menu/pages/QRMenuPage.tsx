@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
+import { canonicalOperationalStatus, canonicalPaymentStatus, operationalLabel, paymentLabel } from "../../../core/payment/lifecycle";
 import { realtimeStateFromStatus, type RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
 import { CategoryFilter } from "../components/CategoryFilter";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
@@ -53,13 +54,12 @@ function getLatestInvoice(invoices: PublicQrOrderInvoice[]) {
 }
 
 function getCustomerTrackingStatus(orderStatus?: string, invoiceStatus?: string | null) {
-  if (invoiceStatus === "pending") return "pending_payment";
-  if (invoiceStatus === "cancelled") return "cancelled";
-  return orderStatus ?? (invoiceStatus === "paid" ? "paid" : "pending_payment");
+  void invoiceStatus;
+  return canonicalOperationalStatus(orderStatus);
 }
 
 function formatStatusLabel(status?: string) {
-  return status ? status.replace(/_/g, " ") : "pending";
+  return operationalLabel(status);
 }
 
 function getReadableOrderNumber(
@@ -80,27 +80,26 @@ function getReadableInvoiceNumber(
 }
 
 function getTrackingStep(status?: string) {
-  if (status === "completed") return 4;
+  if (status === "served" || status === "closed") return 4;
   if (status === "ready") return 3;
-  if (status === "preparing" || status === "paid") return 2;
-  if (status === "pending_payment") return 1;
+  if (status === "preparing" || status === "accepted") return 2;
+  if (status === "new") return 1;
   return 0;
 }
 
 function getFriendlyTrackingText(status?: string) {
-  if (status === "completed") return "Served. Enjoy your meal.";
+  if (status === "served" || status === "closed") return "Served. Enjoy your meal.";
   if (status === "ready") return "Your order is ready.";
   if (status === "preparing") return "The kitchen is preparing your order.";
-  if (status === "paid") return "Payment confirmed. Kitchen received it.";
-  if (status === "cancelled") return "This order was cancelled.";
-  return "Waiting for payment confirmation";
+  if (status === "accepted") return "The kitchen accepted your order.";
+  return "Your order was received.";
 }
 
 function getEstimatedWaitText(status?: string) {
-  if (status === "completed") return "Served";
+  if (status === "served" || status === "closed") return "Served";
   if (status === "ready") return "Ready now";
   if (status === "preparing") return "Est. 8-12 min";
-  if (status === "paid") return "Est. 15 min";
+  if (status === "accepted") return "Est. 15 min";
   return "Est. 15 min";
 }
 
@@ -521,9 +520,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const trackingTotal = submittedOrder
     ? submittedOrder.invoice_total ?? submittedOrder.added_total ?? submittedOrder.total_price
     : trackingInvoice?.total_price ?? activeSession?.total_price ?? 0;
-  const trackingPaymentApproved = trackingStatus
-    ? ["paid", "preparing", "ready", "completed"].includes(trackingStatus)
-    : false;
+  const trackingPaymentStatus = canonicalPaymentStatus(trackingInvoice?.status ?? submittedOrder?.invoice_status);
   const trackingItems = activeSession?.items.filter((item) => {
     if (!trackingInvoice?.id) return true;
     return item.invoice_id === trackingInvoice.id;
@@ -579,7 +576,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           >
             <span className="tracker-status-line">
               <span className={`tracker-live-dot step-${trackingStep}`} aria-hidden="true" />
-              <span>{trackingPaymentApproved ? trackingMessage : "Waiting for payment confirmation"}</span>
+              <span>{trackingMessage}</span>
             </span>
             <span className="tracker-topline">
               <strong>{getReadableOrderNumber(trackingOrderId, submittedOrder?.display_number ?? activeSession?.display_number, submittedOrder?.dining_session_display_number ?? activeSession?.dining_session_display_number)} · Bill {getReadableInvoiceNumber(trackingInvoice, submittedOrder)}</strong>
@@ -588,7 +585,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             <span className="tracker-meta">
               <span>{trackingEta}</span>
               <span>{trackingItemCount} {trackingItemCount === 1 ? "item" : "items"}</span>
-              <span>Status: {formatStatusLabel(trackingStatus)}</span>
+              <span>Order: {formatStatusLabel(trackingStatus)}</span>
+              <span>Payment: {paymentLabel(trackingPaymentStatus)}</span>
             </span>
             <span className="tracker-toggle" aria-hidden="true">{trackerExpanded ? "⌃" : "⌄"}</span>
           </button>
