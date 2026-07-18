@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { canonicalOperationalStatus } from "../../../core/payment/lifecycle";
 
 export type CustomerExperienceAlertType =
   "long_wait" | "bill_wait" | "vip_wait" | "complaint" | "special_request";
@@ -80,6 +81,7 @@ type OrderRow = {
   table_id: string | null;
   table_number: string | null;
   status: string;
+  operational_status: string;
   order_source: string | null;
   customer_name: string | null;
   customer_phone?: string | null;
@@ -222,7 +224,7 @@ export async function loadManagerCustomerExperience(
     supabase
       .from("orders")
       .select(
-        "id,display_number,table_id,table_number,status,order_source,customer_name,customer_phone,total_price,created_at,dining_session_opened_at,bill_requested_at,billing_started_at,payment_verified_at,table_released_at",
+        "id,display_number,table_id,table_number,status,operational_status,order_source,customer_name,customer_phone,total_price,created_at,dining_session_opened_at,bill_requested_at,billing_started_at,payment_verified_at,table_released_at",
       )
       .eq("restaurant_id", restaurantId)
       .eq("dining_session_status", "open")
@@ -316,7 +318,7 @@ export async function loadManagerCustomerExperience(
       tableNumber: order.table_number,
       customerName: order.customer_name,
       customerPhone: order.customer_phone ?? null,
-      status: order.status,
+      status: canonicalOperationalStatus(order.operational_status),
       orderSource: order.order_source,
       openedAt,
       waitingMinutes: minutesSince(openedAt, now),
@@ -343,7 +345,7 @@ export async function loadManagerCustomerExperience(
   for (const session of sessions) {
     if (
       session.waitingMinutes >= LONG_WAIT_MINUTES &&
-      session.status !== "completed"
+      session.status !== "served" && session.status !== "closed"
     )
       alerts.push({
         id: `${session.orderId}:long-wait`,

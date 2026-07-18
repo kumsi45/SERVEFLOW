@@ -1,10 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
+import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import type { WaiterSession, WaiterTerminalContext } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WAITER_SESSION_KEY = "serveflow.waiter.session.v1";
-const WAITER_AUTH_STORAGE_KEY = "serveflow-waiter-auth";
+const WAITER_TAB_ID_KEY = "serveflow.waiter-tab-id";
+const waiterTabId = sessionStorage.getItem(WAITER_TAB_ID_KEY) ?? createBrowserUuid();
+sessionStorage.setItem(WAITER_TAB_ID_KEY, waiterTabId);
+const WAITER_AUTH_STORAGE_KEY = `serveflow-waiter-auth:${waiterTabId}`;
 
 if (!supabaseUrl) {
   throw new Error("Missing environment variable: VITE_SUPABASE_URL");
@@ -33,7 +37,12 @@ export const waiterSupabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Public waiter discovery must never inherit an owner/cashier session from the
 // shared application client. Authentication happens only after identity lookup.
 const waiterPublicSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: "serveflow-waiter-public-auth",
+  },
 });
 
 type WaiterContextRow = {
@@ -167,6 +176,22 @@ export async function signInWaiter(
   if (authData.user.id !== identity.user_id) {
     await waiterSupabase.auth.signOut({ scope: "local" });
     throw new Error("This account is not assigned to this waiter terminal.");
+  }
+
+  // Re-check membership with the authenticated JWT. Identity discovery alone
+  // is never accepted as authorization for a restaurant waiter session.
+  const { data: membership, error: membershipError } = await waiterSupabase
+    .from("restaurant_staff")
+    .select("id,restaurant_id,user_id,role,active")
+    .eq("id", identity.staff_id)
+    .eq("restaurant_id", identity.restaurant_id)
+    .eq("user_id", authData.user.id)
+    .eq("role", "waiter")
+    .eq("active", true)
+    .maybeSingle();
+  if (membershipError || !membership) {
+    await waiterSupabase.auth.signOut({ scope: "local" });
+    throw new Error("This waiter is not active for this restaurant.");
   }
 
   const { error: loginRecordError } = await waiterSupabase.rpc("record_waiter_login", {

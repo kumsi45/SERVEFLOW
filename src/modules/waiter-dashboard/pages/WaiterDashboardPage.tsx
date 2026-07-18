@@ -7,6 +7,7 @@ import {
   waiterSupabase,
 } from "../../waiter-auth/services/waiterAuthService";
 import { formatCurrency } from "../../../core/format/currency";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   canonicalPaymentStatus,
   paymentLabel,
@@ -140,7 +141,7 @@ function sessionKitchenStatus(detail: WaiterSessionDetail) {
       ? "Preparing"
       : status === "ready"
         ? "Ready"
-        : status === "paid"
+        : status === "accepted"
           ? "Waiting Kitchen"
           : "Not released";
 }
@@ -186,9 +187,9 @@ function sessionBatches(detail: WaiterSessionDetail) {
                     (value) => value === "ready" || value === "completed",
                   )
                 ? "ready"
-                : statuses.some((value) => value === "paid")
+                : statuses.some((value) => value === "accepted")
                   ? "waiting"
-                  : "paid";
+                  : "accepted";
       return { number: index + 1, createdAt, items, status };
     });
 }
@@ -231,7 +232,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connection, setConnection] = useState<Connection>("connecting");
   const [sessionTable, setSessionTable] = useState<WaiterDashboardTable | null>(
     null,
   );
@@ -264,7 +264,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [requestingBill, setRequestingBill] = useState(false);
   const [view, setView] = useState<ProductivityView>("tables");
   const [orderSearch, setOrderSearch] = useState("");
-  const refreshTimer = useRef<number | null>(null);
   const idleTimer = useRef<number | null>(null);
   const knownReadyRef = useRef<Set<string>>(new Set());
   const readyHydratedRef = useRef(false);
@@ -302,16 +301,13 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     setMetrics(nextMetrics);
     setSummary(summaryFrom(rows, restaurantSlug));
   }, [restaurantSlug]);
-  const scheduleRefresh = useCallback(() => {
-    if (refreshTimer.current !== null) clearTimeout(refreshTimer.current);
-    refreshTimer.current = window.setTimeout(
-      () =>
-        void loadTables().catch((e) =>
-          setError(e instanceof Error ? e.message : "Realtime update failed."),
-        ),
-      100,
-    );
-  }, [loadTables]);
+  const connection: Connection = useTenantRealtime({
+    channelName: "waiter-shared-tablet",
+    restaurantId: summary?.restaurantId ?? "",
+    tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices"],
+    client: waiterSupabase,
+    refresh: () => loadTables().catch((e) => setError(e instanceof Error ? e.message : "Realtime update failed.")),
+  });
 
   useEffect(() => {
     void loadTables()
@@ -347,56 +343,17 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   }, [tables]);
   useEffect(() => {
     const sync = () =>
-      void syncWaiterOrderQueue()
+      void syncWaiterOrderQueue(restaurantSlug)
         .then(() => loadTables())
         .catch(() => undefined);
     window.addEventListener("online", sync);
     if (navigator.onLine) sync();
     return () => window.removeEventListener("online", sync);
-  }, [loadTables]);
+  }, [loadTables, restaurantSlug]);
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
-  useEffect(() => {
-    if (!summary?.restaurantId) return;
-    const channel = waiterSupabase.channel(
-      `waiter-shared-tablet:${summary.restaurantId}`,
-    );
-    for (const table of [
-      "restaurant_tables",
-      "restaurant_table_waiter_assignments",
-      "orders",
-      "order_items",
-      "order_invoices",
-    ])
-      channel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table,
-          filter: `restaurant_id=eq.${summary.restaurantId}`,
-        },
-        scheduleRefresh,
-      );
-    channel.subscribe((status) => {
-      setConnection(
-        status === "SUBSCRIBED"
-          ? "connected"
-          : status === "CHANNEL_ERROR" ||
-              status === "TIMED_OUT" ||
-              status === "CLOSED"
-            ? "reconnecting"
-            : "connecting",
-      );
-      if (status === "SUBSCRIBED") scheduleRefresh();
-    });
-    return () => {
-      if (refreshTimer.current !== null) clearTimeout(refreshTimer.current);
-      void waiterSupabase.removeChannel(channel);
-    };
-  }, [scheduleRefresh, summary?.restaurantId]);
   useEffect(() => {
     const reset = () => {
       if (switchMode === "unlock") return;
@@ -508,6 +465,11 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       navigateWaiter(
         `/waiter/${encodeURIComponent(restaurantSlug)}/order/${table.tableNumber}`,
       );
+  }
+  function openAddItems(table: WaiterDashboardTable) {
+    navigateWaiter(
+      `/waiter/${encodeURIComponent(restaurantSlug)}/order/${encodeURIComponent(String(table.tableNumber))}`,
+    );
   }
   async function authenticate() {
     try {
@@ -884,17 +846,17 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
               </small>
               <strong>Table {sessionTable.tableNumber}</strong>
             </div>
-            {sessionDetail && sessionAllowsItems(sessionDetail) ? (
-              <button
+            {!sessionDetail || sessionAllowsItems(sessionDetail) ? (
+              <a
                 className="w103-add-top"
-                onClick={() =>
-                  navigateWaiter(
-                    `/waiter/${encodeURIComponent(restaurantSlug)}/order/${sessionTable.tableNumber}`,
-                  )
-                }
+                href={`/waiter/${encodeURIComponent(restaurantSlug)}/order/${encodeURIComponent(String(sessionTable.tableNumber))}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  openAddItems(sessionTable);
+                }}
               >
                 + Add Items
-              </button>
+              </a>
             ) : (
               <span className="w103-session-locked">
                 {sessionDetail?.orderingReason ?? "Loading"}
@@ -1013,8 +975,8 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                             ? "Served"
                             : batch.status === "preparing"
                               ? "Preparing"
-                              : batch.status === "paid"
-                                ? "Paid"
+                              : batch.status === "accepted"
+                                ? "Waiting Kitchen"
                                 : "Waiting Kitchen"}
                     </b>
                   </article>
@@ -1047,7 +1009,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                     {batch.items.map((item) => {
                       const editable =
                         item.kitchenStatus === "held" ||
-                        item.kitchenStatus === "paid";
+                        item.kitchenStatus === "accepted";
                       return (
                         <div key={item.id}>
                           <span>

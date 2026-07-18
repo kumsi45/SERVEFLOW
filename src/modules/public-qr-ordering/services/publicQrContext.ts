@@ -1,3 +1,6 @@
+import { readCustomerTracking } from "./customerTrackingService";
+import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
+
 export type PublicQrContext = {
   restaurantSlug: string;
   tableNumber: string;
@@ -17,7 +20,7 @@ export type PublicQrSession = {
 };
 
 const QR_CONTEXT_STORAGE_PREFIX = "serveflow.publicQrContext";
-const QR_ACTIVE_SESSION_STORAGE_KEY = "serveflow.publicQrActiveSessionKey";
+const QR_ACTIVE_SESSION_STORAGE_PREFIX = "serveflow.publicQrActiveSessionKey";
 const QR_LEGACY_ACTIVE_SCAN_STORAGE_KEY = "serveflow.publicQrActiveScan";
 const QR_CART_STORAGE_PREFIX = "serveflow.publicQrCart";
 const QR_CHECKOUT_STORAGE_PREFIX = "serveflow.publicQrCheckout";
@@ -36,22 +39,23 @@ function readBrowserSessionToken(sessionKey: string) {
 
   const storageKey = `${QR_BROWSER_SESSION_STORAGE_PREFIX}:${sessionKey}`;
   try {
-    const storedToken = window.sessionStorage.getItem(storageKey);
+    const storedToken = window.localStorage.getItem(storageKey);
     if (storedToken) return storedToken;
 
-    const newToken = crypto.randomUUID();
-    window.sessionStorage.setItem(storageKey, newToken);
+    const newToken = createBrowserUuid();
+    window.localStorage.setItem(storageKey, newToken);
     return newToken;
   } catch {
     return "";
   }
 }
 
-function clearPublicQrStorageForNewSession(sessionKey: string) {
+function clearPublicQrStorageForNewSession(restaurantSlug: string, sessionKey: string) {
   if (typeof window === "undefined" || !sessionKey) return;
 
   try {
-    if (window.localStorage.getItem(QR_ACTIVE_SESSION_STORAGE_KEY) === sessionKey) return;
+    const activeSessionKey = `${QR_ACTIVE_SESSION_STORAGE_PREFIX}:${restaurantSlug}`;
+    if (window.localStorage.getItem(activeSessionKey) === sessionKey) return;
 
     const prefixesToClear = [
       QR_CONTEXT_STORAGE_PREFIX,
@@ -61,13 +65,18 @@ function clearPublicQrStorageForNewSession(sessionKey: string) {
 
     for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
       const key = window.localStorage.key(index);
-      if (key && prefixesToClear.some((prefix) => key === prefix || key.startsWith(`${prefix}:`))) {
+      const belongsToRestaurant = key && prefixesToClear.some((prefix) =>
+        key === `${prefix}:${restaurantSlug}` ||
+        key.startsWith(`${prefix}:${restaurantSlug}:`) ||
+        key.startsWith(`${prefix}:${restaurantSlug}-`)
+      );
+      if (belongsToRestaurant) {
         window.localStorage.removeItem(key);
       }
     }
 
     window.localStorage.removeItem(QR_LEGACY_ACTIVE_SCAN_STORAGE_KEY);
-    window.localStorage.setItem(QR_ACTIVE_SESSION_STORAGE_KEY, sessionKey);
+    window.localStorage.setItem(activeSessionKey, sessionKey);
   } catch {
     // localStorage may be unavailable in private browsing or embedded webviews.
   }
@@ -84,7 +93,7 @@ export function readPublicQrContext(restaurantSlug: string): PublicQrContext {
 
   if (tableNumberFromUrl && qrTokenFromUrl) {
     const sessionKey = buildPublicQrSessionKey(restaurantSlug, tableNumberFromUrl, qrTokenFromUrl);
-    clearPublicQrStorageForNewSession(sessionKey);
+    clearPublicQrStorageForNewSession(restaurantSlug, sessionKey);
     return {
       restaurantSlug,
       tableNumber: tableNumberFromUrl,
@@ -92,6 +101,19 @@ export function readPublicQrContext(restaurantSlug: string): PublicQrContext {
       tableNumberFromQr: true,
       sessionKey,
       browserSessionToken: readBrowserSessionToken(sessionKey),
+      source: "url",
+    };
+  }
+
+  const tracking = readCustomerTracking(restaurantSlug);
+  if (tracking?.table_number && tracking.qr_token) {
+    return {
+      restaurantSlug,
+      tableNumber: tracking.table_number,
+      qrToken: tracking.qr_token,
+      tableNumberFromQr: true,
+      sessionKey: tracking.session_id,
+      browserSessionToken: tracking.browser_session_token || readBrowserSessionToken(tracking.session_id),
       source: "url",
     };
   }

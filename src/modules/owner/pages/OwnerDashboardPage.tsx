@@ -5,6 +5,8 @@ import {
   buildAbsolutePublicUrl,
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
+import { analyticsWindow } from "../../../core/analytics/historicalAnalytics";
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -12,7 +14,10 @@ import {
 } from "../../../core/format/currency";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import {
+  canonicalOperationalStatus,
   canonicalPaymentMethod,
+  operationalLabel,
+  type OperationalStatus,
   type PaymentPolicy,
 } from "../../../core/payment/lifecycle";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
@@ -31,6 +36,7 @@ import {
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
+let activeOwnerTimezone = "Africa/Nairobi";
 
 function fmtMoney(value: number) {
   return formatCurrency(value, activeOwnerCurrency);
@@ -104,6 +110,7 @@ type OdOrder = {
   id: string;
   display_number: string | null;
   status: OwnerOrderStatus;
+  operational_status: OperationalStatus;
   dining_session_status:
     "open" | "closed" | "abandoned" | "expired" | "checked_out" | string | null;
   customer_name: string | null;
@@ -196,6 +203,10 @@ type RestaurantConfig = {
   ordering_settings: JsonRecord;
   payment_policy: PaymentPolicy;
   mixed_waiter_payment_timing: "before_kitchen" | "after_meal";
+  vat_enabled: boolean;
+  vat_percentage: number;
+  service_charge_enabled: boolean;
+  service_charge_percentage: number;
   branding: JsonRecord;
   notification_settings: JsonRecord;
   security_settings: JsonRecord;
@@ -301,9 +312,9 @@ const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
   { id: "settings", icon: "SE", label: "Settings" },
 ];
 
-const ACTIVE_ORDER_STATUSES: OwnerOrderStatus[] = [
-  "pending_payment",
-  "paid",
+const ACTIVE_ORDER_STATUSES: OperationalStatus[] = [
+  "new",
+  "accepted",
   "preparing",
   "ready",
 ];
@@ -316,15 +327,7 @@ type OwnerDashboardPageProps = {
 };
 
 function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    pending_payment: "Pending",
-    paid: "Paid",
-    preparing: "Preparing",
-    ready: "Ready",
-    completed: "Completed",
-    cancelled: "Cancelled",
-  };
-  return labels[status] ?? status;
+  return operationalLabel(canonicalOperationalStatus(status));
 }
 
 function statusClass(status: string) {
@@ -360,28 +363,11 @@ function getMenuItemName(menuItem: unknown) {
 }
 
 function startOfTodayIso() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today.toISOString();
+  return analyticsWindow("today", activeOwnerTimezone).rangeStart;
 }
 
 function getAnalyticsDateRange(period: AnalyticsPeriod) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-
-  if (period === "week") {
-    const daysSinceMonday = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - daysSinceMonday);
-    end.setDate(start.getDate() + 7);
-  } else if (period === "month") {
-    start.setDate(1);
-    end.setMonth(start.getMonth() + 1, 1);
-  } else {
-    end.setDate(start.getDate() + 1);
-  }
-
-  return { rangeStart: start.toISOString(), rangeEnd: end.toISOString() };
+  return analyticsWindow(period, activeOwnerTimezone);
 }
 
 function sameHour(iso: string, hour: number) {
@@ -444,6 +430,10 @@ function buildRestaurantConfig(
       row.mixed_waiter_payment_timing === "before_kitchen"
         ? "before_kitchen"
         : "after_meal",
+    vat_enabled: Boolean(row.vat_enabled),
+    vat_percentage: Number(row.vat_percentage ?? 15),
+    service_charge_enabled: Boolean(row.service_charge_enabled),
+    service_charge_percentage: Number(row.service_charge_percentage ?? 0),
     branding: toJsonRecord(row.branding),
     notification_settings: toJsonRecord(row.notification_settings),
     security_settings: toJsonRecord(row.security_settings),
@@ -517,13 +507,7 @@ function toDateInputValue(date: Date) {
 }
 
 function getDateInputRange(startDate: string, endDate: string) {
-  const start = new Date(`${startDate}T00:00:00`);
-  const endExclusive = new Date(`${endDate}T00:00:00`);
-  endExclusive.setDate(endExclusive.getDate() + 1);
-  return {
-    rangeStart: start.toISOString(),
-    rangeEnd: endExclusive.toISOString(),
-  };
+  return analyticsWindow("custom", activeOwnerTimezone, startDate, endDate);
 }
 
 function downloadText(filename: string, content: string, mimeType: string) {
@@ -621,6 +605,9 @@ export function OwnerDashboardPage({
         locale: restaurantConfig.locale,
       }
     : (currency ?? null);
+  activeOwnerTimezone = restaurantConfig
+    ? jsonString(restaurantConfig.profile, "timezone", "Africa/Nairobi")
+    : "Africa/Nairobi";
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(
     [],
   );
@@ -660,7 +647,7 @@ export function OwnerDashboardPage({
           supabase
             .from("orders")
             .select(
-              "id,display_number,status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at",
+              "id,display_number,status,operational_status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at",
             )
             .eq("restaurant_id", restaurantId)
             .order("created_at", { ascending: false })
@@ -689,7 +676,7 @@ export function OwnerDashboardPage({
           supabase
             .from("restaurants")
             .select(
-              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
             )
             .eq("id", restaurantId)
             .maybeSingle(),
@@ -736,6 +723,9 @@ export function OwnerDashboardPage({
           display_number:
             typeof row.display_number === "string" ? row.display_number : null,
           status: String(row.status) as OwnerOrderStatus,
+          operational_status: canonicalOperationalStatus(
+            row.operational_status,
+          ),
           dining_session_status:
             typeof row.dining_session_status === "string"
               ? row.dining_session_status
@@ -905,11 +895,8 @@ export function OwnerDashboardPage({
   }, [restaurantId, orders]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`owner-${restaurantId}`)
-      .on(
-        "postgres_changes",
-        {
+    const channel = createRestaurantEventConsumer(restaurantId)
+      .onTable({
           event: "*",
           schema: "public",
           table: "orders",
@@ -940,6 +927,9 @@ export function OwnerDashboardPage({
                   ? row.display_number
                   : (existing?.display_number ?? null),
               status: String(row.status) as OwnerOrderStatus,
+              operational_status: canonicalOperationalStatus(
+                row.operational_status ?? existing?.operational_status,
+              ),
               dining_session_status:
                 typeof row.dining_session_status === "string"
                   ? row.dining_session_status
@@ -962,9 +952,7 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "order_items",
@@ -1041,9 +1029,7 @@ export function OwnerDashboardPage({
           }
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "order_invoices",
@@ -1080,9 +1066,7 @@ export function OwnerDashboardPage({
             });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "cashier_shifts",
@@ -1109,9 +1093,7 @@ export function OwnerDashboardPage({
             });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "restaurant_tables",
@@ -1127,9 +1109,7 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "menu_items",
@@ -1145,9 +1125,7 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "kitchen_stations",
@@ -1163,9 +1141,7 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "*",
           schema: "public",
           table: "restaurant_staff",
@@ -1181,9 +1157,7 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .on(
-        "postgres_changes",
-        {
+      .onTable({
           event: "UPDATE",
           schema: "public",
           table: "restaurants",
@@ -1202,7 +1176,7 @@ export function OwnerDashboardPage({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
   }, [restaurantId, menuItems]);
 
@@ -1249,18 +1223,20 @@ export function OwnerDashboardPage({
   const todayVatCollected = dashboardReports.today.vat_collected;
   const activeOrders = useMemo(
     () =>
-      orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status)),
+      orders.filter((order) =>
+        ACTIVE_ORDER_STATUSES.includes(order.operational_status),
+      ),
     [orders],
   );
   const pendingOrders = useMemo(
-    () => orders.filter((order) => order.status === "pending_payment"),
+    () => orders.filter((order) => order.operational_status === "new"),
     [orders],
   );
   const completedToday = useMemo(
     () =>
       orders.filter(
         (order) =>
-          order.status === "completed" &&
+          ["served", "closed"].includes(order.operational_status) &&
           (order.completed_at ?? order.created_at) >= todayStart,
       ),
     [orders, todayStart],
@@ -1280,9 +1256,7 @@ export function OwnerDashboardPage({
     const hour = new Date();
     hour.setHours(hour.getHours() - (6 - index), 0, 0, 0);
     return todayPayments
-      .filter((payment) =>
-        sameHour(payment.paid_at ?? payment.created_at, hour.getHours()),
-      )
+      .filter((payment) => sameHour(payment.paid_at ?? "", hour.getHours()))
       .reduce((sum, payment) => sum + payment.total_price, 0);
   });
   const sparkMax = Math.max(...sparkData, 1);
@@ -1290,16 +1264,13 @@ export function OwnerDashboardPage({
   const barHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
   const barData = barHours.map((hour) =>
     todayPayments
-      .filter((payment) =>
-        sameHour(payment.paid_at ?? payment.created_at, hour),
-      )
+      .filter((payment) => sameHour(payment.paid_at ?? "", hour))
       .reduce((sum, payment) => sum + payment.total_price, 0),
   );
   const orderBarData = barHours.map(
     (hour) =>
-      todayPayments.filter((payment) =>
-        sameHour(payment.paid_at ?? payment.created_at, hour),
-      ).length,
+      todayPayments.filter((payment) => sameHour(payment.paid_at ?? "", hour))
+        .length,
   );
   const barMax = Math.max(...barData, 1);
   const orderBarMax = Math.max(...orderBarData, 1);
@@ -1461,7 +1432,7 @@ export function OwnerDashboardPage({
       supabase
         .from("restaurants")
         .select(
-          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
         )
         .eq("id", restaurantId)
         .maybeSingle(),
@@ -1862,6 +1833,13 @@ function OverviewPage({
   );
 
   const { start, end, label } = useMemo(() => {
+    const canonicalWindow = analyticsWindow(
+      range,
+      activeOwnerTimezone,
+      customStart,
+      customEnd,
+      now,
+    );
     const endOfRange = new Date(now);
     endOfRange.setHours(23, 59, 59, 999);
     const startOfRange = new Date(now);
@@ -1879,14 +1857,14 @@ function OverviewPage({
       const selectedStart = new Date(`${customStart}T00:00:00`);
       const selectedEnd = new Date(`${customEnd}T23:59:59.999`);
       return {
-        start: selectedStart.getTime(),
-        end: selectedEnd.getTime(),
+        start: new Date(canonicalWindow.rangeStart).getTime(),
+        end: new Date(canonicalWindow.rangeEnd).getTime(),
         label: `${selectedStart.toLocaleDateString()} – ${selectedEnd.toLocaleDateString()}`,
       };
     }
     return {
-      start: startOfRange.getTime(),
-      end: endOfRange.getTime(),
+      start: new Date(canonicalWindow.rangeStart).getTime(),
+      end: new Date(canonicalWindow.rangeEnd).getTime(),
       label:
         range === "today"
           ? "Today"
@@ -1901,10 +1879,10 @@ function OverviewPage({
   const inRange = (iso: string | null) =>
     Boolean(iso) &&
     new Date(iso!).getTime() >= start &&
-    new Date(iso!).getTime() <= end;
+    new Date(iso!).getTime() < end;
   const rangeOrders = data.orders.filter((order) => inRange(order.created_at));
   const rangePayments = data.payments.filter((payment) =>
-    inRange(payment.paid_at ?? payment.created_at),
+    inRange(payment.paid_at),
   );
   const cashRevenue = rangePayments
     .filter(
@@ -1918,16 +1896,18 @@ function OverviewPage({
     .reduce((sum, payment) => sum + payment.total_price, 0);
   const totalRevenue = cashRevenue + digitalRevenue;
   const pendingPayments = rangeOrders.filter(
-    (order) => order.status === "pending_payment",
+    (order) => order.operational_status === "new",
   ).length;
   const kitchenWaiting = rangeOrders.filter(
-    (order) => order.status === "paid" || order.status === "preparing",
+    (order) =>
+      order.operational_status === "accepted" ||
+      order.operational_status === "preparing",
   ).length;
   const ordersInProgress = rangeOrders.filter((order) =>
-    ["paid", "preparing", "ready"].includes(order.status),
+    ["accepted", "preparing", "ready"].includes(order.operational_status),
   ).length;
   const activeRangeOrders = rangeOrders.filter((order) =>
-    ACTIVE_ORDER_STATUSES.includes(order.status),
+    ACTIVE_ORDER_STATUSES.includes(order.operational_status),
   );
   const activeTables = new Set(
     activeRangeOrders.map((order) => order.table_number).filter(Boolean),
@@ -2229,9 +2209,9 @@ function OwnerMobileOverview({
               </span>
               <span className="od-mobile-activity-side">
                 <span
-                  className={`od-mobile-status ${statusClass(order.status)}`}
+                  className={`od-mobile-status ${statusClass(order.operational_status)}`}
                 >
-                  {statusLabel(order.status)}
+                  {statusLabel(order.operational_status)}
                 </span>
                 <strong>{fmtMoney(order.total_price)}</strong>
               </span>
@@ -2404,9 +2384,9 @@ function RecentOrdersTable({
                   </td>
                   <td>
                     <span
-                      className={`od-status-badge ${statusClass(order.status)}`}
+                      className={`od-status-badge ${statusClass(order.operational_status)}`}
                     >
-                      {statusLabel(order.status)}
+                      {statusLabel(order.operational_status)}
                     </span>
                   </td>
                 </tr>
@@ -2433,17 +2413,17 @@ function OrdersPage({
   const [tab, setTab] = useState<string>("active");
   const tabs = [
     ["active", "Active"],
-    ["pending_payment", "Pending Payment"],
-    ["paid", "Paid"],
+    ["new", "New"],
+    ["accepted", "Accepted"],
     ["preparing", "Preparing"],
     ["ready", "Ready"],
-    ["completed", "Completed"],
-    ["cancelled", "Cancelled"],
+    ["served", "Served"],
+    ["closed", "Closed"],
   ];
   const filtered =
     tab === "active"
       ? activeOrders
-      : orders.filter((order) => order.status === tab);
+      : orders.filter((order) => order.operational_status === tab);
 
   return (
     <div className="od-page">
@@ -2461,49 +2441,50 @@ function OrdersPage({
       </div>
 
       <div className="od-kanban">
-        {(
-          [
-            "pending_payment",
-            "paid",
-            "preparing",
-            "ready",
-          ] as OwnerOrderStatus[]
-        ).map((status) => (
-          <div key={status} className={`od-order-lane ${statusClass(status)}`}>
-            <div className="od-lane-header">
-              <span>{statusLabel(status)}</span>
-              <strong>
-                {orders.filter((order) => order.status === status).length}
-              </strong>
+        {(["new", "accepted", "preparing", "ready"] as OperationalStatus[]).map(
+          (status) => (
+            <div
+              key={status}
+              className={`od-order-lane ${statusClass(status)}`}
+            >
+              <div className="od-lane-header">
+                <span>{statusLabel(status)}</span>
+                <strong>
+                  {
+                    orders.filter(
+                      (order) => order.operational_status === status,
+                    ).length
+                  }
+                </strong>
+              </div>
+              {orders
+                .filter((order) => order.operational_status === status)
+                .slice(0, 3)
+                .map((order) => (
+                  <div key={order.id} className="od-order-card">
+                    <div className="od-order-card-top">
+                      <strong>{fmtOrderLabel(order)}</strong>
+                      <span>{fmtTimeAgo(order.created_at)}</span>
+                    </div>
+                    <div className="od-order-table">
+                      {order.table_number
+                        ? `Table ${order.table_number}`
+                        : "No table"}
+                    </div>
+                    <div className="od-order-customer">
+                      {order.customer_name || "Guest"}
+                    </div>
+                    <div className="od-order-card-bottom">
+                      <strong>{fmtMoney(order.total_price)}</strong>
+                      <span>{order.item_count || 0} items</span>
+                    </div>
+                  </div>
+                ))}
+              {orders.filter((order) => order.operational_status === status)
+                .length === 0 && <div className="od-lane-empty">No orders</div>}
             </div>
-            {orders
-              .filter((order) => order.status === status)
-              .slice(0, 3)
-              .map((order) => (
-                <div key={order.id} className="od-order-card">
-                  <div className="od-order-card-top">
-                    <strong>{fmtOrderLabel(order)}</strong>
-                    <span>{fmtTimeAgo(order.created_at)}</span>
-                  </div>
-                  <div className="od-order-table">
-                    {order.table_number
-                      ? `Table ${order.table_number}`
-                      : "No table"}
-                  </div>
-                  <div className="od-order-customer">
-                    {order.customer_name || "Guest"}
-                  </div>
-                  <div className="od-order-card-bottom">
-                    <strong>{fmtMoney(order.total_price)}</strong>
-                    <span>{order.item_count || 0} items</span>
-                  </div>
-                </div>
-              ))}
-            {orders.filter((order) => order.status === status).length === 0 && (
-              <div className="od-lane-empty">No orders</div>
-            )}
-          </div>
-        ))}
+          ),
+        )}
       </div>
 
       <div className="od-tabs">
@@ -2516,7 +2497,8 @@ function OrdersPage({
             {label} (
             {value === "active"
               ? activeOrders.length
-              : orders.filter((order) => order.status === value).length}
+              : orders.filter((order) => order.operational_status === value)
+                  .length}
             )
           </button>
         ))}
@@ -2577,9 +2559,9 @@ function OrdersPage({
                     </td>
                     <td>
                       <span
-                        className={`od-status-badge ${statusClass(order.status)}`}
+                        className={`od-status-badge ${statusClass(order.operational_status)}`}
                       >
-                        {statusLabel(order.status)}
+                        {statusLabel(order.operational_status)}
                       </span>
                     </td>
                   </tr>
@@ -6291,7 +6273,7 @@ async function buildOwnerReportDataFromTables(
     { date: string; revenue: number; orders: number }
   >();
   for (const invoice of invoices) {
-    const key = dateKey(invoice.paid_at ?? invoice.created_at);
+    const key = dateKey(invoice.paid_at ?? "");
     const current = salesByDay.get(key) ?? { date: key, revenue: 0, orders: 0 };
     current.revenue += invoice.total_price;
     current.orders += 1;
@@ -6789,7 +6771,13 @@ function ReportsPage({
   const [loading, setLoading] = useState(true);
   const [reportError, setReportError] = useState<string | null>(null);
   const selectedRange = useMemo(() => {
-    if (range === "custom") return getDateInputRange(customStart, customEnd);
+    if (range === "custom")
+      return analyticsWindow(
+        "custom",
+        activeOwnerTimezone,
+        customStart,
+        customEnd,
+      );
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     let start = new Date(now),
@@ -6814,7 +6802,7 @@ function ReportsPage({
       end = new Date(start);
       end.setMonth(end.getMonth() + 1);
     }
-    return { rangeStart: start.toISOString(), rangeEnd: end.toISOString() };
+    return analyticsWindow(range, activeOwnerTimezone);
   }, [customEnd, customStart, range]);
   useEffect(() => {
     let mounted = true;
@@ -8592,6 +8580,9 @@ type SettingsFormState = {
   autoAcceptOrders: boolean;
   paymentPolicy: PaymentPolicy;
   mixedWaiterPaymentTiming: "before_kitchen" | "after_meal";
+  vatEnabled: boolean;
+  vatPercentage: string;
+  serviceChargeEnabled: boolean;
   serviceCharge: string;
   primaryColor: string;
   logoUrl: string;
@@ -8653,10 +8644,10 @@ function configToSettingsForm(
     paymentPolicy: config?.payment_policy ?? "pay_before_kitchen",
     mixedWaiterPaymentTiming:
       config?.mixed_waiter_payment_timing ?? "after_meal",
-    serviceCharge: String(
-      (config?.ordering_settings?.service_charge_percent as
-        number | undefined) ?? 0,
-    ),
+    vatEnabled: config?.vat_enabled ?? false,
+    vatPercentage: String(config?.vat_percentage ?? 15),
+    serviceChargeEnabled: config?.service_charge_enabled ?? false,
+    serviceCharge: String(config?.service_charge_percentage ?? 0),
     primaryColor: jsonString(
       config?.branding ?? {},
       "primary_color",
@@ -8846,6 +8837,7 @@ function SettingsPage({
       setNotice(null);
       const totalTables = Number(form.totalTables);
       const serviceCharge = Number(form.serviceCharge);
+      const vatPercentage = Number(form.vatPercentage);
       const sessionTimeout = Number(form.sessionTimeoutMinutes);
       const currencyCode = form.currency.trim().toUpperCase();
       const currencySymbol = form.currencySymbol.trim();
@@ -8856,6 +8848,9 @@ function SettingsPage({
         totalTables > 500
       )
         throw new Error("Total tables must be a whole number from 1 to 500.");
+      if (
+        !Number.isFinite(vatPercentage) || vatPercentage < 0 || vatPercentage > 100
+      ) throw new Error("VAT must be between 0 and 100 percent.");
       if (
         !Number.isFinite(serviceCharge) ||
         serviceCharge < 0 ||
@@ -8950,6 +8945,17 @@ function SettingsPage({
         },
       );
       if (mixedTimingError) throw new Error(mixedTimingError.message);
+      const { error: financialError } = await supabase.rpc(
+        "set_restaurant_financial_settings",
+        {
+          target_restaurant_id: restaurantId,
+          requested_vat_enabled: form.vatEnabled,
+          requested_vat_percentage: vatPercentage,
+          requested_service_charge_enabled: form.serviceChargeEnabled,
+          requested_service_charge_percentage: serviceCharge,
+        },
+      );
+      if (financialError) throw new Error(financialError.message);
       await onSettingsChanged();
       setNotice("Settings saved.");
     } catch (saveError) {
@@ -9395,9 +9401,47 @@ function SettingsPage({
                       <option value="before_kitchen">Pay Before Kitchen</option>
                       <option value="after_meal">Hold Payment</option>
                     </select>
-                    <small>QR customer orders always require payment first.</small>
+                    <small>
+                      QR customer orders always require payment first.
+                    </small>
                   </label>
                 )}
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.vatEnabled}
+                    onChange={(event) =>
+                      updateField("vatEnabled", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  VAT enabled
+                </label>
+                <label>
+                  VAT %
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.vatPercentage}
+                    onChange={(event) =>
+                      updateField("vatPercentage", event.target.value)
+                    }
+                    disabled={working || !form.vatEnabled}
+                  />
+                </label>
+                <label className="od-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={form.serviceChargeEnabled}
+                    onChange={(event) =>
+                      updateField("serviceChargeEnabled", event.target.checked)
+                    }
+                    disabled={working}
+                  />
+                  Service charge enabled
+                </label>
                 <label>
                   Service Charge %
                   <input
@@ -9409,7 +9453,7 @@ function SettingsPage({
                     onChange={(event) =>
                       updateField("serviceCharge", event.target.value)
                     }
-                    disabled={working}
+                    disabled={working || !form.serviceChargeEnabled}
                   />
                 </label>
               </div>

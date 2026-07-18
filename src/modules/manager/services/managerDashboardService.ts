@@ -1,5 +1,7 @@
 import { supabase } from "../../../core/database";
-import { canonicalPaymentMethod } from "../../../core/payment/lifecycle";
+import { canonicalOperationalStatus, canonicalPaymentMethod } from "../../../core/payment/lifecycle";
+import { analyticsWindow, loadCanonicalHistoricalSummary } from "../../../core/analytics/historicalAnalytics";
+import { loadRestaurantAnalyticsTimezone } from "./managerOperationalReportsService";
 import type {
   ManagerCashierStatus,
   ManagerDashboardSnapshot,
@@ -165,7 +167,10 @@ async function fetchOpenOrders(restaurantId: string): Promise<OrderRow[]> {
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as OrderRow[];
+  return ((data ?? []) as OrderRow[]).map((row) => ({
+    ...row,
+    operational_status: canonicalOperationalStatus(row.operational_status),
+  }));
 }
 
 async function fetchTables(restaurantId: string): Promise<TableRow[]> {
@@ -256,12 +261,12 @@ async function fetchActiveShiftOpen(restaurantId: string): Promise<boolean> {
 async function fetchLiveMetrics(
   restaurantId: string,
 ): Promise<ManagerLiveMetrics> {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 1);
+  const timezone = await loadRestaurantAnalyticsTimezone(restaurantId);
+  const window = analyticsWindow("today", timezone);
+  const start = new Date(window.rangeStart);
+  const end = new Date(window.rangeEnd);
 
-  const [ordersResult, invoicesResult, paidInvoicesResult] = await Promise.all([
+  const [ordersResult, invoicesResult, paidInvoicesResult, canonical] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -287,6 +292,7 @@ async function fetchLiveMetrics(
       .eq("payment_status", "paid")
       .gte("paid_at", start.toISOString())
       .lt("paid_at", end.toISOString()),
+    loadCanonicalHistoricalSummary(restaurantId, window),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
@@ -326,16 +332,16 @@ async function fetchLiveMetrics(
   const collectionDelays = paidInvoices.map((invoice) =>
     Math.max(
       0,
-      (new Date(invoice.paid_at ?? invoice.created_at).getTime() -
+      (new Date(invoice.paid_at as string).getTime() -
         new Date(invoice.created_at).getTime()) /
         60000,
     ),
   );
 
   return {
-    revenueToday,
-    revenueThisShift: revenueToday,
-    ordersToday: orders.length,
+    revenueToday: canonical.revenue,
+    revenueThisShift: canonical.revenue,
+    ordersToday: canonical.orderVolume,
     ordersPending: orders.filter(
       (order) =>
         order.operational_status === "new" ||
@@ -367,7 +373,7 @@ async function fetchLiveMetrics(
     digitalCollected,
     paymentMethodTotals,
     averageOrder: paidInvoices.length
-      ? Math.round(revenueToday / paidInvoices.length)
+      ? Math.round(canonical.revenue / paidInvoices.length)
       : 0,
   };
 }
@@ -381,9 +387,9 @@ function buildKpis(openOrders: OrderRow[], staffOnDuty: number): ManagerKpis {
 
   return {
     activeDiningSessions: openOrders.length,
-    kitchenWaiting: openOrders.filter((order) => order.status === "paid")
+    kitchenWaiting: openOrders.filter((order) => order.operational_status === "accepted")
       .length,
-    kitchenPreparing: openOrders.filter((order) => order.status === "preparing")
+    kitchenPreparing: openOrders.filter((order) => order.operational_status === "preparing")
       .length,
     awaitingCashier: openOrders.filter(
       (order) => order.bill_requested_at && !order.payment_verified_at,
@@ -437,7 +443,7 @@ function deriveKitchenStatus(items: OrderItemRow[]): ManagerKitchenStatus {
   if (statuses.some((itemStatus) => itemStatus === "ready")) return "ready";
   if (statuses.some((itemStatus) => itemStatus === "preparing"))
     return "preparing";
-  if (statuses.some((itemStatus) => itemStatus === "paid")) return "waiting";
+  if (statuses.some((itemStatus) => itemStatus === "accepted")) return "waiting";
   return "idle";
 }
 

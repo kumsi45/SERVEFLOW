@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   formatCurrency,
   type CurrencyConfig,
@@ -37,32 +37,7 @@ export function ManagerRestaurantIntelligencePage({
   useEffect(() => {
     void load();
   }, [load]);
-  useEffect(() => {
-    const channel = supabase.channel(`restaurant-intelligence:${restaurantId}`);
-    for (const table of [
-      "orders",
-      "order_items",
-      "restaurant_staff",
-      "restaurant_table_waiter_assignments",
-      "manager_customer_complaints",
-      "kitchen_inventory_requests",
-      "inventory_items",
-    ])
-      channel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table,
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void load(),
-      );
-    channel.subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [load, restaurantId]);
+  useTenantRealtime({ channelName: "restaurant-intelligence", restaurantId, tables: ["orders", "order_items", "restaurant_staff", "restaurant_table_waiter_assignments", "manager_customer_complaints", "kitchen_inventory_requests", "inventory_items"], refresh: load });
   return (
     <main className="mri-page" aria-busy={loading}>
       {error && <div className="mri-error" role="alert">{error}</div>}

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createBrowserUuid } from "../browser/createBrowserUuid";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -11,11 +12,20 @@ if (!supabaseAnonKey) {
   throw new Error("Missing environment variable: VITE_SUPABASE_ANON_KEY");
 }
 
-// Use sessionStorage so each browser tab keeps its own independent auth session.
-// This prevents a second login in Tab 2 from overwriting the session in Tab 1.
-// localStorage (the Supabase default) shares state across all tabs on the same
-// origin, which causes the cross-tab session overwrite problem.
-const tabStorage = {
+const STAFF_TAB_ID_KEY = "serveflow.staff-tab-id";
+function getStaffTabId() {
+  let value = sessionStorage.getItem(STAFF_TAB_ID_KEY);
+  if (!value) {
+    value = createBrowserUuid();
+    sessionStorage.setItem(STAFF_TAB_ID_KEY, value);
+  }
+  return value;
+}
+
+// A Supabase session is owned by one browser tab. Refresh preserves it, while
+// another tab receives a different storage namespace and cannot replace it.
+const staffTabId = getStaffTabId();
+const isolatedStaffStorage = {
   getItem: (key: string) => sessionStorage.getItem(key),
   setItem: (key: string, value: string) => sessionStorage.setItem(key, value),
   removeItem: (key: string) => sessionStorage.removeItem(key),
@@ -26,6 +36,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: tabStorage,
+    storage: isolatedStaffStorage,
+    storageKey: `serveflow-staff-auth:${staffTabId}`,
   },
 });

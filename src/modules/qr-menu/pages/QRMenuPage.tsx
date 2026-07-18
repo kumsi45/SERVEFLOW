@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../../../core/database";
-import { canonicalOperationalStatus, canonicalPaymentStatus, operationalLabel, paymentLabel } from "../../../core/payment/lifecycle";
-import { realtimeStateFromStatus, type RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
+import { subscribeCustomerTrackingEvents } from "../../../core/realtime/restaurantEventService";
+import {
+  canonicalOperationalStatus,
+  canonicalPaymentStatus,
+  customerTrackingEta,
+  customerTrackingMessage,
+  customerTrackingStep,
+  operationalLabel,
+  paymentLabel,
+} from "../../../core/payment/lifecycle";
+import { CanonicalLifecycleStatus } from "../../../core/payment/LifecycleBadge";
+import type { RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
 import { CategoryFilter } from "../components/CategoryFilter";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
 import { MenuGroup } from "../components/MenuGroup";
 import { MenuSearch } from "../components/MenuSearch";
 import { RestaurantHeader } from "../components/RestaurantHeader";
-import { formatMenuPrice, setMenuCurrency } from "../components/menuPresentation";
+import {
+  formatMenuPrice,
+  setMenuCurrency,
+} from "../components/menuPresentation";
 import { useQRMenu } from "../hooks/useQRMenu";
 import { logPublicQrScan } from "../services/qrMenuService";
 import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/PublicQrCheckoutPanel";
@@ -24,8 +36,16 @@ import {
   buildPublicQrSession,
   logPublicQrContext,
 } from "../../public-qr-ordering/services/publicQrContext";
+import {
+  persistCustomerTracking,
+  readCustomerTracking,
+} from "../../public-qr-ordering/services/customerTrackingService";
 import { isPaymentMethod } from "../../public-qr-ordering/types";
-import type { PublicQrOrderInvoice, PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
+import type {
+  PublicQrOrderInvoice,
+  PublicQrOrderSession,
+  SubmittedPublicQrOrder,
+} from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
 
 type QRMenuPageProps = {
@@ -53,7 +73,10 @@ function getLatestInvoice(invoices: PublicQrOrderInvoice[]) {
   }, null);
 }
 
-function getCustomerTrackingStatus(orderStatus?: string, invoiceStatus?: string | null) {
+function getCustomerTrackingStatus(
+  orderStatus?: string,
+  invoiceStatus?: string | null,
+) {
   void invoiceStatus;
   return canonicalOperationalStatus(orderStatus);
 }
@@ -65,7 +88,7 @@ function formatStatusLabel(status?: string) {
 function getReadableOrderNumber(
   orderId?: string,
   displayNumber?: string | null,
-  diningSessionDisplayNumber?: string | null
+  diningSessionDisplayNumber?: string | null,
 ) {
   if (displayNumber) return displayNumber;
   if (diningSessionDisplayNumber) return diningSessionDisplayNumber;
@@ -74,43 +97,40 @@ function getReadableOrderNumber(
 
 function getReadableInvoiceNumber(
   invoice?: PublicQrOrderInvoice | null,
-  submitted?: SubmittedPublicQrOrder | null
+  submitted?: SubmittedPublicQrOrder | null,
 ) {
-  return invoice?.display_number ?? submitted?.invoice_display_number ?? String(invoice?.invoice_number ?? submitted?.invoice_number ?? 1);
-}
-
-function getTrackingStep(status?: string) {
-  if (status === "served" || status === "closed") return 4;
-  if (status === "ready") return 3;
-  if (status === "preparing" || status === "accepted") return 2;
-  if (status === "new") return 1;
-  return 0;
-}
-
-function getFriendlyTrackingText(status?: string) {
-  if (status === "served" || status === "closed") return "Served. Enjoy your meal.";
-  if (status === "ready") return "Your order is ready.";
-  if (status === "preparing") return "The kitchen is preparing your order.";
-  if (status === "accepted") return "The kitchen accepted your order.";
-  return "Your order was received.";
-}
-
-function getEstimatedWaitText(status?: string) {
-  if (status === "served" || status === "closed") return "Served";
-  if (status === "ready") return "Ready now";
-  if (status === "preparing") return "Est. 8-12 min";
-  if (status === "accepted") return "Est. 15 min";
-  return "Est. 15 min";
+  return (
+    invoice?.display_number ??
+    submitted?.invoice_display_number ??
+    String(invoice?.invoice_number ?? submitted?.invoice_number ?? 1)
+  );
 }
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
   const [submitError, setSubmitError] = useState<string>();
-  const [submittedOrder, setSubmittedOrder] = useState<SubmittedPublicQrOrder>();
-  const [activeSession, setActiveSession] = useState<PublicQrOrderSession | null>(null);
+  const [submittedOrder, setSubmittedOrder] = useState<
+    SubmittedPublicQrOrder | undefined
+  >(() => {
+    const tracking = readCustomerTracking(restaurantSlug);
+    if (!tracking || tracking.session_id !== checkout.sessionKey)
+      return undefined;
+    return {
+      order_id: tracking.order_id,
+      invoice_id: tracking.invoice_id || null,
+      invoice_status: tracking.payment_status ?? "pending",
+      status: tracking.operational_status ?? "new",
+      total_price: 0,
+      table_number: tracking.table_number,
+      created_at: tracking.updated_at,
+    };
+  });
+  const [activeSession, setActiveSession] =
+    useState<PublicQrOrderSession | null>(null);
   const activeSessionRef = useRef<PublicQrOrderSession | null>(null);
-  const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>("connecting");
+  const [realtimeState, setRealtimeState] =
+    useState<RealtimeConnectionState>("connecting");
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const previousActiveSessionId = useRef<string | null>(null);
   const currentSessionKeyRef = useRef(checkout.sessionKey);
@@ -119,7 +139,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const [foodInfoItem, setFoodInfoItem] = useState<MenuItem>();
   const [trackerExpanded, setTrackerExpanded] = useState(false);
   const [showTrackerSuccess, setShowTrackerSuccess] = useState(false);
-  const [servedFeedbackOrder, setServedFeedbackOrder] = useState<ServedFeedbackOrder | null>(null);
+  const [servedFeedbackOrder, setServedFeedbackOrder] =
+    useState<ServedFeedbackOrder | null>(null);
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackReactions, setFeedbackReactions] = useState<string[]>([]);
   const [feedbackComment, setFeedbackComment] = useState("");
@@ -139,24 +160,29 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     setActiveCategoryId,
     setSearchTerm,
   } = useQRMenu(restaurantSlug);
-  setMenuCurrency(restaurant ? {
-    currencyCode: restaurant.currency_code,
-    currencySymbol: restaurant.currency_symbol,
-    locale: restaurant.locale,
-  } : null);
+  setMenuCurrency(
+    restaurant
+      ? {
+          currencyCode: restaurant.currency_code,
+          currencySymbol: restaurant.currency_symbol,
+          locale: restaurant.locale,
+        }
+      : null,
+  );
   const publicQrSession = useMemo(
-    () => buildPublicQrSession(
-      checkout,
-      restaurant?.id ?? null,
-      activeSession?.order_id ?? null
-    ),
+    () =>
+      buildPublicQrSession(
+        checkout,
+        restaurant?.id ?? null,
+        activeSession?.order_id ?? null,
+      ),
     [
       activeSession?.order_id,
       checkout.qrToken,
       checkout.sessionKey,
       checkout.tableNumber,
       restaurant?.id,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -166,6 +192,35 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   useEffect(() => {
     activeSessionRef.current = activeSession;
   }, [activeSession]);
+
+  useEffect(() => {
+    const orderId = activeSession?.order_id ?? submittedOrder?.order_id;
+    if (!orderId || !checkout.sessionKey) return;
+    const latestInvoice = activeSession
+      ? getLatestInvoice(activeSession.invoices)
+      : null;
+    persistCustomerTracking({
+      restaurant_slug: restaurantSlug,
+      session_id: checkout.sessionKey,
+      order_id: orderId,
+      invoice_id: latestInvoice?.id ?? submittedOrder?.invoice_id ?? "",
+      table_number: checkout.tableNumber,
+      qr_token: checkout.qrToken,
+      browser_session_token: checkout.browserSessionToken,
+      operational_status: activeSession?.status ?? submittedOrder?.status,
+      payment_status:
+        latestInvoice?.status ?? submittedOrder?.invoice_status ?? "pending",
+      updated_at: new Date().toISOString(),
+    });
+  }, [
+    activeSession,
+    checkout.browserSessionToken,
+    checkout.qrToken,
+    checkout.sessionKey,
+    checkout.tableNumber,
+    restaurantSlug,
+    submittedOrder,
+  ]);
 
   const refreshActiveSession = useCallback(async () => {
     const requestSessionKey = checkout.sessionKey;
@@ -194,10 +249,21 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     if (currentSessionKeyRef.current === requestSessionKey) {
       setActiveSession(session);
     }
-  }, [checkout.browserSessionToken, checkout.qrToken, checkout.sessionKey, checkout.tableNumber, restaurantSlug]);
+  }, [
+    checkout.browserSessionToken,
+    checkout.qrToken,
+    checkout.sessionKey,
+    checkout.tableNumber,
+    restaurantSlug,
+  ]);
 
   useEffect(() => {
-    if (!checkout.tableNumberFromQr || !checkout.tableNumber || !checkout.qrToken) return;
+    if (
+      !checkout.tableNumberFromQr ||
+      !checkout.tableNumber ||
+      !checkout.qrToken
+    )
+      return;
 
     void logPublicQrScan({
       restaurantSlug,
@@ -206,7 +272,12 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     }).catch(() => {
       // Scan analytics must never block public ordering.
     });
-  }, [checkout.qrToken, checkout.tableNumber, checkout.tableNumberFromQr, restaurantSlug]);
+  }, [
+    checkout.qrToken,
+    checkout.tableNumber,
+    checkout.tableNumberFromQr,
+    restaurantSlug,
+  ]);
 
   useEffect(() => {
     void refreshActiveSession().catch(() => {
@@ -216,7 +287,6 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
   useEffect(() => {
     setActiveSession(null);
-    setSubmittedOrder(undefined);
     setSubmitError(undefined);
     setCartVisible(false);
     setSubmitting(false);
@@ -240,14 +310,6 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   }, [submittedOrder?.invoice_id, submittedOrder?.order_id]);
 
   useEffect(() => {
-    if (previousActiveSessionId.current && !activeSession) {
-      cart.clearCart();
-      setSubmittedOrder(undefined);
-      setSubmitError(undefined);
-      setCartVisible(false);
-      checkout.resetCheckoutState();
-    }
-
     previousActiveSessionId.current = activeSession?.order_id ?? null;
   }, [activeSession?.order_id]);
 
@@ -255,7 +317,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     if (!restaurant?.id || !checkout.tableNumber || !checkout.qrToken) return;
 
     const refresh = () => {
-      if (realtimeRefreshTimerRef.current !== null) window.clearTimeout(realtimeRefreshTimerRef.current);
+      if (realtimeRefreshTimerRef.current !== null)
+        window.clearTimeout(realtimeRefreshTimerRef.current);
       realtimeRefreshTimerRef.current = window.setTimeout(() => {
         realtimeRefreshTimerRef.current = null;
         void refreshActiveSession().catch(() => undefined);
@@ -275,7 +338,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         if (!alreadyHandled) {
           setServedFeedbackOrder({
             orderId: activeSession.order_id,
-            orderLabel: getReadableOrderNumber(activeSession.order_id, activeSession.display_number, activeSession.dining_session_display_number),
+            orderLabel: getReadableOrderNumber(
+              activeSession.order_id,
+              activeSession.display_number,
+              activeSession.dining_session_display_number,
+            ),
             restaurantId: restaurant.id,
             tableNumber: checkout.tableNumber,
             qrToken: checkout.qrToken,
@@ -283,7 +350,9 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             invoiceNumber: latestInvoice?.invoice_number ?? 1,
             total: latestInvoice?.total_price ?? activeSession.total_price,
             items: latestInvoice
-              ? activeSession.items.filter((item) => item.invoice_id === latestInvoice.id)
+              ? activeSession.items.filter(
+                  (item) => item.invoice_id === latestInvoice.id,
+                )
               : activeSession.items,
           });
           setFeedbackRating(5);
@@ -296,23 +365,26 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       }
       refresh();
     };
-    const channel = supabase.channel(`public-order-session-${restaurant.id}-${checkout.sessionKey}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurant.id}` }, captureServedOrder)
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "dining_sessions", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurant.id}` }, refresh)
-      .subscribe((status) => {
-        setRealtimeState(realtimeStateFromStatus(status));
-        if (status === "SUBSCRIBED") refresh();
-      });
+    const unsubscribe = subscribeCustomerTrackingEvents(
+      restaurant.id,
+      checkout.browserSessionToken,
+      (record) => { captureServedOrder({ new: record }); },
+      (status) => { setRealtimeState(status); if (status === "connected") refresh(); },
+    );
 
     return () => {
-      if (realtimeRefreshTimerRef.current !== null) window.clearTimeout(realtimeRefreshTimerRef.current);
+      if (realtimeRefreshTimerRef.current !== null)
+        window.clearTimeout(realtimeRefreshTimerRef.current);
       realtimeRefreshTimerRef.current = null;
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
-  }, [checkout.qrToken, checkout.sessionKey, checkout.tableNumber, refreshActiveSession, restaurant?.id]);
+  }, [
+    checkout.qrToken,
+    checkout.sessionKey,
+    checkout.tableNumber,
+    refreshActiveSession,
+    restaurant?.id,
+  ]);
 
   function getTableNumberValidationMessage(tableNumber: string) {
     const normalizedTableNumber = tableNumber.trim();
@@ -325,7 +397,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       return "Table number must be a whole number.";
     }
 
-    const tableLimit = restaurant?.total_tables ?? restaurant?.table_count ?? 20;
+    const tableLimit =
+      restaurant?.total_tables ?? restaurant?.table_count ?? 20;
     const numericTableNumber = Number(normalizedTableNumber);
 
     if (numericTableNumber < 1 || numericTableNumber > tableLimit) {
@@ -353,7 +426,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   async function submitOrder() {
     const tableNum = checkout.tableNumber.trim();
     const customerName = checkout.customerName.trim();
-    const tableNumberValidationMessage = getTableNumberValidationMessage(tableNum);
+    const tableNumberValidationMessage =
+      getTableNumberValidationMessage(tableNum);
 
     if (tableNumberValidationMessage) {
       setSubmitError(tableNumberValidationMessage);
@@ -392,7 +466,9 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       }
     } catch (error) {
       if (currentSessionKeyRef.current === requestSessionKey) {
-        setSubmitError(error instanceof Error ? error.message : "Order could not be placed.");
+        setSubmitError(
+          error instanceof Error ? error.message : "Order could not be placed.",
+        );
       }
     } finally {
       if (currentSessionKeyRef.current === requestSessionKey) {
@@ -434,17 +510,30 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         customerSessionKey: servedFeedbackOrder.sessionKey,
       });
 
-      window.localStorage.setItem(`serveflow.feedback:${servedFeedbackOrder.orderId}`, "submitted");
+      window.localStorage.setItem(
+        `serveflow.feedback:${servedFeedbackOrder.orderId}`,
+        "submitted",
+      );
       setFeedbackSubmitted(true);
     } catch (error) {
-      setFeedbackError(error instanceof Error ? error.message : "Feedback could not be submitted.");
+      setFeedbackError(
+        error instanceof Error
+          ? error.message
+          : "Feedback could not be submitted.",
+      );
     } finally {
       setFeedbackSubmitting(false);
     }
   }
 
   useEffect(() => {
-    if (!activeSession || activeSession.status !== "completed" || !restaurant?.id || !checkout.tableNumber || !checkout.qrToken) {
+    if (
+      !activeSession ||
+      activeSession.status !== "completed" ||
+      !restaurant?.id ||
+      !checkout.tableNumber ||
+      !checkout.qrToken
+    ) {
       return;
     }
 
@@ -467,7 +556,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
     setServedFeedbackOrder({
       orderId: activeSession.order_id,
-      orderLabel: getReadableOrderNumber(activeSession.order_id, activeSession.display_number, activeSession.dining_session_display_number),
+      orderLabel: getReadableOrderNumber(
+        activeSession.order_id,
+        activeSession.display_number,
+        activeSession.dining_session_display_number,
+      ),
       restaurantId: restaurant.id,
       tableNumber: checkout.tableNumber,
       qrToken: checkout.qrToken,
@@ -475,10 +568,19 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       invoiceNumber: latestInvoice?.invoice_number ?? 1,
       total: latestInvoice?.total_price ?? activeSession.total_price,
       items: latestInvoice
-        ? activeSession.items.filter((item) => item.invoice_id === latestInvoice.id)
+        ? activeSession.items.filter(
+            (item) => item.invoice_id === latestInvoice.id,
+          )
         : activeSession.items,
     });
-  }, [activeSession, checkout.qrToken, checkout.sessionKey, checkout.tableNumber, restaurant?.id, servedFeedbackOrder?.orderId]);
+  }, [
+    activeSession,
+    checkout.qrToken,
+    checkout.sessionKey,
+    checkout.tableNumber,
+    restaurant?.id,
+    servedFeedbackOrder?.orderId,
+  ]);
 
   if (loading) {
     return (
@@ -507,29 +609,47 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     );
   }
 
-  const activeSessionLatestInvoice = activeSession ? getLatestInvoice(activeSession.invoices) : null;
-  const submittedOrderInvoice = submittedOrder?.invoice_id && activeSession?.order_id === submittedOrder.order_id
-    ? activeSession.invoices.find((invoice) => invoice.id === submittedOrder.invoice_id) ?? null
+  const activeSessionLatestInvoice = activeSession
+    ? getLatestInvoice(activeSession.invoices)
     : null;
+  const submittedOrderInvoice =
+    submittedOrder?.invoice_id &&
+    activeSession?.order_id === submittedOrder.order_id
+      ? (activeSession.invoices.find(
+          (invoice) => invoice.id === submittedOrder.invoice_id,
+        ) ?? null)
+      : null;
   const trackingInvoice = submittedOrderInvoice ?? activeSessionLatestInvoice;
   const trackingOrderId = submittedOrder?.order_id ?? activeSession?.order_id;
   const trackingStatus = getCustomerTrackingStatus(
     activeSession?.status ?? submittedOrder?.status,
-    trackingInvoice?.status ?? submittedOrder?.invoice_status ?? null
+    trackingInvoice?.status ?? submittedOrder?.invoice_status ?? null,
   );
   const trackingTotal = submittedOrder
-    ? submittedOrder.invoice_total ?? submittedOrder.added_total ?? submittedOrder.total_price
-    : trackingInvoice?.total_price ?? activeSession?.total_price ?? 0;
-  const trackingPaymentStatus = canonicalPaymentStatus(trackingInvoice?.status ?? submittedOrder?.invoice_status);
-  const trackingItems = activeSession?.items.filter((item) => {
-    if (!trackingInvoice?.id) return true;
-    return item.invoice_id === trackingInvoice.id;
-  }) ?? submittedOrder?.items_added ?? [];
-  const trackingStep = getTrackingStep(trackingStatus);
-  const trackingMessage = getFriendlyTrackingText(trackingStatus);
-  const trackingEta = getEstimatedWaitText(trackingStatus);
-  const trackingItemCount = trackingItems.reduce((total, item) => total + item.quantity, 0);
-  const feedbackPhotoUploadEnabled = Boolean(restaurant.ordering_settings?.feedback_photo_uploads);
+    ? (submittedOrder.invoice_total ??
+      submittedOrder.added_total ??
+      submittedOrder.total_price)
+    : (trackingInvoice?.total_price ?? activeSession?.total_price ?? 0);
+  const trackingPaymentStatus = canonicalPaymentStatus(
+    trackingInvoice?.status ?? submittedOrder?.invoice_status,
+  );
+  const trackingItems =
+    activeSession?.items.filter((item) => {
+      if (!trackingInvoice?.id) return true;
+      return item.invoice_id === trackingInvoice.id;
+    }) ??
+    submittedOrder?.items_added ??
+    [];
+  const trackingStep = customerTrackingStep(trackingStatus);
+  const trackingMessage = customerTrackingMessage(trackingStatus);
+  const trackingEta = customerTrackingEta(trackingStatus);
+  const trackingItemCount = trackingItems.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+  const feedbackPhotoUploadEnabled = Boolean(
+    restaurant.ordering_settings?.feedback_photo_uploads,
+  );
   const feedbackReactionOptions = [
     "Delicious 😋",
     "Fast Service ⚡",
@@ -547,7 +667,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
   return (
     <main className="qr-menu-page">
-      {realtimeState !== "connected" ? <div role="status" className="qr-realtime-state">Realtime reconnecting…</div> : null}
+      {realtimeState !== "connected" ? (
+        <div role="status" className="qr-realtime-state">
+          Realtime reconnecting…
+        </div>
+      ) : null}
       <RestaurantHeader
         restaurant={restaurant}
         tableNumber={checkout.tableNumber}
@@ -561,7 +685,9 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         >
           {showTrackerSuccess ? (
             <div className="tracker-success-pop" role="status">
-              <span className="tracker-success-check" aria-hidden="true">✓</span>
+              <span className="tracker-success-check" aria-hidden="true">
+                ✓
+              </span>
               <div>
                 <strong>Order sent</strong>
                 <span>Your bill is now being tracked.</span>
@@ -575,28 +701,55 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             onClick={() => setTrackerExpanded((expanded) => !expanded)}
           >
             <span className="tracker-status-line">
-              <span className={`tracker-live-dot step-${trackingStep}`} aria-hidden="true" />
+              <span
+                className={`tracker-live-dot step-${trackingStep}`}
+                aria-hidden="true"
+              />
               <span>{trackingMessage}</span>
             </span>
             <span className="tracker-topline">
-              <strong>{getReadableOrderNumber(trackingOrderId, submittedOrder?.display_number ?? activeSession?.display_number, submittedOrder?.dining_session_display_number ?? activeSession?.dining_session_display_number)} · Bill {getReadableInvoiceNumber(trackingInvoice, submittedOrder)}</strong>
+              <strong>
+                {getReadableOrderNumber(
+                  trackingOrderId,
+                  submittedOrder?.display_number ??
+                    activeSession?.display_number,
+                  submittedOrder?.dining_session_display_number ??
+                    activeSession?.dining_session_display_number,
+                )}{" "}
+                · Bill{" "}
+                {getReadableInvoiceNumber(trackingInvoice, submittedOrder)}
+              </strong>
               <span>{formatMenuPrice(trackingTotal)}</span>
             </span>
             <span className="tracker-meta">
               <span>{trackingEta}</span>
-              <span>{trackingItemCount} {trackingItemCount === 1 ? "item" : "items"}</span>
+              <span>
+                {trackingItemCount} {trackingItemCount === 1 ? "item" : "items"}
+              </span>
               <span>Order: {formatStatusLabel(trackingStatus)}</span>
               <span>Payment: {paymentLabel(trackingPaymentStatus)}</span>
             </span>
-            <span className="tracker-toggle" aria-hidden="true">{trackerExpanded ? "⌃" : "⌄"}</span>
+            <span className="tracker-toggle" aria-hidden="true">
+              {trackerExpanded ? "⌃" : "⌄"}
+            </span>
           </button>
+          <CanonicalLifecycleStatus
+            operationalStatus={trackingStatus}
+            paymentStatus={trackingPaymentStatus}
+            kitchenProgress={trackingStatus}
+          />
           <div className="tracker-timeline" aria-label="Order progress">
             {progressSteps.map((step, index) => {
               const done = index < trackingStep;
               const active = index === trackingStep;
               return (
-                <div className={`tracker-step${done ? " done" : ""}${active ? " active" : ""}`} key={step.title}>
-                  <span className="tracker-step-dot" aria-hidden="true">{done ? "✓" : step.icon}</span>
+                <div
+                  className={`tracker-step${done ? " done" : ""}${active ? " active" : ""}`}
+                  key={step.title}
+                >
+                  <span className="tracker-step-dot" aria-hidden="true">
+                    {done ? "✓" : step.icon}
+                  </span>
                   <span>{step.label}</span>
                 </div>
               );
@@ -609,16 +762,20 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                 <span>{trackingEta}</span>
               </div>
               <div className="tracker-item-list">
-                {trackingItems.length > 0 ? trackingItems.map((item) => (
-                  <div className="tracker-item-row" key={item.id}>
-                    <div>
-                      <strong>{item.name}</strong>
-                      <span>Qty {item.quantity}</span>
+                {trackingItems.length > 0 ? (
+                  trackingItems.map((item) => (
+                    <div className="tracker-item-row" key={item.id}>
+                      <div>
+                        <strong>{item.name}</strong>
+                        <span>Qty {item.quantity}</span>
+                      </div>
+                      <span>{formatMenuPrice(item.line_total)}</span>
                     </div>
-                    <span>{formatMenuPrice(item.line_total)}</span>
+                  ))
+                ) : (
+                  <div className="tracker-empty">
+                    Items will appear here as soon as the order syncs.
                   </div>
-                )) : (
-                  <div className="tracker-empty">Items will appear here as soon as the order syncs.</div>
                 )}
               </div>
               <div className="tracker-total-row">
@@ -643,7 +800,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                 <div>
                   <span className="feedback-eyebrow">Order served</span>
                   <h2>Before you leave, how was your meal?</h2>
-                  <p>Order {servedFeedbackOrder.orderLabel} · Bill {servedFeedbackOrder.invoiceNumber}</p>
+                  <p>
+                    Order {servedFeedbackOrder.orderLabel} · Bill{" "}
+                    {servedFeedbackOrder.invoiceNumber}
+                  </p>
                 </div>
                 <strong>{formatMenuPrice(servedFeedbackOrder.total)}</strong>
               </div>
@@ -673,7 +833,9 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                       className={selected ? "selected" : ""}
                       onClick={() => {
                         setFeedbackReactions((current) =>
-                          selected ? current.filter((item) => item !== reactionLabel) : [...current, reactionLabel]
+                          selected
+                            ? current.filter((item) => item !== reactionLabel)
+                            : [...current, reactionLabel],
                         );
                       }}
                     >
@@ -696,22 +858,39 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
               {feedbackPhotoUploadEnabled ? (
                 <label className="feedback-photo-field">
-                  <span>{feedbackPhotoFile ? feedbackPhotoFile.name : "Add an optional photo"}</span>
+                  <span>
+                    {feedbackPhotoFile
+                      ? feedbackPhotoFile.name
+                      : "Add an optional photo"}
+                  </span>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(event) => setFeedbackPhotoFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      setFeedbackPhotoFile(event.target.files?.[0] ?? null)
+                    }
                   />
                 </label>
               ) : null}
 
-              {feedbackError ? <p className="feedback-error">{feedbackError}</p> : null}
+              {feedbackError ? (
+                <p className="feedback-error">{feedbackError}</p>
+              ) : null}
 
               <div className="feedback-actions">
-                <button type="button" className="feedback-submit" disabled={feedbackSubmitting} onClick={submitFeedback}>
+                <button
+                  type="button"
+                  className="feedback-submit"
+                  disabled={feedbackSubmitting}
+                  onClick={submitFeedback}
+                >
                   {feedbackSubmitting ? "Submitting..." : "Submit Feedback"}
                 </button>
-                <button type="button" className="feedback-later" onClick={() => dismissFeedback(servedFeedbackOrder.orderId)}>
+                <button
+                  type="button"
+                  className="feedback-later"
+                  onClick={() => dismissFeedback(servedFeedbackOrder.orderId)}
+                >
                   Maybe Later
                 </button>
               </div>
@@ -741,8 +920,14 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               ))
             ) : (
               <div className="menu-state">
-                <div className="empty-state-icon" aria-hidden="true">SF</div>
-                <h2>{searchTerm ? "No matching dishes" : "No menu items available"}</h2>
+                <div className="empty-state-icon" aria-hidden="true">
+                  SF
+                </div>
+                <h2>
+                  {searchTerm
+                    ? "No matching dishes"
+                    : "No menu items available"}
+                </h2>
                 <p>
                   {searchTerm
                     ? "Try another search or browse the categories above."
@@ -764,7 +949,9 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               submitting={submitting}
               submitError={submitError}
               tableNumber={checkout.tableNumber}
-              tableCount={restaurant.total_tables ?? restaurant.table_count ?? 20}
+              tableCount={
+                restaurant.total_tables ?? restaurant.table_count ?? 20
+              }
               tableNumberFromQr={checkout.tableNumberFromQr}
               onClose={() => checkout.setCheckoutVisible(false)}
               onCustomerNameChange={checkout.setCustomerName}
@@ -780,8 +967,12 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               displaySubtotal={cart.displaySubtotal}
               isOpen={cartVisible}
               onClose={() => setCartVisible(false)}
-              onIncrease={(menuItemId, quantity) => cart.updateQuantity(menuItemId, quantity + 1)}
-              onDecrease={(menuItemId, quantity) => cart.updateQuantity(menuItemId, quantity - 1)}
+              onIncrease={(menuItemId, quantity) =>
+                cart.updateQuantity(menuItemId, quantity + 1)
+              }
+              onDecrease={(menuItemId, quantity) =>
+                cart.updateQuantity(menuItemId, quantity - 1)
+              }
               onRemove={cart.removeItem}
               onReviewOrder={() => {
                 checkout.setCheckoutVisible(true);
@@ -799,8 +990,12 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         isFloatingOnly
         isOpen={cartVisible}
         onClose={() => setCartVisible(false)}
-        onIncrease={(menuItemId, quantity) => cart.updateQuantity(menuItemId, quantity + 1)}
-        onDecrease={(menuItemId, quantity) => cart.updateQuantity(menuItemId, quantity - 1)}
+        onIncrease={(menuItemId, quantity) =>
+          cart.updateQuantity(menuItemId, quantity + 1)
+        }
+        onDecrease={(menuItemId, quantity) =>
+          cart.updateQuantity(menuItemId, quantity - 1)
+        }
         onRemove={cart.removeItem}
         onReviewOrder={() => checkout.setCheckoutVisible(true)}
       />
@@ -833,4 +1028,3 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     </main>
   );
 }
-

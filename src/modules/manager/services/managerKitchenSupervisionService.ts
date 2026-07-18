@@ -148,7 +148,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
       .from("order_items")
       .select("id,order_id,kitchen_station_id,kitchen_status,quantity,created_at,appended_at,kitchen_preparation_started_at,kitchen_ready_marked_at,orders!order_items_order_same_restaurant(id,display_number,table_number,customer_name,kitchen_priority,status)")
       .eq("restaurant_id", restaurantId)
-      .in("kitchen_status", ["paid", "preparing", "ready"]),
+      .in("kitchen_status", ["accepted", "preparing", "ready"]),
     supabase
       .from("restaurant_staff")
       .select("id,display_name,assigned_kitchen_station_id,staff_session_active")

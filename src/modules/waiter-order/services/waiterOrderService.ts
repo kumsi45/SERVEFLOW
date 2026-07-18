@@ -19,10 +19,10 @@ export type WaiterOrderSession = PublicQrOrderSession & {
   customerPhone?: string | null;
   orderNote?: string | null;
 };
-const WAITER_QUEUE_KEY="serveflow.waiter.order-queue.v1";
+const waiterQueueKey=(restaurantSlug:string)=>`serveflow.waiter.order-queue.v2:${restaurantSlug.trim().toLowerCase()}`;
 type QueuedWaiterOrder={clientRequestId:string;restaurantSlug:string;tableNumber:string;customerName?:string;customerPhone?:string;orderNote?:string;items:PublicQrCartItem[]};
-export function queueWaiterOrder(order:QueuedWaiterOrder){const current=JSON.parse(localStorage.getItem(WAITER_QUEUE_KEY)??"[]") as QueuedWaiterOrder[];if(!current.some(item=>item.clientRequestId===order.clientRequestId))localStorage.setItem(WAITER_QUEUE_KEY,JSON.stringify([...current,order]));}
-export async function syncWaiterOrderQueue(){const current=JSON.parse(localStorage.getItem(WAITER_QUEUE_KEY)??"[]") as QueuedWaiterOrder[];const remaining=[...current];for(const order of current){try{await submitWaiterOrder(order);remaining.splice(remaining.findIndex(item=>item.clientRequestId===order.clientRequestId),1);localStorage.setItem(WAITER_QUEUE_KEY,JSON.stringify(remaining));}catch{break}}return remaining.length;}
+export function queueWaiterOrder(order:QueuedWaiterOrder){const key=waiterQueueKey(order.restaurantSlug);const current=JSON.parse(localStorage.getItem(key)??"[]") as QueuedWaiterOrder[];if(!current.some(item=>item.clientRequestId===order.clientRequestId))localStorage.setItem(key,JSON.stringify([...current,order]));}
+export async function syncWaiterOrderQueue(restaurantSlug:string){const key=waiterQueueKey(restaurantSlug);const current=(JSON.parse(localStorage.getItem(key)??"[]") as QueuedWaiterOrder[]).filter(order=>order.restaurantSlug.trim().toLowerCase()===restaurantSlug.trim().toLowerCase());const remaining=[...current];for(const order of current){try{await submitWaiterOrder(order);remaining.splice(remaining.findIndex(item=>item.clientRequestId===order.clientRequestId),1);localStorage.setItem(key,JSON.stringify(remaining));}catch{break}}return remaining.length;}
 
 function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
   if (!value || typeof value !== "object") return null;

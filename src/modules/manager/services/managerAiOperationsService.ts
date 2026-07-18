@@ -206,7 +206,7 @@ export async function loadManagerAiOperations(
         "id,order_id,kitchen_station_id,kitchen_status,quantity,notes,created_at,appended_at,kitchen_preparation_started_at,kitchen_ready_marked_at,kitchen_completed_at",
       )
       .eq("restaurant_id", restaurantId)
-      .in("kitchen_status", ["paid", "preparing", "ready", "completed"]),
+      .in("kitchen_status", ["accepted", "preparing", "ready", "completed"]),
     supabase
       .from("restaurant_table_waiter_assignments")
       .select("table_id,waiter_staff_id")

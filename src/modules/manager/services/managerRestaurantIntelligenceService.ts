@@ -8,8 +8,10 @@ import {
 } from "./managerAiOperationsService";
 import {
   loadManagerOperationalReport,
+  loadRestaurantAnalyticsTimezone,
   type ManagerOperationalReport,
 } from "./managerOperationalReportsService";
+import { analyticsWindow, completedDaysWindow } from "../../../core/analytics/historicalAnalytics";
 export type IntelligenceModule = {
   key: "traffic" | "staffing" | "kitchen" | "tables" | "revenue" | "inventory";
   title: string;
@@ -36,23 +38,21 @@ const best = <T>(rows: T[], value: (row: T) => number) =>
 export async function loadRestaurantIntelligence(
   restaurantId: string,
 ): Promise<RestaurantIntelligenceSnapshot> {
-  const now = new Date(),
-    todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const historyEnd = new Date(todayStart),
-    historyStart = new Date(todayStart);
-  historyStart.setDate(historyStart.getDate() - 7);
+  const now = new Date();
+  const timezone = await loadRestaurantAnalyticsTimezone(restaurantId);
+  const todayWindow = analyticsWindow("today", timezone, "", "", now);
+  const historyWindow = completedDaysWindow(7, timezone, now);
   const [operations, today, history, inventory] = await Promise.all([
     loadManagerAiOperations(restaurantId),
     loadManagerOperationalReport(
       restaurantId,
-      todayStart.toISOString(),
+      todayWindow.rangeStart,
       now.toISOString(),
+      timezone,
     ),
     loadManagerOperationalReport(
       restaurantId,
-      historyStart.toISOString(),
-      historyEnd.toISOString(),
+      historyWindow.rangeStart, historyWindow.rangeEnd, timezone,
     ),
     loadInventoryIntelligence(restaurantId),
   ]);
@@ -80,7 +80,7 @@ export async function loadRestaurantIntelligence(
       .map((r) => r.recommendation);
   const elapsed = Math.max(
       0.05,
-      (now.getTime() - todayStart.getTime()) / 86400000,
+      (now.getTime() - new Date(todayWindow.rangeStart).getTime()) / 86400000,
     ),
     historicalDaily = history.summary.revenue / 7,
     forecast = today.summary.revenue / elapsed,

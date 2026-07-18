@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import {
   assignManagerCustomerWaiter,
@@ -51,18 +51,7 @@ export function ManagerCustomerExperiencePage({ restaurantId, restaurantName, ma
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`manager-customer-experience:${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "manager_customer_complaints", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "staff_activity_log", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [refresh, restaurantId]);
+  useTenantRealtime({ channelName: "manager-customer-experience", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "manager_customer_complaints", "staff_activity_log"], refresh });
 
   const selectedSession = snapshot?.sessions.find((session) => session.orderId === selectedOrderId) ?? snapshot?.sessions[0] ?? null;
   const selectedComplaints = snapshot?.complaints.filter((complaint) => complaint.orderId === selectedSession?.orderId) ?? [];

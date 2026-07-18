@@ -464,15 +464,13 @@ Deno.serve(async (request) => {
       if (role === "manager" && actingStaff.role !== "owner") {
         return jsonResponse(403, { error: "Only owners can create manager accounts." });
       }
-      const username = normalizeUsername(payload.username);
+      const username = role === "waiter" ? normalizeUsername(payload.username) : null;
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const pinPassword = role === "waiter" ? normalizePinPassword(payload.pinPassword) : null;
-      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : normalizeTemporaryPassword(payload.pinPassword);
-      const email = typeof payload.email === "string" && payload.email.trim()
-        ? normalizeEmail(payload.email)
-        : role === "waiter"
-          ? waiterAuthEmail(restaurantId, username)
-          : staffAuthEmail(restaurantId, username, role);
+      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : generateTemporaryPassword(fullName);
+      const email = role === "waiter"
+        ? waiterAuthEmail(restaurantId, username)
+        : normalizeEmail(payload.email);
       const assignedKitchenStationId = role === "kitchen"
         ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
         : null;

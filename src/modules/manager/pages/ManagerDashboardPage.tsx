@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   formatCurrency,
   type CurrencyConfig,
@@ -129,85 +129,7 @@ export function ManagerDashboardPage({
     void loadSnapshot();
   }, [loadSnapshot]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`manager-dashboard:${restaurantId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_items",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_invoices",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "restaurant_tables",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "restaurant_table_waiter_assignments",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "restaurant_staff",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cashier_shifts",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => void loadSnapshot(),
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [loadSnapshot, restaurantId]);
+  useTenantRealtime({ channelName: "manager-dashboard", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "cashier_shifts"], refresh: loadSnapshot });
 
   const notifications = snapshot?.notifications ?? [];
   const floorTables = snapshot?.floorTables ?? [];

@@ -8,7 +8,13 @@
     "build": "tsc -b && vite build",
     "audit:setup-wizard": "node supabase/setup-wizard-audit.cjs",
     "audit:owner-table-sync": "node supabase/owner-table-sync-audit.cjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:unit": "vitest run --reporter=default --reporter=json --outputFile.json=test-results/unit.json",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:regression": "node tests/run-regression.cjs",
+    "test:report": "node tests/report/generate-report.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
@@ -23,8 +29,10 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "vitest": "^4.1.10"
   }
 }

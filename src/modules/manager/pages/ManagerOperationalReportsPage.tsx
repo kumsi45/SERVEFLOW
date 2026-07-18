@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import {
   exportOperationalReportCsv,
   exportOperationalReportExcel,
   loadManagerOperationalReport,
+  loadRestaurantAnalyticsTimezone,
   managerReportDateRange,
   type ChartRow,
   type ManagerOperationalReport,
@@ -78,19 +79,13 @@ export function ManagerOperationalReportsPage({ restaurantId, restaurantName, ma
   const [customEnd, setCustomEnd] = useState(todayInput());
   const [report, setReport] = useState<ManagerOperationalReport | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const dateRange = useMemo(() => managerReportDateRange(range, customStart, customEnd), [range, customStart, customEnd]);
-  const refresh = useCallback(async () => { try { setReport(await loadManagerOperationalReport(restaurantId, dateRange.rangeStart, dateRange.rangeEnd)); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operational reports unavailable."); } }, [restaurantId, dateRange.rangeStart, dateRange.rangeEnd]);
+  const [timezone, setTimezone] = useState("Africa/Nairobi");
+  const dateRange = useMemo(() => managerReportDateRange(range, customStart, customEnd, timezone), [range, customStart, customEnd, timezone]);
+  useEffect(() => { void loadRestaurantAnalyticsTimezone(restaurantId).then(setTimezone).catch(() => undefined); }, [restaurantId]);
+  const refresh = useCallback(async () => { try { setReport(await loadManagerOperationalReport(restaurantId, dateRange.rangeStart, dateRange.rangeEnd, timezone)); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operational reports unavailable."); } }, [restaurantId, dateRange.rangeStart, dateRange.rangeEnd, timezone]);
 
   useEffect(() => { void refresh(); }, [refresh]);
-  useEffect(() => {
-    const channel = supabase.channel(`manager-operational-reports:${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh()).subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [refresh, restaurantId]);
+  useTenantRealtime({ channelName: "manager-operational-reports", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "restaurant_staff"], refresh });
 
   const peak = bestRow(report?.ordersPerHour ?? []);
   const busiestWaiter = [...(report?.waiterPerformance ?? [])].sort((a, b) => b.orders - a.orders)[0];

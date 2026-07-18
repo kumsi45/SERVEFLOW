@@ -1,0 +1,47 @@
+[
+  {
+    "id": "REG-001",
+    "summary": "The public waiter Supabase client reused the default auth storage key, allowing multiple GoTrue clients in one browser context to contend for the same session.",
+    "fix": "assigned the client the isolated serveflow-waiter-public-auth storage key"
+  },
+  {
+    "id": "REG-002",
+    "summary": "Five deployed PL/pgSQL paths failed static runtime validation because of ambiguous identifiers or an enum type mismatch.",
+    "fix": "stabilized name resolution, waiter assignment conflict handling, and kitchen activity enum writes in migrations 140-141"
+  },
+  {
+    "id": "REG-003",
+    "summary": "Customer feedback photos were globally readable from a public storage bucket.",
+    "fix": "made the bucket private and restricted object reads and persisted paths to the owning restaurant in migration 142"
+  },
+  {
+    "id": "REG-004",
+    "summary": "Staff authentication was stored per tab and could not survive browser restart or restore in a new tab.",
+    "fix": "superseded by REG-006 because durable shared storage broke concurrent dashboard isolation"
+  },
+  {
+    "id": "REG-005",
+    "summary": "Manager pages duplicated subscriptions and did not consistently reload after reconnect, browser wake, or network recovery.",
+    "fix": "migrated all Manager data surfaces to the shared tenant realtime recovery hook"
+  },
+  {
+    "id": "REG-006",
+    "summary": "One durable staff auth key allowed a login in any tab to replace Owner, Manager, Cashier, or Kitchen sessions in every other tab.",
+    "fix": "assigned every browser tab an isolated sessionStorage-backed Supabase auth namespace"
+  },
+  {
+    "id": "REG-007",
+    "summary": "Opening a QR session for Restaurant B deleted Restaurant A QR cart and checkout state from shared localStorage.",
+    "fix": "scoped active QR markers and cleanup to the current restaurant slug"
+  },
+  {
+    "id": "REG-008",
+    "summary": "Waiter offline order queues were shared by every restaurant.",
+    "fix": "scoped queue storage and synchronization to the authenticated waiter restaurant"
+  },
+  {
+    "id": "REG-009",
+    "summary": "Owner AI insights could crash in PostgreSQL formatting with too few arguments.",
+    "fix": "removed PostgreSQL format calls and deployed typed concatenation in migration 143"
+  }
+]

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../../../core/database";
+import { getRestaurantEventStream } from "../../../core/realtime/restaurantEventService";
 import { formatCurrency } from "../../../core/format/currency";
 import {
   playNotificationTone,
-  realtimeStateFromStatus,
   type RealtimeConnectionState,
 } from "../../../core/realtime/realtimeNotifications";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
@@ -426,7 +425,6 @@ export function KitchenDashboardPage({
   const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
   const [realtimeState, setRealtimeState] =
     useState<RealtimeConnectionState>("connecting");
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const contextRef = useRef<KitchenDashboardContext | null>(null);
   const selectedStationRef = useRef<"all" | string>("all");
   const skipNextStationLoadRef = useRef(true);
@@ -564,11 +562,6 @@ export function KitchenDashboardPage({
   useEffect(() => {
     if (!dashboardContext) return;
 
-    const includeAllStations =
-      dashboardContext.role === "owner" && selectedStationId === "all";
-    const itemFilter = includeAllStations
-      ? `restaurant_id=eq.${restaurantId}`
-      : `kitchen_station_id=eq.${selectedStationId}`;
     const refresh = () => {
       if (realtimeRefreshTimerRef.current !== null)
         window.clearTimeout(realtimeRefreshTimerRef.current);
@@ -577,72 +570,19 @@ export function KitchenDashboardPage({
         void refreshStationOrders(false, true);
       }, 120);
     };
-    const ch = supabase
-      .channel(`kitchen-${restaurantId}-${selectedStationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        refresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_items",
-          filter: itemFilter,
-        },
-        () => {
-          setRealtimeNotice("Kitchen queue updated.");
-          refresh();
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_invoices",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        refresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "dining_sessions",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        refresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "restaurant_tables",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        refresh,
-      )
-      .subscribe((status) => {
-        setRealtimeState(realtimeStateFromStatus(status));
-        if (status === "SUBSCRIBED" && kitchenRealtimeReadyRef.current)
-          refresh();
-      });
-    channelRef.current = ch;
+    const unsubscribe = getRestaurantEventStream(restaurantId).subscribe((event) => {
+      if (!["orders", "order_items", "restaurant_tables"].includes(event.table)) return;
+      if (event.table === "order_items") setRealtimeNotice("Kitchen queue updated.");
+      refresh();
+    }, (status) => {
+      setRealtimeState(status);
+      if (status === "connected" && kitchenRealtimeReadyRef.current) refresh();
+    });
     return () => {
       if (realtimeRefreshTimerRef.current !== null)
         window.clearTimeout(realtimeRefreshTimerRef.current);
       realtimeRefreshTimerRef.current = null;
-      void supabase.removeChannel(ch);
+      unsubscribe();
     };
   }, [dashboardContext, restaurantId, selectedStationId]);
 
@@ -655,6 +595,13 @@ export function KitchenDashboardPage({
         dashboardContext?.role === "owner" && selectedStationId !== "all"
           ? selectedStationId
           : null;
+    console.log("START PREPARING");
+       console.table({
+    orderId: order.id,
+    stationId: targetStationId,
+    batchKey: order.kitchenBatchKey,
+    status: order.status,
+   });
       const updated = await startOrderPreparation(
         order.id,
         targetStationId,
@@ -844,8 +791,8 @@ export function KitchenDashboardPage({
           </button>
           <button
             className="kd-icon-btn"
-            aria-label="Refresh"
-            onClick={() => window.location.reload()}
+            aria-label="Realtime reconnects automatically"
+            disabled
           >
             ↻
           </button>

@@ -37,6 +37,16 @@ export function canonicalPaymentMethod(
 export type DiningSessionStatus =
   "opened" | "dining" | "waiting_bill" | "paid" | "closed";
 
+export type CanonicalOrderLifecycle = {
+  operational: OperationalStatus;
+  payment: PaymentStatus;
+};
+
+export type CanonicalLifecycleSource = {
+  operational_status?: unknown;
+  payment_status?: unknown;
+};
+
 export const OPERATIONAL_STATUS_LABEL: Record<OperationalStatus, string> = {
   new: "New",
   accepted: "Accepted",
@@ -77,9 +87,56 @@ export function canonicalOperationalStatus(value: unknown): OperationalStatus {
   return "new";
 }
 
+/** The only supported UI mapper for an order lifecycle. */
+export function canonicalOrderLifecycle(
+  source: CanonicalLifecycleSource,
+): CanonicalOrderLifecycle {
+  return {
+    operational: canonicalOperationalStatus(source.operational_status),
+    payment: canonicalPaymentStatus(source.payment_status),
+  };
+}
+
+export function canonicalKitchenProgress(
+  itemStatuses: readonly unknown[],
+  fallbackOperationalStatus: unknown,
+): OperationalStatus {
+  const statuses = itemStatuses.map(canonicalOperationalStatus);
+  if (statuses.includes("preparing")) return "preparing";
+  if (statuses.length > 0 && statuses.every((status) => status === "ready" || status === "served" || status === "closed")) return "ready";
+  if (statuses.includes("ready")) return "preparing";
+  if (statuses.includes("accepted")) return "accepted";
+  return canonicalOperationalStatus(fallbackOperationalStatus);
+}
+
 export function paymentLabel(value: unknown) {
   return PAYMENT_STATUS_LABEL[canonicalPaymentStatus(value)];
 }
 export function operationalLabel(value: unknown) {
   return OPERATIONAL_STATUS_LABEL[canonicalOperationalStatus(value)];
+}
+
+export function customerTrackingStep(value: unknown) {
+  const status = canonicalOperationalStatus(value);
+  if (status === "served" || status === "closed") return 4;
+  if (status === "ready") return 3;
+  if (status === "preparing" || status === "accepted") return 2;
+  return 1;
+}
+
+export function customerTrackingMessage(value: unknown) {
+  const status = canonicalOperationalStatus(value);
+  if (status === "served" || status === "closed") return "Served. Enjoy your meal.";
+  if (status === "ready") return "Your order is ready.";
+  if (status === "preparing") return "The kitchen is preparing your order.";
+  if (status === "accepted") return "The kitchen accepted your order.";
+  return "Your order was received.";
+}
+
+export function customerTrackingEta(value: unknown) {
+  const status = canonicalOperationalStatus(value);
+  if (status === "served" || status === "closed") return "Served";
+  if (status === "ready") return "Ready now";
+  if (status === "preparing") return "Est. 8-12 min";
+  return "Est. 15 min";
 }

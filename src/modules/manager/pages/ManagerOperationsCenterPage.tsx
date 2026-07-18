@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import {
   fetchManagerDashboardSnapshot,
@@ -40,11 +40,12 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextDashboard, nextStaffOps] = await Promise.all([
+      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextInventoryItems] = await Promise.all([
         fetchManagerDashboardSnapshot(restaurantId),
         loadManagerStaffOperations(restaurantId),
+        loadInventoryRequests(restaurantId),
+        loadInventoryItems(restaurantId),
       ]);
-      const [nextInventoryRequests,nextInventoryItems]=await Promise.all([loadInventoryRequests(restaurantId),loadInventoryItems(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
       setInventoryRequests(nextInventoryRequests);setInventoryItems(nextInventoryItems);
@@ -58,20 +59,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`manager-operations-center:${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_tables", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_inventory_requests", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [refresh, restaurantId]);
+  useTenantRealtime({ channelName: "manager-operations-center", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests", "inventory_items"], refresh });
 
   const tables = dashboard?.floorTables ?? [];
   const waiters = useMemo(() => (staffOps?.staff ?? []).filter((member): member is ManagerStaffMember => member.role === "waiter" && member.active), [staffOps]);

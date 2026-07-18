@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { analyticsWindow, loadCanonicalHistoricalSummary } from "../../../core/analytics/historicalAnalytics";
 
 export type ManagerReportRange = "today" | "week" | "month" | "custom";
 
@@ -68,36 +69,16 @@ export function managerReportDateRange(
   range: ManagerReportRange,
   customStart: string,
   customEnd: string,
+  timezone = "Africa/Nairobi",
 ) {
-  const now = new Date();
-  const start = new Date(now);
-  const end = new Date(now);
-  if (range === "today") {
-    start.setHours(0, 0, 0, 0);
-    end.setDate(start.getDate() + 1);
-    end.setHours(0, 0, 0, 0);
-  } else if (range === "week") {
-    const day = start.getDay() || 7;
-    start.setDate(start.getDate() - day + 1);
-    start.setHours(0, 0, 0, 0);
-    end.setTime(start.getTime());
-    end.setDate(start.getDate() + 7);
-  } else if (range === "month") {
-    start.setDate(1);
-    start.setHours(0, 0, 0, 0);
-    end.setTime(start.getTime());
-    end.setMonth(start.getMonth() + 1);
-  } else {
-    const customStartDate = new Date(`${customStart}T00:00:00`);
-    const customEndDate = new Date(`${customEnd}T00:00:00`);
-    if (!Number.isNaN(customStartDate.getTime()))
-      start.setTime(customStartDate.getTime());
-    if (!Number.isNaN(customEndDate.getTime())) {
-      end.setTime(customEndDate.getTime());
-      end.setDate(end.getDate() + 1);
-    }
-  }
-  return { rangeStart: start.toISOString(), rangeEnd: end.toISOString() };
+  return analyticsWindow(range, timezone, customStart, customEnd);
+}
+
+export async function loadRestaurantAnalyticsTimezone(restaurantId: string) {
+  const { data, error } = await supabase.from("restaurants").select("profile").eq("id", restaurantId).single();
+  if (error) throw new Error(error.message);
+  const profile = data?.profile && typeof data.profile === "object" ? data.profile as Record<string, unknown> : {};
+  return typeof profile.timezone === "string" && profile.timezone ? profile.timezone : "Africa/Nairobi";
 }
 
 function chartRows(value: unknown): ChartRow[] {
@@ -165,8 +146,9 @@ export async function loadManagerOperationalReport(
   restaurantId: string,
   rangeStart: string,
   rangeEnd: string,
+  timezone = "Africa/Nairobi",
 ): Promise<ManagerOperationalReport> {
-  const [{ data, error }, invoiceResult, paidInvoiceResult] = await Promise.all(
+  const [{ data, error }, invoiceResult, paidInvoiceResult, canonical, servedItemsResult, closedSessionsResult, volumeOrdersResult] = await Promise.all(
     [
       supabase.rpc("get_manager_operational_report", {
         target_restaurant_id: restaurantId,
@@ -186,11 +168,18 @@ export async function loadManagerOperationalReport(
         .eq("payment_status", "paid")
         .gte("paid_at", rangeStart)
         .lt("paid_at", rangeEnd),
+      loadCanonicalHistoricalSummary(restaurantId, { rangeStart, rangeEnd }),
+      supabase.from("order_items").select("order_id,kitchen_station_id,kitchen_preparation_started_at,kitchen_completed_at,kitchen_stations(name)").eq("restaurant_id", restaurantId).gte("kitchen_completed_at", rangeStart).lt("kitchen_completed_at", rangeEnd),
+      supabase.from("orders").select("table_number,dining_session_opened_at,created_at,dining_session_closed_at").eq("restaurant_id", restaurantId).gte("dining_session_closed_at", rangeStart).lt("dining_session_closed_at", rangeEnd),
+      supabase.from("orders").select("created_at").eq("restaurant_id", restaurantId).gte("created_at", rangeStart).lt("created_at", rangeEnd),
     ],
   );
   if (error) throw new Error(error.message);
   if (invoiceResult.error) throw new Error(invoiceResult.error.message);
   if (paidInvoiceResult.error) throw new Error(paidInvoiceResult.error.message);
+  if (servedItemsResult.error) throw new Error(servedItemsResult.error.message);
+  if (closedSessionsResult.error) throw new Error(closedSessionsResult.error.message);
+  if (volumeOrdersResult.error) throw new Error(volumeOrdersResult.error.message);
   const invoices = invoiceResult.data ?? [];
   const paid = paidInvoiceResult.data ?? [];
   const collected = paid.reduce(
@@ -209,7 +198,7 @@ export async function loadManagerOperationalReport(
   const delays = paid.map((invoice) =>
     Math.max(
       0,
-      (new Date(invoice.paid_at ?? invoice.created_at).getTime() -
+      (new Date(invoice.paid_at as string).getTime() -
         new Date(invoice.created_at).getTime()) /
         60000,
     ),
@@ -221,20 +210,44 @@ export async function loadManagerOperationalReport(
     payload.summary && typeof payload.summary === "object"
       ? (payload.summary as Record<string, unknown>)
       : {};
+  const servedItems = servedItemsResult.data ?? [];
+  const stationGroups = new Map<string, { stationId: string; station: string; durations: number[] }>();
+  for (const item of servedItems) {
+    const stationId = String(item.kitchen_station_id ?? "unassigned");
+    const relation = Array.isArray(item.kitchen_stations) ? item.kitchen_stations[0] : item.kitchen_stations;
+    const group: { stationId: string; station: string; durations: number[] } = stationGroups.get(stationId) ?? { stationId, station: relation?.name ?? "Unassigned", durations: [] };
+    if (item.kitchen_preparation_started_at && item.kitchen_completed_at) group.durations.push(Math.max(0, (new Date(item.kitchen_completed_at).getTime() - new Date(item.kitchen_preparation_started_at).getTime()) / 60000));
+    stationGroups.set(stationId, group);
+  }
+  const canonicalKitchen = [...stationGroups.values()].map((group) => ({ staffId: group.stationId, stationId: group.stationId, station: group.station, tickets: group.durations.length, completed: group.durations.length, delayed: group.durations.filter((value) => value >= 25).length, averagePrepMinutes: group.durations.length ? group.durations.reduce((sum, value) => sum + value, 0) / group.durations.length : 0, efficiency: 100 }));
+  const sessionGroups = new Map<string, number[]>();
+  for (const session of closedSessionsResult.data ?? []) {
+    const table = String(session.table_number ?? "-");
+    const opened = session.dining_session_opened_at ?? session.created_at;
+    if (!opened || !session.dining_session_closed_at) continue;
+    const values = sessionGroups.get(table) ?? [];
+    values.push(Math.max(0, (new Date(session.dining_session_closed_at).getTime() - new Date(opened).getTime()) / 60000));
+    sessionGroups.set(table, values);
+  }
+  const canonicalTurnover = [...sessionGroups].map(([tableNumber, values]) => ({ tableNumber, sessions: values.length, averageStayMinutes: values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length) }));
+  const hourCounts = new Map<string, number>();
+  for (const order of volumeOrdersResult.data ?? []) {
+    const label = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", hourCycle: "h23" }).format(new Date(order.created_at)) + ":00";
+    hourCounts.set(label, (hourCounts.get(label) ?? 0) + 1);
+  }
+  const canonicalHours = [...hourCounts].map(([label, value]) => ({ label, value })).sort((a, b) => a.label.localeCompare(b.label));
   return {
     rangeStart: String(payload.range_start ?? rangeStart),
     rangeEnd: String(payload.range_end ?? rangeEnd),
     generatedAt: String(payload.generated_at ?? new Date().toISOString()),
     summary: {
-      orders: Number(summary.orders ?? 0),
-      revenue: collected,
+      orders: canonical.orderVolume,
+      revenue: canonical.revenue,
       averageTicket: Number(
         summary.average_ticket ?? summary.average_ticket_value ?? 0,
       ),
-      averagePreparationMinutes: Number(
-        summary.average_preparation_minutes ?? 0,
-      ),
-      tableTurnover: Number(summary.table_turnover ?? 0),
+      averagePreparationMinutes: servedItems.length ? canonicalKitchen.reduce((sum, row) => sum + row.averagePrepMinutes * row.completed, 0) / Math.max(1, canonicalKitchen.reduce((sum, row) => sum + row.completed, 0)) : 0,
+      tableTurnover: canonical.diningSessionsClosed,
       delayedOrders: Number(summary.delayed_orders ?? 0),
       cancelledOrders: Number(summary.cancelled_orders ?? 0),
       averageCustomerWaitMinutes: Number(
@@ -253,12 +266,12 @@ export async function loadManagerOperationalReport(
         ? (paid.length / invoices.length) * 100
         : 0,
     },
-    ordersPerHour: chartRows(payload.orders_per_hour),
-    peakHours: chartRows(payload.peak_hours),
-    tableTurnover: tableRows(payload.table_turnover),
+    ordersPerHour: canonicalHours,
+    peakHours: [...canonicalHours].sort((a, b) => b.value - a.value).slice(0, 8),
+    tableTurnover: canonicalTurnover,
     waiterPerformance: waiterRows(payload.waiter_performance),
-    kitchenEfficiency: kitchenRows(payload.kitchen_efficiency),
-    stationUtilization: chartRows(payload.station_utilization),
+    kitchenEfficiency: canonicalKitchen,
+    stationUtilization: canonicalKitchen.map((row) => ({ label: row.station, value: row.tickets, secondary: row.completed })),
     delayedOrders: chartRows(payload.delayed_orders),
     cancelledOrders: chartRows(payload.cancelled_orders),
     customerWaitTime: chartRows(payload.customer_wait_time),

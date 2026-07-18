@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { canonicalOrderLifecycle } from "../../../core/payment/lifecycle";
 import { logPublicQrContext } from "./publicQrContext";
 import type {
   PublicQrCartItem,
@@ -196,9 +197,14 @@ export async function fetchPublicQrOrderSession({
     });
     if (lifecycleError) throw new Error(lifecycleError.message);
     const canonical = lifecycle as { operational_status?: string; invoices?: Array<{ id: string; payment_status: string }> } | null;
-    if (canonical?.operational_status) session.status = canonical.operational_status;
+    if (canonical?.operational_status) {
+      session.status = canonicalOrderLifecycle({ operational_status: canonical.operational_status }).operational;
+    }
     const paymentById = new Map((canonical?.invoices ?? []).map((invoice) => [invoice.id, invoice.payment_status]));
-    session.invoices = session.invoices.map((invoice) => ({ ...invoice, status: paymentById.get(invoice.id) ?? invoice.status }));
+    session.invoices = session.invoices.map((invoice) => ({
+      ...invoice,
+      status: canonicalOrderLifecycle({ payment_status: paymentById.get(invoice.id) ?? invoice.status }).payment,
+    }));
   }
   logPublicQrContext("publicQrOrderService:sessionLookup:result", {
     restaurantSlug,
@@ -317,8 +323,7 @@ export async function uploadPublicOrderFeedbackPhoto({
 
   if (error) throw new Error(error.message);
 
-  const { data } = supabase.storage.from("feedback-photos").getPublicUrl(path);
-  return data.publicUrl;
+  return path;
 }
 
 export async function submitPublicOrderFeedback({

@@ -140,7 +140,7 @@ function normalizeOrder(
     ? row.status
     : row.status === "paid"
       ? "accepted"
-      : row.operational_status;
+      : "accepted";
   return {
     id: row.id,
     displayNumber: row.display_number ?? null,

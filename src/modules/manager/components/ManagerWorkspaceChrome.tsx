@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useState } from "react";
-import { supabase } from "../../../core/database";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { useRestaurantEvents } from "../../../core/realtime/useRestaurantEvents";
 import "../styles/managerWorkspaceChrome.css";
 
 type Props = {
@@ -8,11 +8,21 @@ type Props = {
   children: ReactNode;
 };
 
-export function ManagerWorkspaceChrome({ restaurantId, section, children }: Props) {
+export function ManagerWorkspaceChrome({
+  restaurantId,
+  section,
+  children,
+}: Props) {
   const [online, setOnline] = useState(() => navigator.onLine);
-  const [realtimeState, setRealtimeState] = useState<"connecting" | "connected" | "reconnecting">("connecting");
+  const [realtimeState, setRealtimeState] = useState<
+    "connecting" | "connected" | "reconnecting"
+  >("connecting");
   const [criticalCount, setCriticalCount] = useState(0);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => typeof Notification !== "undefined" && Notification.permission === "granted");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () =>
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted",
+  );
   const [connectionOpen, setConnectionOpen] = useState(false);
 
   useEffect(() => {
@@ -26,26 +36,22 @@ export function ManagerWorkspaceChrome({ restaurantId, section, children }: Prop
     };
   }, []);
 
-  useEffect(() => {
-    let changeCount = 0;
-    const notify = (message: string) => {
-      changeCount += 1;
+  const onRestaurantEvent = useCallback((event: { table: string }) => {
+    if (!["orders", "order_items", "manager_customer_complaints", "restaurant_staff"].includes(event.table)) return;
       setCriticalCount((count) => Math.min(99, count + 1));
-      if (notificationsEnabled && typeof Notification !== "undefined" && document.hidden) {
-        new Notification("ServeFlow Manager Alert", { body: message, tag: `serveflow-manager-${restaurantId}-${changeCount}` });
+      if (
+        notificationsEnabled &&
+        typeof Notification !== "undefined" &&
+        document.hidden
+      ) {
+        new Notification("ServeFlow Manager Alert", {
+          body: "Restaurant operations changed. Review live alerts.",
+          tag: `serveflow-manager-${restaurantId}`,
+        });
       }
-    };
-
-    const channel = supabase
-      .channel(`manager-workspace-chrome:${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => notify("Dining sessions changed. Review live alerts."))
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => notify("Kitchen queue changed."))
-      .on("postgres_changes", { event: "*", schema: "public", table: "manager_customer_complaints", filter: `restaurant_id=eq.${restaurantId}` }, () => notify("Customer complaint status changed."))
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => notify("Staff status changed."))
-      .subscribe((status) => setRealtimeState(status === "SUBSCRIBED" ? "connected" : status === "CHANNEL_ERROR" || status === "TIMED_OUT" ? "reconnecting" : "connecting"));
-
-    return () => { void supabase.removeChannel(channel); };
   }, [notificationsEnabled, restaurantId]);
+  const centralRealtimeState = useRestaurantEvents({ restaurantId, onEvent: onRestaurantEvent });
+  useEffect(() => setRealtimeState(centralRealtimeState), [centralRealtimeState]);
 
   async function enableNotifications() {
     if (typeof Notification === "undefined") return;
@@ -54,14 +60,41 @@ export function ManagerWorkspaceChrome({ restaurantId, section, children }: Prop
   }
 
   return (
-    <div className={`mwc-shell ${section === "dashboard" ? "mwc-shell-overview" : ""}`}>
-      <button className={`mwc-status-dot ${online ? realtimeState : "offline"}`} type="button" aria-label="Realtime status" onClick={() => setConnectionOpen((open) => !open)} />
-      {connectionOpen && <div className={`mwc-status ${online ? realtimeState : "offline"}`}>
-        <span>{online ? realtimeState === "connected" ? "Realtime connected" : "Realtime reconnecting" : "Offline mode"}</span>
-        <button type="button" onClick={() => window.location.reload()}>Reconnect</button>
-        {!notificationsEnabled && typeof Notification !== "undefined" && <button type="button" onClick={() => void enableNotifications()}>Enable notifications</button>}
-      </div>}
-      {criticalCount > 0 && <a className="mwc-critical" href="/manager/ai" onClick={() => setCriticalCount(0)}>{criticalCount} live update{criticalCount === 1 ? "" : "s"} need review</a>}
+    <div
+      className={`mwc-shell ${section === "dashboard" ? "mwc-shell-overview" : ""}`}
+    >
+      <button
+        className={`mwc-status-dot ${online ? realtimeState : "offline"}`}
+        type="button"
+        aria-label="Realtime status"
+        onClick={() => setConnectionOpen((open) => !open)}
+      />
+      {connectionOpen && (
+        <div className={`mwc-status ${online ? realtimeState : "offline"}`}>
+          <span>
+            {online
+              ? realtimeState === "connected"
+                ? "Realtime connected"
+                : "Realtime reconnecting"
+              : "Offline mode"}
+          </span>
+          {!notificationsEnabled && typeof Notification !== "undefined" && (
+            <button type="button" onClick={() => void enableNotifications()}>
+              Enable notifications
+            </button>
+          )}
+        </div>
+      )}
+      {criticalCount > 0 && (
+        <a
+          className="mwc-critical"
+          href="/manager/ai"
+          onClick={() => setCriticalCount(0)}
+        >
+          {criticalCount} live update{criticalCount === 1 ? "" : "s"} need
+          review
+        </a>
+      )}
       {children}
     </div>
   );

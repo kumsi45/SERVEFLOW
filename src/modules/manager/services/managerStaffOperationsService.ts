@@ -126,7 +126,7 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
     supabase.from("restaurant_tables").select("id,label,table_number").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
     supabase.from("restaurant_table_waiter_assignments").select("waiter_staff_id,table_id").eq("restaurant_id", restaurantId).eq("active", true),
     supabase.from("orders").select("id,status,created_by_waiter_id,payment_verified_by").eq("restaurant_id", restaurantId).eq("dining_session_status", "open"),
-    supabase.from("order_items").select("id,kitchen_status,kitchen_station_id").eq("restaurant_id", restaurantId).in("kitchen_status", ["paid", "preparing", "ready"]),
+    supabase.from("order_items").select("id,kitchen_status,kitchen_station_id").eq("restaurant_id", restaurantId).in("kitchen_status", ["accepted", "preparing", "ready"]),
     supabase.from("staff_activity_log").select("id,action,target_staff_id,target_staff_email,details,created_at").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(80),
   ]);
 

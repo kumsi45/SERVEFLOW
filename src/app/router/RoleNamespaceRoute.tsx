@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
-import { ProtectedCashierRoute } from "../../modules/staff-auth/pages/ProtectedCashierRoute";
-import { ProtectedKitchenRoute } from "../../modules/staff-auth/pages/ProtectedKitchenRoute";
-import { ProtectedManagerRoute } from "../../modules/staff-auth/pages/ProtectedManagerRoute";
-import { ProtectedOwnerRoute } from "../../modules/staff-auth/pages/ProtectedOwnerRoute";
-import { ProtectedInventoryRoute } from "../../modules/staff-auth/pages/ProtectedInventoryRoute";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { getCurrentStaffSession } from "../../modules/staff-auth/services/staffAuthService";
 import { getActiveWaiterSession } from "../../modules/waiter-auth/services/waiterAuthService";
-import { WaiterDashboardPage } from "../../modules/waiter-dashboard/pages/WaiterDashboardPage";
+
+const ProtectedCashierRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedCashierRoute").then((module) => ({ default: module.ProtectedCashierRoute })));
+const ProtectedKitchenRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedKitchenRoute").then((module) => ({ default: module.ProtectedKitchenRoute })));
+const ProtectedManagerRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedManagerRoute").then((module) => ({ default: module.ProtectedManagerRoute })));
+const ProtectedOwnerRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedOwnerRoute").then((module) => ({ default: module.ProtectedOwnerRoute })));
+const ProtectedInventoryRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedInventoryRoute").then((module) => ({ default: module.ProtectedInventoryRoute })));
+const WaiterDashboardPage = lazy(() => import("../../modules/waiter-dashboard/pages/WaiterDashboardPage").then((module) => ({ default: module.WaiterDashboardPage })));
 
 export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitchen" | "inventory" | "admin";
 
@@ -59,13 +60,15 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   }, [namespace]);
 
   if (state.status === "loading") return <main className="route-message"><p>Opening workspace…</p></main>;
-  if (state.status === "waiter") return <WaiterDashboardPage restaurantSlug={state.restaurantSlug} />;
+  if (state.status === "waiter") return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}><WaiterDashboardPage restaurantSlug={state.restaurantSlug} /></Suspense>;
   if (state.status === "authorized") {
-    if (state.role === "owner") return <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />;
-    if (state.role === "manager") return <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />;
-    if (state.role === "cashier") return <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />;
-    if (state.role === "inventory") return <ProtectedInventoryRoute restaurantId={state.restaurantId} />;
-    return <ProtectedKitchenRoute restaurantId={state.restaurantId} />;
+    return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}>
+      {state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
+        : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
+        : state.role === "cashier" ? <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />
+        : state.role === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} />
+        : <ProtectedKitchenRoute restaurantId={state.restaurantId} />}
+    </Suspense>;
   }
   return <main className="route-message"><p>This role workspace is not configured for this account.</p></main>;
 }

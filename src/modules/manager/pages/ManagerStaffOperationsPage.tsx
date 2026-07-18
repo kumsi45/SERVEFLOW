@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   activateManagerStaff,
   assignWaiterTables,
@@ -91,18 +91,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`manager-staff-operations:${restaurantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_stations", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "staff_activity_log", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [refresh, restaurantId]);
+  useTenantRealtime({ channelName: "manager-staff-operations", restaurantId, tables: ["restaurant_staff", "restaurant_table_waiter_assignments", "kitchen_stations", "orders", "order_items", "staff_activity_log"], refresh });
 
   const staff = snapshot?.staff ?? [];
   const selectedStaff = staff.find((member) => member.id === selectedStaffId) ?? staff[0] ?? null;

@@ -155,8 +155,8 @@ export async function loadWaiterSessionDetail(
                 (status) => status === "ready" || status === "completed",
               )
             ? "ready"
-            : statuses.includes("paid")
-              ? "paid"
+            : statuses.includes("accepted")
+              ? "accepted"
               : "pending_payment";
     return {
       id: String(invoice.id),

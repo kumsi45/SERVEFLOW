@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../../core/database";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import { logManagerAiDecision, type AiDecision, type ManagerAiOperationsSnapshot, type ManagerAiRecommendation } from "../services/managerAiOperationsService";
 import { loadRestaurantIntelligence, type RestaurantIntelligenceSnapshot } from "../services/managerRestaurantIntelligenceService";
@@ -41,17 +41,7 @@ export function ManagerAiOperationsPage({ restaurantId, restaurantName, managerN
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const refresh = useCallback(async () => { try { const next = await loadRestaurantIntelligence(restaurantId); setIntelligence(next); setSnapshot(next.operations); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operations Copilot unavailable."); } }, [restaurantId]);
   useEffect(() => { void refresh(); }, [refresh]);
-  useEffect(() => { const channel = supabase.channel(`manager-ai-operations:${restaurantId}`)
-    .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "order_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "order_invoices", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_stations", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_staff", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_table_waiter_assignments", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "manager_customer_complaints", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "kitchen_inventory_requests", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "manager_ai_recommendation_decisions", filter: `restaurant_id=eq.${restaurantId}` }, () => void refresh()).subscribe(); return () => { void supabase.removeChannel(channel); }; }, [refresh, restaurantId]);
+  useTenantRealtime({ channelName: "manager-ai-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "kitchen_stations", "restaurant_staff", "restaurant_table_waiter_assignments", "manager_customer_complaints", "kitchen_inventory_requests", "inventory_items", "manager_ai_recommendation_decisions"], refresh });
 
   const health = useMemo(() => new Map((snapshot?.health.breakdown ?? []).map((item) => [item.label, item])), [snapshot]);
   const problems = snapshot?.alerts.length ?? 0;

@@ -101,6 +101,14 @@ Risk reduced: attackers cannot self-assign roles, attach themselves to another r
 
 PHASE 1 SECURITY APPROVED
 
+## Phase 6 concurrent session isolation
+
+Staff authentication is deliberately tab-scoped. `src/core/database/supabaseClient.ts` generates a tab identifier in `sessionStorage` and uses it in the Supabase `storageKey`. Logging into Kitchen in one tab cannot write, remove, refresh, or broadcast the Owner, Manager, or Cashier token stored by another tab.
+
+Waiter auth uses a separate tab-scoped client and storage key. The public waiter discovery client never persists a session. All waiter authorization is rechecked against the restaurant-specific active membership after password authentication.
+
+Signing out uses Supabase's local scope and only removes the current tab's session. Cross-tenant protection remains enforced by RLS and tenant-validating RPCs even if a route or browser value is manipulated.
+
 ## Folder Mapping
 
 | Area | Future responsibility |
