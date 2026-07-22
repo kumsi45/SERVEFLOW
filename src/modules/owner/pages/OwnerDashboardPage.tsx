@@ -3578,14 +3578,13 @@ function StaffPage({
       return;
     }
 
-    if (formRole === "waiter") {
-      if (!formUsername.trim()) {
-        setStaffError("Enter a username for the waiter.");
+    if (modal.mode === "create") {
+      if (formRole === "waiter" && !/^\d{4}$/.test(formPin)) {
+        setStaffError("Enter a 4-digit waiter PIN.");
         return;
       }
-
-      if (modal.mode === "create" && !formPin.trim()) {
-        setStaffError("Enter a numeric PIN for the waiter.");
+      if (formRole !== "waiter" && (formPin.length < 4 || !formEmail.trim())) {
+        setStaffError("Enter a work email and password of at least 4 characters.");
         return;
       }
     }
@@ -3597,7 +3596,6 @@ function StaffPage({
             restaurantId,
             fullName: formName,
             email: formEmail,
-            username: formUsername,
             pinPassword: formPin,
             phoneNumber: formPhone,
             role: formRole,
@@ -3611,7 +3609,6 @@ function StaffPage({
           restaurantId,
           staffId: modal.member.id,
           fullName: formName,
-          username: formUsername,
           phoneNumber: formPhone,
           role: formRole,
           assignedKitchenStationId,
@@ -4057,8 +4054,7 @@ function StaffPage({
                       : "Staff Profile"}
                 </div>
                 <div className="od-card-subtitle">
-                  Manager, cashier, kitchen, and waiter accounts use the same
-                  secured staff creation flow.
+                  Owners can create managers and operational restaurant staff.
                 </div>
               </div>
               <button
@@ -4080,61 +4076,21 @@ function StaffPage({
                   required
                 />
               </label>
-              <label>
+              {formRole !== "waiter" && <label>
                 Email
                 <input
                   type="email"
                   value={formEmail}
                   onChange={(event) => setFormEmail(event.target.value)}
-                  disabled={
-                    modal.mode !== "create" ||
-                    formRole === "waiter" ||
-                    isWorking
-                  }
-                  required={formRole !== "waiter"}
-                  placeholder={
-                    formRole === "waiter" ? "Not needed for waiter login" : ""
-                  }
+                  disabled={modal.mode !== "create" || isWorking}
+                  placeholder="Required work email"
+                  required={modal.mode === "create"}
                 />
-              </label>
-              {formRole === "waiter" && (
-                <>
-                  <label>
-                    Username
-                    <input
-                      value={formUsername}
-                      onChange={(event) => setFormUsername(event.target.value)}
-                      disabled={modal.mode === "view" || isWorking}
-                      required
-                      autoComplete="off"
-                    />
-                  </label>
-                  {modal.mode === "create" && (
-                    <label>
-                      PIN / Password
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        value={formPin}
-                        onChange={(event) => setFormPin(event.target.value)}
-                        disabled={isWorking}
-                        required
-                        placeholder="4-12 digits"
-                      />
-                    </label>
-                  )}
-                  <label>
-                    Phone Number
-                    <input
-                      value={formPhone}
-                      onChange={(event) => setFormPhone(event.target.value)}
-                      disabled={modal.mode === "view" || isWorking}
-                      inputMode="tel"
-                    />
-                  </label>
-                </>
+              </label>}
+              {modal.mode === "create" && (
+                <label>{formRole === "waiter" ? "4-digit PIN" : "Password"}<input type="password" inputMode={formRole === "waiter" ? "numeric" : "text"} pattern={formRole === "waiter" ? "[0-9]{4}" : undefined} maxLength={formRole === "waiter" ? 4 : 64} value={formPin} onChange={(event) => setFormPin(formRole === "waiter" ? event.target.value.replace(/\D/g, "").slice(0, 4) : event.target.value)} disabled={isWorking} required /></label>
               )}
-              {formRole !== "waiter" && (
+              {(
                 <label>
                   Phone Number
                   <input
@@ -4187,8 +4143,8 @@ function StaffPage({
                 <div className="od-staff-detail-grid">
                   <span>Status</span>
                   <strong>{modal.member.active ? "Active" : "Inactive"}</strong>
-                  <span>Username</span>
-                  <strong>{modal.member.username || "-"}</strong>
+                  <span>Employee ID</span>
+                  <strong>{modal.member.employee_id || "-"}</strong>
                   <span>Phone</span>
                   <strong>{modal.member.phone_number || "-"}</strong>
                   <span>Created</span>

@@ -62,9 +62,9 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
   const [snapshot, setSnapshot] = useState<ManagerStaffOperationsSnapshot | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [filters, setFilters] = useState({ name: "", username: "", role: "all", status: "all", shift: "all", station: "all" });
+  const [filters, setFilters] = useState({ name: "", employeeId: "", role: "all", status: "all", shift: "all", station: "all" });
   const [wizardStep, setWizardStep] = useState(1);
-  const [form, setForm] = useState({ fullName: "", email: "", username: "", pinPassword: "", phoneNumber: "", role: "waiter" as ManagerStaffRole, assignedKitchenStationId: "", shift: "", section: "" });
+  const [form, setForm] = useState({ fullName: "", email: "", pinPassword: "", phoneNumber: "", role: "waiter" as ManagerStaffRole, assignedKitchenStationId: "", shift: "", section: "" });
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,12 +102,12 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
 
   const filteredStaff = useMemo(() => staff.filter((member) => {
     const matchesName = member.fullName.toLowerCase().includes(filters.name.toLowerCase());
-    const matchesUsername = (member.username || member.email || "").toLowerCase().includes(filters.username.toLowerCase());
+    const matchesEmployeeId = member.employeeId.toLowerCase().includes(filters.employeeId.toLowerCase());
     const matchesRole = filters.role === "all" || member.role === filters.role;
     const matchesStatus = filters.status === "all" || (filters.status === "active" ? member.active : !member.active);
     const matchesShift = filters.shift === "all" || member.shiftStatus === filters.shift;
     const matchesStation = filters.station === "all" || member.assignedKitchenStationId === filters.station;
-    return matchesName && matchesUsername && matchesRole && matchesStatus && matchesShift && matchesStation;
+    return matchesName && matchesEmployeeId && matchesRole && matchesStatus && matchesShift && matchesStation;
   }), [filters, staff]);
   const assignedTableIds = useMemo(() => new Set(staff.flatMap((member) => member.assignedTables.map((table) => table.id))), [staff]);
   const unassignedTables = (snapshot?.tables ?? []).filter((table) => !assignedTableIds.has(table.id));
@@ -143,7 +143,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
     }
     await runAction(() => createManagerStaff(restaurantId, {
       ...form,
-      email: form.role === "waiter" ? undefined : form.email,
+      email: form.email || undefined,
       assignedKitchenStationId: form.role === "kitchen" ? form.assignedKitchenStationId : null,
     }), "Staff account created.");
     setCreateOpen(false);
@@ -228,7 +228,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
 
       <section className="mso-toolbar">
         <input value={filters.name} onChange={(event) => setFilters({ ...filters, name: event.target.value })} placeholder="Filter by name" />
-        <input value={filters.username} onChange={(event) => setFilters({ ...filters, username: event.target.value })} placeholder="Username or email" />
+        <input value={filters.employeeId} onChange={(event) => setFilters({ ...filters, employeeId: event.target.value })} placeholder="Employee ID" />
         <select value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })}>
           <option value="all">All roles</option>
           {ROLE_OPTIONS.filter((role) => role.enabled).map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
@@ -273,7 +273,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
                 {filteredStaff.map((member) => (
                   <tr key={member.id} className={selectedStaff?.id === member.id ? "selected" : ""} onClick={() => setSelectedStaffId(member.id)}>
                     <td data-label="Select"><input type="checkbox" checked={selectedIds.includes(member.id)} onChange={(event) => setSelectedIds(event.target.checked ? [...selectedIds, member.id] : selectedIds.filter((id) => id !== member.id))} onClick={(event) => event.stopPropagation()} /></td>
-                    <td data-label="Staff"><div className="mso-person"><span>{member.avatarInitials}</span><div><strong>{member.fullName}</strong><small>{member.username || member.email || "No username"}</small></div></div></td>
+                    <td data-label="Staff"><div className="mso-person"><span>{member.avatarInitials}</span><div><strong>{member.fullName}</strong><small>{member.employeeId}</small></div></div></td>
                     <td data-label="Role">{roleLabel(member.role)}</td>
                     <td data-label="Shift"><b className={member.shiftStatus}>{member.shiftStatus === "on_shift" ? "On shift" : "Off shift"}</b><small>{fmtDate(member.clockIn)} / {fmtDate(member.clockOut)}</small></td>
                     <td data-label="Assignments">{member.role === "waiter" ? member.assignedTables.map((table) => table.label).join(", ") || "No tables" : member.assignedKitchenStationName || "No station"}</td>
@@ -379,7 +379,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
               <button type="button" onClick={() => void runAction(() => activateManagerStaff(restaurantId, selectedStaff.id), "Staff activated.")}>Activate</button>
               <button type="button" onClick={() => void runAction(() => deactivateManagerStaff(restaurantId, selectedStaff.id), "Staff deactivated.")}>Deactivate</button>
               <button type="button" onClick={() => void runAction(() => suspendManagerStaff(restaurantId, selectedStaff.id), "Staff suspended.")}>Suspend</button>
-              <button type="button" onClick={() => void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), "Password reset.")}>Reset password</button>
+              <button type="button" onClick={() => void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), selectedStaff.role === "waiter" ? "PIN reset." : "Temporary password generated.")}>{selectedStaff.role === "waiter" ? "Reset PIN" : "Reset password"}</button>
               <button type="button" onClick={() => void runAction(() => markManagerStaffBreak(restaurantId, selectedStaff.id), "Break started.")}>Mark break</button>
               <button type="button" onClick={() => void runAction(() => endManagerStaffBreak(restaurantId, selectedStaff.id), "Break ended.")}>End break</button>
               {selectedStaff.role === "waiter" && <button type="button" onClick={() => void assignSelectedTables(selectedStaff)}>Assign tables</button>}
@@ -425,27 +425,26 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
               <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => setForm({ ...form, role: "waiter" })}>Waiter</button>
               <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => setForm({ ...form, role: "cashier" })}>Cashier</button>
               <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => setForm({ ...form, role: "kitchen" })}>Kitchen</button>
-              <button type="button" className={form.role === "inventory" ? "selected" : ""} onClick={() => setForm({ ...form, role: "inventory" })}>Inventory</button>
             </div>}
 
             {wizardStep === 2 && <>
               <input required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} placeholder="Full name" />
-              <input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} placeholder="Username" />
-              <input required value={form.pinPassword} onChange={(event) => setForm({ ...form, pinPassword: event.target.value })} placeholder="Temporary password" />
-              {form.role !== "waiter" && <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Email invite" />}
+              <input required type="password" inputMode={form.role === "waiter" ? "numeric" : "text"} pattern={form.role === "waiter" ? "[0-9]{4}" : undefined} maxLength={form.role === "waiter" ? 4 : 64} value={form.pinPassword} onChange={(event) => setForm({ ...form, pinPassword: form.role === "waiter" ? event.target.value.replace(/\D/g, "").slice(0, 4) : event.target.value })} placeholder={form.role === "waiter" ? "4-digit PIN" : "Temporary password"} />
+              {form.role !== "waiter" && <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Work email" />}
               <input value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} placeholder="Phone number (optional)" />
             </>}
 
             {wizardStep === 3 && <>
               {form.role === "waiter" && <input value={form.section} onChange={(event) => setForm({ ...form, section: event.target.value })} placeholder="Assign section (optional)" />}
               {form.role === "kitchen" && <select required value={form.assignedKitchenStationId} onChange={(event) => setForm({ ...form, assignedKitchenStationId: event.target.value })}><option value="">Assign kitchen station</option>{(snapshot?.stations ?? []).map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}</select>}
-              {form.role === "cashier" && <input value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })} placeholder="Assign shift" />}
+              <input value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })} placeholder="Assign shift (optional)" />
             </>}
 
             {wizardStep === 4 && <div className="mso-review">
               <p><strong>Role</strong><span>{roleLabel(form.role)}</span></p>
               <p><strong>Full name</strong><span>{form.fullName || "Missing"}</span></p>
-              <p><strong>Username</strong><span>{form.username || "Missing"}</span></p>
+              <p><strong>Employee ID</strong><span>Generated automatically</span></p>
+              <p><strong>Login</strong><span>{form.role === "waiter" ? "Name and PIN" : `${form.email || "Missing email"} and password`}</span></p>
               <p><strong>Assignment</strong><span>{form.role === "kitchen" ? (snapshot?.stations.find((station) => station.id === form.assignedKitchenStationId)?.name || "No station") : form.role === "cashier" ? (form.shift || "No shift") : (form.section || "No section")}</span></p>
             </div>}
 

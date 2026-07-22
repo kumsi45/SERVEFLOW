@@ -25,6 +25,7 @@ type ManageStaffPayload = {
   username?: string;
   pinPassword?: string;
   phoneNumber?: string;
+  shift?: string;
   role?: StaffRole;
   assignedKitchenStationId?: string | null;
   tableIds?: string[];
@@ -149,13 +150,25 @@ function normalizeOptionalPhone(phone: unknown) {
 }
 
 function normalizePinPassword(value: unknown) {
-  const pin = requireString(value, "PIN / password");
+  const pin = requireString(value, "PIN");
 
-  if (!/^\d{4,12}$/.test(pin)) {
-    throw new Error("Waiter PIN must be 4-12 digits.");
+  if (!/^\d{4}$/.test(pin)) {
+    throw new Error("PIN must be exactly 4 digits.");
   }
 
   return pin;
+}
+
+function normalizeOptionalEmail(email: unknown) {
+  if (email === undefined || email === null || String(email).trim() === "") return null;
+  return normalizeEmail(email);
+}
+
+function normalizeOptionalShift(shift: unknown) {
+  if (shift === undefined || shift === null || String(shift).trim() === "") return null;
+  const value = String(shift).trim();
+  if (value.length > 40) throw new Error("Shift must be 40 characters or fewer.");
+  return value;
 }
 
 function waiterAuthEmail(restaurantId: string, username: string) {
@@ -166,6 +179,11 @@ function waiterAuthEmail(restaurantId: string, username: string) {
 function staffAuthEmail(restaurantId: string, username: string, role: StaffRole) {
   const restaurantPart = restaurantId.replace(/-/g, "");
   return `${username}.${restaurantPart}@${role}.serveflow.local`;
+}
+
+function employeeAuthEmail(restaurantId: string, employeeId: string, role: StaffRole) {
+  const restaurantPart = restaurantId.replace(/-/g, "");
+  return `${employeeId.toLowerCase()}.${restaurantPart}@${role}.serveflow.local`;
 }
 
 function generateWaiterPin() {
@@ -372,7 +390,7 @@ Deno.serve(async (request) => {
     async function loadTargetStaff(staffId: string) {
       const { data, error } = await serviceClient
         .from("restaurant_staff")
-        .select("id, restaurant_id, user_id, email, username, phone_number, display_name, role, active, assigned_kitchen_station_id, staff_session_active, waiter_session_active")
+        .select("id, restaurant_id, user_id, email, employee_id, contact_email, username, phone_number, shift_label, display_name, role, active, assigned_kitchen_station_id, staff_session_active, waiter_session_active")
         .eq("id", staffId)
         .limit(1)
         .maybeSingle();
@@ -454,23 +472,33 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception", "inventory"].includes(String(payload.role))) {
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen"].includes(String(payload.role))) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       const role = normalizeRole(payload.role);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen", "reception", "inventory"].includes(role)) {
+      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen"].includes(role)) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       if (role === "manager" && actingStaff.role !== "owner") {
         return jsonResponse(403, { error: "Only owners can create manager accounts." });
       }
-      const username = role === "waiter" ? normalizeUsername(payload.username) : null;
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
-      const pinPassword = role === "waiter" ? normalizePinPassword(payload.pinPassword) : null;
-      const temporaryPassword = role === "waiter" ? requireString(pinPassword, "PIN / password") : generateTemporaryPassword(fullName);
+      const contactEmail = role === "waiter" ? normalizeOptionalEmail(payload.email) : normalizeEmail(payload.email);
+      const shift = normalizeOptionalShift(payload.shift);
+      const temporaryPassword = role === "waiter"
+        ? normalizePinPassword(payload.pinPassword)
+        : normalizeTemporaryPassword(payload.pinPassword);
+      const { data: employeeId, error: employeeIdError } = await serviceClient.rpc(
+        "next_restaurant_employee_id",
+        { target_restaurant_id: restaurantId, target_role: role },
+      );
+      if (employeeIdError || typeof employeeId !== "string") {
+        throw new Error(employeeIdError?.message || "Could not generate an employee ID.");
+      }
+      const username = employeeId.toLowerCase();
       const email = role === "waiter"
-        ? waiterAuthEmail(restaurantId, username)
-        : normalizeEmail(payload.email);
+        ? employeeAuthEmail(restaurantId, employeeId, role)
+        : requireString(contactEmail, "Email");
       const assignedKitchenStationId = role === "kitchen"
         ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
         : null;
@@ -556,6 +584,9 @@ Deno.serve(async (request) => {
           display_name: fullName,
           email,
           username,
+          employee_id: employeeId,
+          contact_email: contactEmail,
+          shift_label: shift,
           phone_number: phoneNumber,
           assigned_kitchen_station_id: assignedKitchenStationId,
           active: true,
@@ -577,16 +608,17 @@ Deno.serve(async (request) => {
       await audit(role === "waiter" ? "waiter_created" : "staff_created", staffData.id, email, {
         target_staff_name: fullName,
         role,
-        username,
+        employee_id: employeeId,
         phone_number: phoneNumber,
         previous_values: null,
         new_values: {
           active: true,
           assigned_kitchen_station_id: assignedKitchenStationId,
-          email,
+          contact_email: contactEmail,
+          employee_id: employeeId,
           phone_number: phoneNumber,
           role,
-          username,
+          shift_label: shift,
         },
       });
       if (role === "kitchen" && assignedStation) {
@@ -609,7 +641,7 @@ Deno.serve(async (request) => {
 
       return jsonResponse(200, {
         staffId: staffData.id,
-        temporaryPassword,
+        employeeId,
       });
     }
 
@@ -678,6 +710,11 @@ Deno.serve(async (request) => {
         const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
         updates.phone_number = phoneNumber;
         details.phone_number = phoneNumber;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, "shift")) {
+        const shift = normalizeOptionalShift(payload.shift);
+        updates.shift_label = shift;
+        details.shift_label = shift;
       }
       if (nextRole !== "waiter") {
         updates.username = null;
@@ -893,7 +930,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === "generate-temporary-password") {
-      const temporaryPassword = targetStaff.role === "waiter" ? generateWaiterPin() : generateTemporaryPassword(targetStaff.display_name);
+      const temporaryPassword = targetStaff.role === "waiter"
+        ? generateWaiterPin()
+        : generateTemporaryPassword(targetStaff.display_name);
       const { error } = await serviceClient.auth.admin.updateUserById(targetStaff.user_id, {
         password: temporaryPassword,
       });
@@ -904,7 +943,9 @@ Deno.serve(async (request) => {
         target_staff_name: targetStaff.display_name,
         username: targetStaff.username ?? null,
         previous_values: null,
-        new_values: { temporary_password_generated: true, username: targetStaff.username ?? null },
+        new_values: targetStaff.role === "waiter"
+          ? { pin_reset: true, employee_id: targetStaff.employee_id ?? null }
+          : { temporary_password_generated: true, employee_id: targetStaff.employee_id ?? null },
       });
       return jsonResponse(200, { temporaryPassword });
     }

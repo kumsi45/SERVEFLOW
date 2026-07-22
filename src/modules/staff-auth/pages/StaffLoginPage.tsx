@@ -3,6 +3,9 @@ import {
   getStaffDestinations,
   redirectToStaffDestination,
   signInStaff,
+  loadOperationalStaffProfiles,
+  signInOperationalStaff,
+  type OperationalStaffProfile,
 } from "../services/staffAuthService";
 import type { StaffDestination } from "../types";
 import "../styles/staffLogin.css";
@@ -127,6 +130,12 @@ function DestinationPicker({ destinations }: { destinations: StaffDestination[] 
 
 // ─── Main login page ──────────────────────────────────────────────────────────
 export function StaffLoginPage() {
+  const [loginMode, setLoginMode] = useState<"terminal" | "owner">("owner");
+  const [restaurantIdentity, setRestaurantIdentity] = useState(() => localStorage.getItem("serveflow.staff-terminal.restaurant") ?? "");
+  const [operationalProfiles, setOperationalProfiles] = useState<OperationalStaffProfile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<OperationalStaffProfile | null>(null);
+  const [terminalPin, setTerminalPin] = useState("");
+  const [terminalLoading, setTerminalLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -154,12 +163,70 @@ export function StaffLoginPage() {
     }
   }
 
+  async function connectTerminal() {
+    try {
+      setTerminalLoading(true);
+      setError(null);
+      const profiles = await loadOperationalStaffProfiles(restaurantIdentity);
+      localStorage.setItem("serveflow.staff-terminal.restaurant", restaurantIdentity.trim());
+      setOperationalProfiles(profiles);
+      if (!profiles.length) setError("No active operational staff were found for this restaurant.");
+    } catch {
+      setError("Restaurant terminal was not found. Check the restaurant code.");
+    } finally {
+      setTerminalLoading(false);
+    }
+  }
+
+  async function submitOperationalPin() {
+    if (!selectedProfile || terminalPin.length !== 4) return;
+    try {
+      setTerminalLoading(true);
+      setError(null);
+      const staffSession = await signInOperationalStaff(restaurantIdentity, selectedProfile.employeeId, terminalPin);
+      const destination = getStaffDestinations(staffSession).find((item) => item.restaurant.role === selectedProfile.role);
+      if (!destination) throw new Error("No matching staff workspace was found.");
+      redirectToStaffDestination(destination);
+    } catch {
+      setError("Incorrect PIN. Please try again.");
+      setTerminalPin("");
+    } finally {
+      setTerminalLoading(false);
+    }
+  }
+
   if (destinations.length > 1) {
     return (
       <div className="sl-root">
         <LeftPanel />
         <DestinationPicker destinations={destinations} />
       </div>
+    );
+  }
+
+  if (loginMode === "terminal") {
+    return (
+      <main className="st-terminal">
+        <header className="st-terminal-header"><img src="/serveflowlogo.png" alt="ServeFlow" /><strong>Restaurant Staff Terminal</strong><button type="button" onClick={() => setLoginMode("owner")}>Owner or legacy sign in</button></header>
+        <section className="st-terminal-content">
+          {!operationalProfiles.length ? <>
+            <div className="st-terminal-title"><span>Shared staff terminal</span><h1>Connect to your restaurant</h1><p>Enter the restaurant code once. This tablet will remember it.</p></div>
+            {error && <div className="sl-error" role="alert">{error}</div>}
+            <div className="st-connect"><input value={restaurantIdentity} onChange={(event) => setRestaurantIdentity(event.target.value)} placeholder="Restaurant code" aria-label="Restaurant code" /><button type="button" onClick={() => void connectTerminal()} disabled={terminalLoading || !restaurantIdentity.trim()}>{terminalLoading ? "Connecting…" : "Connect terminal"}</button></div>
+          </> : !selectedProfile ? <>
+            <div className="st-terminal-title"><span>Restaurant terminal</span><h1>Select your name</h1><p>Employee ID distinguishes staff members who share the same name.</p></div>
+            {error && <div className="sl-error" role="alert">{error}</div>}
+            <div className="st-profile-grid">{operationalProfiles.map((profile) => <button type="button" key={profile.staffId} onClick={() => { setSelectedProfile(profile); setError(null); }}><b>{profile.displayName.slice(0, 1).toUpperCase()}</b><strong>{profile.displayName}</strong><span>{profile.role} · {profile.employeeId}</span><small>{profile.shift || "Active"}</small></button>)}</div>
+            <button className="st-change-restaurant" type="button" onClick={() => setOperationalProfiles([])}>Change restaurant</button>
+          </> : <>
+            <button className="st-back" type="button" onClick={() => { setSelectedProfile(null); setTerminalPin(""); setError(null); }}>← All staff</button>
+            <div className="st-terminal-title"><span>{selectedProfile.employeeId}</span><h1>Welcome, {selectedProfile.displayName}</h1><p>Enter your 4-digit PIN</p></div>
+            <div className="st-pin-dots">{[0,1,2,3].map((index) => <i key={index} className={terminalPin.length > index ? "filled" : ""} />)}</div>
+            {error && <div className="st-pin-error" role="alert">{error}</div>}
+            <div className="st-keypad">{[7,8,9,4,5,6,1,2,3].map((digit) => <button type="button" key={digit} onClick={() => setTerminalPin((pin) => `${pin}${digit}`.slice(0,4))}>{digit}</button>)}<button type="button" onClick={() => setTerminalPin((pin) => pin.slice(0,-1))}>⌫</button><button type="button" onClick={() => setTerminalPin((pin) => `${pin}0`.slice(0,4))}>0</button><button type="button" className="confirm" onClick={() => void submitOperationalPin()} disabled={terminalPin.length !== 4 || terminalLoading}>✓</button></div>
+          </>}
+        </section>
+      </main>
     );
   }
 

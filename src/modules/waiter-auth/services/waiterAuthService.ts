@@ -1,10 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
-import type { WaiterSession, WaiterTerminalContext } from "../types";
+import type { WaiterSession, WaiterTerminalContext, WaiterTerminalProfile } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WAITER_SESSION_KEY = "serveflow.waiter.session.v1";
+const WAITER_PROFILES_KEY = "serveflow.waiter.terminal-profiles.v1";
 const WAITER_TAB_ID_KEY = "serveflow.waiter-tab-id";
 const waiterTabId = sessionStorage.getItem(WAITER_TAB_ID_KEY) ?? createBrowserUuid();
 sessionStorage.setItem(WAITER_TAB_ID_KEY, waiterTabId);
@@ -62,6 +63,19 @@ type WaiterIdentityRow = WaiterContextRow & {
   display_name: string;
 };
 
+type RestaurantStaffIdentityRow = {
+  staff_id: string;
+  user_id: string;
+  auth_email: string | null;
+  employee_id: string;
+  display_name: string;
+  staff_role: string;
+  restaurant_id: string;
+  restaurant_slug: string;
+  restaurant_name: string;
+  logo_url: string | null;
+};
+
 function normalizeRestaurant(row: WaiterContextRow): WaiterTerminalContext {
   return {
     id: row.restaurant_id,
@@ -76,6 +90,74 @@ function normalizeRestaurant(row: WaiterContextRow): WaiterTerminalContext {
 
 function storeWaiterSession(session: WaiterSession) {
   sessionStorage.setItem(WAITER_SESSION_KEY, JSON.stringify(session));
+}
+
+function profileStorageKey(restaurantSlug: string) {
+  return `${WAITER_PROFILES_KEY}:${restaurantSlug}`;
+}
+
+export function getKnownWaiterProfiles(restaurantSlug: string): WaiterTerminalProfile[] {
+  try {
+    const value = localStorage.getItem(profileStorageKey(restaurantSlug));
+    const profiles = value ? (JSON.parse(value) as WaiterTerminalProfile[]) : [];
+    return Array.isArray(profiles)
+      ? profiles.filter((profile) => profile?.staffId && profile?.employeeId)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberWaiterProfile(restaurantSlug: string, profile: WaiterTerminalProfile) {
+  const profiles = getKnownWaiterProfiles(restaurantSlug).filter(
+    (knownProfile) => knownProfile.staffId !== profile.staffId
+  );
+  localStorage.setItem(
+    profileStorageKey(restaurantSlug),
+    JSON.stringify([profile, ...profiles].slice(0, 24))
+  );
+}
+
+export async function resolveWaiterTerminalProfile(
+  restaurantSlug: string,
+  employeeLookup: string
+): Promise<WaiterTerminalProfile> {
+  const lookup = employeeLookup.trim();
+  if (!lookup) {
+    throw new Error("Enter your name or employee ID.");
+  }
+
+  const { data, error } = await waiterPublicSupabase.rpc("resolve_restaurant_staff_identity", {
+    target_restaurant_slug: restaurantSlug,
+    target_employee_identity: lookup,
+    target_role: "waiter",
+  });
+  if (error) throw new Error(error.message);
+
+  const identity = Array.isArray(data) ? (data[0] as RestaurantStaffIdentityRow | undefined) : undefined;
+  if (!identity) {
+    throw new Error("No active waiter matched that name or employee ID.");
+  }
+
+  const profile: WaiterTerminalProfile = {
+    staffId: identity.staff_id,
+    employeeId: identity.employee_id,
+    displayName: identity.display_name,
+    role: "Waiter",
+    shift: null,
+  };
+  rememberWaiterProfile(restaurantSlug, profile);
+  return profile;
+}
+
+export async function loadWaiterTerminalProfiles(restaurantSlug: string): Promise<WaiterTerminalProfile[]> {
+  const { data, error } = await waiterPublicSupabase.rpc("get_restaurant_terminal_staff", {
+    target_restaurant_slug: restaurantSlug,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<{ staff_id: string; employee_id: string; display_name: string; staff_role: string; shift_label: string | null }>)
+    .filter((row) => row.staff_role === "waiter")
+    .map((row) => ({ staffId: row.staff_id, employeeId: row.employee_id, displayName: row.display_name, role: "Waiter", shift: row.shift_label }));
 }
 
 function parseWaiterSession(value: string | null): WaiterSession | null {
@@ -136,19 +218,20 @@ export async function loadWaiterTerminalContext(restaurantSlug: string) {
 
 export async function signInWaiter(
   restaurantSlug: string,
-  username: string,
+  employeeIdentity: string,
   password: string
 ): Promise<WaiterSession> {
-  const normalizedUsername = username.trim();
-  if (!normalizedUsername || !password) {
-    throw new Error("Enter your username and PIN or password.");
+  const normalizedIdentity = employeeIdentity.trim();
+  if (!normalizedIdentity || !password) {
+    throw new Error("Select your employee profile and enter your PIN.");
   }
 
   const { data: identityData, error: identityError } = await waiterPublicSupabase.rpc(
-    "resolve_waiter_login_identity",
+    "resolve_restaurant_staff_identity",
     {
       target_restaurant_slug: restaurantSlug,
-      waiter_username: normalizedUsername,
+      target_employee_identity: normalizedIdentity,
+      target_role: "waiter",
     }
   );
 
@@ -157,15 +240,15 @@ export async function signInWaiter(
   }
 
   const identity = Array.isArray(identityData)
-    ? (identityData[0] as WaiterIdentityRow | undefined)
+    ? (identityData[0] as RestaurantStaffIdentityRow | undefined)
     : null;
 
-  if (!identity?.email) {
+  if (!identity?.auth_email) {
     throw new Error("Only active waiters for this restaurant can log in here.");
   }
 
   const { data: authData, error: authError } = await waiterSupabase.auth.signInWithPassword({
-    email: identity.email,
+    email: identity.auth_email,
     password,
   });
 
@@ -206,13 +289,25 @@ export async function signInWaiter(
   const session: WaiterSession = {
     staffId: identity.staff_id,
     userId: identity.user_id,
-    username: normalizedUsername,
+    username: identity.employee_id,
     displayName: identity.display_name,
-    restaurant: normalizeRestaurant(identity),
+    restaurant: {
+      id: identity.restaurant_id,
+      slug: identity.restaurant_slug,
+      name: identity.restaurant_name,
+      logoUrl: identity.logo_url,
+    },
     signedInAt: new Date().toISOString(),
   };
 
   storeWaiterSession(session);
+  rememberWaiterProfile(identity.restaurant_slug, {
+    staffId: identity.staff_id,
+    employeeId: identity.employee_id,
+    displayName: identity.display_name,
+    role: "Waiter",
+    shift: null,
+  });
   return session;
 }
 

@@ -8,6 +8,7 @@ export type ManagedStaffMember = {
   display_name: string;
   email: string | null;
   username: string | null;
+  employee_id: string;
   phone_number: string | null;
   role: ManagedStaffRole;
   assigned_kitchen_station_id: string | null;
@@ -56,7 +57,6 @@ export type CreateStaffInput = {
   restaurantId: string;
   fullName: string;
   email?: string;
-  username?: string;
   pinPassword?: string;
   phoneNumber?: string;
   role: Exclude<ManagedStaffRole, "owner">;
@@ -67,7 +67,6 @@ export type UpdateStaffInput = {
   restaurantId: string;
   staffId: string;
   fullName?: string;
-  username?: string;
   phoneNumber?: string;
   role?: Exclude<ManagedStaffRole, "owner">;
   assignedKitchenStationId?: string | null;
@@ -119,7 +118,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 export async function loadManagedStaff(restaurantId: string) {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
+    .select("id,user_id,display_name,email,username,employee_id,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
     .eq("restaurant_id", restaurantId)
     .neq("role", "owner")
     .order("created_at", { ascending: true });
@@ -152,7 +151,6 @@ export async function createStaff(input: CreateStaffInput) {
     restaurantId: input.restaurantId,
     fullName: input.fullName,
     email: input.email,
-    username: input.username,
     pinPassword: input.pinPassword,
     phoneNumber: input.phoneNumber,
     role: input.role,
@@ -166,7 +164,6 @@ export async function updateStaff(input: UpdateStaffInput) {
     restaurantId: input.restaurantId,
     staffId: input.staffId,
     fullName: input.fullName,
-    username: input.username,
     phoneNumber: input.phoneNumber,
     role: input.role,
     assignedKitchenStationId: input.assignedKitchenStationId ?? null,

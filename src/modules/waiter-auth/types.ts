@@ -18,3 +18,11 @@ export type WaiterSession = {
 };
 
 export type WaiterTerminalContext = WaiterRestaurant;
+
+export type WaiterTerminalProfile = {
+  staffId: string;
+  employeeId: string;
+  displayName: string;
+  role: "Waiter";
+  shift: string | null;
+};

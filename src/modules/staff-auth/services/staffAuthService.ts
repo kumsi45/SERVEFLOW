@@ -8,6 +8,14 @@ type StaffRoleRow = {
   restaurants?: { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null } | { id?: string | null; name?: string | null; currency_code?: string | null; currency_symbol?: string | null; locale?: string | null }[] | null;
 };
 
+export type OperationalStaffProfile = {
+  staffId: string;
+  employeeId: string;
+  displayName: string;
+  role: "manager" | "cashier" | "kitchen";
+  shift: string | null;
+};
+
 function isStaffRole(value: unknown): value is StaffRole {
   return value === "owner" || value === "manager" || value === "cashier" || value === "kitchen" || value === "inventory";
 }
@@ -178,6 +186,34 @@ export async function signInStaff(email: string, password: string): Promise<Staf
   }
 
   return staffSession;
+}
+
+export async function loadOperationalStaffProfiles(restaurantIdentity: string): Promise<OperationalStaffProfile[]> {
+  const { data, error } = await supabase.rpc("get_restaurant_terminal_staff", {
+    target_restaurant_slug: restaurantIdentity.trim(),
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<{ staff_id: string; employee_id: string; display_name: string; staff_role: string; shift_label: string | null }>)
+    .filter((row) => row.staff_role === "manager" || row.staff_role === "cashier" || row.staff_role === "kitchen")
+    .map((row) => ({ staffId: row.staff_id, employeeId: row.employee_id, displayName: row.display_name, role: row.staff_role as OperationalStaffProfile["role"], shift: row.shift_label }));
+}
+
+export async function signInOperationalStaff(
+  restaurantIdentity: string,
+  employeeId: string,
+  pin: string,
+): Promise<StaffSession> {
+  const { data, error } = await supabase.rpc("resolve_restaurant_staff_identity", {
+    target_restaurant_slug: restaurantIdentity.trim(),
+    target_employee_identity: employeeId,
+    target_role: null,
+  });
+  if (error) throw new Error(error.message);
+  const identity = Array.isArray(data) ? data[0] as { auth_email?: string; staff_role?: string } | undefined : undefined;
+  if (!identity?.auth_email || !["manager", "cashier", "kitchen"].includes(identity.staff_role ?? "")) {
+    throw new Error("This employee is not active on this restaurant terminal.");
+  }
+  return signInStaff(identity.auth_email, pin);
 }
 
 export async function signOutStaff() {

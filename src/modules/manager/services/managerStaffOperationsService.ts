@@ -20,9 +20,10 @@ export type ManagerStaffMember = {
   userId: string;
   avatarInitials: string;
   fullName: string;
-  username: string | null;
+  employeeId: string;
   email: string | null;
   phoneNumber: string | null;
+  shift: string | null;
   role: ManagerStaffRole;
   shiftStatus: "on_shift" | "off_shift";
   clockIn: string | null;
@@ -57,6 +58,9 @@ type StaffRow = {
   id: string;
   user_id: string;
   display_name: string;
+  employee_id: string;
+  contact_email: string | null;
+  shift_label: string | null;
   email: string | null;
   username: string | null;
   phone_number: string | null;
@@ -121,7 +125,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 
 export async function loadManagerStaffOperations(restaurantId: string): Promise<ManagerStaffOperationsSnapshot> {
   const [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult] = await Promise.all([
-    supabase.from("restaurant_staff").select("id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,last_login_at,last_logout_at,staff_session_active,waiter_session_active").eq("restaurant_id", restaurantId).not("role", "in", "(owner,manager)").order("display_name", { ascending: true }),
+    supabase.from("restaurant_staff").select("id,user_id,display_name,employee_id,contact_email,phone_number,shift_label,role,assigned_kitchen_station_id,active,last_login_at,last_logout_at,staff_session_active,waiter_session_active").eq("restaurant_id", restaurantId).not("role", "in", "(owner,manager)").order("display_name", { ascending: true }),
     supabase.from("kitchen_stations").select("id,name,active").eq("restaurant_id", restaurantId).order("priority", { ascending: true }),
     supabase.from("restaurant_tables").select("id,label,table_number").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
     supabase.from("restaurant_table_waiter_assignments").select("waiter_staff_id,table_id").eq("restaurant_id", restaurantId).eq("active", true),
@@ -179,9 +183,10 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
           userId: member.user_id,
           avatarInitials: initials(member.display_name),
           fullName: member.display_name,
-          username: member.username,
-          email: member.email,
+          employeeId: member.employee_id,
+          email: member.contact_email,
           phoneNumber: member.phone_number,
+          shift: member.shift_label,
           role: member.role as ManagerStaffRole,
           shiftStatus: online ? "on_shift" : "off_shift",
           clockIn: member.last_login_at,
@@ -202,11 +207,11 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
   };
 }
 
-export function createManagerStaff(restaurantId: string, input: { fullName: string; email?: string; username?: string; pinPassword?: string; phoneNumber?: string; role: ManagerStaffRole; assignedKitchenStationId?: string | null }) {
+export function createManagerStaff(restaurantId: string, input: { fullName: string; email?: string; pinPassword: string; phoneNumber?: string; shift?: string; role: ManagerStaffRole; assignedKitchenStationId?: string | null }) {
   return invokeManageStaff({ action: "create-staff", restaurantId, ...input });
 }
 
-export function updateManagerStaff(restaurantId: string, staffId: string, input: Partial<{ fullName: string; username: string; phoneNumber: string; role: ManagerStaffRole; assignedKitchenStationId: string | null }>) {
+export function updateManagerStaff(restaurantId: string, staffId: string, input: Partial<{ fullName: string; phoneNumber: string; shift: string; role: ManagerStaffRole; assignedKitchenStationId: string | null }>) {
   return invokeManageStaff({ action: "update-staff", restaurantId, staffId, ...input });
 }
 

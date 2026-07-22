@@ -243,9 +243,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [metrics, setMetrics] = useState<Map<string, WaiterTableMetric>>(
     new Map(),
   );
-  const [switchMode, setSwitchMode] = useState<"switch" | "unlock" | null>(
-    null,
-  );
+  const [switchMode, setSwitchMode] = useState<"switch" | "unlock" | null>(null);
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [authWorking, setAuthWorking] = useState(false);
@@ -356,12 +354,14 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   }, []);
   useEffect(() => {
     const reset = () => {
-      if (switchMode === "unlock") return;
       if (idleTimer.current !== null) clearTimeout(idleTimer.current);
       idleTimer.current = window.setTimeout(() => {
-        setUsername(getStoredWaiterSession(restaurantSlug)?.username ?? "");
-        setPin("");
-        setSwitchMode("unlock");
+        void signOutWaiter().finally(() =>
+          navigateWaiter(
+            `/waiter/${encodeURIComponent(restaurantSlug)}?reason=expired`,
+            true,
+          ),
+        );
       }, IDLE_LOCK_MS);
     };
     for (const event of ["pointerdown", "keydown", "touchstart"] as const)
@@ -372,7 +372,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
         window.removeEventListener(event, reset);
       if (idleTimer.current !== null) clearTimeout(idleTimer.current);
     };
-  }, [restaurantSlug, switchMode]);
+  }, [restaurantSlug]);
   useEffect(() => {
     if (!sessionTable?.activeOrderId) {
       setSessionDetail(null);
@@ -475,23 +475,13 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     try {
       setAuthWorking(true);
       setAuthError(null);
-      const targetUsername =
-        switchMode === "unlock"
-          ? (getStoredWaiterSession(restaurantSlug)?.username ?? username)
-          : username;
-      const session =
-        switchMode === "switch"
-          ? await switchWaiter(restaurantSlug, targetUsername, pin)
-          : await signInWaiter(restaurantSlug, targetUsername, pin);
-      setSummary((old) =>
-        old
-          ? {
-              ...old,
-              waiterStaffId: session.staffId,
-              waiterDisplayName: session.displayName,
-            }
-          : old,
-      );
+      const targetUsername = switchMode === "unlock"
+        ? (getStoredWaiterSession(restaurantSlug)?.username ?? username)
+        : username;
+      const session = switchMode === "switch"
+        ? await switchWaiter(restaurantSlug, targetUsername, pin)
+        : await signInWaiter(restaurantSlug, targetUsername, pin);
+      setSummary((old) => old ? { ...old, waiterStaffId: session.staffId, waiterDisplayName: session.displayName } : old);
       setSwitchMode(null);
       setPin("");
       setUsername("");
