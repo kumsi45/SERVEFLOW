@@ -44,7 +44,11 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
         return;
       }
 
-      const roleMatch = session.restaurants.filter((restaurant) => restaurant.role === namespace);
+      const roleMatch = session.restaurants.filter((restaurant) =>
+        namespace === "inventory"
+          ? restaurant.role === "owner" || restaurant.role === "manager"
+          : restaurant.role === namespace,
+      );
       if (roleMatch.length === 0) {
         window.location.replace(dashboardPath(session.restaurants[0].role));
         return;
@@ -64,9 +68,9 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   if (state.status === "authorized") {
     return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}>
       {state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
+        : namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "cashier" ? <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />
-        : state.role === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} />
         : <ProtectedKitchenRoute restaurantId={state.restaurantId} />}
     </Suspense>;
   }

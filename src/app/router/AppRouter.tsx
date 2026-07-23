@@ -16,7 +16,7 @@ const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
   waiter: ["dashboard", "tables", "orders", "dining-sessions"],
   cashier: ["dashboard", "payments", "checkout", "bills"],
   kitchen: ["dashboard", "stations", "history"],
-  inventory: ["dashboard", "requests"],
+  inventory: ["dashboard", "items", "categories", "suppliers", "storage-locations", "units"],
   admin: ["dashboard", "restaurants", "subscriptions", "users"],
 };
 
