@@ -10,6 +10,7 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -48,6 +49,7 @@
 .ia-pagination button,
 .ia-quick-grid button,
 .ia-metrics button,
+.ia-operation-grid button,
 .ia-modal header button,
 .ia-form footer button,
 .ia-list-row {
@@ -115,7 +117,7 @@
 
 .ia-metrics {
   display: grid;
-  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
@@ -232,14 +234,36 @@
 
 .ia-split > div,
 .ia-table-wrap,
-.ia-record {
+.ia-record,
+.ia-panel {
   border: 1px solid #dfe4ec;
   border-radius: 8px;
   background: #fff;
 }
 
-.ia-split > div {
+.ia-split > div,
+.ia-panel {
   padding: 12px;
+}
+
+.ia-operation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.ia-operation-grid button {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  padding: 12px;
+  text-align: left;
+}
+
+.ia-operation-grid button span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .ia-section-title {
@@ -285,6 +309,11 @@
   font-size: 13px;
 }
 
+.ia-table.stock,
+.ia-table.ledger {
+  min-width: 980px;
+}
+
 .ia-table th,
 .ia-table td {
   padding: 10px;
@@ -326,9 +355,33 @@
   background: #fff3d6;
 }
 
+.ia-status.low_stock,
+.ia-status.out_of_stock {
+  color: #b42318;
+  background: #ffe8e5;
+}
+
+.ia-status.in_stock {
+  color: #067647;
+  background: #dcfae6;
+}
+
+.ia-status.over_stock {
+  color: #7a2e0e;
+  background: #ffead5;
+}
+
 .ia-status.deleted {
   color: #b42318;
   background: #ffe8e5;
+}
+
+.ia-positive {
+  color: #067647;
+}
+
+.ia-negative {
+  color: #b42318;
 }
 
 .ia-record-grid {
@@ -437,6 +490,10 @@
   padding: 14px;
 }
 
+.ia-form.operation {
+  padding: 12px 0 0;
+}
+
 .ia-form label {
   display: grid;
   gap: 6px;
@@ -448,6 +505,11 @@
 .ia-form .wide,
 .ia-form footer {
   grid-column: 1 / -1;
+}
+
+.ia-checkbox.inline {
+  align-self: end;
+  justify-content: start;
 }
 
 .ia-form footer {

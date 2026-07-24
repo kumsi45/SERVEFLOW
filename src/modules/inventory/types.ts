@@ -3,10 +3,35 @@ export type InventoryStatus = "active" | "archived" | "deleted";
 export type InventorySection =
   | "dashboard"
   | "items"
+  | "current-stock"
+  | "movements"
+  | "stock-in"
+  | "stock-out"
+  | "adjustments"
+  | "waste"
+  | "transfers"
+  | "ledger"
   | "categories"
   | "suppliers"
   | "storage-locations"
   | "units";
+
+export type InventoryMovementType =
+  | "opening_balance"
+  | "stock_in"
+  | "stock_out"
+  | "transfer_in"
+  | "transfer_out"
+  | "adjustment_increase"
+  | "adjustment_decrease"
+  | "waste"
+  | "spoilage"
+  | "manual_correction"
+  | "closing_balance";
+
+export type InventoryQuantityEffect = "in" | "out";
+
+export type InventoryStockStatus = "out_of_stock" | "low_stock" | "in_stock" | "over_stock";
 
 export type InventorySortKey =
   | "recent"
@@ -70,6 +95,50 @@ export type InventoryAdminData = {
   staffNames: Record<string, string>;
 };
 
+export type InventoryCurrentStockRow = {
+  inventoryItemId: string;
+  itemName: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  storageLocationId: string;
+  storageLocationName: string;
+  unitId: string;
+  unitName: string;
+  minimumStock: number;
+  maximumStock: number | null;
+  currentQuantity: number;
+  stockStatus: InventoryStockStatus;
+  lastMovementAt: string | null;
+};
+
+export type InventoryLedgerEntry = {
+  id: string;
+  inventoryItemId: string;
+  itemName: string;
+  storageLocationId: string;
+  storageLocationName: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  movementType: InventoryMovementType;
+  quantity: number;
+  quantityEffect: InventoryQuantityEffect;
+  signedQuantity: number;
+  unitName: string;
+  referenceNumber: string | null;
+  invoiceNumber: string | null;
+  reason: string | null;
+  notes: string | null;
+  transferGroupId: string | null;
+  movementDate: string;
+  createdByStaffId: string;
+  staffName: string | null;
+};
+
+export type InventoryOperationsData = InventoryAdminData & {
+  currentStock: InventoryCurrentStockRow[];
+  ledger: InventoryLedgerEntry[];
+};
+
 export type InventoryItemDraft = {
   id?: string;
   name: string;
@@ -115,4 +184,58 @@ export type InventoryFilters = {
   archived: "all" | "active" | "archived";
   recentlyAdded: boolean;
   sort: InventorySortKey;
+};
+
+export type StockMovementDraft = {
+  inventoryItemId: string;
+  storageLocationId: string;
+  movementType: InventoryMovementType;
+  quantity: string;
+  quantityEffect: InventoryQuantityEffect;
+  supplierId: string;
+  referenceNumber: string;
+  invoiceNumber: string;
+  reason: string;
+  notes: string;
+  movementDate: string;
+};
+
+export type InventoryAdjustmentDraft = {
+  inventoryItemId: string;
+  storageLocationId: string;
+  direction: "increase" | "decrease";
+  quantity: string;
+  reason: string;
+  notes: string;
+  movementDate: string;
+};
+
+export type InventoryWasteDraft = {
+  inventoryItemId: string;
+  storageLocationId: string;
+  quantity: string;
+  reason: string;
+  isSpoilage: boolean;
+  notes: string;
+  movementDate: string;
+};
+
+export type InventoryTransferDraft = {
+  inventoryItemId: string;
+  fromStorageLocationId: string;
+  toStorageLocationId: string;
+  quantity: string;
+  referenceNumber: string;
+  reason: string;
+  notes: string;
+  movementDate: string;
+};
+
+export type InventoryOpeningBalanceDraft = {
+  inventoryItemId: string;
+  storageLocationId: string;
+  quantity: string;
+  referenceNumber: string;
+  notes: string;
+  movementDate: string;
 };
