@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { canAccessInventory } from "../../core/permissions/inventoryAccess";
 import { getCurrentStaffSession } from "../../modules/staff-auth/services/staffAuthService";
 import { getActiveWaiterSession } from "../../modules/waiter-auth/services/waiterAuthService";
 
@@ -13,11 +14,12 @@ export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitche
 
 type State =
   | { status: "loading" }
-  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen" | "inventory"; restaurantId: string }
+  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen" | "inventory" | "inventory_officer"; restaurantId: string }
   | { status: "waiter"; restaurantSlug: string }
   | { status: "unavailable" };
 
 function dashboardPath(role: string) {
+  if (role === "inventory_officer") return "/inventory/dashboard";
   return role === "owner" || role === "cashier" || role === "kitchen" || role === "inventory" || role === "waiter" || role === "manager" || role === "admin"
     ? `/${role}/dashboard`
     : "/staff-login";
@@ -46,7 +48,7 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
 
       const roleMatch = session.restaurants.filter((restaurant) =>
         namespace === "inventory"
-          ? restaurant.role === "owner" || restaurant.role === "manager"
+          ? canAccessInventory(restaurant.role)
           : restaurant.role === namespace,
       );
       if (roleMatch.length === 0) {
@@ -67,8 +69,8 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   if (state.status === "waiter") return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}><WaiterDashboardPage restaurantSlug={state.restaurantSlug} /></Suspense>;
   if (state.status === "authorized") {
     return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}>
-      {state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
-        : namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
+      {namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
+        : state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "cashier" ? <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />
         : <ProtectedKitchenRoute restaurantId={state.restaurantId} />}

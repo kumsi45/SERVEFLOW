@@ -1,4 +1,4 @@
-export type StaffRole = "owner" | "manager" | "cashier" | "kitchen" | "inventory";
+export type StaffRole = "owner" | "manager" | "cashier" | "kitchen" | "inventory" | "inventory_officer";
 
 export type StaffRestaurant = {
   id: string;

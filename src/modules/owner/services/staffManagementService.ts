@@ -1,6 +1,6 @@
 import { supabase } from "../../../core/database";
 
-export type ManagedStaffRole = "owner" | "manager" | "cashier" | "kitchen" | "waiter";
+export type ManagedStaffRole = "owner" | "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer";
 
 export type ManagedStaffMember = {
   id: string;

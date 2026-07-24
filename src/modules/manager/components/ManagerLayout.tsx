@@ -3,6 +3,7 @@ import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import "../styles/managerLayout.css";
 
 type Props = {
+  restaurantId: string;
   restaurantName: string;
   managerName: string;
   section: string;
@@ -18,6 +19,7 @@ const MANAGER_NAV = [
   { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: "▥" },
   { key: "intelligence", label: "Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
   { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
+  { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: "IN" },
 ];
 
 const MOBILE_NAV = MANAGER_NAV.filter((item) => ["dashboard", "tables", "kitchen", "staff"].includes(item.key));
@@ -34,7 +36,7 @@ function formatTime(value: Date) {
   return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(value);
 }
 
-export function ManagerLayout({ restaurantName, managerName, section, children }: Props) {
+export function ManagerLayout({ restaurantId, restaurantName, managerName, section, children }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const activeSection = section === "cashier" || section === "tables" ? "tables" : section;
@@ -46,6 +48,9 @@ export function ManagerLayout({ restaurantName, managerName, section, children }
 
   function navigate(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
     event.preventDefault();
+    if (href.startsWith("/inventory/")) {
+      window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
+    }
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
     setSidebarOpen(false);

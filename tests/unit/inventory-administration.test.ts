@@ -75,16 +75,18 @@ describe("Phase 8.1 inventory administration contracts", () => {
     expect(page).not.toContain("../../kitchen");
 
     const route = read("src/modules/staff-auth/pages/ProtectedInventoryRoute.tsx");
-    expect(route).toContain('.in("role", ["owner", "manager"])');
+    expect(route).toContain('.in("role", ["owner", "manager", "inventory_officer"])');
     expect(route).not.toContain('.eq("role", "inventory")');
   });
 
   it("routes the complete inventory navigation surface", () => {
     const router = read("src/app/router/AppRouter.tsx");
     const roleRoute = read("src/app/router/RoleNamespaceRoute.tsx");
+    const inventoryAccess = read("src/core/permissions/inventoryAccess.ts");
     expect(router).toContain('inventory: ["dashboard", "items", "current-stock", "movements", "stock-in", "stock-out", "adjustments", "waste", "transfers", "ledger", "categories", "suppliers", "storage-locations", "units"]');
     expect(roleRoute).toContain('namespace === "inventory"');
-    expect(roleRoute).toContain('restaurant.role === "owner" || restaurant.role === "manager"');
+    expect(roleRoute).toContain("canAccessInventory(restaurant.role)");
+    expect(inventoryAccess).toContain('role === "owner" || role === "manager" || role === "inventory_officer"');
     expect(roleRoute).toContain('<ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />');
   });
 });

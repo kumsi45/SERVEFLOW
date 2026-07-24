@@ -90,6 +90,7 @@ function DestinationPicker({ destinations }: { destinations: StaffDestination[] 
     if (destination.dashboard === "owner") return "Owner Dashboard";
     if (destination.dashboard === "manager") return "Manager Dashboard";
     if (destination.dashboard === "cashier") return "Cashier Dashboard";
+    if (destination.dashboard === "inventory") return "Inventory Dashboard";
     return "Kitchen Dashboard";
   }
 

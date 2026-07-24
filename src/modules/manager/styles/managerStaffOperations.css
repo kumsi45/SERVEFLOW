@@ -477,6 +477,22 @@
   border-color: #dce3eb;
 }
 
+.mso-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.mso-role-badge.inventory_officer {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .mso-role-grid button.selected {
   color: #fff;
   background: #173f35;

@@ -129,6 +129,12 @@ function isOperationalStaff(member: Pick<OdStaff, "role">) {
   return member.role !== "owner";
 }
 
+function staffRoleLabel(role: string) {
+  if (role === "inventory_officer") return "Inventory Officer";
+  if (role === "inventory") return "Inventory Staff";
+  return role.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 type OdMenuItem = {
   id: string;
   name: string;
@@ -299,7 +305,9 @@ type NavId =
   | "reports"
   | "settings";
 
-const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
+type OwnerNavTarget = NavId | "inventory";
+
+const NAV_ITEMS: { id: OwnerNavTarget; icon: string; label: string }[] = [
   { id: "overview", icon: "OV", label: "Overview" },
   { id: "orders", icon: "OR", label: "Orders" },
   { id: "analytics", icon: "AN", label: "Revenue & Analytics" },
@@ -309,6 +317,7 @@ const NAV_ITEMS: { id: NavId; icon: string; label: string }[] = [
   { id: "qr", icon: "QR", label: "QR & Tables" },
   { id: "customers", icon: "CU", label: "Customers" },
   { id: "reports", icon: "RP", label: "Reports" },
+  { id: "inventory", icon: "IN", label: "Inventory" },
   { id: "settings", icon: "SE", label: "Settings" },
 ];
 
@@ -1503,8 +1512,18 @@ export function OwnerDashboardPage({
     dashboardReportsLoading,
   };
 
-  function handleMobileNavigate(nextNav: NavId) {
+  function handleDashboardNavigate(nextNav: OwnerNavTarget) {
+    if (nextNav === "inventory") {
+      window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
+      window.history.pushState({}, "", "/inventory/dashboard");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      return;
+    }
     setNav(nextNav);
+  }
+
+  function handleMobileNavigate(nextNav: OwnerNavTarget) {
+    handleDashboardNavigate(nextNav);
     setMobileMenuOpen(false);
   }
 
@@ -1595,7 +1614,7 @@ export function OwnerDashboardPage({
             <button
               key={item.id}
               className={`od-nav-item${nav === item.id ? " active" : ""}`}
-              onClick={() => setNav(item.id)}
+              onClick={() => handleDashboardNavigate(item.id)}
             >
               <span className="od-nav-icon">{item.icon}</span>
               {item.label}
@@ -3403,7 +3422,7 @@ function StaffPage({
 }: StaffPageProps) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "manager" | "cashier" | "kitchen" | "waiter"
+    "all" | "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer"
   >("all");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
@@ -3415,7 +3434,7 @@ function StaffPage({
   const [formPin, setFormPin] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formRole, setFormRole] = useState<
-    "manager" | "cashier" | "kitchen" | "waiter"
+    "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer"
   >("cashier");
   const [formStationId, setFormStationId] = useState("");
   const [activity, setActivity] = useState<StaffActivityLog[]>([]);
@@ -3528,6 +3547,10 @@ function StaffPage({
           ? "kitchen"
           : member.role === "waiter"
             ? "waiter"
+            : member.role === "inventory_officer"
+              ? "inventory_officer"
+              : member.role === "inventory"
+                ? "inventory"
             : "cashier",
     );
     setFormStationId(
@@ -3684,6 +3707,9 @@ function StaffPage({
   const waiterCount = operationalStaff.filter(
     (member) => member.role === "waiter",
   ).length;
+  const inventoryOfficerCount = operationalStaff.filter(
+    (member) => member.role === "inventory_officer",
+  ).length;
 
   return (
     <div className="od-page">
@@ -3729,6 +3755,7 @@ function StaffPage({
           ["Cashiers", cashierCount, "POS access"],
           ["Kitchen Staff", kitchenCount, "KDS access"],
           ["Waiters", waiterCount, "Shared terminal access"],
+          ["Inventory Officers", inventoryOfficerCount, "Inventory access"],
           [
             "Average Shift Length",
             averageShiftMinutes
@@ -3774,6 +3801,8 @@ function StaffPage({
                 <option value="cashier">Cashier</option>
                 <option value="kitchen">Kitchen</option>
                 <option value="waiter">Waiter</option>
+                <option value="inventory_officer">Inventory Officer</option>
+                <option value="inventory">Inventory Staff (Legacy)</option>
               </select>
               <select
                 value={statusFilter}
@@ -3843,7 +3872,7 @@ function StaffPage({
                         </td>
                         <td>
                           <span className={`od-role-badge ${member.role}`}>
-                            {member.role}
+                            {staffRoleLabel(member.role)}
                           </span>
                         </td>
                         <td>
@@ -4109,7 +4138,7 @@ function StaffPage({
                   onChange={(event) =>
                     setFormRole(
                       event.target.value as
-                        "manager" | "cashier" | "kitchen" | "waiter",
+                        "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer",
                     )
                   }
                   disabled={modal.mode === "view" || isWorking}
@@ -4118,6 +4147,8 @@ function StaffPage({
                   <option value="cashier">Cashier</option>
                   <option value="kitchen">Kitchen</option>
                   <option value="waiter">Waiter</option>
+                  <option value="inventory_officer">Inventory Officer</option>
+                  <option value="inventory" disabled>Inventory Staff (Legacy)</option>
                 </select>
               </label>
               {formRole === "kitchen" && (

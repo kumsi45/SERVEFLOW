@@ -17,7 +17,7 @@ export type OperationalStaffProfile = {
 };
 
 function isStaffRole(value: unknown): value is StaffRole {
-  return value === "owner" || value === "manager" || value === "cashier" || value === "kitchen" || value === "inventory";
+  return value === "owner" || value === "manager" || value === "cashier" || value === "kitchen" || value === "inventory" || value === "inventory_officer";
 }
 
 function getRestaurant(
@@ -111,7 +111,7 @@ async function getStaffSessionForUser(userId: string): Promise<StaffSession | nu
     .select("role,active,restaurant_id,restaurants(id,name,currency_code,currency_symbol,locale)")
     .eq("user_id", userId)
     .eq("active", true)
-    .in("role", ["owner", "manager", "cashier", "kitchen", "inventory"]);
+    .in("role", ["owner", "manager", "cashier", "kitchen", "inventory", "inventory_officer"]);
 
   if (error) {
     throw new Error(error.message);
@@ -262,7 +262,9 @@ export function getStaffDestinations(staffSession: StaffSession): StaffDestinati
         restaurant,
       });
     }
-    if (restaurant.role === "inventory") destinations.push({ dashboard: "inventory", restaurant });
+    if (restaurant.role === "inventory" || restaurant.role === "inventory_officer") {
+      destinations.push({ dashboard: "inventory", restaurant });
+    }
   }
 
   return destinations;

@@ -49,7 +49,7 @@ type Props = {
   restaurantId: string;
   restaurantName: string;
   staffName: string;
-  staffRole: "owner" | "manager";
+  staffRole: "owner" | "manager" | "inventory_officer";
   initialSection?: string;
 };
 
@@ -988,7 +988,7 @@ export function InventoryDashboardPage({
         </nav>
         <div className="ia-user">
           <strong>{staffName}</strong>
-          <span>{staffRole === "owner" ? "Owner" : "Manager"}</span>
+          <span>{staffRole === "owner" ? "Owner" : staffRole === "manager" ? "Manager" : "Inventory Officer"}</span>
           <button type="button" onClick={() => void logout()}>Logout</button>
         </div>
       </aside>

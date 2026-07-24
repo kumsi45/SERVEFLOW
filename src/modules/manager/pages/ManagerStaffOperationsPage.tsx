@@ -39,7 +39,8 @@ const ROLE_OPTIONS: Array<{ value: ManagerDirectoryRole; label: string; enabled:
   { value: "waiter", label: "Waiters", enabled: true },
   { value: "cashier", label: "Cashiers", enabled: true },
   { value: "kitchen", label: "Kitchen Staff", enabled: true },
-  { value: "inventory", label: "Inventory Staff", enabled: true },
+  { value: "inventory_officer", label: "Inventory Officers", enabled: true },
+  { value: "inventory", label: "Inventory Staff (Legacy)", enabled: true },
   { value: "supervisor", label: "Supervisors", enabled: false },
   { value: "reception", label: "Reception", enabled: false },
 ];
@@ -274,7 +275,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
                   <tr key={member.id} className={selectedStaff?.id === member.id ? "selected" : ""} onClick={() => setSelectedStaffId(member.id)}>
                     <td data-label="Select"><input type="checkbox" checked={selectedIds.includes(member.id)} onChange={(event) => setSelectedIds(event.target.checked ? [...selectedIds, member.id] : selectedIds.filter((id) => id !== member.id))} onClick={(event) => event.stopPropagation()} /></td>
                     <td data-label="Staff"><div className="mso-person"><span>{member.avatarInitials}</span><div><strong>{member.fullName}</strong><small>{member.employeeId}</small></div></div></td>
-                    <td data-label="Role">{roleLabel(member.role)}</td>
+                    <td data-label="Role"><span className={`mso-role-badge ${member.role}`}>{roleLabel(member.role)}</span></td>
                     <td data-label="Shift"><b className={member.shiftStatus}>{member.shiftStatus === "on_shift" ? "On shift" : "Off shift"}</b><small>{fmtDate(member.clockIn)} / {fmtDate(member.clockOut)}</small></td>
                     <td data-label="Assignments">{member.role === "waiter" ? member.assignedTables.map((table) => table.label).join(", ") || "No tables" : member.assignedKitchenStationName || "No station"}</td>
                     <td data-label="Workload">{member.currentWorkload} current - {member.activeOrders} orders</td>
@@ -425,6 +426,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName, manag
               <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => setForm({ ...form, role: "waiter" })}>Waiter</button>
               <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => setForm({ ...form, role: "cashier" })}>Cashier</button>
               <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => setForm({ ...form, role: "kitchen" })}>Kitchen</button>
+              <button type="button" className={form.role === "inventory_officer" ? "selected" : ""} onClick={() => setForm({ ...form, role: "inventory_officer" })}>Inventory Officer</button>
             </div>}
 
             {wizardStep === 2 && <>

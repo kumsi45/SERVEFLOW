@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../core/database";
+import { canAccessInventory, type InventoryAccessRole } from "../../../core/permissions/inventoryAccess";
 import { InventoryDashboardPage } from "../../inventory/pages/InventoryDashboardPage";
 import { useStaffAuthSession } from "../hooks/useStaffAuthSession";
 
@@ -11,7 +12,7 @@ type Props = {
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
-  | { status: "authorized"; restaurantName: string; staffName: string; staffRole: "owner" | "manager" };
+  | { status: "authorized"; restaurantName: string; staffName: string; staffRole: InventoryAccessRole };
 
 export function ProtectedInventoryRoute({ restaurantId, section = "dashboard" }: Props) {
   const auth = useStaffAuthSession();
@@ -32,13 +33,13 @@ export function ProtectedInventoryRoute({ restaurantId, section = "dashboard" }:
       .eq("user_id", auth.userId!)
       .eq("restaurant_id", restaurantId)
       .eq("active", true)
-      .in("role", ["owner", "manager"])
+      .in("role", ["owner", "manager", "inventory_officer"])
       .limit(1)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!mounted) return;
         const restaurant = Array.isArray(data?.restaurants) ? data.restaurants[0] : data?.restaurants;
-        const role = data?.role === "owner" || data?.role === "manager" ? data.role : null;
+        const role = canAccessInventory(data?.role) ? data.role : null;
         if (error || !data || !role || !restaurant?.name) {
           setAccess({ status: "unauthorized", reason: "access" });
           return;
@@ -46,7 +47,7 @@ export function ProtectedInventoryRoute({ restaurantId, section = "dashboard" }:
         setAccess({
           status: "authorized",
           restaurantName: restaurant.name,
-          staffName: data.display_name || data.email || (role === "owner" ? "Owner" : "Manager"),
+          staffName: data.display_name || data.email || (role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Inventory Officer"),
           staffRole: role,
         });
       }, () => {
@@ -66,7 +67,7 @@ export function ProtectedInventoryRoute({ restaurantId, section = "dashboard" }:
       window.location.replace("/staff-login");
       return null;
     }
-    return <main className="route-message"><p>Inventory administration is available to owners and managers only.</p></main>;
+    return <main className="route-message"><p>Inventory administration is available to owners, managers, and inventory officers only.</p></main>;
   }
 
   return (

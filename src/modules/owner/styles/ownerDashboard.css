@@ -2088,4 +2088,4 @@
     box-shadow: none;
   }
 }
-.od-role-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:11px;font-weight:900;text-transform:capitalize}.od-role-badge.manager{background:#ede9fe;color:#6d28d9}.od-role-badge.cashier{background:#dbeafe;color:#1d4ed8}.od-role-badge.kitchen{background:#ffedd5;color:#c2410c}.od-role-badge.waiter{background:#dcfce7;color:#166534}
+.od-role-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:11px;font-weight:900;text-transform:capitalize}.od-role-badge.manager{background:#ede9fe;color:#6d28d9}.od-role-badge.cashier{background:#dbeafe;color:#1d4ed8}.od-role-badge.kitchen{background:#ffedd5;color:#c2410c}.od-role-badge.waiter{background:#dcfce7;color:#166534}.od-role-badge.inventory_officer{background:#ccfbf1;color:#0f766e}

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const roles = ["waiter", "cashier", "kitchen", "manager", "owner", "inventory", "reports", "ai"] as const;
+const roles = ["waiter", "cashier", "kitchen", "manager", "owner", "inventory", "inventory_officer", "reports", "ai"] as const;
 
 for (const role of roles) {
   test(`${role} workflow route is guarded and renderable`, async ({ page }, testInfo) => {

@@ -1,6 +1,6 @@
 import { supabase } from "../../../core/database";
 
-export type ManagerStaffRole = "cashier" | "kitchen" | "waiter" | "reception" | "inventory";
+export type ManagerStaffRole = "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 export type ManagerDirectoryRole = ManagerStaffRole | "supervisor";
 
 export type ManagerKitchenStation = {

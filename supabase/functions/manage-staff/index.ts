@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception" | "inventory";
+type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 type StaffAction =
   | "create-staff"
   | "update-staff"
@@ -47,6 +47,8 @@ const STAFF_ACTIONS: StaffAction[] = [
   "generate-temporary-password",
   "delete-staff",
 ];
+
+const MANAGER_CREATABLE_ROLES: StaffRole[] = ["waiter", "cashier", "kitchen", "inventory_officer"];
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -95,7 +97,7 @@ function normalizeAction(action: unknown): StaffAction {
 }
 
 function normalizeRole(role: unknown): StaffRole {
-  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "reception" || role === "inventory") {
+  if (role === "manager" || role === "cashier" || role === "kitchen" || role === "waiter" || role === "reception" || role === "inventory" || role === "inventory_officer") {
     return role;
   }
 
@@ -103,7 +105,7 @@ function normalizeRole(role: unknown): StaffRole {
     throw new Error("Managers cannot create owner or super admin accounts.");
   }
 
-  throw new Error("Role must be waiter, cashier, kitchen, reception, or manager.");
+  throw new Error("Role must be manager, cashier, waiter, kitchen, reception, inventory, or inventory officer.");
 }
 
 function normalizeEmail(email: unknown) {
@@ -472,11 +474,11 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen"].includes(String(payload.role))) {
+      if (actingStaff.role === "manager" && !MANAGER_CREATABLE_ROLES.includes(payload.role as StaffRole)) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       const role = normalizeRole(payload.role);
-      if (actingStaff.role === "manager" && !["waiter", "cashier", "kitchen"].includes(role)) {
+      if (actingStaff.role === "manager" && !MANAGER_CREATABLE_ROLES.includes(role)) {
         return jsonResponse(403, { error: "Permission denied." });
       }
       if (role === "manager" && actingStaff.role !== "owner") {
@@ -673,6 +675,9 @@ Deno.serve(async (request) => {
         username: targetStaff.username ?? null,
       };
       const nextRole = payload.role ? normalizeRole(payload.role) : previousRole;
+      if (actingStaff.role === "manager" && payload.role && !MANAGER_CREATABLE_ROLES.includes(nextRole)) {
+        return jsonResponse(403, { error: "Permission denied." });
+      }
       if ((previousRole === "manager" || nextRole === "manager") && actingStaff.role !== "owner") {
         return jsonResponse(403, { error: "Permission denied." });
       }

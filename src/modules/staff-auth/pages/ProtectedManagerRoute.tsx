@@ -75,7 +75,7 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>
-      <ManagerLayout restaurantName={access.restaurantName} managerName={access.managerName} section={section}>
+      <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section}>
         <Suspense fallback={<main className="route-message"><p>Loading manager module...</p></main>}>
           {page}
         </Suspense>
