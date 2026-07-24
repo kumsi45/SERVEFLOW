@@ -924,6 +924,32 @@ function buildDiningSessionSummaries(sessionOrders: CashierOrder[]) {
   );
 }
 
+function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
+  const dueBatches = session.batches.filter(isUnpaidPayment);
+  const first = dueBatches[0] ?? session.batches[0];
+  if (!first) throw new Error("Dining session has no order batches.");
+  return {
+    ...first,
+    id: session.diningSessionId,
+    displayNumber: session.diningSessionDisplayNumber,
+    invoiceId: null,
+    invoiceDisplayNumber: "Running Bill",
+    invoiceNumber: null,
+    invoiceStatus: dueBatches.some((batch) => batch.invoiceStatus === "held")
+      ? "held"
+      : "pending",
+    diningSessionId: session.diningSessionId,
+    diningSessionStatus: session.diningSessionStatus,
+    totalPrice: dueBatches.reduce((sum, batch) => sum + batch.totalPrice, 0),
+    paymentMethod:
+      dueBatches.find((batch) => batch.paymentMethod)?.paymentMethod ?? "Cash",
+    items: dueBatches.flatMap((batch) => batch.items),
+    referenceNumber: null,
+    transactionId: null,
+    screenshotUrl: null,
+  };
+}
+
 function CashierMenuItemImage({ item }: { item: CashierMenuItem }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(item.image_url) && !imageFailed;
@@ -958,11 +984,13 @@ function OrderDrawer({
   paymentScreenshotPreviewUrl,
   duplicateReferenceNotice,
   ownerDuplicateOverride,
+  collectionPaymentMethod,
   paymentNote,
   onPaymentReferenceChange,
   onPaymentTransactionIdChange,
   onPaymentScreenshotFileChange,
   onOwnerDuplicateOverrideChange,
+  onCollectionPaymentMethodChange,
   onPaymentNoteChange,
   formatMoney,
 }: {
@@ -978,11 +1006,13 @@ function OrderDrawer({
   paymentScreenshotPreviewUrl: string | null;
   duplicateReferenceNotice: string | null;
   ownerDuplicateOverride: boolean;
+  collectionPaymentMethod: string;
   paymentNote: string;
   onPaymentReferenceChange: (value: string) => void;
   onPaymentTransactionIdChange: (value: string) => void;
   onPaymentScreenshotFileChange: (file: File | null) => void;
   onOwnerDuplicateOverrideChange: (value: boolean) => void;
+  onCollectionPaymentMethodChange: (value: string) => void;
   onPaymentNoteChange: (value: string) => void;
   formatMoney: (value: number) => string;
 }) {
@@ -990,7 +1020,7 @@ function OrderDrawer({
     order.invoiceStatus === "pending" || order.invoiceStatus === "held";
   const isRejected = order.invoiceStatus === "cancelled";
   const isVerified = order.invoiceStatus === "paid";
-  const isDigital = order.paymentMethod !== "Cash";
+  const isDigital = collectionPaymentMethod !== "Cash";
 
   return (
     <>
@@ -1049,7 +1079,21 @@ function OrderDrawer({
             <div className="cd-drawer-detail">
               <div className="cd-drawer-detail-label">Payment Method</div>
               <div className="cd-drawer-detail-value">
-                {order.paymentMethod || "Not selected"}
+                {isPending ? (
+                  <select
+                    aria-label="Dining session payment method"
+                    value={collectionPaymentMethod}
+                    onChange={(event) =>
+                      onCollectionPaymentMethodChange(event.target.value)
+                    }
+                  >
+                    {PAYMENT_METHODS.map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                ) : (
+                  order.paymentMethod || "Not selected"
+                )}
               </div>
             </div>
             <div className="cd-drawer-detail">
@@ -1365,6 +1409,7 @@ export function CashierDashboardPage({
         : "pending",
   );
   const [drawerOrder, setDrawerOrder] = useState<CashierOrder | null>(null);
+  const [collectionPaymentMethod, setCollectionPaymentMethod] = useState("Cash");
   const [posEntryOpen, setPosEntryOpen] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState("");
@@ -1423,6 +1468,7 @@ export function CashierDashboardPage({
     setPaymentReference(drawerOrder?.referenceNumber ?? "");
     setPaymentTransactionId(drawerOrder?.transactionId ?? "");
     setPaymentScreenshotUrl(drawerOrder?.screenshotUrl ?? "");
+    setCollectionPaymentMethod(drawerOrder?.paymentMethod || "Cash");
     setOwnerDuplicateOverride(false);
     setDuplicateReferenceNotice(null);
     let cancelled = false;
@@ -1441,7 +1487,7 @@ export function CashierDashboardPage({
     return () => {
       cancelled = true;
     };
-  }, [drawerOrder?.invoiceId]);
+  }, [drawerOrder?.id, drawerOrder?.invoiceId]);
 
   async function checkDuplicateReference(
     reference: string,
@@ -1498,12 +1544,13 @@ export function CashierDashboardPage({
         throw new Error("Payment screenshot must be an image file.");
       if (file.size > PAYMENT_SCREENSHOT_MAX_BYTES)
         throw new Error("Payment screenshot must be 5 MB or smaller.");
-      if (!drawerOrder?.invoiceId)
-        throw new Error("Payment batch is missing for this order.");
+      const paymentTargetId = drawerOrder?.diningSessionId ?? drawerOrder?.id;
+      if (!paymentTargetId)
+        throw new Error("Dining session is missing for this payment.");
 
       const path = paymentScreenshotPath(
         restaurantId,
-        drawerOrder.invoiceId,
+        paymentTargetId,
         file,
       );
       const { error: uploadError } = await supabase.storage
@@ -1611,25 +1658,20 @@ export function CashierDashboardPage({
     const normalizedOrders = ((invoiceRows ?? []) as OrderRow[]).map(
       normalizeInvoiceRow,
     );
+    const dueSessions = buildDiningSessionSummaries(
+      normalizedOrders.filter(isActiveOrder),
+    ).filter((session) => session.pendingCount > 0);
     const pendingPaymentIds = new Set(
-      normalizedOrders
-        .filter(
-          (order) =>
-            order.invoiceStatus === "pending" || order.invoiceStatus === "held",
-        )
-        .map((order) => order.invoiceId ?? order.id),
+      dueSessions.map((session) => session.diningSessionId),
     );
-    const newPendingPaymentCount = normalizedOrders.filter((order) => {
-      const orderKey = order.invoiceId ?? order.id;
-      return (
-        (order.invoiceStatus === "pending" || order.invoiceStatus === "held") &&
-        !knownPendingPaymentIdsRef.current.has(orderKey)
-      );
-    }).length;
+    const newPendingPaymentCount = dueSessions.filter(
+      (session) =>
+        !knownPendingPaymentIdsRef.current.has(session.diningSessionId),
+    ).length;
 
     if (dashboardHydratedRef.current && newPendingPaymentCount > 0) {
       setRealtimeNotice(
-        `${newPendingPaymentCount} new payment${newPendingPaymentCount === 1 ? "" : "s"} requiring collection.`,
+        `${newPendingPaymentCount} dining session${newPendingPaymentCount === 1 ? "" : "s"} with payment due.`,
       );
       setQueueTab("pending");
       playNotificationTone("cashier");
@@ -1734,15 +1776,14 @@ export function CashierDashboardPage({
 
   async function handleApprove(order: CashierOrder) {
     try {
-      const targetActionId = order.invoiceId ?? order.id;
-      if (!order.invoiceId)
-        throw new Error("Payment batch is missing for this order.");
-      setApprovingId(targetActionId);
+      const diningSessionId = order.diningSessionId ?? order.id;
+      setApprovingId(diningSessionId);
       setError(null);
-      const { data, error: rpcError } = await supabase.rpc(
-        "verify_order_payment",
+      const { error: rpcError } = await supabase.rpc(
+        "verify_dining_session_payment",
         {
-          target_invoice_id: order.invoiceId,
+          target_dining_session_id: diningSessionId,
+          selected_payment_method: collectionPaymentMethod,
           payment_reference_number: paymentReference || null,
           payment_transaction_id: paymentTransactionId || null,
           payment_screenshot_url: paymentScreenshotUrl || null,
@@ -1750,45 +1791,7 @@ export function CashierDashboardPage({
         },
       );
       if (rpcError) throw new Error(rpcError.message);
-      const updated = normalizeOrder(data as OrderRow);
-      const paidAt = new Date().toISOString();
-      setOrders((prev) =>
-        prev.map((existing) =>
-          (existing.invoiceId ?? existing.id) === targetActionId
-            ? {
-                ...existing,
-                ...updated,
-                invoiceId: existing.invoiceId,
-                invoiceNumber: existing.invoiceNumber,
-                invoiceStatus: "paid",
-                invoicePaidAt: paidAt,
-                invoiceVerifiedAt: paidAt,
-                referenceNumber: paymentReference || null,
-                transactionId: paymentTransactionId || null,
-                screenshotUrl: paymentScreenshotUrl || null,
-                items: existing.items,
-              }
-            : existing,
-        ),
-      );
-      if ((drawerOrder?.invoiceId ?? drawerOrder?.id) === targetActionId)
-        setDrawerOrder((current) =>
-          current
-            ? {
-                ...current,
-                ...updated,
-                invoiceId: current.invoiceId,
-                invoiceNumber: current.invoiceNumber,
-                invoiceStatus: "paid",
-                invoicePaidAt: paidAt,
-                invoiceVerifiedAt: paidAt,
-                referenceNumber: paymentReference || null,
-                transactionId: paymentTransactionId || null,
-                screenshotUrl: paymentScreenshotUrl || null,
-                items: current.items,
-              }
-            : null,
-        );
+      setDrawerOrder(null);
       setPaymentReference("");
       setPaymentTransactionId("");
       setPaymentScreenshotUrl("");
@@ -1796,6 +1799,7 @@ export function CashierDashboardPage({
       setOwnerDuplicateOverride(false);
       setDuplicateReferenceNotice(null);
       setPaymentNote("");
+      setRealtimeNotice(`Payment collected for table ${order.tableNumber ?? ""}.`);
       await loadDashboard();
     } catch (approveError) {
       setError(
@@ -2137,6 +2141,10 @@ export function CashierDashboardPage({
     () => buildDiningSessionSummaries(activeOrders),
     [activeOrders],
   );
+  const paymentDueSessions = useMemo(
+    () => activeDiningSessions.filter((session) => session.pendingCount > 0),
+    [activeDiningSessions],
+  );
   const completedDiningSessions = useMemo(
     () => buildDiningSessionSummaries(completedOrders),
     [completedOrders],
@@ -2246,7 +2254,7 @@ export function CashierDashboardPage({
     0,
     tables.length - occupiedTableNumbers.size,
   );
-  const queueOrders = pendingPayments;
+  const queueOrders = paymentDueSessions;
   const expectedCash = activeShift?.expected_cash ?? 0;
   const actualCashNumber = Number(actualCash || 0);
   const variance = actualCash === "" ? 0 : actualCashNumber - expectedCash;
@@ -2262,10 +2270,15 @@ export function CashierDashboardPage({
   });
 
   function openTable(tableNumber: number) {
-    const order = activeOrders.find(
+    const session = activeDiningSessions.find(
       (candidate) => candidate.tableNumber === String(tableNumber),
     );
-    if (order) setDrawerOrder(order);
+    if (!session) return;
+    setDrawerOrder(
+      session.pendingCount > 0
+        ? paymentDueOrder(session)
+        : session.batches[0] ?? null,
+    );
   }
 
   return (
@@ -2362,10 +2375,10 @@ export function CashierDashboardPage({
                 detail="Active dining sessions"
               />
               <CashierMetricCard
-                label="Pending Payments"
-                value={`${pendingPayments.length}`}
+                label="Payment Due"
+                value={`${paymentDueSessions.length}`}
                 detail="Needs collection"
-                tone={pendingPayments.length > 0 ? "warning" : "default"}
+                tone={paymentDueSessions.length > 0 ? "warning" : "default"}
               />
               <CashierMetricCard
                 label="Awaiting Collection"
@@ -2401,7 +2414,7 @@ export function CashierDashboardPage({
                       className={`cd-tab${queueTab === "pending" ? " active" : ""}`}
                       onClick={() => setQueueTab("pending")}
                     >
-                      Pending Payment <span className="cd-tab-badge">{pendingPayments.length}</span>
+                      Payment Due <span className="cd-tab-badge">{paymentDueSessions.length}</span>
                     </button>
                     <button
                       type="button"
@@ -2449,7 +2462,7 @@ export function CashierDashboardPage({
                   {queueTab === "pending" && queueOrders.length === 0 ? (
                     <div className="cd-empty">
                       <div className="cd-empty-title">
-                        No orders in this queue
+                        No dining sessions with payment due
                       </div>
                       <div className="cd-empty-sub">
                         Realtime orders will appear here.
@@ -2457,11 +2470,16 @@ export function CashierDashboardPage({
                     </div>
                   ) : null}
                   {queueTab === "pending"
-                    ? queueOrders.map((order) => {
+                    ? queueOrders.map((session) => {
+                        const order = paymentDueOrder(session);
+                        const runningBill = session.batches.reduce(
+                          (sum, batch) => sum + batch.totalPrice,
+                          0,
+                        );
                         return (
                           <article
-                            key={order.invoiceId ?? order.id}
-                            className={`cd-order-card ${order.invoiceStatus === "pending" ? "pending_payment" : order.status}`}
+                            key={session.diningSessionId}
+                            className="cd-order-card pending_payment"
                             onClick={() => setDrawerOrder(order)}
                           >
                             <div className="cd-order-table-tile">
@@ -2470,25 +2488,22 @@ export function CashierDashboardPage({
                             <div className="cd-order-card-main">
                               <div className="cd-order-card-title">
                                 <strong>
-                                  {fmtOrderLabel(order)} ·{" "}
-                                  {fmtInvoiceLabel(order)}
+                                  {fmtSessionLabel(session)}
                                 </strong>
                                 <span
                                   className={`cd-badge ${order.invoiceStatus}`}
                                 >
-                                  Payment:{" "}
-                                  {paymentLabel(
-                                    order.invoiceStatus || "pending",
-                                  )}
+                                  PAYMENT DUE
                                 </span>
                                 <span className="cd-badge cbe">
-                                  Order: {operationalLabel(order.status)}
+                                  Kitchen: {operationalLabel(order.status)}
                                 </span>
                               </div>
                               <div className="cd-order-card-meta cd-order-card-summary">
-                                <span>{durationFrom(order.createdAt, now)} elapsed</span>
-                                <span>{order.items.length} item{order.items.length === 1 ? "" : "s"}</span>
-                                <strong>{fmtMoney(order.totalPrice)}</strong>
+                                <span>{durationFrom(session.createdAt, now)} elapsed</span>
+                                <span>{session.batches.length} order batch{session.batches.length === 1 ? "" : "es"}</span>
+                                <span>{session.itemCount} item{session.itemCount === 1 ? "" : "s"}</span>
+                                <strong>{fmtMoney(runningBill)}</strong>
                               </div>
                             </div>
                             <div
@@ -2501,20 +2516,15 @@ export function CashierDashboardPage({
                               >
                                 View
                               </button>
-                              {isVerifiablePayment(order) && (
-                                <button
-                                  className="cd-approve-btn"
-                                  disabled={
-                                    approvingId ===
-                                    (order.invoiceId ?? order.id)
-                                  }
-                                  onClick={() => handleApprove(order)}
-                                >
-                                  {approvingId === (order.invoiceId ?? order.id)
-                                    ? "..."
-                                    : "Collect Payment"}
-                                </button>
-                              )}
+                              <button
+                                className="cd-approve-btn"
+                                disabled={approvingId === session.diningSessionId}
+                                onClick={() => setDrawerOrder(order)}
+                              >
+                                {approvingId === session.diningSessionId
+                                  ? "..."
+                                  : "Collect Payment"}
+                              </button>
                             </div>
                           </article>
                         );
@@ -2657,7 +2667,7 @@ export function CashierDashboardPage({
                       <div className="cd-card-subtitle">
                         {availableTables} available ·{" "}
                         {occupiedTableNumbers.size} occupied ·{" "}
-                        {awaitingPaymentTableNumbers.size} awaiting payment
+                        {awaitingPaymentTableNumbers.size} payment due
                       </div>
                     </div>
                   </div>
@@ -2674,10 +2684,10 @@ export function CashierDashboardPage({
                           key={table.id}
                           className={`cd-table-cell ${awaitingPayment ? "pay" : ready ? "ready" : occupied ? "occupied" : "available"}`}
                           onClick={() => openTable(table.table_number)}
-                          aria-label={`Table ${table.table_number}: ${awaitingPayment ? "waiting for payment" : ready ? "ready" : occupied ? "occupied" : "available"}`}
+                          aria-label={`Table ${table.table_number}: ${awaitingPayment ? "payment due" : ready ? "ready" : occupied ? "occupied" : "available"}`}
                         >
                           <strong>{table.table_number}</strong>
-                          <span>{awaitingPayment ? "Payment" : ready ? "Ready" : occupied ? "Occupied" : "Available"}</span>
+                          <span>{awaitingPayment ? "Payment Due" : ready ? "Ready" : occupied ? "Occupied" : "Available"}</span>
                         </button>
                       );
                     })}
@@ -3182,22 +3192,23 @@ export function CashierDashboardPage({
               : undefined
           }
           onReject={
-            isVerifiablePayment(drawerOrder)
+            drawerOrder.invoiceId && isVerifiablePayment(drawerOrder)
               ? () => handleRejectPayment(drawerOrder)
               : undefined
           }
           onRetry={
-            drawerOrder.invoiceStatus === "pending"
+            drawerOrder.invoiceId && drawerOrder.invoiceStatus === "pending"
               ? () => handleRequestRetry(drawerOrder)
               : undefined
           }
-          approving={approvingId === (drawerOrder.invoiceId ?? drawerOrder.id)}
+          approving={approvingId === (drawerOrder.diningSessionId ?? drawerOrder.id)}
           paymentReference={paymentReference}
           paymentTransactionId={paymentTransactionId}
           paymentScreenshotUrl={paymentScreenshotUrl}
           paymentScreenshotPreviewUrl={paymentScreenshotPreviewUrl}
           duplicateReferenceNotice={duplicateReferenceNotice}
           ownerDuplicateOverride={ownerDuplicateOverride}
+          collectionPaymentMethod={collectionPaymentMethod}
           paymentNote={paymentNote}
           onPaymentReferenceChange={(value) =>
             void handlePaymentReferenceChange(value)
@@ -3209,6 +3220,7 @@ export function CashierDashboardPage({
             void handlePaymentScreenshotFileChange(file)
           }
           onOwnerDuplicateOverrideChange={setOwnerDuplicateOverride}
+          onCollectionPaymentMethodChange={setCollectionPaymentMethod}
           onPaymentNoteChange={setPaymentNote}
           formatMoney={fmtMoney}
         />

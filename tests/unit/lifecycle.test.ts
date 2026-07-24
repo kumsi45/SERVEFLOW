@@ -47,9 +47,13 @@ describe("payment methods", () => {
 });
 
 describe("payment policy matrix", () => {
-  const policies = ["pay_before_kitchen", "hold_payment", "mixed"] as const;
+  const policies = ["pay_before_kitchen", "kitchen_before_payment"] as const;
   it.each(policies)("has a deterministic policy fixture for %s", (policy) => {
-    const expected = policy === "pay_before_kitchen" ? "pending" : policy === "hold_payment" ? "held" : "pending";
+    const expected = policy === "pay_before_kitchen" ? "pending" : "held";
     expect(canonicalOrderLifecycle({ operational_status: "new", payment_status: expected }).payment).toBe(expected);
+  });
+
+  it.each(["pending", "held"])("labels unpaid state %s as Payment Due", (status) => {
+    expect(PAYMENT_STATUS_LABEL[status as "pending" | "held"]).toBe("Payment Due");
   });
 });

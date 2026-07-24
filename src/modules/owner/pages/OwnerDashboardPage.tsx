@@ -208,7 +208,6 @@ type RestaurantConfig = {
   kitchen_settings: JsonRecord;
   ordering_settings: JsonRecord;
   payment_policy: PaymentPolicy;
-  mixed_waiter_payment_timing: "before_kitchen" | "after_meal";
   vat_enabled: boolean;
   vat_percentage: number;
   service_charge_enabled: boolean;
@@ -430,15 +429,11 @@ function buildRestaurantConfig(
     business_hours: toJsonRecord(row.business_hours),
     kitchen_settings: toJsonRecord(row.kitchen_settings),
     ordering_settings: toJsonRecord(row.ordering_settings),
-    payment_policy: ["pay_before_kitchen", "hold_payment", "mixed"].includes(
+    payment_policy: ["pay_before_kitchen", "kitchen_before_payment"].includes(
       String(row.payment_policy),
     )
       ? (row.payment_policy as PaymentPolicy)
       : "pay_before_kitchen",
-    mixed_waiter_payment_timing:
-      row.mixed_waiter_payment_timing === "before_kitchen"
-        ? "before_kitchen"
-        : "after_meal",
     vat_enabled: Boolean(row.vat_enabled),
     vat_percentage: Number(row.vat_percentage ?? 15),
     service_charge_enabled: Boolean(row.service_charge_enabled),
@@ -685,7 +680,7 @@ export function OwnerDashboardPage({
           supabase
             .from("restaurants")
             .select(
-              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
             )
             .eq("id", restaurantId)
             .maybeSingle(),
@@ -1441,7 +1436,7 @@ export function OwnerDashboardPage({
       supabase
         .from("restaurants")
         .select(
-          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,mixed_waiter_payment_timing,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
         )
         .eq("id", restaurantId)
         .maybeSingle(),
@@ -8566,7 +8561,6 @@ type SettingsFormState = {
   acceptsQrOrders: boolean;
   autoAcceptOrders: boolean;
   paymentPolicy: PaymentPolicy;
-  mixedWaiterPaymentTiming: "before_kitchen" | "after_meal";
   vatEnabled: boolean;
   vatPercentage: string;
   serviceChargeEnabled: boolean;
@@ -8629,8 +8623,6 @@ function configToSettingsForm(
       false,
     ),
     paymentPolicy: config?.payment_policy ?? "pay_before_kitchen",
-    mixedWaiterPaymentTiming:
-      config?.mixed_waiter_payment_timing ?? "after_meal",
     vatEnabled: config?.vat_enabled ?? false,
     vatPercentage: String(config?.vat_percentage ?? 15),
     serviceChargeEnabled: config?.service_charge_enabled ?? false,
@@ -8924,14 +8916,6 @@ function SettingsPage({
         },
       );
       if (policyError) throw new Error(policyError.message);
-      const { error: mixedTimingError } = await supabase.rpc(
-        "set_mixed_waiter_payment_timing",
-        {
-          target_restaurant_id: restaurantId,
-          requested_timing: form.mixedWaiterPaymentTiming,
-        },
-      );
-      if (mixedTimingError) throw new Error(mixedTimingError.message);
       const { error: financialError } = await supabase.rpc(
         "set_restaurant_financial_settings",
         {
@@ -9368,31 +9352,14 @@ function SettingsPage({
                     <option value="pay_before_kitchen">
                       Pay Before Kitchen
                     </option>
-                    <option value="hold_payment">Hold Payment</option>
-                    <option value="mixed">Mixed Mode</option>
+                    <option value="kitchen_before_payment">
+                      Kitchen Before Payment
+                    </option>
                   </select>
+                  <small>
+                    QR customer orders always require payment before kitchen.
+                  </small>
                 </label>
-                {form.paymentPolicy === "mixed" && (
-                  <label>
-                    Mixed Mode · Waiter Orders
-                    <select
-                      value={form.mixedWaiterPaymentTiming}
-                      onChange={(event) =>
-                        updateField(
-                          "mixedWaiterPaymentTiming",
-                          event.target.value as "before_kitchen" | "after_meal",
-                        )
-                      }
-                      disabled={working}
-                    >
-                      <option value="before_kitchen">Pay Before Kitchen</option>
-                      <option value="after_meal">Hold Payment</option>
-                    </select>
-                    <small>
-                      QR customer orders always require payment first.
-                    </small>
-                  </label>
-                )}
                 <label className="od-toggle-row">
                   <input
                     type="checkbox"

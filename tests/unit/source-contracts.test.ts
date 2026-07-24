@@ -42,15 +42,13 @@ describe("production source contracts", () => {
     expect(queueAndActions).not.toMatch(/orders\.status|orders\.status::text|target_order\.status|order_invoices\.status = 'verified'|verified_at is not null|kitchen_status = 'paid'|kitchen_status in \('paid'/i);
   });
   it("keeps QR permanently pay-before while waiter orders follow tenant policy", () => {
-    const policySql = read("supabase/migrations/134_payment_policy_source_enforcement.sql");
-    const qrRule = policySql.indexOf("when coalesce(target_order_source, '') = 'public_qr' then 'before_kitchen'");
-    const restaurantRules = policySql.indexOf("when restaurants.payment_policy = 'hold_payment'");
+    const policySql = read("supabase/migrations/161_waiter_order_lifecycle_engine.sql");
+    const qrRule = policySql.indexOf("when coalesce(target_order_source, '') in ('public_qr', 'cashier')");
+    const restaurantRules = policySql.indexOf("restaurants.payment_policy = 'kitchen_before_payment'");
     expect(qrRule).toBeGreaterThan(-1);
     expect(restaurantRules).toBeGreaterThan(qrRule);
-
-    const kitchenSql = read("supabase/migrations/150_phase7a3_canonical_lifecycle_finalization.sql");
-    expect(kitchenSql).toContain("orders.order_source <> 'public_qr'");
-    expect(kitchenSql).toContain("target_order.order_source <> 'public_qr'");
+    expect(policySql).toContain("invoices.invoice_source = 'waiter'");
+    expect(policySql).toContain("set kitchen_status = 'held'");
   });
   it("keeps station status independent in the canonical kitchen UI payload", () => {
     const sql = read("supabase/migrations/151_phase7a4_canonical_kitchen_ui_contract.sql");

@@ -2,7 +2,7 @@ export type OperationalStatus =
   "new" | "accepted" | "preparing" | "ready" | "served" | "closed";
 export type PaymentStatus =
   "pending" | "held" | "paid" | "refunded" | "cancelled";
-export type PaymentPolicy = "pay_before_kitchen" | "hold_payment" | "mixed";
+export type PaymentPolicy = "pay_before_kitchen" | "kitchen_before_payment";
 export type CanonicalPaymentMethod =
   | "Cash"
   | "Card"
@@ -56,7 +56,7 @@ export const OPERATIONAL_STATUS_LABEL: Record<OperationalStatus, string> = {
   closed: "Closed",
 };
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "Pending",
+  pending: "Payment Due",
   held: "Payment Due",
   paid: "Paid",
   refunded: "Refunded",
@@ -64,8 +64,7 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
 };
 export const PAYMENT_POLICY_LABEL: Record<PaymentPolicy, string> = {
   pay_before_kitchen: "Pay Before Kitchen",
-  hold_payment: "Hold Payment",
-  mixed: "Mixed Mode",
+  kitchen_before_payment: "Kitchen Before Payment",
 };
 
 export function canonicalPaymentStatus(value: unknown): PaymentStatus {

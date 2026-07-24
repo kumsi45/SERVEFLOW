@@ -32,10 +32,10 @@ suite("guarded Supabase multi-tenant regression", () => {
     expect(data).toMatchObject({ error: "Permission denied." });
   });
 
-  it.each(["pay_before_kitchen", "hold_payment", "mixed"])("supports payment policy fixture %s", async (policy) => {
+  it.each(["pay_before_kitchen", "kitchen_before_payment"])("supports payment policy fixture %s", async (policy) => {
     const { data, error } = await client(process.env.SERVEFLOW_TENANT_A_TOKEN!).from("restaurants").select("payment_policy").eq("id", process.env.SERVEFLOW_TENANT_A_ID!).single();
     expect(error).toBeNull();
-    expect(["pay_before_kitchen", "hold_payment", "mixed"]).toContain(data?.payment_policy);
+    expect(["pay_before_kitchen", "kitchen_before_payment"]).toContain(data?.payment_policy);
     expect(policy).toBeTruthy();
   });
 });

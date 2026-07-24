@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const sql = readFileSync(
   resolve(
     process.cwd(),
-    "supabase/migrations/155_waiter_appended_batch_identity_and_policy.sql",
+    "supabase/migrations/161_waiter_order_lifecycle_engine.sql",
   ),
   "utf8",
 ).toLowerCase();
@@ -22,10 +22,12 @@ describe("waiter appended order batch", () => {
     expect(sql).toContain("acting_waiter.display_name");
   });
 
-  it("applies hold or payment-first behavior from canonical timing", () => {
+  it("applies kitchen-before-payment or payment-first behavior from canonical timing", () => {
     expect(sql).toContain("resolve_order_payment_timing");
     expect(sql).toContain("resolved_timing = 'after_meal'");
     expect(sql).toContain("payment_status = 'held'");
     expect(sql).toContain("payment_status = 'pending'");
+    expect(sql).toContain("set kitchen_status = 'accepted'");
+    expect(sql).toContain("set kitchen_status = 'held'");
   });
 });

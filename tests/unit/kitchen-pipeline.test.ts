@@ -12,16 +12,14 @@ type Ticket = {
 };
 
 const tenants = ["Restaurant A", "Restaurant B", "Restaurant C", "Restaurant D"];
-const policies = ["pay_before_kitchen", "hold_payment", "mixed"] as const;
+const policies = ["pay_before_kitchen", "kitchen_before_payment"] as const;
 
 const resolvePaymentTiming = (
   source: Ticket["source"],
   policy: (typeof policies)[number],
-  mixedWaiterTiming: Ticket["paymentTiming"] = "after_meal",
 ): Ticket["paymentTiming"] => {
   if (source === "public_qr") return "before_kitchen";
-  if (policy === "hold_payment") return "after_meal";
-  if (policy === "mixed") return mixedWaiterTiming;
+  if (policy === "kitchen_before_payment") return "after_meal";
   return "before_kitchen";
 };
 
@@ -81,7 +79,7 @@ describe.each(tenants)("%s canonical kitchen pipeline", (restaurantId) => {
     expect(isQueueEligible(waiter)).toBe(paymentTiming === "after_meal");
   });
 
-  it("preserves waiter hold-payment and the complete kitchen lifecycle", () => {
+  it("preserves waiter kitchen-before-payment and the complete kitchen lifecycle", () => {
     const held = base({
       source: "waiter",
       paymentTiming: "after_meal",
