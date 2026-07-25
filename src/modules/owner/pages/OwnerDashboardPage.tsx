@@ -304,7 +304,7 @@ type NavId =
   | "reports"
   | "settings";
 
-type OwnerNavTarget = NavId | "inventory";
+type OwnerNavTarget = NavId | "inventory" | "recipes";
 
 const NAV_ITEMS: { id: OwnerNavTarget; icon: string; label: string }[] = [
   { id: "overview", icon: "OV", label: "Overview" },
@@ -316,6 +316,7 @@ const NAV_ITEMS: { id: OwnerNavTarget; icon: string; label: string }[] = [
   { id: "qr", icon: "QR", label: "QR & Tables" },
   { id: "customers", icon: "CU", label: "Customers" },
   { id: "reports", icon: "RP", label: "Reports" },
+  { id: "recipes", icon: "RC", label: "Recipes" },
   { id: "inventory", icon: "IN", label: "Inventory" },
   { id: "settings", icon: "SE", label: "Settings" },
 ];
@@ -1508,6 +1509,11 @@ export function OwnerDashboardPage({
   };
 
   function handleDashboardNavigate(nextNav: OwnerNavTarget) {
+    if (nextNav === "recipes") {
+      window.history.pushState({}, "", "/owner/recipes");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      return;
+    }
     if (nextNav === "inventory") {
       window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
       window.history.pushState({}, "", "/inventory/dashboard");

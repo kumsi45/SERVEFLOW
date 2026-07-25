@@ -19,6 +19,7 @@ const MANAGER_NAV = [
   { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: "▥" },
   { key: "intelligence", label: "Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
   { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
+  { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: "RC" },
   { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: "IN" },
 ];
 

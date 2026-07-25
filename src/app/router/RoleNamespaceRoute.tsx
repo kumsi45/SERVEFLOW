@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { canAccessInventory } from "../../core/permissions/inventoryAccess";
+import { canReadRecipes } from "../../core/permissions/recipeAccess";
 import { getCurrentStaffSession } from "../../modules/staff-auth/services/staffAuthService";
 import { getActiveWaiterSession } from "../../modules/waiter-auth/services/waiterAuthService";
 
@@ -9,6 +10,7 @@ const ProtectedManagerRoute = lazy(() => import("../../modules/staff-auth/pages/
 const ProtectedOwnerRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedOwnerRoute").then((module) => ({ default: module.ProtectedOwnerRoute })));
 const ProtectedInventoryRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedInventoryRoute").then((module) => ({ default: module.ProtectedInventoryRoute })));
 const WaiterDashboardPage = lazy(() => import("../../modules/waiter-dashboard/pages/WaiterDashboardPage").then((module) => ({ default: module.WaiterDashboardPage })));
+const RecipeManagementPage = lazy(() => import("../../modules/recipes/pages/RecipeManagementPage").then((module) => ({ default: module.RecipeManagementPage })));
 
 export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitchen" | "inventory" | "admin";
 
@@ -69,7 +71,9 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   if (state.status === "waiter") return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}><WaiterDashboardPage restaurantSlug={state.restaurantSlug} /></Suspense>;
   if (state.status === "authorized") {
     return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}>
-      {namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
+      {section === "recipes" && canReadRecipes(state.role)
+        ? <RecipeManagementPage restaurantId={state.restaurantId} role={state.role} />
+        : namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "cashier" ? <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />

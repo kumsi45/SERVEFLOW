@@ -11,8 +11,8 @@ import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPag
 import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleNamespace } from "./RoleNamespaceRoute";
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
-  owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables"],
-  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai"],
+  owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables", "recipes"],
+  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai", "recipes"],
   waiter: ["dashboard", "tables", "orders", "dining-sessions"],
   cashier: ["dashboard", "payments", "checkout", "bills"],
   kitchen: ["dashboard", "stations", "history"],
@@ -46,6 +46,11 @@ function resolveRoute(pathname: string) {
 
   if (resetPasswordMatch) {
     return { name: "reset-password" as const };
+  }
+
+  const recipeMatch = pathname.match(/^\/(owner|manager|inventory)\/recipes\/?$/);
+  if (recipeMatch) {
+    return { name: "role-namespace" as const, namespace: recipeMatch[1] as RoleNamespace, section: "recipes" };
   }
 
   const roleNamespaceMatch = pathname.match(/^\/(owner|manager|waiter|cashier|kitchen|inventory|admin)\/([^/]+)\/?$/);
