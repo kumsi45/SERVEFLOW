@@ -156,6 +156,10 @@ function quantityLabel(value: number, unitName: string) {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value)} ${unitName}`;
 }
 
+function countLabel(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function movementLabel(value: InventoryMovementType) {
   const labels: Record<InventoryMovementType, string> = {
     opening_balance: "Opening Balance",
@@ -286,6 +290,19 @@ function statusBadge(status: string) {
   return <span className={`ia-status ${status}`}>{status}</span>;
 }
 
+function AdvancedInfo({ rows }: { rows: Array<{ label: string; value: ReactNode }> }) {
+  return (
+    <section className="ia-advanced-info">
+      <h3>Advanced Information</h3>
+      <dl>
+        {rows.map((row) => (
+          <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 export function InventoryDashboardPage({
   restaurantId,
   restaurantName,
@@ -376,6 +393,30 @@ export function InventoryDashboardPage({
   const supplierNames = useMemo(() => new Map(data.suppliers.map((row) => [row.id, row.name])), [data.suppliers]);
   const storageNames = useMemo(() => new Map(data.storageLocations.map((row) => [row.id, row.name])), [data.storageLocations]);
   const unitNames = useMemo(() => new Map(data.units.map((row) => [row.id, row.name])), [data.units]);
+  const activeItemRows = useMemo(() => data.items.filter((item) => item.status !== "deleted"), [data.items]);
+  const countItemsBy = useCallback((field: "categoryId" | "unitId" | "storageLocationId" | "preferredSupplierId") => {
+    const counts = new Map<string, number>();
+    for (const item of activeItemRows) {
+      const id = item[field];
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [activeItemRows]);
+  const categoryItemCounts = useMemo(() => countItemsBy("categoryId"), [countItemsBy]);
+  const unitItemCounts = useMemo(() => countItemsBy("unitId"), [countItemsBy]);
+  const storageItemCounts = useMemo(() => countItemsBy("storageLocationId"), [countItemsBy]);
+  const supplierItemCounts = useMemo(() => countItemsBy("preferredSupplierId"), [countItemsBy]);
+  const stockByItemId = useMemo(() => {
+    const totals = new Map<string, { quantity: number; unitName: string }>();
+    for (const row of currentStock) {
+      const current = totals.get(row.inventoryItemId);
+      totals.set(row.inventoryItemId, {
+        quantity: (current?.quantity ?? 0) + row.currentQuantity,
+        unitName: current?.unitName ?? row.unitName,
+      });
+    }
+    return totals;
+  }, [currentStock]);
   const lowStockRows = currentStock.filter((row) => row.stockStatus === "low_stock" || row.stockStatus === "out_of_stock");
   const recentLedger = ledger.slice(0, 8);
 
@@ -910,17 +951,11 @@ export function InventoryDashboardPage({
             <tr>
               <th><input aria-label="Select page" type="checkbox" checked={pagedItems.length > 0 && pagedItems.every((item) => selectedIds.includes(item.id))} onChange={(event) => selectPageItems(event.target.checked)} /></th>
               <th>Item Name</th>
-              <th>Category</th>
+              <th>Current Stock</th>
               <th>Unit</th>
-              <th>Storage</th>
               <th>Supplier</th>
-              <th>SKU</th>
-              <th>Barcode</th>
-              <th>Minimum</th>
-              <th>Maximum</th>
+              <th>Storage</th>
               <th>Status</th>
-              <th>Created By</th>
-              <th>Updated By</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -929,17 +964,11 @@ export function InventoryDashboardPage({
               <tr key={item.id}>
                 <td data-label="Select"><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelected(item.id)} /></td>
                 <td data-label="Item Name"><strong>{item.name}</strong><small>{item.description ?? "No description"}</small></td>
-                <td data-label="Category">{categoryNames.get(item.categoryId) ?? "Missing"}</td>
+                <td data-label="Current Stock">{stockByItemId.has(item.id) ? quantityLabel(stockByItemId.get(item.id)?.quantity ?? 0, stockByItemId.get(item.id)?.unitName ?? unitNames.get(item.unitId) ?? "unit") : "No stock"}</td>
                 <td data-label="Unit">{unitNames.get(item.unitId) ?? "Missing"}</td>
-                <td data-label="Storage">{storageNames.get(item.storageLocationId) ?? "Missing"}</td>
                 <td data-label="Supplier">{item.preferredSupplierId ? supplierNames.get(item.preferredSupplierId) ?? "Missing" : "None"}</td>
-                <td data-label="SKU">{item.sku ?? "None"}</td>
-                <td data-label="Barcode">{item.barcode ?? "None"}</td>
-                <td data-label="Minimum">{item.minimumStock}</td>
-                <td data-label="Maximum">{item.maximumStock ?? "None"}</td>
+                <td data-label="Storage">{storageNames.get(item.storageLocationId) ?? "Missing"}</td>
                 <td data-label="Status">{statusBadge(item.status)}</td>
-                <td data-label="Created By">{item.createdByStaffId ? data.staffNames[item.createdByStaffId] ?? "Staff" : "System"}</td>
-                <td data-label="Updated By">{item.updatedByStaffId ? data.staffNames[item.updatedByStaffId] ?? "Staff" : "System"}</td>
                 <td data-label="Actions">
                   <div className="ia-row-actions">
                     <button type="button" onClick={() => setItemForm(itemDraft(item))}>Edit</button>
@@ -972,6 +1001,7 @@ export function InventoryDashboardPage({
     onCreate: () => void,
     onEdit: (id: string) => void,
     table: "inventory_categories" | "inventory_suppliers" | "inventory_storage_locations" | "inventory_units",
+    metric: (row: { id: string }) => { label: string; value: string },
   ) {
     return (
       <div className="ia-stack">
@@ -981,28 +1011,32 @@ export function InventoryDashboardPage({
         </section>
         <section className="ia-record-grid">
           {rows.filter((row) => row.status !== "deleted").map((row) => (
-            <article className="ia-record" key={row.id}>
-              <header>
-                <div>
-                  <strong>{row.name}</strong>
-                  <span>{row.description || "No description"}</span>
-                </div>
-                {statusBadge(row.status)}
-              </header>
-              <dl>
-                <div><dt>Created</dt><dd>{dateLabel(row.createdAt)}</dd></div>
-                <div><dt>Updated</dt><dd>{dateLabel(row.updatedAt)}</dd></div>
-              </dl>
-              <footer>
-                <button type="button" onClick={() => onEdit(row.id)}>Edit</button>
-                {row.status === "archived" ? (
-                  <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, table, row.id), "Record restored.")}>Restore</button>
-                ) : (
-                  <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, table, row.id), "Record archived.")}>Archive</button>
-                )}
-                <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, table, row.id), "Record soft deleted.")}>Soft Delete</button>
-              </footer>
-            </article>
+            (() => {
+              const businessMetric = metric(row);
+              return (
+                <article className="ia-record" key={row.id}>
+                  <header>
+                    <div>
+                      <strong>{row.name}</strong>
+                      <span>{row.description || "No description"}</span>
+                    </div>
+                    {statusBadge(row.status)}
+                  </header>
+                  <dl>
+                    <div><dt>{businessMetric.label}</dt><dd>{businessMetric.value}</dd></div>
+                  </dl>
+                  <footer>
+                    <button type="button" onClick={() => onEdit(row.id)}>Edit</button>
+                    {row.status === "archived" ? (
+                      <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, table, row.id), "Record restored.")}>Restore</button>
+                    ) : (
+                      <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, table, row.id), "Record archived.")}>Archive</button>
+                    )}
+                    <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, table, row.id), "Record soft deleted.")}>Soft Delete</button>
+                  </footer>
+                </article>
+              );
+            })()
           ))}
           {rows.filter((row) => row.status !== "deleted").length === 0 && <div className="ia-empty">No records yet.</div>}
         </section>
@@ -1020,7 +1054,14 @@ export function InventoryDashboardPage({
     : section === "transfers" ? transfers
     : section === "ledger" ? ledgerView
     : section === "items" ? items
-    : section === "categories" ? masterList("Categories", data.categories, () => setCategoryForm(categoryDraft()), (id) => setCategoryForm(categoryDraft(data.categories.find((row) => row.id === id))), "inventory_categories")
+    : section === "categories" ? masterList(
+      "Categories",
+      data.categories,
+      () => setCategoryForm(categoryDraft()),
+      (id) => setCategoryForm(categoryDraft(data.categories.find((row) => row.id === id))),
+      "inventory_categories",
+      (row) => ({ label: "Inventory Items", value: countLabel(categoryItemCounts.get(row.id) ?? 0, "item") }),
+    )
     : section === "suppliers" ? (
       <div className="ia-stack">
         <section className="ia-toolbar">
@@ -1036,6 +1077,7 @@ export function InventoryDashboardPage({
             <article className="ia-record" key={supplier.id}>
               <header><div><strong>{supplier.name}</strong><span>{supplier.contactPerson || "No contact person"}</span></div>{statusBadge(supplier.status)}</header>
               <dl>
+                <div><dt>Supplied Items</dt><dd>{countLabel(supplierItemCounts.get(supplier.id) ?? 0, "item")}</dd></div>
                 <div><dt>Phone</dt><dd>{supplier.phone || "Not set"}</dd></div>
                 <div><dt>Address</dt><dd>{supplier.address || "Not set"}</dd></div>
                 <div><dt>Notes</dt><dd>{supplier.notes || "None"}</dd></div>
@@ -1054,8 +1096,22 @@ export function InventoryDashboardPage({
         </section>
       </div>
     )
-    : section === "storage-locations" ? masterList("Storage Locations", data.storageLocations, () => setStorageForm(simpleDraft()), (id) => setStorageForm(simpleDraft(data.storageLocations.find((row) => row.id === id))), "inventory_storage_locations")
-    : masterList("Units", data.units, () => setUnitForm(simpleDraft()), (id) => setUnitForm(simpleDraft(data.units.find((row) => row.id === id))), "inventory_units");
+    : section === "storage-locations" ? masterList(
+      "Storage Locations",
+      data.storageLocations,
+      () => setStorageForm(simpleDraft()),
+      (id) => setStorageForm(simpleDraft(data.storageLocations.find((row) => row.id === id))),
+      "inventory_storage_locations",
+      (row) => ({ label: "Stored Items", value: countLabel(storageItemCounts.get(row.id) ?? 0, "item") }),
+    )
+    : masterList(
+      "Units",
+      data.units,
+      () => setUnitForm(simpleDraft()),
+      (id) => setUnitForm(simpleDraft(data.units.find((row) => row.id === id))),
+      "inventory_units",
+      (row) => ({ label: "Inventory Items", value: countLabel(unitItemCounts.get(row.id) ?? 0, "item") }),
+    );
 
   const utilityContent = utilityView === "reports" ? (
     <section className="ia-navigation-placeholder" aria-labelledby="inventory-reports-title">
@@ -1239,6 +1295,7 @@ export function InventoryDashboardPage({
           draft={itemForm}
           setDraft={setItemForm}
           data={data}
+          metadata={itemForm.id ? data.items.find((row) => row.id === itemForm.id) ?? null : null}
           categories={activeCategories}
           suppliers={activeSuppliers}
           locations={activeLocations}
@@ -1251,6 +1308,7 @@ export function InventoryDashboardPage({
         <CategoryForm
           draft={categoryForm}
           setDraft={setCategoryForm}
+          metadata={categoryForm.id ? data.categories.find((row) => row.id === categoryForm.id) ?? null : null}
           working={working}
           onSave={() => void run(() => saveCategory(restaurantId, categoryForm, data), categoryForm.id ? "Category updated." : "Category created.").then((saved) => { if (saved) setCategoryForm(null); })}
         />
@@ -1259,6 +1317,7 @@ export function InventoryDashboardPage({
         <SupplierForm
           draft={supplierForm}
           setDraft={setSupplierForm}
+          metadata={supplierForm.id ? data.suppliers.find((row) => row.id === supplierForm.id) ?? null : null}
           working={working}
           onSave={() => void run(() => saveSupplier(restaurantId, supplierForm, data), supplierForm.id ? "Supplier updated." : "Supplier created.").then((saved) => { if (saved) setSupplierForm(null); })}
         />
@@ -1268,6 +1327,7 @@ export function InventoryDashboardPage({
           title="Storage Location"
           draft={storageForm}
           setDraft={setStorageForm}
+          metadata={storageForm.id ? data.storageLocations.find((row) => row.id === storageForm.id) ?? null : null}
           working={working}
           examples="Main Store, Freezer, Cold Room, Bar Store, Bakery Store"
           onSave={() => void run(() => saveStorageLocation(restaurantId, storageForm, data), storageForm.id ? "Storage location updated." : "Storage location created.").then((saved) => { if (saved) setStorageForm(null); })}
@@ -1278,6 +1338,7 @@ export function InventoryDashboardPage({
           title="Unit"
           draft={unitForm}
           setDraft={setUnitForm}
+          metadata={unitForm.id ? data.units.find((row) => row.id === unitForm.id) ?? null : null}
           working={working}
           examples="kg, g, L, ml, pcs, box, bag, cup, bottle"
           onSave={() => void run(() => saveUnit(restaurantId, unitForm, data), unitForm.id ? "Unit updated." : "Unit created.").then((saved) => { if (saved) setUnitForm(null); })}
@@ -1455,6 +1516,7 @@ function InventoryItemForm({
   draft,
   setDraft,
   data,
+  metadata,
   categories,
   suppliers,
   locations,
@@ -1465,6 +1527,7 @@ function InventoryItemForm({
   draft: InventoryItemDraft;
   setDraft: (draft: InventoryItemDraft | null) => void;
   data: InventoryAdminData;
+  metadata: InventoryItem | null;
   categories: InventoryCategory[];
   suppliers: InventorySupplier[];
   locations: Array<{ id: string; name: string }>;
@@ -1488,26 +1551,35 @@ function InventoryItemForm({
         <label>Maximum Stock<input min="0" step="0.001" type="number" value={draft.maximumStock} onChange={(event) => setDraft({ ...draft, maximumStock: event.target.value })} /></label>
         <label>Purchase Price (ETB per unit)<input required min="0" step="0.000001" type="number" value={draft.purchasePrice} onChange={(event) => setDraft({ ...draft, purchasePrice: event.target.value })} /></label>
         <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+        {metadata && (
+          <AdvancedInfo rows={[
+            { label: "Created", value: dateLabel(metadata.createdAt) },
+            { label: "Updated", value: dateLabel(metadata.updatedAt) },
+            { label: "Created By", value: metadata.createdByStaffId ? data.staffNames[metadata.createdByStaffId] ?? "Staff" : "System" },
+            { label: "Updated By", value: metadata.updatedByStaffId ? data.staffNames[metadata.updatedByStaffId] ?? "Staff" : "System" },
+          ]} />
+        )}
         <footer><button disabled={working || !canCreate} type="submit">{working ? "Saving..." : "Save Item"}</button></footer>
       </form>
     </FormShell>
   );
 }
 
-function CategoryForm({ draft, setDraft, working, onSave }: { draft: InventoryCategoryDraft; setDraft: (draft: InventoryCategoryDraft | null) => void; working: boolean; onSave: () => void }) {
+function CategoryForm({ draft, setDraft, metadata, working, onSave }: { draft: InventoryCategoryDraft; setDraft: (draft: InventoryCategoryDraft | null) => void; metadata: { createdAt: string; updatedAt: string } | null; working: boolean; onSave: () => void }) {
   return (
     <FormShell title={draft.id ? "Edit Category" : "Create Category"} onClose={() => setDraft(null)}>
       <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
         <label>Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
         <label>Sort Order<input type="number" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label>
         <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+        {metadata && <AdvancedInfo rows={[{ label: "Created", value: dateLabel(metadata.createdAt) }, { label: "Updated", value: dateLabel(metadata.updatedAt) }]} />}
         <footer><button disabled={working} type="submit">{working ? "Saving..." : "Save Category"}</button></footer>
       </form>
     </FormShell>
   );
 }
 
-function SupplierForm({ draft, setDraft, working, onSave }: { draft: InventorySupplierDraft; setDraft: (draft: InventorySupplierDraft | null) => void; working: boolean; onSave: () => void }) {
+function SupplierForm({ draft, setDraft, metadata, working, onSave }: { draft: InventorySupplierDraft; setDraft: (draft: InventorySupplierDraft | null) => void; metadata: { createdAt: string; updatedAt: string } | null; working: boolean; onSave: () => void }) {
   return (
     <FormShell title={draft.id ? "Edit Supplier" : "Create Supplier"} onClose={() => setDraft(null)}>
       <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
@@ -1516,18 +1588,20 @@ function SupplierForm({ draft, setDraft, working, onSave }: { draft: InventorySu
         <label>Contact Person<input value={draft.contactPerson} onChange={(event) => setDraft({ ...draft, contactPerson: event.target.value })} /></label>
         <label className="wide">Address<textarea value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label>
         <label className="wide">Notes<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
+        {metadata && <AdvancedInfo rows={[{ label: "Created", value: dateLabel(metadata.createdAt) }, { label: "Updated", value: dateLabel(metadata.updatedAt) }]} />}
         <footer><button disabled={working} type="submit">{working ? "Saving..." : "Save Supplier"}</button></footer>
       </form>
     </FormShell>
   );
 }
 
-function SimpleForm({ title, draft, setDraft, working, examples, onSave }: { title: string; draft: InventorySimpleDraft; setDraft: (draft: InventorySimpleDraft | null) => void; working: boolean; examples: string; onSave: () => void }) {
+function SimpleForm({ title, draft, setDraft, metadata, working, examples, onSave }: { title: string; draft: InventorySimpleDraft; setDraft: (draft: InventorySimpleDraft | null) => void; metadata: { createdAt: string; updatedAt: string } | null; working: boolean; examples: string; onSave: () => void }) {
   return (
     <FormShell title={draft.id ? `Edit ${title}` : `Create ${title}`} onClose={() => setDraft(null)}>
       <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
         <label>Name<input required value={draft.name} placeholder={examples} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
         <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+        {metadata && <AdvancedInfo rows={[{ label: "Created", value: dateLabel(metadata.createdAt) }, { label: "Updated", value: dateLabel(metadata.updatedAt) }]} />}
         <footer><button disabled={working} type="submit">{working ? "Saving..." : `Save ${title}`}</button></footer>
       </form>
     </FormShell>
