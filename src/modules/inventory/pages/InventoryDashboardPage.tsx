@@ -36,6 +36,7 @@ import { recordOpeningBalance } from "../services/openingBalanceService";
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
 import { InventoryAdjustmentsPage } from "./InventoryAdjustmentsPage";
+import { LowStockAssistantPage } from "./LowStockAssistantPage";
 import { MovementHistoryPage } from "./MovementHistoryPage";
 import type {
   InventoryAdminData,
@@ -88,6 +89,7 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "movement-history", label: "Movement History" },
   { key: "purchase-orders", label: "Purchase Orders" },
   { key: "purchase-history", label: "Purchase History" },
+  { key: "low-stock-assistant", label: "Low Stock Assistant" },
   { key: "items", label: "Items" },
   { key: "categories", label: "Categories" },
   { key: "suppliers", label: "Suppliers" },
@@ -109,6 +111,7 @@ const STOCK_MANAGEMENT_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "movement-history", label: "Movement History" },
   { key: "purchase-orders", label: "Purchase Orders" },
   { key: "purchase-history", label: "Purchase History" },
+  { key: "low-stock-assistant", label: "Low Stock Assistant" },
 ];
 
 const INVENTORY_RECORDS_NAV: Array<{ key: InventorySection; label: string }> = [
@@ -1089,6 +1092,7 @@ export function InventoryDashboardPage({
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
     : section === "purchase-orders" ? <PurchaseOrderDraftsPage restaurantId={restaurantId} suppliers={data.suppliers} items={data.items} units={data.units} />
     : section === "purchase-history" ? <PurchaseHistoryPage restaurantId={restaurantId} />
+    : section === "low-stock-assistant" ? <LowStockAssistantPage restaurantId={restaurantId} staffRole={staffRole} currentStock={currentStock} items={data.items} categories={data.categories} suppliers={data.suppliers} storageLocations={data.storageLocations} units={data.units} onOpenPurchaseOrders={() => navigate("purchase-orders")} />
     : section === "items" ? items
     : section === "categories" ? masterList(
       "Categories",

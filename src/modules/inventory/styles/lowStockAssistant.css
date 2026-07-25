@@ -1,0 +1,73 @@
+.lsa-page { display: grid; gap: 16px; }
+.lsa-heading, .lsa-heading > div, .lsa-draft header > div { display: grid; gap: 4px; }
+.lsa-heading { grid-template-columns: 1fr auto; align-items: center; }
+.lsa-heading h2, .lsa-heading p, .lsa-draft h3, .lsa-draft p { margin: 0; }
+.lsa-heading p, .lsa-draft p { color: #667085; }
+.lsa-heading > div > span, .lsa-draft header span { color: #667085; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.lsa-heading > button, .lsa-selection-bar button, .lsa-draft button, .ia-alert button { min-height: 40px; padding: 0 13px; border: 1px solid #1457d9; border-radius: 8px; color: #fff; background: #1457d9; font-weight: 800; cursor: pointer; }
+.lsa-readonly { padding: 7px 11px; border-radius: 999px; color: #475467; background: #f2f4f7; font-weight: 800; }
+.lsa-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.lsa-summary button { display: grid; gap: 7px; padding: 14px; border: 1px solid #e4e7ec; border-radius: 12px; text-align: left; background: #fff; cursor: pointer; }
+.lsa-summary button span { color: #667085; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.lsa-summary button strong { font-size: 25px; }
+.lsa-summary button.out_of_stock { border-left: 4px solid #d92d20; }
+.lsa-summary button.critical { border-left: 4px solid #f79009; }
+.lsa-summary button.low { border-left: 4px solid #fdb022; }
+.lsa-summary button.healthy { border-left: 4px solid #12b76a; }
+.lsa-filters { display: grid; grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(140px, .65fr)); gap: 10px; padding: 12px; border: 1px solid #dfe4ec; border-radius: 10px; background: #fff; }
+.lsa-filters label, .lsa-draft-fields label, .lsa-draft-lines label { display: grid; gap: 5px; color: #344054; font-size: 12px; font-weight: 800; }
+.lsa-filters input, .lsa-filters select, .lsa-draft input, .lsa-draft select, .lsa-draft textarea { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #cfd6e2; border-radius: 8px; color: #17202f; background: #fff; font: inherit; box-sizing: border-box; }
+.lsa-status-filters { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.lsa-status-filters > span { color: #344054; font-size: 12px; font-weight: 800; }
+.lsa-status-filters label { display: flex; align-items: center; gap: 5px; }
+.lsa-status-filters input { width: 16px; min-height: 16px; }
+.lsa-selection-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.lsa-selection-bar span { margin-right: auto; color: #475467; font-weight: 800; }
+.lsa-selection-bar button:last-child { border-color: #cfd6e2; color: #344054; background: #fff; }
+.lsa-table-wrap { overflow: auto; border: 1px solid #dfe4ec; border-radius: 12px; background: #fff; }
+.lsa-table { width: 100%; min-width: 1280px; border-collapse: collapse; }
+.lsa-table th, .lsa-table td { padding: 11px 12px; border-bottom: 1px solid #e4e7ec; text-align: left; vertical-align: middle; }
+.lsa-table th { color: #667085; background: #f9fafb; font-size: 11px; text-transform: uppercase; }
+.lsa-table td { color: #344054; font-size: 13px; }
+.lsa-table td > strong, .lsa-table td > small { display: block; }
+.lsa-table td > small { margin-top: 3px; color: #667085; }
+.lsa-badge { display: inline-block; padding: 5px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.lsa-badge.out_of_stock { color: #b42318; background: #fef3f2; }
+.lsa-badge.critical { color: #b54708; background: #fffaeb; }
+.lsa-badge.low { color: #854d0e; background: #fefce8; }
+.lsa-badge.healthy { color: #067647; background: #ecfdf3; }
+.ia-alert { display: flex; align-items: center; gap: 12px; }
+.ia-alert > span { flex: 1; }
+.lsa-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(16, 24, 40, .55); }
+.lsa-draft { display: grid; gap: 16px; width: min(920px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 18px; border-radius: 14px; background: #fff; box-shadow: 0 20px 50px rgba(16, 24, 40, .25); }
+.lsa-draft header { display: flex; justify-content: space-between; gap: 12px; }
+.lsa-draft header > button { min-width: 40px; padding: 0; border-color: #d0d5dd; color: #344054; background: #fff; font-size: 24px; }
+.lsa-draft-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lsa-draft-fields .wide { grid-column: 1 / -1; }
+.lsa-draft textarea { min-height: 68px; resize: vertical; }
+.lsa-draft-lines { display: grid; gap: 8px; }
+.lsa-draft-lines > div { display: grid; grid-template-columns: minmax(160px, 1fr) 130px 90px 130px 120px; gap: 10px; align-items: end; padding: 11px; border: 1px solid #e4e7ec; border-radius: 9px; background: #f9fafb; }
+.lsa-draft-lines > div > div { display: grid; gap: 4px; }
+.lsa-draft-lines > div > div span { color: #667085; font-size: 11px; }
+.lsa-draft footer { display: grid; grid-template-columns: 1fr minmax(220px, 1.5fr) auto auto; gap: 10px; align-items: center; padding-top: 12px; border-top: 1px solid #e4e7ec; }
+.lsa-draft footer > div { display: grid; }
+.lsa-draft footer > div span { color: #667085; font-size: 11px; }
+.lsa-draft footer p { font-size: 12px; }
+.lsa-draft footer button:first-of-type { border-color: #cfd6e2; color: #344054; background: #fff; }
+.lsa-draft button:disabled { cursor: not-allowed; opacity: .55; }
+
+@media (max-width: 1000px) {
+  .lsa-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lsa-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lsa-draft-lines > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .lsa-heading { grid-template-columns: 1fr; }
+  .lsa-heading > button { width: 100%; }
+  .lsa-summary, .lsa-filters, .lsa-draft-fields, .lsa-draft footer { grid-template-columns: 1fr; }
+  .lsa-status-filters { align-items: flex-start; flex-direction: column; }
+  .lsa-selection-bar { align-items: stretch; flex-direction: column; }
+  .lsa-selection-bar span { margin-right: 0; }
+  .lsa-draft-lines > div { grid-template-columns: 1fr; }
+}

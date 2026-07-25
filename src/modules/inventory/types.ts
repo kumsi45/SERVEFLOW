@@ -14,6 +14,7 @@ export type InventorySection =
   | "movement-history"
   | "purchase-orders"
   | "purchase-history"
+  | "low-stock-assistant"
   | "categories"
   | "suppliers"
   | "storage-locations"
