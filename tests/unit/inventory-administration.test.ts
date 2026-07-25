@@ -83,7 +83,7 @@ describe("Phase 8.1 inventory administration contracts", () => {
     const router = read("src/app/router/AppRouter.tsx");
     const roleRoute = read("src/app/router/RoleNamespaceRoute.tsx");
     const inventoryAccess = read("src/core/permissions/inventoryAccess.ts");
-    expect(router).toContain('inventory: ["dashboard", "items", "current-stock", "movements", "stock-in", "stock-out", "adjustments", "waste", "transfers", "ledger", "movement-history", "categories", "suppliers", "storage-locations", "units"]');
+    expect(router).toContain('inventory: ["dashboard", "items", "current-stock", "movements", "stock-in", "stock-out", "adjustments", "waste", "transfers", "ledger", "movement-history", "purchase-orders", "categories", "suppliers", "storage-locations", "units"]');
     expect(roleRoute).toContain('namespace === "inventory"');
     expect(roleRoute).toContain("canAccessInventory(restaurant.role)");
     expect(inventoryAccess).toContain('role === "owner" || role === "manager" || role === "inventory_officer"');

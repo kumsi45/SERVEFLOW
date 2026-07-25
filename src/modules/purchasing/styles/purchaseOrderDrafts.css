@@ -1,0 +1,52 @@
+.po-page { display: grid; gap: 16px; }
+.po-heading, .po-editor-heading, .po-lines-heading, .po-editor-footer, .po-draft-card > header, .po-draft-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.po-heading h2, .po-heading p, .po-editor h3, .po-draft-card h3 { margin: 0; }
+.po-heading p { margin-top: 4px; color: #667085; }
+.po-heading > div > span, .po-editor-heading > span, .po-draft-card header span, .po-editor-footer span, .po-draft-card footer span { color: #667085; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.po-heading button, .po-lines-heading button, .po-editor-footer button, .po-draft-card footer button, .po-line > button { min-height: 40px; padding: 0 13px; border: 1px solid #1457d9; border-radius: 8px; color: #fff; background: #1457d9; font-weight: 800; cursor: pointer; }
+.po-editor, .po-draft-card { padding: 16px; border: 1px solid #dfe4ec; border-radius: 14px; background: #fff; }
+.po-editor { display: grid; gap: 16px; }
+.po-editor-heading > span, .po-status { padding: 5px 9px; border-radius: 999px; color: #854d0e !important; background: #fef3c7; }
+.po-header-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.po-header-fields label, .po-line label, .po-filters label { display: grid; gap: 5px; color: #344054; font-size: 12px; font-weight: 800; }
+.po-header-fields .wide { grid-column: 1 / -1; }
+.po-header-fields input, .po-header-fields select, .po-header-fields textarea, .po-line input, .po-line select, .po-filters input, .po-filters select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #cfd6e2; border-radius: 8px; color: #17202f; background: #fff; font: inherit; }
+.po-header-fields textarea { min-height: 82px; resize: vertical; }
+.po-lines { display: grid; gap: 10px; }
+.po-line { display: grid; grid-template-columns: minmax(180px, 1.6fr) minmax(90px, .6fr) minmax(130px, .8fr) minmax(110px, .7fr) minmax(100px, .6fr) auto; align-items: end; gap: 10px; padding: 12px; border: 1px solid #e4e7ec; border-radius: 10px; background: #f9fafb; }
+.po-line-total { display: grid; gap: 5px; min-height: 42px; align-content: center; }
+.po-line-total span { color: #667085; font-size: 11px; font-weight: 800; }
+.po-line > button.danger, .po-draft-card footer button.danger { border-color: #fda29b; color: #b42318; background: #fff; }
+.po-line > button:disabled, .po-draft-card button:disabled, .po-editor-footer button:disabled { cursor: not-allowed; opacity: .55; }
+.po-editor-footer { padding-top: 14px; border-top: 1px solid #e4e7ec; justify-content: flex-end; }
+.po-editor-footer > div { display: grid; margin-right: auto; }
+.po-editor-footer > div strong { font-size: 22px; }
+.po-editor-footer button:first-of-type { border-color: #cfd6e2; color: #344054; background: #fff; }
+.po-filters { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(160px, .45fr) minmax(140px, .35fr); gap: 10px; padding: 12px; border: 1px solid #dfe4ec; border-radius: 10px; background: #fff; }
+.po-draft-list { display: grid; gap: 12px; }
+.po-draft-card { display: grid; gap: 14px; }
+.po-draft-card dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.po-draft-card dl div { display: grid; gap: 3px; }
+.po-draft-card dt { color: #667085; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.po-draft-card dd { margin: 0; font-weight: 700; }
+.po-draft-lines { display: grid; border: 1px solid #e4e7ec; border-radius: 9px; overflow: hidden; }
+.po-draft-lines > div { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(180px, .8fr) minmax(90px, auto); gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e4e7ec; }
+.po-draft-lines > div:last-child { border-bottom: 0; }
+.po-draft-lines strong { text-align: right; }
+.po-draft-card > p { margin: 0; padding: 10px; border-radius: 8px; color: #475467; background: #f9fafb; white-space: pre-wrap; }
+.po-draft-card footer > div { display: grid; margin-right: auto; }
+.po-draft-card footer > div strong { font-size: 20px; }
+
+@media (max-width: 980px) {
+  .po-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .po-line > button { align-self: end; }
+}
+
+@media (max-width: 680px) {
+  .po-heading, .po-editor-footer, .po-draft-card > footer { align-items: stretch; flex-direction: column; }
+  .po-heading button, .po-editor-footer button, .po-draft-card footer button { width: 100%; }
+  .po-header-fields, .po-line, .po-filters, .po-draft-card dl { grid-template-columns: 1fr; }
+  .po-draft-lines > div { grid-template-columns: 1fr; }
+  .po-draft-lines strong { text-align: left; }
+  .po-editor-footer > div, .po-draft-card footer > div { margin-right: 0; }
+}
