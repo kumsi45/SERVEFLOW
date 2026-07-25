@@ -20,6 +20,7 @@ const MANAGER_NAV = [
   { key: "intelligence", label: "Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
   { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
   { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: "RC" },
+  { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: "MN" },
   { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: "IN" },
 ];
 

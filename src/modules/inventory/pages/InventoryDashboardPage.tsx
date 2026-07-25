@@ -185,6 +185,7 @@ function itemDraft(item?: InventoryItem): InventoryItemDraft {
     barcode: item?.barcode ?? "",
     minimumStock: item ? String(item.minimumStock) : "0",
     maximumStock: item?.maximumStock == null ? "" : String(item.maximumStock),
+    purchasePrice: item ? String(item.purchasePrice) : "0",
     description: item?.description ?? "",
   };
 }
@@ -1485,6 +1486,7 @@ function InventoryItemForm({
         <label>Barcode<input value={draft.barcode} onChange={(event) => setDraft({ ...draft, barcode: event.target.value })} /></label>
         <label>Minimum Stock<input min="0" step="0.001" type="number" value={draft.minimumStock} onChange={(event) => setDraft({ ...draft, minimumStock: event.target.value })} /></label>
         <label>Maximum Stock<input min="0" step="0.001" type="number" value={draft.maximumStock} onChange={(event) => setDraft({ ...draft, maximumStock: event.target.value })} /></label>
+        <label>Purchase Price (ETB per unit)<input required min="0" step="0.000001" type="number" value={draft.purchasePrice} onChange={(event) => setDraft({ ...draft, purchasePrice: event.target.value })} /></label>
         <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
         <footer><button disabled={working || !canCreate} type="submit">{working ? "Saving..." : "Save Item"}</button></footer>
       </form>

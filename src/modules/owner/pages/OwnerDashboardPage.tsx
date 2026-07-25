@@ -21,6 +21,7 @@ import {
   type PaymentPolicy,
 } from "../../../core/payment/lifecycle";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { searchActiveMenuRecipes, type MenuRecipeOption } from "../../menu-recipes/services/menuRecipeService";
 import {
   createStaff,
   deleteStaff,
@@ -157,6 +158,9 @@ type OdMenuItem = {
   kitchen_station_id: string | null;
   image_url: string | null;
   archived_at?: string | null;
+  recipe_id: string | null;
+  recipe_name: string | null;
+  recipe_status: string | null;
 };
 
 type OdCategory = {
@@ -668,7 +672,7 @@ export function OwnerDashboardPage({
           supabase
             .from("menu_items")
             .select(
-              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at",
+              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,recipes!menu_items_recipe_same_restaurant(name,status)",
             )
             .eq("restaurant_id", restaurantId)
             .is("archived_at", null)
@@ -804,6 +808,8 @@ export function OwnerDashboardPage({
           (menuData ?? []).map((row) => ({
             ...row,
             price: Number(row.price),
+            recipe_name: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.name ?? null,
+            recipe_status: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.status ?? null,
           })) as OdMenuItem[],
         );
         setCategories((categoryData ?? []) as OdCategory[]);
@@ -1390,7 +1396,7 @@ export function OwnerDashboardPage({
       supabase
         .from("menu_items")
         .select(
-          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at",
+          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,recipes!menu_items_recipe_same_restaurant(name,status)",
         )
         .eq("restaurant_id", restaurantId)
         .is("archived_at", null)
@@ -1409,6 +1415,8 @@ export function OwnerDashboardPage({
       (menuData ?? []).map((row) => ({
         ...row,
         price: Number(row.price),
+        recipe_name: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.name ?? null,
+        recipe_status: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.status ?? null,
       })) as OdMenuItem[],
     );
     setCategories((categoryData ?? []) as OdCategory[]);
@@ -4827,10 +4835,21 @@ function MenuPage({
   const [formFiberG, setFormFiberG] = useState("");
   const [formSugarG, setFormSugarG] = useState("");
   const [formSodiumMg, setFormSodiumMg] = useState("");
+  const [formRecipeId, setFormRecipeId] = useState("");
+  const [recipeSearch, setRecipeSearch] = useState("");
+  const [recipeOptions, setRecipeOptions] = useState<MenuRecipeOption[]>([]);
   const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>([]);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+
+  useEffect(() => {
+    if (!modal) return;
+    const timer = window.setTimeout(() => {
+      void searchActiveMenuRecipes(restaurantId, recipeSearch).then(setRecipeOptions).catch((cause) => setMenuError(cause instanceof Error ? cause.message : "Recipes could not be loaded."));
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [modal, recipeSearch, restaurantId]);
   const activeStations = useMemo(
     () =>
       [...stations]
@@ -4934,6 +4953,8 @@ function MenuPage({
     setFormFiberG("");
     setFormSugarG("");
     setFormSodiumMg("");
+    setFormRecipeId("");
+    setRecipeSearch("");
     setModal({ mode: "create" });
   }
 
@@ -4963,8 +4984,17 @@ function MenuPage({
     setFormFiberG(formatOptionalNutritionInput(item.fiber_g));
     setFormSugarG(formatOptionalNutritionInput(item.sugar_g));
     setFormSodiumMg(formatOptionalNutritionInput(item.sodium_mg));
+    setFormRecipeId(item.recipe_id ?? "");
+    setRecipeSearch(item.recipe_name ?? "");
     setModal({ mode: "edit", item });
   }
+
+  useEffect(() => {
+    const targetId = new URLSearchParams(window.location.search).get("item");
+    if (!targetId || modal) return;
+    const target = items.find((item) => item.id === targetId);
+    if (target) { window.history.replaceState({}, "", window.location.pathname); openEditModal(target); }
+  }, [items, modal]);
 
   async function ensureCategory() {
     const newCategory = formNewCategory.trim();
@@ -5169,6 +5199,7 @@ function MenuPage({
         fiber_g: fiberG,
         sugar_g: sugarG,
         sodium_mg: sodiumMg,
+        recipe_id: formRecipeId || null,
       };
 
       if (modal.mode === "create") {
@@ -5401,13 +5432,14 @@ function MenuPage({
                 <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
+                <th>Recipe</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="od-empty">
                       <div className="od-empty-icon">--</div>
                       <div className="od-empty-msg">
@@ -5466,6 +5498,7 @@ function MenuPage({
                         {item.available ? "Available" : "Unavailable"}
                       </span>
                     </td>
+                    <td>{item.recipe_id ? <div><strong>{item.recipe_name ?? "Linked Recipe"}</strong><div><span className="od-status-badge paid">Linked</span></div></div> : <div><span>No Recipe Assigned</span><div><span className="od-status-badge pending">Recipe Required</span></div></div>}</td>
                     <td>
                       <div className="od-row-actions">
                         <button
@@ -5689,6 +5722,12 @@ function MenuPage({
                   placeholder="Optional"
                 />
               </label>
+              <fieldset className="od-recipe-link-fieldset">
+                <legend>Recipe</legend>
+                <label>Search Recipe<input value={recipeSearch} onChange={(event) => setRecipeSearch(event.target.value)} disabled={isWorking} placeholder="Search active recipes" /></label>
+                <label>Select Recipe<select value={formRecipeId} onChange={(event) => setFormRecipeId(event.target.value)} disabled={isWorking}><option value="">No Recipe Assigned</option>{recipeOptions.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name} ({recipe.recipe_code})</option>)}</select></label>
+                {!formRecipeId && <span className="od-recipe-warning">Recipe Required — bottled drinks may remain unlinked.</span>}
+              </fieldset>
               <label>
                 Kitchen Station
                 <select

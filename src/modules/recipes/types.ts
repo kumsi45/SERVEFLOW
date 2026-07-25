@@ -15,3 +15,24 @@ export type RecipeFilters = {
   sort: "newest" | "oldest"; page: number; pageSize: number;
 };
 export type RecipePage = { items: Recipe[]; total: number; page: number; page_size: number };
+export type RecipeIngredient = {
+  id: string; restaurant_id: string; recipe_id: string; inventory_item_id: string;
+  inventory_item_name: string; quantity_required: number; unit_id: string; unit_name: string;
+  optional_notes: string | null; sort_order: number; created_at: string; updated_at: string;
+};
+export type IngredientInventoryItem = { id: string; name: string; unit_id: string };
+export type IngredientUnit = { id: string; name: string; description: string | null };
+export type RecipeIngredientDraft = {
+  id?: string; inventoryItemId: string; quantityRequired: string; unitId: string;
+  optionalNotes: string; sortOrder: number;
+};
+export type RecipeIngredientCost = {
+  id: string; inventory_item_id: string; inventory_item_name: string;
+  quantity_required: number; unit_id: string; unit_name: string;
+  purchase_price: number; purchase_unit_name: string;
+  unit_cost: number | null; ingredient_cost: number | null;
+};
+export type RecipeCost = {
+  recipe_id: string; currency: string; total_cost: number; complete: boolean;
+  ingredients: RecipeIngredientCost[];
+};

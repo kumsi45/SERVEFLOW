@@ -101,6 +101,7 @@ function mapItem(row: Row): InventoryItem {
     barcode: nullableText(row.barcode),
     minimumStock: numberValue(row.minimum_stock),
     maximumStock: row.maximum_stock == null ? null : numberValue(row.maximum_stock),
+    purchasePrice: numberValue(row.purchase_price),
     description: nullableText(row.description),
     status: statusValue(row.status),
     createdByStaffId: nullableText(row.created_by_staff_id),
@@ -129,7 +130,7 @@ export async function loadInventoryAdminData(restaurantId: string): Promise<Inve
   const [items, categories, suppliers, storageLocations, units] = await Promise.all([
     supabase
       .from("inventory_items")
-      .select("id,restaurant_id,name,category_id,unit_id,storage_location_id,preferred_supplier_id,sku,barcode,minimum_stock,maximum_stock,description,status,created_by_staff_id,updated_by_staff_id,created_at,updated_at")
+      .select("id,restaurant_id,name,category_id,unit_id,storage_location_id,preferred_supplier_id,sku,barcode,minimum_stock,maximum_stock,purchase_price,description,status,created_by_staff_id,updated_by_staff_id,created_at,updated_at")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false }),
     supabase
@@ -244,6 +245,7 @@ export async function saveInventoryItem(restaurantId: string, draft: InventoryIt
     barcode: nullableText(draft.barcode),
     minimum_stock: Number(draft.minimumStock || 0),
     maximum_stock: draft.maximumStock.trim() ? Number(draft.maximumStock) : null,
+    purchase_price: Number(draft.purchasePrice || 0),
     description: nullableText(draft.description),
   };
   const query = draft.id
@@ -302,6 +304,7 @@ export async function duplicateInventoryItem(
     preferred_supplier_id: item.preferredSupplierId,
     minimum_stock: item.minimumStock,
     maximum_stock: item.maximumStock,
+    purchase_price: item.purchasePrice,
     description: item.description,
   });
   if (error) throw new Error(errorMessage(error));

@@ -12,7 +12,7 @@ import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleN
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
   owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables", "recipes"],
-  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai", "recipes"],
+  manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai", "recipes", "menu"],
   waiter: ["dashboard", "tables", "orders", "dining-sessions"],
   cashier: ["dashboard", "payments", "checkout", "bills"],
   kitchen: ["dashboard", "stations", "history"],

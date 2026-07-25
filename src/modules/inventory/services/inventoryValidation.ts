@@ -118,6 +118,7 @@ export function validateItemDraft(
 
   const minimumStock = Number(draft.minimumStock || 0);
   const maximumStock = draft.maximumStock.trim() ? Number(draft.maximumStock) : null;
+  const purchasePrice = Number(draft.purchasePrice || 0);
   if (!Number.isFinite(minimumStock) || minimumStock < 0) {
     errors.push("Minimum stock must be zero or greater.");
   }
@@ -126,6 +127,9 @@ export function validateItemDraft(
   }
   if (maximumStock !== null && maximumStock < minimumStock) {
     errors.push("Maximum stock cannot be less than minimum stock.");
+  }
+  if (!Number.isFinite(purchasePrice) || purchasePrice < 0) {
+    errors.push("Purchase price must be zero or greater.");
   }
 
   const duplicateSku = draft.sku.trim()

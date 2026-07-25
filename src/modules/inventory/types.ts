@@ -78,6 +78,7 @@ export type InventoryItem = {
   barcode: string | null;
   minimumStock: number;
   maximumStock: number | null;
+  purchasePrice: number;
   description: string | null;
   status: InventoryStatus;
   createdByStaffId: string | null;
@@ -150,6 +151,7 @@ export type InventoryItemDraft = {
   barcode: string;
   minimumStock: string;
   maximumStock: string;
+  purchasePrice: string;
   description: string;
 };
 
