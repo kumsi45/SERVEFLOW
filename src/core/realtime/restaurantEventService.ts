@@ -9,7 +9,26 @@ export const RESTAURANT_REALTIME_TABLES = [
   "kitchen_inventory_requests", "inventory_items", "manager_customer_complaints",
   "menu_items", "kitchen_stations", "restaurants",
   "staff_activity_log", "manager_ai_recommendation_decisions",
+  "inventory_movements", "inventory_categories", "inventory_suppliers",
+  "inventory_storage_locations", "inventory_units",
 ] as const;
+
+const INVENTORY_TABLES = new Set<string>([
+  "inventory_items", "inventory_movements", "inventory_categories",
+  "inventory_suppliers", "inventory_storage_locations", "inventory_units",
+]);
+const DEFAULT_RESTAURANT_REALTIME_TABLES = RESTAURANT_REALTIME_TABLES
+  .filter(table => !INVENTORY_TABLES.has(table));
+
+function normalizeTables(tables: readonly string[]) {
+  return [...new Set(tables)].sort();
+}
+
+function scopeHash(scope: string) {
+  let hash = 5381;
+  for (let index = 0; index < scope.length; index += 1) hash = ((hash << 5) + hash) ^ scope.charCodeAt(index);
+  return (hash >>> 0).toString(36);
+}
 
 export type RestaurantEventType =
   | "ORDER_CREATED" | "ORDER_UPDATED" | "ORDER_ACCEPTED" | "ORDER_PREPARING"
@@ -75,12 +94,18 @@ class RestaurantEventStream {
   private recoveryTimer: number | undefined;
   private disposed = false;
 
-  constructor(private client: SupabaseClient, readonly restaurantId: string) { this.connect(); }
+  constructor(
+    private client: SupabaseClient,
+    readonly restaurantId: string,
+    private tables: readonly string[],
+    private streamKey: string,
+  ) { this.connect(); }
 
   private connect() {
     if (this.disposed || this.channel) return;
-    let channel = this.client.channel(`restaurant-events:${this.restaurantId}`);
-    for (const table of RESTAURANT_REALTIME_TABLES) {
+    const scope = this.tables.join(",");
+    let channel = this.client.channel(`restaurant-events:${this.restaurantId}:${scopeHash(scope)}`);
+    for (const table of this.tables) {
       const filter = table === "restaurants" ? `id=eq.${this.restaurantId}` : `restaurant_id=eq.${this.restaurantId}`;
       channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter }, payload => {
         const event = canonicalEvent(table, payload as RealtimePostgresChangesPayload<Record<string, unknown>>, this.restaurantId);
@@ -122,16 +147,25 @@ class RestaurantEventStream {
     window.removeEventListener("online", this.recover);
     document.removeEventListener("visibilitychange", this.recoverOnWake);
     if (this.channel) void this.client.removeChannel(this.channel);
-    streams.get(this.client)?.delete(this.restaurantId);
+    streams.get(this.client)?.delete(this.streamKey);
   }
 }
 
 const streams = new WeakMap<SupabaseClient, Map<string, RestaurantEventStream>>();
-export function getRestaurantEventStream(restaurantId: string, client: SupabaseClient = supabase) {
+export function getRestaurantEventStream(
+  restaurantId: string,
+  client: SupabaseClient = supabase,
+  tables: readonly string[] = DEFAULT_RESTAURANT_REALTIME_TABLES,
+) {
   let clientStreams = streams.get(client);
   if (!clientStreams) { clientStreams = new Map(); streams.set(client, clientStreams); }
-  let stream = clientStreams.get(restaurantId);
-  if (!stream) { stream = new RestaurantEventStream(client, restaurantId); clientStreams.set(restaurantId, stream); }
+  const normalizedTables = normalizeTables(tables);
+  const streamKey = `${restaurantId}|${normalizedTables.join(",")}`;
+  let stream = clientStreams.get(streamKey);
+  if (!stream) {
+    stream = new RestaurantEventStream(client, restaurantId, normalizedTables, streamKey);
+    clientStreams.set(streamKey, stream);
+  }
   return stream;
 }
 
@@ -172,7 +206,7 @@ export function createRestaurantEventConsumer(restaurantId: string, client: Supa
       return consumer;
     },
     subscribe(stateListener?: StateListener) {
-      unsubscribe = getRestaurantEventStream(restaurantId, client).subscribe(event => {
+      unsubscribe = getRestaurantEventStream(restaurantId, client, [...handlers.keys()]).subscribe(event => {
         const payload = { eventType: event.operation, new: event.record, old: event.previous };
         handlers.get(event.table)?.forEach(handler => void handler(payload));
       }, stateListener);

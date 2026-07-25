@@ -49,10 +49,12 @@ export function mapInventoryMovementHistoryRow(row: Row): InventoryFoodConsumpti
 
 export async function loadInventoryMovementHistory(
   restaurantId: string,
+  filters: { inventoryItemId?: string; limit?: number } = {},
 ): Promise<InventoryFoodConsumptionMovement[]> {
   const { data, error } = await supabase.rpc("get_inventory_movement_history", {
     target_restaurant_id: restaurantId,
-    result_limit: 500,
+    target_inventory_item_id: filters.inventoryItemId || null,
+    result_limit: filters.limit ?? 500,
   });
   if (error) throw new Error(error.message || "Inventory movement history is unavailable.");
   return ((data ?? []) as Row[]).map(mapInventoryMovementHistoryRow);

@@ -52,7 +52,7 @@ function errorMessage(error: { message?: string } | null | undefined) {
   return error?.message ?? "Inventory stock request failed.";
 }
 
-function mapCurrentStock(row: Row): InventoryCurrentStockRow {
+export function mapCurrentStock(row: Row): InventoryCurrentStockRow {
   return {
     inventoryItemId: text(row.inventory_item_id),
     itemName: text(row.item_name),

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import { adjustInventoryStock } from "../services/adjustmentService";
 import { loadCurrentStock } from "../services/inventoryBalanceService";
 import {
@@ -20,6 +21,15 @@ import {
 } from "../services/inventoryAdminService";
 import { loadLedger } from "../services/ledgerService";
 import { loadInventoryMovementHistory } from "../services/movementHistoryService";
+import {
+  applyInventoryAdminRealtimeChanges,
+  loadRealtimeCurrentStock,
+  loadRealtimeFoodMovements,
+  loadRealtimeLedger,
+  mergeRealtimeFoodMovements,
+  mergeRealtimeLedger,
+  replaceAffectedStock,
+} from "../services/inventoryRealtimeService";
 import { recordOpeningBalance } from "../services/openingBalanceService";
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
@@ -342,6 +352,8 @@ export function InventoryDashboardPage({
   const [wasteForm, setWasteForm] = useState<InventoryWasteDraft>(wasteDraft());
   const [transferForm, setTransferForm] = useState<InventoryTransferDraft>(transferDraft());
   const [openingForm, setOpeningForm] = useState<InventoryOpeningBalanceDraft>(openingBalanceDraft());
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   const reload = useCallback(async () => {
     try {
@@ -367,6 +379,66 @@ export function InventoryDashboardPage({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const reconcileRealtime = useCallback(async () => {
+    const [next, nextStock, nextLedger, nextMovementHistory] = await Promise.all([
+      loadInventoryAdminData(restaurantId),
+      loadCurrentStock(restaurantId),
+      loadLedger(restaurantId, { limit: 200 }),
+      loadInventoryMovementHistory(restaurantId),
+    ]);
+    setData(next);
+    setCurrentStock(nextStock);
+    setLedger(nextLedger);
+    setMovementHistory(nextMovementHistory);
+    setError(null);
+  }, [restaurantId]);
+
+  const synchronizeRealtimeBatch = useCallback(async (batch: InventoryRealtimeBatch) => {
+    const snapshot = dataRef.current;
+    const stockItemIds = new Set(batch.movementItemIds);
+    for (const change of batch.adminChanges.inventory_items ?? []) {
+      const id = typeof change.record.id === "string" ? change.record.id : "";
+      if (id) stockItemIds.add(id);
+    }
+    const affectedByReference: Array<[keyof Pick<InventoryItem, "categoryId" | "unitId" | "storageLocationId">, string[]]> = [
+      ["categoryId", (batch.adminChanges.inventory_categories ?? []).map((change) => String(change.record.id ?? ""))],
+      ["unitId", (batch.adminChanges.inventory_units ?? []).map((change) => String(change.record.id ?? ""))],
+      ["storageLocationId", (batch.adminChanges.inventory_storage_locations ?? []).map((change) => String(change.record.id ?? ""))],
+    ];
+    for (const [field, referenceIds] of affectedByReference) {
+      const changed = new Set(referenceIds.filter(Boolean));
+      if (!changed.size) continue;
+      for (const item of snapshot.items) if (changed.has(item[field])) stockItemIds.add(item.id);
+    }
+
+    setData((current) => applyInventoryAdminRealtimeChanges(current, batch.adminChanges));
+
+    const affectedIds = [...stockItemIds];
+    const [stockRows, ledgerRows, foodMovements] = await Promise.all([
+      loadRealtimeCurrentStock(restaurantId, affectedIds),
+      loadRealtimeLedger(restaurantId, batch.movementItemIds),
+      loadRealtimeFoodMovements(restaurantId, batch.movementItemIds),
+    ]);
+    if (affectedIds.length) {
+      setCurrentStock((current) => replaceAffectedStock(current, affectedIds, stockRows));
+    }
+    if (ledgerRows.length) setLedger((current) => mergeRealtimeLedger(current, ledgerRows));
+    if (foodMovements.length) {
+      setMovementHistory((current) => mergeRealtimeFoodMovements(current, foodMovements));
+    }
+    setError(null);
+  }, [restaurantId]);
+
+  useInventoryRealtime({
+    restaurantId,
+    staffRole,
+    onBatch: synchronizeRealtimeBatch,
+    onReconcile: reconcileRealtime,
+    onError: (realtimeError) => setError(realtimeError instanceof Error
+      ? realtimeError.message
+      : "Inventory realtime synchronization failed."),
+  });
 
   useEffect(() => {
     if (isInventorySection(initialSection)) {

@@ -24,7 +24,7 @@ export function useTenantRealtime({ channelName, restaurantId, tables, refresh, 
     timer.current = window.setTimeout(() => void refreshRef.current(), debounceMs);
   }, [debounceMs, tables.join("|")]);
   void channelName;
-  const state = useRestaurantEvents({ restaurantId, client, onEvent });
+  const state = useRestaurantEvents({ restaurantId, client, tables, onEvent });
   useEffect(() => {
     if (state === "connected") void refreshRef.current();
   }, [state]);
