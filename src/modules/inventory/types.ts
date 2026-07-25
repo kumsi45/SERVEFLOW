@@ -178,6 +178,14 @@ export type InventoryFoodConsumptionMovement = {
   notes: string | null;
 };
 
+export type InventoryIntegrityCheckResult = {
+  checkCode: string;
+  checkName: string;
+  checkStatus: "PASS" | "DETECTED_ISSUES";
+  issueCount: number;
+  details: { samples: Array<{ entity_id: string; detail: Record<string, unknown> }> };
+};
+
 export type InventoryItemDraft = {
   id?: string;
   name: string;

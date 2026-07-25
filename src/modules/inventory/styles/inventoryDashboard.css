@@ -536,6 +536,87 @@
   background: #fff;
 }
 
+.ia-integrity-panel {
+  display: grid;
+  gap: 1rem;
+  max-width: 920px;
+  padding: 1.25rem;
+  border: 1px solid #dfe4ec;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.ia-integrity-panel > button {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #1457d9;
+  border-radius: 8px;
+  color: #fff;
+  background: #1457d9;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ia-integrity-panel > button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.ia-integrity-summary {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.ia-integrity-summary.pass,
+.ia-integrity-results article.pass span {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.ia-integrity-summary.issues,
+.ia-integrity-results article.issues span {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.ia-integrity-results {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ia-integrity-results article {
+  padding: 0.85rem 1rem;
+  border: 1px solid #dfe4ec;
+  border-radius: 12px;
+}
+
+.ia-integrity-results article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ia-integrity-results article span {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.ia-integrity-results details {
+  margin-top: 0.65rem;
+}
+
+.ia-integrity-results ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
 .ia-navigation-placeholder > span {
   color: #1457d9;
   font-size: 12px;

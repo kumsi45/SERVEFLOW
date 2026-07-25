@@ -75,12 +75,13 @@ describe("Phase 8.2.6 Inventory navigation architecture", () => {
     expect(page.match(/aria-expanded=\{expandedNavGroup === /g)).toHaveLength(2);
   });
 
-  it("keeps suppliers direct and implements Reports and Settings as UI-only placeholders", () => {
+  it("keeps suppliers direct, Reports as a placeholder, and Settings owner-scoped", () => {
     expect(page).toContain('onClick={() => navigate("suppliers")}');
     expect(page).toContain('onClick={() => navigateUtility("reports")}');
     expect(page).toContain('onClick={() => navigateUtility("settings")}');
     expect(page).toContain("Inventory reports are coming in a future phase.");
-    expect(page).toContain("No inventory-specific settings are configured yet.");
+    expect(page).toContain('utilityView === "settings" && staffRole === "owner"');
+    expect(page).toContain("Inventory integrity tools are owner-only.");
   });
 
   it("adds responsive labels to all wide Inventory table cells", () => {

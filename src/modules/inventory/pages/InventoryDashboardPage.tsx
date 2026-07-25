@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import { adjustInventoryStock } from "../services/adjustmentService";
 import { loadCurrentStock } from "../services/inventoryBalanceService";
@@ -1201,11 +1202,13 @@ export function InventoryDashboardPage({
       <p>Use Movement History for the current audit trail. No reporting functionality was added in this navigation phase.</p>
       <button type="button" onClick={() => navigate("ledger")}>Open Movement History</button>
     </section>
+  ) : utilityView === "settings" && staffRole === "owner" ? (
+    <InventoryIntegrityCheckPanel restaurantId={restaurantId} />
   ) : utilityView === "settings" ? (
     <section className="ia-navigation-placeholder" aria-labelledby="inventory-settings-title">
       <span>Settings</span>
-      <h2 id="inventory-settings-title">No inventory-specific settings are configured yet.</h2>
-      <p>Units, storage locations, categories, and items remain available under Inventory Records.</p>
+      <h2 id="inventory-settings-title">Inventory integrity tools are owner-only.</h2>
+      <p>Managers and inventory officers can continue using the read-only stock and movement views.</p>
       <button type="button" onClick={() => navigate("items")}>Open Inventory Records</button>
     </section>
   ) : null;
