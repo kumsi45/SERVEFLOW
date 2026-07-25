@@ -13,6 +13,7 @@ export type InventorySection =
   | "ledger"
   | "movement-history"
   | "purchase-orders"
+  | "purchase-history"
   | "categories"
   | "suppliers"
   | "storage-locations"

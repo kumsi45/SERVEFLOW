@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
+import { PurchaseHistoryPage } from "../../purchasing/pages/PurchaseHistoryPage";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import { loadCurrentStock } from "../services/inventoryBalanceService";
@@ -86,6 +87,7 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "ledger", label: "Stock Ledger" },
   { key: "movement-history", label: "Movement History" },
   { key: "purchase-orders", label: "Purchase Orders" },
+  { key: "purchase-history", label: "Purchase History" },
   { key: "items", label: "Items" },
   { key: "categories", label: "Categories" },
   { key: "suppliers", label: "Suppliers" },
@@ -106,6 +108,7 @@ const STOCK_MANAGEMENT_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "ledger", label: "Stock Ledger" },
   { key: "movement-history", label: "Movement History" },
   { key: "purchase-orders", label: "Purchase Orders" },
+  { key: "purchase-history", label: "Purchase History" },
 ];
 
 const INVENTORY_RECORDS_NAV: Array<{ key: InventorySection; label: string }> = [
@@ -1085,6 +1088,7 @@ export function InventoryDashboardPage({
     : section === "ledger" ? ledgerView
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
     : section === "purchase-orders" ? <PurchaseOrderDraftsPage restaurantId={restaurantId} suppliers={data.suppliers} items={data.items} units={data.units} />
+    : section === "purchase-history" ? <PurchaseHistoryPage restaurantId={restaurantId} />
     : section === "items" ? items
     : section === "categories" ? masterList(
       "Categories",
