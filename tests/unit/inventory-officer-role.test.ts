@@ -47,7 +47,7 @@ describe("Inventory Officer role", () => {
     expect(managerPage).toContain('>Inventory Officer</button>');
     expect(ownerStyles).toContain(".od-role-badge.inventory_officer");
     expect(managerStyles).toContain(".mso-role-badge.inventory_officer");
-    expect(staffFunction).toContain('const MANAGER_CREATABLE_ROLES: StaffRole[] = ["waiter", "cashier", "kitchen", "inventory_officer"]');
+    expect(staffFunction).toContain("canCreateStaffRole");
     expect(staffFunction).toContain('.in("role", ["owner", "manager"])');
     expect(staffFunction).not.toContain('.in("role", ["owner", "manager", "inventory_officer"])');
   });

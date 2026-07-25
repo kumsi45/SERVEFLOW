@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { canCreateStaffRole } from "./authorization.ts";
 
 type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 type StaffAction =
@@ -47,8 +48,6 @@ const STAFF_ACTIONS: StaffAction[] = [
   "generate-temporary-password",
   "delete-staff",
 ];
-
-const MANAGER_CREATABLE_ROLES: StaffRole[] = ["waiter", "cashier", "kitchen", "inventory_officer"];
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -474,15 +473,9 @@ Deno.serve(async (request) => {
 
     if (action === "create-staff") {
       const fullName = normalizeDisplayName(payload.fullName);
-      if (actingStaff.role === "manager" && !MANAGER_CREATABLE_ROLES.includes(payload.role as StaffRole)) {
-        return jsonResponse(403, { error: "Permission denied." });
-      }
       const role = normalizeRole(payload.role);
-      if (actingStaff.role === "manager" && !MANAGER_CREATABLE_ROLES.includes(role)) {
+      if (!canCreateStaffRole(actingStaff.role as "owner" | "manager", role)) {
         return jsonResponse(403, { error: "Permission denied." });
-      }
-      if (role === "manager" && actingStaff.role !== "owner") {
-        return jsonResponse(403, { error: "Only owners can create manager accounts." });
       }
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const contactEmail = role === "waiter" ? normalizeOptionalEmail(payload.email) : normalizeEmail(payload.email);

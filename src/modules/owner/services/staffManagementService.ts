@@ -100,8 +100,22 @@ async function getFunctionErrorMessage(error: unknown) {
 }
 
 async function invokeManageStaff(payload: Record<string, unknown>) {
+  // Staff creation is a privileged Owner action. Refresh first so a browser tab
+  // opened before a Supabase JWT signing-key rotation never sends a stale token
+  // to the Edge Function gateway.
+  const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) {
+    throw new Error(`Your Owner session could not be refreshed. Please sign in again. ${refreshError.message}`);
+  }
+
+  const accessToken = refreshedSession.session?.access_token;
+  if (!accessToken) {
+    throw new Error("Your Owner session has expired. Please sign in again.");
+  }
+
   const { data, error } = await supabase.functions.invoke<StaffFunctionResponse>("manage-staff", {
     body: payload,
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (error) {
