@@ -83,6 +83,9 @@ function mapUnit(row: Row): InventoryUnit {
     name: text(row.name),
     description: nullableText(row.description),
     status: statusValue(row.status),
+    pluralName: nullableText(row.plural_name),
+    abbreviation: nullableText(row.abbreviation),
+    active: row.active !== false,
     createdAt: text(row.created_at),
     updatedAt: text(row.updated_at),
   };
@@ -127,6 +130,8 @@ async function loadStaffNames(restaurantId: string, staffIds: string[]) {
 }
 
 export async function loadInventoryAdminData(restaurantId: string): Promise<InventoryAdminData> {
+  await ensureInventoryDefaultMasterData(restaurantId);
+
   const [items, categories, suppliers, storageLocations, units] = await Promise.all([
     supabase
       .from("inventory_items")
@@ -151,7 +156,7 @@ export async function loadInventoryAdminData(restaurantId: string): Promise<Inve
       .order("name", { ascending: true }),
     supabase
       .from("inventory_units")
-      .select("id,restaurant_id,name,description,status,created_at,updated_at")
+      .select("id,restaurant_id,name,plural_name,abbreviation,description,status,active,created_at,updated_at")
       .eq("restaurant_id", restaurantId)
       .order("name", { ascending: true }),
   ]);
@@ -174,6 +179,21 @@ export async function loadInventoryAdminData(restaurantId: string): Promise<Inve
     units: ((units.data ?? []) as Row[]).map(mapUnit),
     staffNames,
   };
+}
+
+export async function ensureInventoryDefaultMasterData(restaurantId: string) {
+  const state = await supabase
+    .from("restaurants")
+    .select("inventory_initialized")
+    .eq("id", restaurantId)
+    .single();
+  if (state.error) throw new Error(errorMessage(state.error));
+  if ((state.data as Row | null)?.inventory_initialized === true) return;
+
+  const initialized = await supabase.rpc("initialize_inventory", {
+    target_restaurant_id: restaurantId,
+  });
+  if (initialized.error) throw new Error(errorMessage(initialized.error));
 }
 
 export async function saveInventoryCategory(restaurantId: string, draft: InventoryCategoryDraft) {

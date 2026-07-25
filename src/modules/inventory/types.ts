@@ -64,7 +64,11 @@ export type InventorySupplier = Omit<InventoryMasterRecord, "description"> & {
 
 export type InventoryStorageLocation = InventoryMasterRecord;
 
-export type InventoryUnit = InventoryMasterRecord;
+export type InventoryUnit = InventoryMasterRecord & {
+  pluralName: string | null;
+  abbreviation: string | null;
+  active: boolean;
+};
 
 export type InventoryItem = {
   id: string;
