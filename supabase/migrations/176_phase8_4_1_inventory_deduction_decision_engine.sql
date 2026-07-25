@@ -138,7 +138,11 @@ begin
     and (target_invoice_id is null or items.invoice_id = target_invoice_id)
     and (
       target_batch_key is null
-      or coalesce(items.kitchen_batch_key, 'initial') = coalesce(nullif(btrim(target_batch_key), ''), 'initial')
+      or coalesce(
+        case when items.appended_at is null then 'initial'
+          else ((extract(epoch from items.appended_at) * 1000000)::bigint)::text end,
+        'initial'
+      ) = coalesce(nullif(btrim(target_batch_key), ''), 'initial')
     );
 
   return public.resolve_inventory_deduction_decision(jsonb_build_object(
