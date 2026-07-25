@@ -44,6 +44,31 @@ Output is `nextState`, `releaseToKitchen`, `paymentRequired`,
 `closeDiningSession`, and a diagnostic `reason`. Consumers obey flags and must
 not infer a different route from raw statuses.
 
+## Workflow policy snapshot
+
+Restaurant settings are creation-time defaults, not runtime workflow state.
+When a dining session opens, the order row permanently records:
+
+- `workflow_policy_snapshot` (`pay_before_kitchen` or
+  `kitchen_before_payment`);
+- `workflow_version`;
+- `workflow_captured_at`; and
+- the existing tenant-owned `restaurant_id`.
+
+Every invoice, appended waiter order, and kitchen batch in that dining session
+inherits this snapshot. Runtime gates, queue transitions, and workflow read
+models must use the snapshot and must never read `restaurants.payment_policy`.
+Changing settings therefore affects only dining sessions created afterward.
+
+Existing sessions were backfilled from their persisted `payment_timing`, which
+records how they actually started. They were deliberately not backfilled from
+the restaurant's current setting.
+
+The snapshot is immutable. Future workflow revisions increment
+`workflow_version`; old sessions continue under the resolver semantics for the
+version they captured. A version migration must never silently reinterpret an
+active session.
+
 ## State diagram
 
 ```mermaid
@@ -84,6 +109,9 @@ default safely to payment before kitchen until an explicit engine rule is added.
    again; realtime does not decide the transition.
 7. UI labels may map a returned state to presentation, but may not change it.
 8. A new workflow rule requires engine tests and database parity tests.
+9. Restaurant policy is read exactly once, during dining-session insertion.
+10. Invalid kitchen transitions roll back atomically; their batch remains in its
+    current state and visible in the same station queue.
 
 ## Extension guide
 
