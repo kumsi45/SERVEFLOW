@@ -1,9 +1,12 @@
 import { supabase } from "../../../core/database";
+import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import type { InventoryItem, InventorySupplier, InventoryUnit } from "../../inventory/types";
 import type {
   PurchaseOrderDraft,
   PurchaseOrderDraftForm,
   PurchaseOrderDraftLine,
+  PurchaseOrderReceiptForm,
+  PurchaseOrderStatus,
 } from "../types";
 
 type Row = Record<string, unknown>;
@@ -20,6 +23,8 @@ function mapLine(row: Row): PurchaseOrderDraftLine {
     purchaseUnitId: text(row.purchase_unit_id),
     purchaseUnitName: text(row.purchase_unit_name),
     quantity: numberValue(row.quantity),
+    receivedQuantity: numberValue(row.received_quantity),
+    remainingQuantity: numberValue(row.remaining_quantity ?? row.quantity),
     unitPrice: numberValue(row.unit_price),
     lineTotal: numberValue(row.line_total),
     sortOrder: numberValue(row.sort_order),
@@ -27,12 +32,13 @@ function mapLine(row: Row): PurchaseOrderDraftLine {
 }
 
 export function mapPurchaseOrderDraftRow(row: Row): PurchaseOrderDraft {
+  const status = text(row.status) as PurchaseOrderStatus;
   return {
     id: text(row.id),
     restaurantId: text(row.restaurant_id),
     supplierId: text(row.supplier_id),
     supplierName: text(row.supplier_name),
-    status: "draft",
+    status: ["draft", "partially_received", "completed"].includes(status) ? status : "draft",
     expectedDeliveryDate: text(row.expected_delivery_date),
     notes: nullableText(row.notes),
     createdByStaffId: text(row.created_by_staff_id),
@@ -43,16 +49,70 @@ export function mapPurchaseOrderDraftRow(row: Row): PurchaseOrderDraft {
     updatedAt: text(row.updated_at),
     lineCount: numberValue(row.line_count),
     total: numberValue(row.total),
+    receivedTotal: numberValue(row.received_total),
+    remainingTotal: numberValue(row.remaining_total ?? row.total),
     lines: Array.isArray(row.lines) ? (row.lines as Row[]).map(mapLine) : [],
   };
 }
 
 export async function loadPurchaseOrderDrafts(restaurantId: string): Promise<PurchaseOrderDraft[]> {
-  const { data, error } = await supabase.rpc("get_purchase_order_drafts", {
+  const { data, error } = await supabase.rpc("get_purchase_orders", {
     target_restaurant_id: restaurantId,
   });
   if (error) throw new Error(error.message || "Purchase order drafts are unavailable.");
   return ((data ?? []) as Row[]).map(mapPurchaseOrderDraftRow);
+}
+
+export function validatePurchaseOrderReceipt(form: PurchaseOrderReceiptForm) {
+  const errors: string[] = [];
+  if (!form.purchaseOrderId) errors.push("Purchase order is required.");
+  if (form.notes.trim().length > 1000) errors.push("Receipt notes cannot exceed 1,000 characters.");
+  const selected = form.lines.filter((line) => Number(line.receivedQuantity) > 0);
+  if (!selected.length) errors.push("Enter a quantity for at least one item.");
+  for (const line of form.lines) {
+    if (line.receivedQuantity.trim() === "") continue;
+    const quantity = Number(line.receivedQuantity);
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      errors.push(`${line.inventoryItemName}: received quantity is invalid.`);
+    } else if (quantity > line.remainingQuantity) {
+      errors.push(`${line.inventoryItemName}: received quantity exceeds the remaining quantity.`);
+    } else if (quantity > 0 && Math.round(quantity * 1000) !== quantity * 1000) {
+      errors.push(`${line.inventoryItemName}: received quantity supports at most three decimal places.`);
+    }
+  }
+  return errors;
+}
+
+const receiptStorageKey = (purchaseOrderId: string) => `serveflow.purchase-receipt:${purchaseOrderId}`;
+
+function receiptIdempotencyKey(purchaseOrderId: string) {
+  const storageKey = receiptStorageKey(purchaseOrderId);
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+  const created = createBrowserUuid();
+  window.sessionStorage.setItem(storageKey, created);
+  return created;
+}
+
+export async function receivePurchaseOrder(restaurantId: string, form: PurchaseOrderReceiptForm) {
+  const errors = validatePurchaseOrderReceipt(form);
+  if (errors.length) throw new Error(errors.join(" "));
+  const idempotencyKey = receiptIdempotencyKey(form.purchaseOrderId);
+  const { data, error } = await supabase.rpc("receive_purchase_order", {
+    target_restaurant_id: restaurantId,
+    target_purchase_order_id: form.purchaseOrderId,
+    target_idempotency_key: idempotencyKey,
+    target_lines: form.lines
+      .filter((line) => Number(line.receivedQuantity) > 0)
+      .map((line) => ({
+        purchase_order_item_id: line.purchaseOrderItemId,
+        received_quantity: Number(line.receivedQuantity),
+      })),
+    target_notes: form.notes.trim() || null,
+  });
+  if (error) throw new Error(error.message || "Purchase order could not be received.");
+  window.sessionStorage.removeItem(receiptStorageKey(form.purchaseOrderId));
+  return data as { receipt_id: string; status: PurchaseOrderStatus; already_processed: boolean };
 }
 
 export function validatePurchaseOrderDraft(

@@ -5,9 +5,16 @@ import {
   loadPurchaseOrderDrafts,
   purchaseOrderLineTotal,
   purchaseOrderTotal,
+  receivePurchaseOrder,
   savePurchaseOrderDraft,
 } from "../services/purchaseOrderDraftService";
-import type { PurchaseOrderDraft, PurchaseOrderDraftForm, PurchaseOrderDraftFormLine } from "../types";
+import type {
+  PurchaseOrderDraft,
+  PurchaseOrderDraftForm,
+  PurchaseOrderDraftFormLine,
+  PurchaseOrderReceiptForm,
+  PurchaseOrderStatus,
+} from "../types";
 import "../styles/purchaseOrderDrafts.css";
 
 type Props = {
@@ -44,6 +51,24 @@ const editForm = (draft: PurchaseOrderDraft): PurchaseOrderDraftForm => ({
   })),
 });
 
+const receiptForm = (order: PurchaseOrderDraft): PurchaseOrderReceiptForm => ({
+  purchaseOrderId: order.id,
+  notes: "",
+  lines: order.lines.filter((line) => line.remainingQuantity > 0).map((line) => ({
+    purchaseOrderItemId: line.id,
+    inventoryItemName: line.inventoryItemName,
+    purchaseUnitName: line.purchaseUnitName,
+    remainingQuantity: line.remainingQuantity,
+    receivedQuantity: "",
+  })),
+});
+
+const statusLabel = (status: PurchaseOrderStatus) => ({
+  draft: "Draft",
+  partially_received: "Partially Received",
+  completed: "Completed",
+})[status];
+
 function money(value: number) {
   return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
@@ -59,9 +84,10 @@ function dateTimeLabel(value: string) {
 export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units }: Props) {
   const [drafts, setDrafts] = useState<PurchaseOrderDraft[]>([]);
   const [form, setForm] = useState<PurchaseOrderDraftForm | null>(null);
+  const [receipt, setReceipt] = useState<PurchaseOrderReceiptForm | null>(null);
   const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "draft">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | PurchaseOrderStatus>("all");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +103,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
       setDrafts(await loadPurchaseOrderDrafts(restaurantId));
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Purchase order drafts are unavailable.");
+      setError(loadError instanceof Error ? loadError.message : "Purchase orders are unavailable.");
     } finally {
       setLoading(false);
     }
@@ -92,7 +118,8 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
     if (!query) return true;
     return [
       draft.id,
-      `draft ${draft.id.slice(0, 8)}`,
+      `purchase order ${draft.id.slice(0, 8)}`,
+      statusLabel(draft.status),
       draft.supplierName,
       draft.notes,
       ...draft.lines.map((line) => line.inventoryItemName),
@@ -140,11 +167,44 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
     }
   }
 
+  function openReceipt(order: PurchaseOrderDraft) {
+    setForm(null);
+    setReceipt(receiptForm(order));
+    setError(null);
+    setMessage(null);
+  }
+
+  function updateReceiptLine(index: number, receivedQuantity: string) {
+    setReceipt((current) => current ? {
+      ...current,
+      lines: current.lines.map((line, lineIndex) => lineIndex === index ? { ...line, receivedQuantity } : line),
+    } : current);
+  }
+
+  async function receive() {
+    if (!receipt) return;
+    try {
+      setWorking(true);
+      setError(null);
+      setMessage(null);
+      const result = await receivePurchaseOrder(restaurantId, receipt);
+      await load();
+      setReceipt(null);
+      setMessage(result.already_processed
+        ? "This receipt was already processed; stock was not increased again."
+        : `Purchase order ${statusLabel(result.status).toLowerCase()}. Inventory and movement history were updated.`);
+    } catch (receiveError) {
+      setError(receiveError instanceof Error ? receiveError.message : "Purchase order could not be received.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   return (
     <div className="po-page">
       <header className="po-heading">
-        <div><span>Purchasing Foundation</span><h2>Purchase Orders</h2><p>Create and manage drafts only. Receiving and stock changes are not enabled.</p></div>
-        <button type="button" onClick={() => setForm(emptyForm())}>Create Draft</button>
+        <div><span>Purchasing</span><h2>Purchase Orders</h2><p>Create drafts, receive partial deliveries, and track remaining quantities.</p></div>
+        <button type="button" onClick={() => { setReceipt(null); setForm(emptyForm()); }}>Create Draft</button>
       </header>
       {(error || message) && <div className={`ia-alert ${error ? "error" : ""}`}>{error ?? message}</div>}
 
@@ -176,24 +236,46 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
         </section>
       )}
 
-      <section className="po-filters" aria-label="Purchase order draft filters">
-        <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search draft, supplier, item, or notes" /></label>
+      {receipt && (
+        <section className="po-editor po-receipt-editor" aria-label="Receive purchase order">
+          <div className="po-editor-heading"><h3>Receive PO {receipt.purchaseOrderId.slice(0, 8).toUpperCase()}</h3><span>Stock In</span></div>
+          <p className="po-receipt-help">Enter only the quantities physically received. Prices and unit conversions are preserved in the immutable receipt.</p>
+          <div className="po-receipt-lines">
+            {receipt.lines.map((line, index) => (
+              <div className="po-receipt-line" key={line.purchaseOrderItemId}>
+                <div><strong>{line.inventoryItemName}</strong><span>Remaining: {line.remainingQuantity} {line.purchaseUnitName}</span></div>
+                <label>Receive Now<input min="0" max={line.remainingQuantity} step="0.001" type="number" value={line.receivedQuantity} onChange={(event) => updateReceiptLine(index, event.target.value)} /></label>
+                <span>{line.purchaseUnitName}</span>
+              </div>
+            ))}
+          </div>
+          <label className="po-receipt-notes">Receipt Notes<textarea maxLength={1000} value={receipt.notes} onChange={(event) => setReceipt({ ...receipt, notes: event.target.value })} placeholder="Optional delivery notes" /></label>
+          <footer className="po-editor-footer">
+            <button type="button" onClick={() => setReceipt({ ...receipt, lines: receipt.lines.map((line) => ({ ...line, receivedQuantity: String(line.remainingQuantity) })) })}>Receive Remaining</button>
+            <button type="button" onClick={() => setReceipt(null)}>Cancel</button>
+            <button type="button" disabled={working} onClick={() => void receive()}>{working ? "Receiving..." : "Confirm Receipt"}</button>
+          </footer>
+        </section>
+      )}
+
+      <section className="po-filters" aria-label="Purchase order filters">
+        <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, supplier, item, or notes" /></label>
         <label>Supplier<select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}><option value="">All suppliers</option>{filterSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
-        <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "draft")}><option value="all">All statuses</option><option value="draft">Draft</option></select></label>
+        <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | PurchaseOrderStatus)}><option value="all">All statuses</option><option value="draft">Draft</option><option value="partially_received">Partially Received</option><option value="completed">Completed</option></select></label>
       </section>
 
-      {loading ? <div className="ia-empty">Loading purchase order drafts...</div> : (
-        <section className="po-draft-list" aria-label="Purchase order drafts">
+      {loading ? <div className="ia-empty">Loading purchase orders...</div> : (
+        <section className="po-draft-list" aria-label="Purchase orders">
           {filteredDrafts.map((draft) => (
             <article className="po-draft-card" key={draft.id}>
-              <header><div><span>Draft {draft.id.slice(0, 8).toUpperCase()}</span><h3>{draft.supplierName}</h3></div><span className="po-status">Draft</span></header>
+              <header><div><span>PO {draft.id.slice(0, 8).toUpperCase()}</span><h3>{draft.supplierName}</h3></div><span className={`po-status ${draft.status}`}>{statusLabel(draft.status)}</span></header>
               <dl><div><dt>Expected Delivery</dt><dd>{dateLabel(draft.expectedDeliveryDate)}</dd></div><div><dt>Items</dt><dd>{draft.lineCount}</dd></div><div><dt>Updated</dt><dd>{dateTimeLabel(draft.updatedAt)}</dd></div><div><dt>Updated By</dt><dd>{draft.updatedByName}</dd></div></dl>
-              <div className="po-draft-lines">{draft.lines.map((line) => <div key={line.id}><span>{line.inventoryItemName}</span><span>{line.quantity} {line.purchaseUnitName} × {money(line.unitPrice)}</span><strong>{money(line.lineTotal)}</strong></div>)}</div>
+              <div className="po-draft-lines">{draft.lines.map((line) => <div key={line.id}><span>{line.inventoryItemName}</span><span>Ordered {line.quantity} · Received {line.receivedQuantity} · Remaining {line.remainingQuantity} {line.purchaseUnitName}</span><strong>{money(line.lineTotal)}</strong></div>)}</div>
               {draft.notes && <p>{draft.notes}</p>}
-              <footer><div><span>Total</span><strong>{money(draft.total)}</strong></div><button type="button" onClick={() => setForm(editForm(draft))}>Edit Draft</button><button className="danger" type="button" disabled={working} onClick={() => void remove(draft)}>Delete Draft</button></footer>
+              <footer><div><span>Total / Remaining</span><strong>{money(draft.total)} / {money(draft.remainingTotal)}</strong></div>{draft.status !== "completed" && <button type="button" onClick={() => openReceipt(draft)}>Receive</button>}{draft.status === "draft" && <button type="button" onClick={() => { setReceipt(null); setForm(editForm(draft)); }}>Edit Draft</button>}{draft.status === "draft" && <button className="danger" type="button" disabled={working} onClick={() => void remove(draft)}>Delete Draft</button>}</footer>
             </article>
           ))}
-          {filteredDrafts.length === 0 && <div className="ia-empty">No purchase order drafts match the current filters.</div>}
+          {filteredDrafts.length === 0 && <div className="ia-empty">No purchase orders match the current filters.</div>}
         </section>
       )}
     </div>

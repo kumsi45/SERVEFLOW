@@ -3,7 +3,6 @@ import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
-import { adjustInventoryStock } from "../services/adjustmentService";
 import { loadCurrentStock } from "../services/inventoryBalanceService";
 import {
   archiveRecord,
@@ -35,10 +34,9 @@ import {
 import { recordOpeningBalance } from "../services/openingBalanceService";
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
-import { wasteInventoryStock } from "../services/wasteService";
+import { InventoryAdjustmentsPage } from "./InventoryAdjustmentsPage";
 import { MovementHistoryPage } from "./MovementHistoryPage";
 import type {
-  InventoryAdjustmentDraft,
   InventoryAdminData,
   InventoryCategory,
   InventoryCategoryDraft,
@@ -55,7 +53,6 @@ import type {
   InventorySupplier,
   InventorySupplierDraft,
   InventoryTransferDraft,
-  InventoryWasteDraft,
   StockMovementDraft,
 } from "../types";
 import "../styles/inventoryDashboard.css";
@@ -229,30 +226,6 @@ function stockMovementDraft(movementType: InventoryMovementType): StockMovementD
   };
 }
 
-function adjustmentDraft(): InventoryAdjustmentDraft {
-  return {
-    inventoryItemId: "",
-    storageLocationId: "",
-    direction: "increase",
-    quantity: "",
-    reason: "",
-    notes: "",
-    movementDate: dateInputValue(),
-  };
-}
-
-function wasteDraft(): InventoryWasteDraft {
-  return {
-    inventoryItemId: "",
-    storageLocationId: "",
-    quantity: "",
-    reason: "",
-    isSpoilage: false,
-    notes: "",
-    movementDate: dateInputValue(),
-  };
-}
-
 function transferDraft(): InventoryTransferDraft {
   return {
     inventoryItemId: "",
@@ -352,8 +325,6 @@ export function InventoryDashboardPage({
   const [storageForm, setStorageForm] = useState<InventorySimpleDraft | null>(null);
   const [unitForm, setUnitForm] = useState<InventorySimpleDraft | null>(null);
   const [movementForm, setMovementForm] = useState<StockMovementDraft>(stockMovementDraft("stock_in"));
-  const [adjustmentForm, setAdjustmentForm] = useState<InventoryAdjustmentDraft>(adjustmentDraft());
-  const [wasteForm, setWasteForm] = useState<InventoryWasteDraft>(wasteDraft());
   const [transferForm, setTransferForm] = useState<InventoryTransferDraft>(transferDraft());
   const [openingForm, setOpeningForm] = useState<InventoryOpeningBalanceDraft>(openingBalanceDraft());
   const dataRef = useRef(data);
@@ -921,37 +892,13 @@ export function InventoryDashboardPage({
   );
 
   const adjustments = (
-    <section className="ia-panel">
-      <div className="ia-section-title"><h2>Adjustments</h2><span>Reasoned stock corrections</span></div>
-      <AdjustmentForm
-        draft={adjustmentForm}
-        setDraft={setAdjustmentForm}
-        items={data.items.filter((item) => item.status === "active")}
-        locations={activeLocations}
-        working={working}
-        onSave={() => void run(async () => {
-          await adjustInventoryStock(restaurantId, adjustmentForm, stockContext);
-          setAdjustmentForm(adjustmentDraft());
-        }, "Adjustment recorded.")}
-      />
-    </section>
-  );
-
-  const waste = (
-    <section className="ia-panel">
-      <div className="ia-section-title"><h2>Waste</h2><span>Waste and spoilage entries</span></div>
-      <WasteForm
-        draft={wasteForm}
-        setDraft={setWasteForm}
-        items={data.items.filter((item) => item.status === "active")}
-        locations={activeLocations}
-        working={working}
-        onSave={() => void run(async () => {
-          await wasteInventoryStock(restaurantId, wasteForm, stockContext);
-          setWasteForm(wasteDraft());
-        }, "Waste recorded.")}
-      />
-    </section>
+    <InventoryAdjustmentsPage
+      restaurantId={restaurantId}
+      staffRole={staffRole}
+      items={data.items}
+      currentStock={currentStock}
+      onChanged={reload}
+    />
   );
 
   const transfers = (
@@ -1133,8 +1080,7 @@ export function InventoryDashboardPage({
     : section === "movements" ? movements
     : section === "stock-in" ? stockMovement
     : section === "stock-out" ? stockMovement
-    : section === "adjustments" ? adjustments
-    : section === "waste" ? waste
+    : section === "adjustments" || section === "waste" ? adjustments
     : section === "transfers" ? transfers
     : section === "ledger" ? ledgerView
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
@@ -1466,64 +1412,6 @@ function StockMovementForm({
       <label className="wide">Reason<textarea value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value })} /></label>
       <label className="wide">Notes<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
       <footer><button disabled={working} type="submit">{working ? "Saving..." : incoming ? "Record Stock In" : "Record Stock Out"}</button></footer>
-    </form>
-  );
-}
-
-function AdjustmentForm({
-  draft,
-  setDraft,
-  items,
-  locations,
-  working,
-  onSave,
-}: {
-  draft: InventoryAdjustmentDraft;
-  setDraft: (draft: InventoryAdjustmentDraft) => void;
-  items: InventoryItem[];
-  locations: Array<{ id: string; name: string }>;
-  working: boolean;
-  onSave: () => void;
-}) {
-  return (
-    <form className="ia-form operation" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-      <label>Item<select required value={draft.inventoryItemId} onChange={(event) => setDraft({ ...draft, inventoryItemId: event.target.value })}><option value="">Select item</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label>Storage<select required value={draft.storageLocationId} onChange={(event) => setDraft({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-      <label>Direction<select value={draft.direction} onChange={(event) => setDraft({ ...draft, direction: event.target.value as InventoryAdjustmentDraft["direction"] })}><option value="increase">Increase</option><option value="decrease">Decrease</option></select></label>
-      <label>Quantity<input required min="0.001" step="0.001" type="number" value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /></label>
-      <label>Movement Date<input type="datetime-local" value={draft.movementDate} onChange={(event) => setDraft({ ...draft, movementDate: event.target.value })} /></label>
-      <label className="wide">Reason<textarea required value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value })} /></label>
-      <label className="wide">Notes<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
-      <footer><button disabled={working} type="submit">{working ? "Saving..." : "Record Adjustment"}</button></footer>
-    </form>
-  );
-}
-
-function WasteForm({
-  draft,
-  setDraft,
-  items,
-  locations,
-  working,
-  onSave,
-}: {
-  draft: InventoryWasteDraft;
-  setDraft: (draft: InventoryWasteDraft) => void;
-  items: InventoryItem[];
-  locations: Array<{ id: string; name: string }>;
-  working: boolean;
-  onSave: () => void;
-}) {
-  return (
-    <form className="ia-form operation" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-      <label>Item<select required value={draft.inventoryItemId} onChange={(event) => setDraft({ ...draft, inventoryItemId: event.target.value })}><option value="">Select item</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label>Storage<select required value={draft.storageLocationId} onChange={(event) => setDraft({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-      <label>Quantity<input required min="0.001" step="0.001" type="number" value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /></label>
-      <label>Movement Date<input type="datetime-local" value={draft.movementDate} onChange={(event) => setDraft({ ...draft, movementDate: event.target.value })} /></label>
-      <label className="ia-checkbox inline"><input checked={draft.isSpoilage} type="checkbox" onChange={(event) => setDraft({ ...draft, isSpoilage: event.target.checked })} /> Spoilage</label>
-      <label className="wide">Reason<textarea required value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value })} /></label>
-      <label className="wide">Notes<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
-      <footer><button disabled={working} type="submit">{working ? "Saving..." : "Record Waste"}</button></footer>
     </form>
   );
 }

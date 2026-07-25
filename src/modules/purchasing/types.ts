@@ -5,6 +5,8 @@ export type PurchaseOrderDraftLine = {
   purchaseUnitId: string;
   purchaseUnitName: string;
   quantity: number;
+  receivedQuantity: number;
+  remainingQuantity: number;
   unitPrice: number;
   lineTotal: number;
   sortOrder: number;
@@ -15,7 +17,7 @@ export type PurchaseOrderDraft = {
   restaurantId: string;
   supplierId: string;
   supplierName: string;
-  status: "draft";
+  status: PurchaseOrderStatus;
   expectedDeliveryDate: string;
   notes: string | null;
   createdByStaffId: string;
@@ -26,8 +28,12 @@ export type PurchaseOrderDraft = {
   updatedAt: string;
   lineCount: number;
   total: number;
+  receivedTotal: number;
+  remainingTotal: number;
   lines: PurchaseOrderDraftLine[];
 };
+
+export type PurchaseOrderStatus = "draft" | "partially_received" | "completed";
 
 export type PurchaseOrderDraftFormLine = {
   inventoryItemId: string;
@@ -42,4 +48,18 @@ export type PurchaseOrderDraftForm = {
   expectedDeliveryDate: string;
   notes: string;
   lines: PurchaseOrderDraftFormLine[];
+};
+
+export type PurchaseOrderReceiptFormLine = {
+  purchaseOrderItemId: string;
+  inventoryItemName: string;
+  purchaseUnitName: string;
+  remainingQuantity: number;
+  receivedQuantity: string;
+};
+
+export type PurchaseOrderReceiptForm = {
+  purchaseOrderId: string;
+  notes: string;
+  lines: PurchaseOrderReceiptFormLine[];
 };

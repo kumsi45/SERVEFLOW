@@ -288,3 +288,68 @@ export type InventoryOpeningBalanceDraft = {
   notes: string;
   movementDate: string;
 };
+
+export type InventoryAdjustmentDirection = "increase" | "decrease";
+
+export type InventoryAdjustmentType =
+  | "opening_stock"
+  | "manual_correction"
+  | "donation_received"
+  | "supplier_replacement"
+  | "waste"
+  | "spoilage"
+  | "expired"
+  | "breakage"
+  | "theft"
+  | "returned_to_supplier";
+
+export type InventoryAdjustmentMovementType =
+  | "MANUAL_ADJUSTMENT_IN"
+  | "MANUAL_ADJUSTMENT_OUT"
+  | "WASTE"
+  | "SPOILAGE"
+  | "RETURN_TO_SUPPLIER";
+
+export type InventoryAdjustmentHistoryItem = {
+  id: string;
+  inventoryItemId: string;
+  inventoryItemName: string;
+  unitId: string;
+  unitName: string;
+  quantity: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  movementAuditType: InventoryAdjustmentMovementType;
+  movementId: string;
+};
+
+export type InventoryAdjustment = {
+  id: string;
+  restaurantId: string;
+  direction: InventoryAdjustmentDirection;
+  adjustmentType: InventoryAdjustmentType;
+  reason: string;
+  notes: string | null;
+  status: "confirmed";
+  createdBy: string;
+  createdByName: string;
+  approvedBy: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  itemCount: number;
+  totalQuantity: number;
+  items: InventoryAdjustmentHistoryItem[];
+};
+
+export type InventoryAdjustmentFormLine = {
+  inventoryItemId: string;
+  quantity: string;
+};
+
+export type InventoryAdjustmentForm = {
+  direction: InventoryAdjustmentDirection;
+  adjustmentType: InventoryAdjustmentType | "";
+  notes: string;
+  lines: InventoryAdjustmentFormLine[];
+};

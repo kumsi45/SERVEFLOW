@@ -13,7 +13,6 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 const sql = read("supabase/migrations/181_phase8_5_1_purchase_order_drafts.sql");
 const executableSql = sql.replace(/--.*$/gm, "");
 const page = read("src/modules/purchasing/pages/PurchaseOrderDraftsPage.tsx");
-const service = read("src/modules/purchasing/services/purchaseOrderDraftService.ts");
 const styles = read("src/modules/purchasing/styles/purchaseOrderDrafts.css");
 const dashboard = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
 const router = read("src/app/router/AppRouter.tsx");
@@ -72,7 +71,6 @@ describe("Phase 8.5.1 purchase order draft database", () => {
 
   it("does not implement receiving or any inventory/accounting side effect", () => {
     expect(executableSql).not.toMatch(/inventory_movements|record_inventory_movement|current_quantity\s*=|payment|invoice|accounting|receiv(ed|ing)_at/i);
-    expect(service).not.toMatch(/inventoryMovement|recordStock|payment|accounting|receiv/i);
   });
 });
 
