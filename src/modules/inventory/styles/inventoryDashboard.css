@@ -221,6 +221,7 @@
 
 .ia-search input,
 .ia-filters select,
+.ia-filters input,
 .ia-form input,
 .ia-form select,
 .ia-form textarea {
@@ -270,7 +271,8 @@
   overflow-x: auto;
 }
 
-.ia-filters select {
+.ia-filters select,
+.ia-filters input {
   width: auto;
   min-width: 156px;
 }
@@ -370,6 +372,28 @@
 .ia-table.stock,
 .ia-table.ledger {
   min-width: 980px;
+}
+
+.ia-table.movement-history {
+  min-width: 1640px;
+}
+
+.movement-history-filters {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.movement-history-filters label {
+  display: grid;
+  gap: 5px;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.ia-status.food-consumption {
+  color: #7a2e0e;
+  background: #ffead5;
 }
 
 .ia-table th,
@@ -889,6 +913,7 @@
   .ia-form footer button,
   .ia-search input,
   .ia-filters select,
+  .ia-filters input,
   .ia-form input,
   .ia-form select {
     min-height: 48px;
@@ -929,6 +954,10 @@
   .ia-table.ledger {
     display: block;
     width: 100%;
+    min-width: 0;
+  }
+
+  .ia-table.movement-history {
     min-width: 0;
   }
 

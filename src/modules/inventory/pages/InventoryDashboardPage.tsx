@@ -19,10 +19,12 @@ import {
   softDeleteRecord,
 } from "../services/inventoryAdminService";
 import { loadLedger } from "../services/ledgerService";
+import { loadInventoryMovementHistory } from "../services/movementHistoryService";
 import { recordOpeningBalance } from "../services/openingBalanceService";
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
 import { wasteInventoryStock } from "../services/wasteService";
+import { MovementHistoryPage } from "./MovementHistoryPage";
 import type {
   InventoryAdjustmentDraft,
   InventoryAdminData,
@@ -30,6 +32,7 @@ import type {
   InventoryCategoryDraft,
   InventoryCurrentStockRow,
   InventoryFilters,
+  InventoryFoodConsumptionMovement,
   InventoryItem,
   InventoryItemDraft,
   InventoryLedgerEntry,
@@ -71,7 +74,8 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "adjustments", label: "Adjustments" },
   { key: "waste", label: "Waste" },
   { key: "transfers", label: "Transfers" },
-  { key: "ledger", label: "Movement History" },
+  { key: "ledger", label: "Stock Ledger" },
+  { key: "movement-history", label: "Movement History" },
   { key: "items", label: "Items" },
   { key: "categories", label: "Categories" },
   { key: "suppliers", label: "Suppliers" },
@@ -89,7 +93,8 @@ const STOCK_MANAGEMENT_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "transfers", label: "Transfers" },
   { key: "adjustments", label: "Adjustments" },
   { key: "waste", label: "Waste" },
-  { key: "ledger", label: "Movement History" },
+  { key: "ledger", label: "Stock Ledger" },
+  { key: "movement-history", label: "Movement History" },
 ];
 
 const INVENTORY_RECORDS_NAV: Array<{ key: InventorySection; label: string }> = [
@@ -319,6 +324,7 @@ export function InventoryDashboardPage({
   const [data, setData] = useState<InventoryAdminData>(EMPTY_DATA);
   const [currentStock, setCurrentStock] = useState<InventoryCurrentStockRow[]>([]);
   const [ledger, setLedger] = useState<InventoryLedgerEntry[]>([]);
+  const [movementHistory, setMovementHistory] = useState<InventoryFoodConsumptionMovement[]>([]);
   const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -340,14 +346,16 @@ export function InventoryDashboardPage({
   const reload = useCallback(async () => {
     try {
       setLoading(true);
-      const [next, nextStock, nextLedger] = await Promise.all([
+      const [next, nextStock, nextLedger, nextMovementHistory] = await Promise.all([
         loadInventoryAdminData(restaurantId),
         loadCurrentStock(restaurantId),
         loadLedger(restaurantId, { limit: 200 }),
+        loadInventoryMovementHistory(restaurantId),
       ]);
       setData(next);
       setCurrentStock(nextStock);
       setLedger(nextLedger);
+      setMovementHistory(nextMovementHistory);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Inventory is unavailable.");
@@ -1053,6 +1061,7 @@ export function InventoryDashboardPage({
     : section === "waste" ? waste
     : section === "transfers" ? transfers
     : section === "ledger" ? ledgerView
+    : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
     : section === "items" ? items
     : section === "categories" ? masterList(
       "Categories",

@@ -11,6 +11,7 @@ export type InventorySection =
   | "waste"
   | "transfers"
   | "ledger"
+  | "movement-history"
   | "categories"
   | "suppliers"
   | "storage-locations"
@@ -142,6 +143,39 @@ export type InventoryLedgerEntry = {
 export type InventoryOperationsData = InventoryAdminData & {
   currentStock: InventoryCurrentStockRow[];
   ledger: InventoryLedgerEntry[];
+};
+
+export type InventoryFoodConsumptionMovement = {
+  id: string;
+  restaurantId: string;
+  inventoryItemId: string;
+  inventoryItemName: string;
+  menuItemId: string;
+  menuItemName: string;
+  recipeId: string | null;
+  recipeName: string | null;
+  orderId: string;
+  orderNumber: string;
+  orderItemId: string;
+  diningSessionId: string;
+  diningSessionNumber: string;
+  kitchenBatchId: string;
+  waiterId: string | null;
+  waiterName: string | null;
+  cashierId: string | null;
+  cashierName: string | null;
+  kitchenStationId: string | null;
+  kitchenStationName: string | null;
+  performedByStaffId: string;
+  performedByName: string;
+  movementType: "FOOD_CONSUMPTION";
+  quantity: number;
+  unit: string;
+  quantityBefore: number;
+  quantityAfter: number;
+  createdAt: string;
+  workflowSnapshot: Record<string, unknown>;
+  notes: string | null;
 };
 
 export type InventoryItemDraft = {

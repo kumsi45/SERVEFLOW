@@ -40,7 +40,7 @@ do $$ begin
           and quantity_after is not null
           and workflow_snapshot is not null
         )
-      );
+      ) not valid;
   end if;
   if not exists (select 1 from pg_constraint where conname = 'inventory_movements_audit_menu_item_fk') then
     alter table public.inventory_movements add constraint inventory_movements_audit_menu_item_fk
