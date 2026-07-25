@@ -2,9 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
 import { PurchaseHistoryPage } from "../../purchasing/pages/PurchaseHistoryPage";
+import { loadPurchaseHistory } from "../../purchasing/services/purchaseHistoryService";
+import type { PurchaseHistoryRecord } from "../../purchasing/purchaseHistoryTypes";
+import { fetchRecipes } from "../../recipes/services/recipeService";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
+import {
+  calculateInventoryDashboardKpis,
+  inventoryStatusLabel,
+  stockAttentionRows,
+} from "../inventoryDashboardPresentation";
 import { loadCurrentStock } from "../services/inventoryBalanceService";
+import { loadInventoryAdjustments } from "../services/inventoryAdjustmentService";
 import {
   archiveRecord,
   bulkArchiveItems,
@@ -33,6 +42,7 @@ import {
   replaceAffectedStock,
 } from "../services/inventoryRealtimeService";
 import { recordOpeningBalance } from "../services/openingBalanceService";
+import { buildLowStockAssistantRows } from "../services/lowStockAssistantService";
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
 import { InventoryAdjustmentsPage } from "./InventoryAdjustmentsPage";
@@ -40,6 +50,7 @@ import { LowStockAssistantPage } from "./LowStockAssistantPage";
 import { MovementHistoryPage } from "./MovementHistoryPage";
 import type {
   InventoryAdminData,
+  InventoryAdjustment,
   InventoryCategory,
   InventoryCategoryDraft,
   InventoryCurrentStockRow,
@@ -154,10 +165,6 @@ function isInventorySection(value: string | undefined): value is InventorySectio
   return INVENTORY_NAV.some((item) => item.key === value);
 }
 
-function todayCutoff() {
-  return Date.now() - 7 * 24 * 60 * 60 * 1000;
-}
-
 function dateLabel(value: string) {
   if (!value) return "Not recorded";
   return new Intl.DateTimeFormat(undefined, {
@@ -176,6 +183,10 @@ function dateInputValue() {
 
 function quantityLabel(value: number, unitName: string) {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value)} ${unitName}`;
+}
+
+function moneyLabel(value: number) {
+  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
 function countLabel(count: number, singular: string, plural = `${singular}s`) {
@@ -285,7 +296,63 @@ function simpleDraft(record?: { id: string; name: string; description: string | 
 }
 
 function statusBadge(status: string) {
-  return <span className={`ia-status ${status}`}>{status}</span>;
+  return <span className={`ia-status ${status}`} role="status">{inventoryStatusLabel(status)}</span>;
+}
+
+type DashboardActivityItem = {
+  id: string;
+  title: string;
+  detail: string;
+  date: string;
+  status?: string;
+};
+
+function DashboardEmptyState({
+  icon,
+  title,
+  message,
+  actionLabel,
+  onAction,
+}: {
+  icon: string;
+  title: string;
+  message: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="ia-dashboard-empty">
+      <span className="ia-empty-illustration" aria-hidden="true">{icon}</span>
+      <div><strong>{title}</strong><p>{message}</p></div>
+      <button type="button" onClick={onAction}>{actionLabel}</button>
+    </div>
+  );
+}
+
+function DashboardActivityPanel({
+  title,
+  subtitle,
+  items,
+  empty,
+  onOpen,
+}: {
+  title: string;
+  subtitle: string;
+  items: DashboardActivityItem[];
+  empty: { icon: string; title: string; message: string; actionLabel: string };
+  onOpen: () => void;
+}) {
+  return (
+    <article className="ia-activity-card">
+      <header><div><h3>{title}</h3><span>{subtitle}</span></div><button type="button" onClick={onOpen} aria-label={`View all ${title.toLowerCase()}`}>View all</button></header>
+      {items.length ? <div className="ia-activity-list">{items.map((item) => (
+        <button type="button" key={item.id} onClick={onOpen} aria-label={`Open ${title.toLowerCase()}: ${item.title}`}>
+          <span><strong>{item.title}</strong><small>{item.detail}</small></span>
+          <span className="ia-activity-meta">{item.status && statusBadge(item.status)}<time dateTime={item.date}>{dateLabel(item.date)}</time></span>
+        </button>
+      ))}</div> : <DashboardEmptyState {...empty} onAction={onOpen} />}
+    </article>
+  );
 }
 
 function AdvancedInfo({ rows }: { rows: Array<{ label: string; value: ReactNode }> }) {
@@ -318,6 +385,11 @@ export function InventoryDashboardPage({
   const [currentStock, setCurrentStock] = useState<InventoryCurrentStockRow[]>([]);
   const [ledger, setLedger] = useState<InventoryLedgerEntry[]>([]);
   const [movementHistory, setMovementHistory] = useState<InventoryFoodConsumptionMovement[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistoryRecord[]>([]);
+  const [dashboardAdjustments, setDashboardAdjustments] = useState<InventoryAdjustment[]>([]);
+  const [recipeCount, setRecipeCount] = useState(0);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -357,9 +429,41 @@ export function InventoryDashboardPage({
     }
   }, [restaurantId]);
 
+  const loadDashboardInsights = useCallback(async () => {
+    setInsightsLoading(true);
+    const results = await Promise.allSettled([
+      loadPurchaseHistory(restaurantId),
+      loadInventoryAdjustments(restaurantId),
+      fetchRecipes(restaurantId, {
+        search: "",
+        categoryId: "",
+        status: "all",
+        preparation: "all",
+        sort: "newest",
+        page: 1,
+        pageSize: 1,
+      }),
+    ]);
+    const [purchasesResult, adjustmentsResult, recipesResult] = results;
+    if (purchasesResult.status === "fulfilled") setPurchaseHistory(purchasesResult.value);
+    if (adjustmentsResult.status === "fulfilled") setDashboardAdjustments(adjustmentsResult.value);
+    if (recipesResult.status === "fulfilled") setRecipeCount(recipesResult.value.total);
+    const unavailable = [
+      purchasesResult.status === "rejected" ? "purchases" : null,
+      adjustmentsResult.status === "rejected" ? "adjustments" : null,
+      recipesResult.status === "rejected" ? "recipes" : null,
+    ].filter(Boolean);
+    setInsightsError(unavailable.length ? `Some dashboard activity is temporarily unavailable: ${unavailable.join(", ")}.` : null);
+    setInsightsLoading(false);
+  }, [restaurantId]);
+
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    void loadDashboardInsights();
+  }, [loadDashboardInsights]);
 
   const reconcileRealtime = useCallback(async () => {
     const [next, nextStock, nextLedger, nextMovementHistory] = await Promise.all([
@@ -444,13 +548,12 @@ export function InventoryDashboardPage({
     };
   }, [mobileMenuOpen]);
 
-  const activeCategories = data.categories.filter((row) => row.status === "active");
-  const activeSuppliers = data.suppliers.filter((row) => row.status === "active");
-  const activeLocations = data.storageLocations.filter((row) => row.status === "active");
-  const activeUnits = data.units.filter((row) => row.status === "active");
+  const activeCategories = useMemo(() => data.categories.filter((row) => row.status === "active"), [data.categories]);
+  const activeSuppliers = useMemo(() => data.suppliers.filter((row) => row.status === "active"), [data.suppliers]);
+  const activeLocations = useMemo(() => data.storageLocations.filter((row) => row.status === "active"), [data.storageLocations]);
+  const activeUnits = useMemo(() => data.units.filter((row) => row.status === "active"), [data.units]);
   const stockContext = useMemo(() => ({ ...data, currentStock }), [data, currentStock]);
 
-  const categoryNames = useMemo(() => new Map(data.categories.map((row) => [row.id, row.name])), [data.categories]);
   const supplierNames = useMemo(() => new Map(data.suppliers.map((row) => [row.id, row.name])), [data.suppliers]);
   const storageNames = useMemo(() => new Map(data.storageLocations.map((row) => [row.id, row.name])), [data.storageLocations]);
   const unitNames = useMemo(() => new Map(data.units.map((row) => [row.id, row.name])), [data.units]);
@@ -478,14 +581,90 @@ export function InventoryDashboardPage({
     }
     return totals;
   }, [currentStock]);
-  const lowStockRows = currentStock.filter((row) => row.stockStatus === "low_stock" || row.stockStatus === "out_of_stock");
-  const recentLedger = ledger.slice(0, 8);
+  const dashboardStockLevels = useMemo(() => buildLowStockAssistantRows({
+    restaurantId,
+    currentStock,
+    items: data.items,
+    categories: data.categories,
+    suppliers: data.suppliers,
+    adjustments: dashboardAdjustments,
+  }), [currentStock, dashboardAdjustments, data.categories, data.items, data.suppliers, restaurantId]);
+  const attentionRows = useMemo(() => stockAttentionRows(dashboardStockLevels), [dashboardStockLevels]);
+  const dashboardKpis = useMemo(() => calculateInventoryDashboardKpis({
+    items: data.items,
+    currentStock,
+    stockLevels: dashboardStockLevels,
+    suppliers: data.suppliers,
+    purchases: purchaseHistory,
+  }), [currentStock, dashboardStockLevels, data.items, data.suppliers, purchaseHistory]);
+  const lowStockRows = useMemo(() => currentStock.filter((row) => (
+    row.stockStatus === "low_stock" || row.stockStatus === "out_of_stock"
+  )), [currentStock]);
+  const recentLedger = useMemo(() => ledger.slice(0, 8), [ledger]);
 
   const filteredItems = useMemo(() => getFilteredItems(data, filters), [data, filters]);
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEM_PAGE_SIZE));
-  const pagedItems = filteredItems.slice((page - 1) * ITEM_PAGE_SIZE, page * ITEM_PAGE_SIZE);
-  const recentlyAdded = data.items.filter((item) => new Date(item.createdAt).getTime() >= todayCutoff());
-  const archivedItems = data.items.filter((item) => item.status === "archived");
+  const pagedItems = useMemo(() => filteredItems.slice((page - 1) * ITEM_PAGE_SIZE, page * ITEM_PAGE_SIZE), [filteredItems, page]);
+  const archivedItems = useMemo(() => data.items.filter((item) => item.status === "archived"), [data.items]);
+  const recentPurchases = useMemo<DashboardActivityItem[]>(() => [...purchaseHistory]
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 3)
+    .map((purchase) => ({
+      id: purchase.id,
+      title: purchase.purchaseNumber,
+      detail: `${purchase.supplierName} · ${countLabel(purchase.itemCount, "item")}`,
+      date: purchase.createdAt,
+      status: purchase.status,
+    })), [purchaseHistory]);
+  const recentReceipts = useMemo<DashboardActivityItem[]>(() => purchaseHistory
+    .filter((purchase) => purchase.receivedAt)
+    .sort((left, right) => new Date(right.receivedAt ?? 0).getTime() - new Date(left.receivedAt ?? 0).getTime())
+    .slice(0, 3)
+    .map((purchase) => ({
+      id: `receipt:${purchase.id}`,
+      title: purchase.purchaseNumber,
+      detail: `${purchase.supplierName} · ${purchase.receivedByNames ?? "Inventory staff"}`,
+      date: purchase.receivedAt ?? purchase.createdAt,
+      status: purchase.status,
+    })), [purchaseHistory]);
+  const recentAdjustments = useMemo<DashboardActivityItem[]>(() => [...dashboardAdjustments]
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 3)
+    .map((adjustment) => ({
+      id: adjustment.id,
+      title: adjustment.reason,
+      detail: `${countLabel(adjustment.itemCount, "item")} · ${adjustment.createdByName}`,
+      date: adjustment.createdAt,
+      status: "completed",
+    })), [dashboardAdjustments]);
+  const recentConsumption = useMemo<DashboardActivityItem[]>(() => [...movementHistory]
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 3)
+    .map((movement) => ({
+      id: movement.id,
+      title: movement.inventoryItemName,
+      detail: `${movement.orderNumber} · ${movement.menuItemName}`,
+      date: movement.createdAt,
+      status: "completed",
+    })), [movementHistory]);
+  const recentWaste = useMemo<DashboardActivityItem[]>(() => dashboardAdjustments
+    .filter((adjustment) => adjustment.adjustmentType === "waste" || adjustment.adjustmentType === "spoilage")
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 3)
+    .map((adjustment) => ({
+      id: `waste:${adjustment.id}`,
+      title: inventoryStatusLabel(adjustment.adjustmentType),
+      detail: `${countLabel(adjustment.itemCount, "item")} · ${adjustment.totalQuantity} total quantity`,
+      date: adjustment.createdAt,
+      status: "completed",
+    })), [dashboardAdjustments]);
+  const recentMovements = useMemo<DashboardActivityItem[]>(() => ledger.slice(0, 3).map((entry) => ({
+    id: entry.id,
+    title: entry.itemName,
+    detail: `${movementLabel(entry.movementType)} · ${entry.quantityEffect === "in" ? "+" : "−"}${quantityLabel(entry.quantity, entry.unitName)}`,
+    date: entry.movementDate,
+    status: entry.quantityEffect === "in" ? "healthy" : "completed",
+  })), [ledger]);
 
   useEffect(() => {
     setPage(1);
@@ -526,6 +705,11 @@ export function InventoryDashboardPage({
     if (INVENTORY_RECORDS_NAV.some((item) => item.key === next)) setExpandedNavGroup("records");
     window.history.pushState({}, "", `/inventory/${next}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
+    if (next === "dashboard") void loadDashboardInsights();
+  }
+
+  function openRecipes() {
+    window.location.assign("/inventory/recipes");
   }
 
   function navigateUtility(next: InventoryUtilityView) {
@@ -573,130 +757,70 @@ export function InventoryDashboardPage({
   }
 
   const dashboard = (
-    <div className="ia-stack">
-      <section className="ia-metrics" aria-label="Inventory summary">
-        <button type="button" onClick={() => navigate("items")}>
-          <span>Total Inventory Items</span>
-          <strong>{data.items.filter((item) => item.status !== "deleted").length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("current-stock")}>
-          <span>Tracked Stock Lines</span>
-          <strong>{currentStock.length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("current-stock")}>
-          <span>Low or Out</span>
-          <strong>{lowStockRows.length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("ledger")}>
-          <span>Ledger Entries</span>
-          <strong>{ledger.length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("categories")}>
-          <span>Categories</span>
-          <strong>{data.categories.filter((row) => row.status !== "deleted").length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("suppliers")}>
-          <span>Suppliers</span>
-          <strong>{data.suppliers.filter((row) => row.status !== "deleted").length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("storage-locations")}>
-          <span>Storage Locations</span>
-          <strong>{data.storageLocations.filter((row) => row.status !== "deleted").length}</strong>
-        </button>
-        <button type="button" onClick={() => navigate("units")}>
-          <span>Units</span>
-          <strong>{data.units.filter((row) => row.status !== "deleted").length}</strong>
-        </button>
-        <button type="button" onClick={() => setFilter("archived", "archived")}>
-          <span>Archived Items</span>
-          <strong>{archivedItems.length}</strong>
-        </button>
+    <div className="ia-stack ia-dashboard-polish">
+      <section className="ia-dashboard-hero">
+        <div><span>Inventory Operations</span><h2>Stock health at a glance</h2><p>Live balances, purchasing work, and recent operational activity for {restaurantName}.</p></div>
+        <button type="button" onClick={() => void loadDashboardInsights()} disabled={insightsLoading} aria-label="Refresh inventory dashboard insights">{insightsLoading ? "Refreshing…" : "Refresh dashboard"}</button>
       </section>
 
-      <section className="ia-toolbar dashboard">
-        <label className="ia-search">
-          <span>Search</span>
-          <input
-            value={filters.search}
-            onChange={(event) => setFilter("search", event.target.value)}
-            placeholder="Search item, SKU, barcode, category, supplier, storage"
-          />
-        </label>
-        <div className="ia-actions">
-          <button type="button" onClick={() => navigate("stock-in")}>Stock In</button>
-          <button type="button" onClick={() => navigate("stock-out")}>Stock Out</button>
-          <button type="button" onClick={() => navigate("transfers")}>Transfer</button>
-          <button type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }}>Create Item</button>
-          <button type="button" onClick={() => { navigate("categories"); setCategoryForm(categoryDraft()); }}>Create Category</button>
-          <button type="button" onClick={() => { navigate("suppliers"); setSupplierForm(supplierDraft()); }}>Create Supplier</button>
+      {insightsError && <div className="ia-dashboard-notice" role="status">{insightsError}</div>}
+
+      {dashboardKpis.totalInventoryItems === 0 && (
+        <DashboardEmptyState icon="IN" title="No Inventory" message="Create the first inventory item to start tracking stock and purchasing." actionLabel="Add Inventory Item" onAction={() => { navigate("items"); setItemForm(itemDraft()); }} />
+      )}
+
+      <section className="ia-dashboard-metrics" aria-label="Inventory dashboard KPIs">
+        <button className="value" type="button" onClick={() => navigate("current-stock")} aria-label={`Total inventory value ${moneyLabel(dashboardKpis.totalInventoryValue)}`}><span>Total Inventory Value</span><strong>{moneyLabel(dashboardKpis.totalInventoryValue)}</strong><small>Current quantity at purchase price</small></button>
+        <button className="items" type="button" onClick={() => navigate("items")}><span>Total Inventory Items</span><strong>{dashboardKpis.totalInventoryItems}</strong><small>{archivedItems.length} archived</small></button>
+        <button className="low" type="button" data-stock-lines={lowStockRows.length} onClick={() => navigate("low-stock-assistant")}><span>Low Stock Items</span><strong>{dashboardKpis.lowStockItems}</strong><small>Critical and at minimum</small></button>
+        <button className="out" type="button" onClick={() => navigate("low-stock-assistant")}><span>Out of Stock Items</span><strong>{dashboardKpis.outOfStockItems}</strong><small>Requires attention</small></button>
+        <button className="suppliers" type="button" onClick={() => navigate("suppliers")}><span>Active Suppliers</span><strong>{dashboardKpis.activeSuppliers}</strong><small>Available for purchasing</small></button>
+        <button className="purchases" type="button" onClick={() => navigate("purchase-orders")}><span>Pending Purchase Orders</span><strong>{dashboardKpis.pendingPurchaseOrders}</strong><small>Draft, approved, or partial</small></button>
+      </section>
+
+      <section className="ia-dashboard-section" aria-labelledby="inventory-quick-actions-title">
+        <div className="ia-dashboard-section-title"><div><span>Common workflows</span><h2 id="inventory-quick-actions-title">Quick Actions</h2></div><p>Open an existing workflow without changing inventory from the dashboard.</p></div>
+        <div className="ia-dashboard-actions">
+          <button type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }} aria-label="Add inventory item"><span aria-hidden="true">IT</span><strong>Add Inventory Item</strong><small>Create an inventory record</small></button>
+          <button type="button" onClick={() => navigate("purchase-orders")} aria-label="Create purchase order"><span aria-hidden="true">PO</span><strong>Create Purchase Order</strong><small>Prepare a supplier draft</small></button>
+          <button type="button" onClick={() => navigate("purchase-orders")} aria-label="Receive purchase order"><span aria-hidden="true">RC</span><strong>Receive Purchase</strong><small>Open pending deliveries</small></button>
+          <button type="button" onClick={() => navigate("adjustments")} aria-label="Create inventory adjustment"><span aria-hidden="true">AD</span><strong>Inventory Adjustment</strong><small>Review and confirm a correction</small></button>
+          <button type="button" onClick={() => navigate("movement-history")}><span aria-hidden="true">MV</span><strong>Movement History</strong><small>Audit consumption movements</small></button>
+          <button type="button" onClick={() => navigate("purchase-history")}><span aria-hidden="true">PH</span><strong>Purchase History</strong><small>Review purchasing activity</small></button>
+          <button type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">LS</span><strong>Low Stock Assistant</strong><small>See suggested quantities</small></button>
+          <button type="button" onClick={openRecipes}><span aria-hidden="true">RE</span><strong>Recipes</strong><small>Open recipe management</small></button>
+          <button type="button" onClick={() => navigate("suppliers")}><span aria-hidden="true">SU</span><strong>Suppliers</strong><small>Manage supplier records</small></button>
         </div>
       </section>
 
-      <section className="ia-split">
-        <div>
-          <div className="ia-section-title">
-            <h2>Recently Added Items</h2>
-            <span>Last 7 days</span>
-          </div>
-          <div className="ia-list">
-            {recentlyAdded.slice(0, 6).map((item) => (
-              <button className="ia-list-row" type="button" key={item.id} onClick={() => { navigate("items"); setItemForm(itemDraft(item)); }}>
-                <strong>{item.name}</strong>
-                <span>{categoryNames.get(item.categoryId) ?? "No category"} / {unitNames.get(item.unitId) ?? "No unit"}</span>
-                {statusBadge(item.status)}
-              </button>
-            ))}
-            {recentlyAdded.length === 0 && <div className="ia-empty">No recently added items.</div>}
-          </div>
-        </div>
-        <div>
-          <div className="ia-section-title">
-            <h2>Quick Actions</h2>
-            <span>Master data setup</span>
-          </div>
-          <div className="ia-quick-grid">
-            <button type="button" onClick={() => { navigate("storage-locations"); setStorageForm(simpleDraft()); }}>Add Storage Location</button>
-            <button type="button" onClick={() => { navigate("units"); setUnitForm(simpleDraft()); }}>Add Unit</button>
-            <button type="button" onClick={() => navigate("adjustments")}>Record Adjustment</button>
-            <button type="button" onClick={() => navigate("waste")}>Record Waste</button>
-            <button type="button" onClick={() => { setFilter("recentlyAdded", true); navigate("items"); }}>View Recent Items</button>
-            <button type="button" onClick={() => navigate("ledger")}>View Ledger</button>
-          </div>
-        </div>
+      {(activeSuppliers.length === 0 || (!insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0)) && (
+        <section className="ia-setup-grid" aria-label="Inventory setup guidance">
+          {activeSuppliers.length === 0 && <DashboardEmptyState icon="SU" title="No Suppliers" message="Add an active supplier before preparing purchase orders." actionLabel="Add Supplier" onAction={() => { navigate("suppliers"); setSupplierForm(supplierDraft()); }} />}
+          {!insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0 && <DashboardEmptyState icon="RE" title="No Recipes" message="Create recipes to connect menu consumption with inventory ingredients." actionLabel="Open Recipes" onAction={openRecipes} />}
+        </section>
+      )}
+
+      <section className="ia-dashboard-section ia-stock-attention" aria-labelledby="stock-attention-title">
+        <div className="ia-dashboard-section-title"><div><span>Stock health</span><h2 id="stock-attention-title">Items Requiring Attention</h2></div><button type="button" onClick={() => navigate("low-stock-assistant")}>Open Low Stock Assistant</button></div>
+        {attentionRows.length ? <div className="ia-attention-list">{attentionRows.slice(0, 6).map((row) => (
+          <button type="button" key={row.inventoryItemId} onClick={() => navigate("low-stock-assistant")} aria-label={`Review ${row.itemName} in low stock assistant`}>
+            <span><strong>{row.itemName}</strong><small>{row.categoryName} · {row.supplierName ?? "No preferred supplier"}</small></span>
+            <span><small>Current</small><strong>{quantityLabel(row.currentQuantity, row.unitName)}</strong></span>
+            <span><small>Suggested Purchase</small><strong>{row.maximumStock === null ? "Set maximum" : quantityLabel(row.suggestedPurchase, row.unitName)}</strong></span>
+            {statusBadge(row.classification)}
+          </button>
+        ))}</div> : <DashboardEmptyState icon="OK" title="No Low Stock" message="Every active item is currently above its minimum stock level." actionLabel="Review Current Stock" onAction={() => navigate("current-stock")} />}
       </section>
 
-      <section className="ia-split">
-        <div>
-          <div className="ia-section-title">
-            <h2>Current Stock</h2>
-            <span>Movement-derived balances</span>
-          </div>
-          <div className="ia-list">
-            {lowStockRows.slice(0, 6).map((row) => (
-              <button className="ia-list-row" type="button" key={`${row.inventoryItemId}:${row.storageLocationId}`} onClick={() => navigate("current-stock")}>
-                <strong>{row.itemName}</strong>
-                <span>{row.storageLocationName} / {quantityLabel(row.currentQuantity, row.unitName)}</span>
-                <span className={`ia-status ${row.stockStatus}`}>{row.stockStatus.replace(/_/g, " ")}</span>
-              </button>
-            ))}
-            {lowStockRows.length === 0 && <div className="ia-empty">No low stock lines.</div>}
-          </div>
-        </div>
-        <div>
-          <div className="ia-section-title">
-            <h2>Recent Activity</h2>
-            <span>Latest ledger entries</span>
-          </div>
-          <div className="ia-list">
-            {recentLedger.slice(0, 6).map((entry) => (
-              <button className="ia-list-row" type="button" key={entry.id} onClick={() => navigate("ledger")}>
-                <strong>{entry.itemName}</strong>
-                <span>{movementLabel(entry.movementType)} / {entry.storageLocationName}</span>
-                <span>{entry.quantityEffect === "in" ? "+" : "-"}{quantityLabel(entry.quantity, entry.unitName)}</span>
-              </button>
-            ))}
-            {recentLedger.length === 0 && <div className="ia-empty">No stock movements recorded yet.</div>}
-          </div>
+      <section className="ia-dashboard-section" aria-labelledby="recent-operational-activity-title">
+        <div className="ia-dashboard-section-title"><div><span>Latest records</span><h2 id="recent-operational-activity-title">Recent Operational Activity</h2></div><p>Read-only summaries from existing inventory and purchasing history.</p></div>
+        <div className="ia-activity-grid">
+          <DashboardActivityPanel title="Recent Purchases" subtitle="Latest purchase orders" items={recentPurchases} empty={{ icon: "PO", title: "No Purchases", message: "No purchase orders have been created yet.", actionLabel: "Create Purchase Order" }} onOpen={() => navigate("purchase-orders")} />
+          <DashboardActivityPanel title="Recent Receipts" subtitle="Latest received deliveries" items={recentReceipts} empty={{ icon: "RC", title: "No Receipts", message: "Received deliveries will appear here.", actionLabel: "Receive Purchase" }} onOpen={() => navigate("purchase-orders")} />
+          <DashboardActivityPanel title="Recent Inventory Adjustments" subtitle="Confirmed manual changes" items={recentAdjustments} empty={{ icon: "AD", title: "No Adjustments", message: "Confirmed adjustments will appear here.", actionLabel: "Inventory Adjustment" }} onOpen={() => navigate("adjustments")} />
+          <DashboardActivityPanel title="Recent Consumption" subtitle="Order-linked consumption" items={recentConsumption} empty={{ icon: "CO", title: "No Consumption", message: "Order consumption movements will appear here.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
+          <DashboardActivityPanel title="Recent Waste" subtitle="Waste and spoilage" items={recentWaste} empty={{ icon: "WA", title: "No Waste", message: "Waste and spoilage adjustments will appear here.", actionLabel: "View Adjustments" }} onOpen={() => navigate("adjustments")} />
+          <DashboardActivityPanel title="Recent Movements" subtitle="Latest stock ledger entries" items={recentMovements} empty={{ icon: "MV", title: "No Movements", message: "Inventory movements will appear after the first stock operation.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
         </div>
       </section>
     </div>

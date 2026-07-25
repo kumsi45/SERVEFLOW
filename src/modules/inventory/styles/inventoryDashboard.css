@@ -433,19 +433,42 @@
 }
 
 .ia-status.archived {
-  color: #9a5b00;
-  background: #fff3d6;
+  color: #344054;
+  background: #eaecf0;
 }
 
 .ia-status.low_stock,
+.ia-status.low {
+  color: #854d0e;
+  background: #fef9c3;
+}
+
+.ia-status.critical {
+  color: #b54708;
+  background: #ffead5;
+}
+
 .ia-status.out_of_stock {
   color: #b42318;
   background: #ffe8e5;
 }
 
-.ia-status.in_stock {
+.ia-status.in_stock,
+.ia-status.healthy,
+.ia-status.completed {
   color: #067647;
   background: #dcfae6;
+}
+
+.ia-status.draft {
+  color: #175cd3;
+  background: #eaf1ff;
+}
+
+.ia-status.approved,
+.ia-status.partially_received {
+  color: #854d0e;
+  background: #fef9c3;
 }
 
 .ia-status.over_stock {
@@ -526,6 +549,422 @@
   border-color: #fecdca;
   color: #b42318;
   background: #fff1f0;
+}
+
+.ia-dashboard-polish {
+  gap: 16px;
+  max-width: 1880px;
+  margin: 0 auto;
+}
+
+.ia-dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid #cbdcf8;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(125deg, #123a78, #1457d9 62%, #2e90fa);
+  box-shadow: 0 12px 30px rgba(20, 87, 217, 0.16);
+}
+
+.ia-dashboard-hero > div {
+  display: grid;
+  gap: 5px;
+}
+
+.ia-dashboard-hero span {
+  color: #dbeafe;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ia-dashboard-hero h2,
+.ia-dashboard-hero p {
+  margin: 0;
+}
+
+.ia-dashboard-hero h2 {
+  font-size: clamp(22px, 2.1vw, 32px);
+}
+
+.ia-dashboard-hero p {
+  color: #eaf2ff;
+  line-height: 1.5;
+}
+
+.ia-dashboard-hero button,
+.ia-dashboard-section-title > button,
+.ia-dashboard-empty button,
+.ia-activity-card header > button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid #c7d7f5;
+  border-radius: 9px;
+  color: #174ea6;
+  background: #fff;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.ia-dashboard-hero button:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.ia-dashboard-notice {
+  padding: 11px 14px;
+  border: 1px solid #fedf89;
+  border-radius: 10px;
+  color: #854d0e;
+  background: #fffaeb;
+  font-weight: 700;
+}
+
+.ia-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(145px, 1fr));
+  gap: 10px;
+}
+
+.ia-dashboard-metrics button {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 116px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid #dfe4ec;
+  border-radius: 13px;
+  color: #17202f;
+  text-align: left;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(16, 24, 40, .045);
+  cursor: pointer;
+}
+
+.ia-dashboard-metrics button::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  content: "";
+  background: #1457d9;
+}
+
+.ia-dashboard-metrics button.low::before { background: #fdb022; }
+.ia-dashboard-metrics button.out::before { background: #d92d20; }
+.ia-dashboard-metrics button.suppliers::before { background: #12b76a; }
+.ia-dashboard-metrics button.purchases::before { background: #7f56d9; }
+.ia-dashboard-metrics button span,
+.ia-dashboard-metrics button small {
+  color: #667085;
+}
+
+.ia-dashboard-metrics button span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.ia-dashboard-metrics button strong {
+  font-size: clamp(23px, 2vw, 30px);
+}
+
+.ia-dashboard-metrics button small {
+  font-size: 11px;
+}
+
+.ia-dashboard-section {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #dfe4ec;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ia-dashboard-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ia-dashboard-section-title > div {
+  display: grid;
+  gap: 3px;
+}
+
+.ia-dashboard-section-title span {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ia-dashboard-section-title h2,
+.ia-dashboard-section-title p {
+  margin: 0;
+}
+
+.ia-dashboard-section-title h2 {
+  font-size: 18px;
+}
+
+.ia-dashboard-section-title p {
+  max-width: 520px;
+  color: #667085;
+  font-size: 12px;
+  text-align: right;
+}
+
+.ia-dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.ia-dashboard-actions button {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 11px;
+  align-items: center;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  color: #17202f;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.ia-dashboard-actions button > span {
+  grid-row: 1 / 3;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  color: #175cd3;
+  background: #eef5ff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.ia-dashboard-actions button strong {
+  align-self: end;
+}
+
+.ia-dashboard-actions button small {
+  align-self: start;
+  color: #667085;
+}
+
+.ia-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ia-dashboard-empty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1px dashed #b8c4d6;
+  border-radius: 12px;
+  color: #344054;
+  background: linear-gradient(135deg, #fbfcfe, #f4f7fb);
+}
+
+.ia-empty-illustration {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid #c8d8f3;
+  border-radius: 14px;
+  color: #175cd3;
+  background: #eaf1ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ia-dashboard-empty > div {
+  display: grid;
+  gap: 3px;
+}
+
+.ia-dashboard-empty p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ia-attention-list {
+  display: grid;
+  gap: 7px;
+}
+
+.ia-attention-list > button {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(120px, .55fr) minmax(155px, .7fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  padding: 9px 11px;
+  border: 1px solid #e4e7ec;
+  border-radius: 9px;
+  color: #344054;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.ia-attention-list > button > span:not(.ia-status) {
+  display: grid;
+  gap: 3px;
+}
+
+.ia-attention-list small {
+  color: #667085;
+}
+
+.ia-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ia-activity-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e4e7ec;
+  border-radius: 11px;
+  background: #fcfcfd;
+}
+
+.ia-activity-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.ia-activity-card header > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ia-activity-card h3 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ia-activity-card header span,
+.ia-activity-card time {
+  color: #667085;
+  font-size: 10px;
+}
+
+.ia-activity-card header > button {
+  min-height: 32px;
+  padding-inline: 9px;
+  font-size: 11px;
+}
+
+.ia-activity-list {
+  display: grid;
+  gap: 5px;
+}
+
+.ia-activity-list > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  color: #344054;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.ia-activity-list > button > span:first-child,
+.ia-activity-meta {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ia-activity-list strong,
+.ia-activity-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ia-activity-list small {
+  color: #667085;
+  font-size: 10px;
+}
+
+.ia-activity-meta {
+  flex: 0 0 auto;
+  justify-items: end;
+}
+
+.ia-activity-card .ia-dashboard-empty {
+  grid-template-columns: auto 1fr;
+  min-height: 138px;
+}
+
+.ia-activity-card .ia-dashboard-empty button {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
+
+.ia-shell :is(button, input, select, textarea, a):focus-visible {
+  outline: 3px solid rgba(46, 144, 250, .38);
+  outline-offset: 2px;
+}
+
+.ia-dashboard-metrics button:hover,
+.ia-dashboard-actions button:hover,
+.ia-attention-list > button:hover,
+.ia-activity-list > button:hover {
+  border-color: #84adf4;
+  background: #f8fbff;
+  transform: translateY(-1px);
+}
+
+.ia-table tbody tr:nth-child(even) {
+  background: #fcfcfd;
+}
+
+.ia-table tbody tr:hover {
+  background: #f5f8fc;
 }
 
 .ia-navigation-placeholder {
@@ -1278,5 +1717,108 @@
 
   .ia-mobile-bottom-nav button strong {
     font-size: 10px;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1500px) {
+  .ia-dashboard-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1180px) {
+  .ia-dashboard-metrics,
+  .ia-dashboard-actions,
+  .ia-activity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .ia-dashboard-hero,
+  .ia-dashboard-section-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ia-dashboard-hero button,
+  .ia-dashboard-section-title > button {
+    width: 100%;
+  }
+
+  .ia-dashboard-section-title p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .ia-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ia-dashboard-actions,
+  .ia-activity-grid,
+  .ia-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ia-attention-list > button {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ia-attention-list > button > span:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .ia-dashboard-empty {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ia-dashboard-empty button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .ia-dashboard-hero,
+  .ia-dashboard-section {
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  .ia-dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .ia-dashboard-metrics button {
+    min-height: 98px;
+  }
+
+  .ia-attention-list > button {
+    grid-template-columns: 1fr;
+  }
+
+  .ia-attention-list > button > span:first-child {
+    grid-column: auto;
+  }
+
+  .ia-attention-list .ia-status {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-dashboard-metrics button,
+  .ia-dashboard-actions button,
+  .ia-attention-list > button,
+  .ia-activity-list > button {
+    transition: none;
+  }
+
+  .ia-dashboard-metrics button:hover,
+  .ia-dashboard-actions button:hover,
+  .ia-attention-list > button:hover,
+  .ia-activity-list > button:hover {
+    transform: none;
   }
 }
