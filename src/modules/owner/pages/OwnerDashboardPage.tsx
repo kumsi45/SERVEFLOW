@@ -21,7 +21,12 @@ import {
   type PaymentPolicy,
 } from "../../../core/payment/lifecycle";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
-import { searchActiveMenuRecipes, type MenuRecipeOption } from "../../menu-recipes/services/menuRecipeService";
+import {
+  searchActiveDirectInventoryItems,
+  searchActiveMenuRecipes,
+  type DirectInventoryOption,
+  type MenuRecipeOption,
+} from "../../menu-recipes/services/menuRecipeService";
 import {
   createStaff,
   deleteStaff,
@@ -161,6 +166,8 @@ type OdMenuItem = {
   recipe_id: string | null;
   recipe_name: string | null;
   recipe_status: string | null;
+  direct_inventory_item_id: string | null;
+  direct_inventory_item_name: string | null;
 };
 
 type OdCategory = {
@@ -672,7 +679,7 @@ export function OwnerDashboardPage({
           supabase
             .from("menu_items")
             .select(
-              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,recipes!menu_items_recipe_same_restaurant(name,status)",
+              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,direct_inventory_item_id,recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)",
             )
             .eq("restaurant_id", restaurantId)
             .is("archived_at", null)
@@ -810,6 +817,8 @@ export function OwnerDashboardPage({
             price: Number(row.price),
             recipe_name: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.name ?? null,
             recipe_status: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.status ?? null,
+            direct_inventory_item_name:
+              (Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items)?.name ?? null,
           })) as OdMenuItem[],
         );
         setCategories((categoryData ?? []) as OdCategory[]);
@@ -1396,7 +1405,7 @@ export function OwnerDashboardPage({
       supabase
         .from("menu_items")
         .select(
-          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,recipes!menu_items_recipe_same_restaurant(name,status)",
+          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,direct_inventory_item_id,recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)",
         )
         .eq("restaurant_id", restaurantId)
         .is("archived_at", null)
@@ -1417,6 +1426,8 @@ export function OwnerDashboardPage({
         price: Number(row.price),
         recipe_name: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.name ?? null,
         recipe_status: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.status ?? null,
+        direct_inventory_item_name:
+          (Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items)?.name ?? null,
       })) as OdMenuItem[],
     );
     setCategories((categoryData ?? []) as OdCategory[]);
@@ -4836,8 +4847,11 @@ function MenuPage({
   const [formSugarG, setFormSugarG] = useState("");
   const [formSodiumMg, setFormSodiumMg] = useState("");
   const [formRecipeId, setFormRecipeId] = useState("");
+  const [formDirectInventoryItemId, setFormDirectInventoryItemId] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
+  const [directInventorySearch, setDirectInventorySearch] = useState("");
   const [recipeOptions, setRecipeOptions] = useState<MenuRecipeOption[]>([]);
+  const [directInventoryOptions, setDirectInventoryOptions] = useState<DirectInventoryOption[]>([]);
   const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>([]);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -4850,6 +4864,13 @@ function MenuPage({
     }, 180);
     return () => window.clearTimeout(timer);
   }, [modal, recipeSearch, restaurantId]);
+  useEffect(() => {
+    if (!modal) return;
+    const timer = window.setTimeout(() => {
+      void searchActiveDirectInventoryItems(restaurantId, directInventorySearch).then(setDirectInventoryOptions).catch((cause) => setMenuError(cause instanceof Error ? cause.message : "Inventory items could not be loaded."));
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [directInventorySearch, modal, restaurantId]);
   const activeStations = useMemo(
     () =>
       [...stations]
@@ -4954,7 +4975,9 @@ function MenuPage({
     setFormSugarG("");
     setFormSodiumMg("");
     setFormRecipeId("");
+    setFormDirectInventoryItemId("");
     setRecipeSearch("");
+    setDirectInventorySearch("");
     setModal({ mode: "create" });
   }
 
@@ -4985,7 +5008,9 @@ function MenuPage({
     setFormSugarG(formatOptionalNutritionInput(item.sugar_g));
     setFormSodiumMg(formatOptionalNutritionInput(item.sodium_mg));
     setFormRecipeId(item.recipe_id ?? "");
+    setFormDirectInventoryItemId(item.direct_inventory_item_id ?? "");
     setRecipeSearch(item.recipe_name ?? "");
+    setDirectInventorySearch(item.direct_inventory_item_name ?? "");
     setModal({ mode: "edit", item });
   }
 
@@ -5200,6 +5225,7 @@ function MenuPage({
         sugar_g: sugarG,
         sodium_mg: sodiumMg,
         recipe_id: formRecipeId || null,
+        direct_inventory_item_id: formDirectInventoryItemId || null,
       };
 
       if (modal.mode === "create") {
@@ -5432,7 +5458,7 @@ function MenuPage({
                 <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
-                <th>Recipe</th>
+                <th>Inventory Link</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -5498,7 +5524,26 @@ function MenuPage({
                         {item.available ? "Available" : "Unavailable"}
                       </span>
                     </td>
-                    <td>{item.recipe_id ? <div><strong>{item.recipe_name ?? "Linked Recipe"}</strong><div><span className="od-status-badge paid">Linked</span></div></div> : <div><span>No Recipe Assigned</span><div><span className="od-status-badge pending">Recipe Required</span></div></div>}</td>
+                    <td>
+                      {item.recipe_id ? (
+                        <div>
+                          <strong>{item.recipe_name ?? "Linked Recipe"}</strong>
+                          <div>
+                            <span className="od-status-badge paid">Recipe Linked</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="od-recipe-warning">No Recipe Assigned</span>
+                          {item.direct_inventory_item_id && (
+                            <div className="od-muted-line">
+                              Direct inventory:{" "}
+                              {item.direct_inventory_item_name ?? "Inventory item"}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div className="od-row-actions">
                         <button
@@ -5723,10 +5768,63 @@ function MenuPage({
                 />
               </label>
               <fieldset className="od-recipe-link-fieldset">
-                <legend>Recipe</legend>
-                <label>Search Recipe<input value={recipeSearch} onChange={(event) => setRecipeSearch(event.target.value)} disabled={isWorking} placeholder="Search active recipes" /></label>
-                <label>Select Recipe<select value={formRecipeId} onChange={(event) => setFormRecipeId(event.target.value)} disabled={isWorking}><option value="">No Recipe Assigned</option>{recipeOptions.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name} ({recipe.recipe_code})</option>)}</select></label>
-                {!formRecipeId && <span className="od-recipe-warning">Recipe Required — bottled drinks may remain unlinked.</span>}
+                <legend>Inventory Link</legend>
+                <label>
+                  Search Recipe
+                  <input
+                    value={recipeSearch}
+                    onChange={(event) => setRecipeSearch(event.target.value)}
+                    disabled={isWorking}
+                    placeholder="Search active recipes"
+                  />
+                </label>
+                <label>
+                  Select Recipe
+                  <select
+                    value={formRecipeId}
+                    onChange={(event) => {
+                      setFormRecipeId(event.target.value);
+                      if (event.target.value) setFormDirectInventoryItemId("");
+                    }}
+                    disabled={isWorking}
+                  >
+                    <option value="">No Recipe Assigned</option>
+                    {recipeOptions.map((recipe) => (
+                      <option key={recipe.id} value={recipe.id}>
+                        {recipe.name} ({recipe.recipe_code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Search Direct Inventory
+                  <input
+                    value={directInventorySearch}
+                    onChange={(event) => setDirectInventorySearch(event.target.value)}
+                    disabled={isWorking}
+                    placeholder="Search ready-to-serve inventory"
+                  />
+                </label>
+                <label>
+                  Direct Inventory Item
+                  <select
+                    value={formDirectInventoryItemId}
+                    onChange={(event) => {
+                      setFormDirectInventoryItemId(event.target.value);
+                      if (event.target.value) setFormRecipeId("");
+                    }}
+                    disabled={isWorking}
+                  >
+                    <option value="">No Direct Inventory Item</option>
+                    {directInventoryOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                        {item.sku ? ` (${item.sku})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!formRecipeId && <span className="od-recipe-warning">No Recipe Assigned</span>}
               </fieldset>
               <label>
                 Kitchen Station

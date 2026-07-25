@@ -42,7 +42,7 @@ describe("Phase 8.3.4 Menu to Recipe Linking", () => {
 
   it("warns but does not block menu items without recipes", () => {
     expect(owner).toContain("No Recipe Assigned");
-    expect(owner).toContain("Recipe Required");
+    expect(owner).not.toContain("Recipe Required");
     expect(owner).toContain("recipe_id: formRecipeId || null");
     expect(sql).not.toMatch(/recipe_id uuid not null/i);
   });
@@ -52,4 +52,3 @@ describe("Phase 8.3.4 Menu to Recipe Linking", () => {
     expect(service).not.toMatch(/inventory_movements|stock_deduction|order_items|purchase_orders/i);
   });
 });
-
