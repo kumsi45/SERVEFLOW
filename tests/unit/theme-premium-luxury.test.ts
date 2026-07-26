@@ -105,11 +105,11 @@ describe("Phase 9.3 Premium Luxury rendering", () => {
     expect(definition.primaryColor).toBe("#0b0b0a");
     expect(definition.secondaryColor).toBe("#d7b56d");
     expect(definition.typography).toMatch(/Georgia|serif/);
-    expect(ownerPage).toContain('<option value="luxury">Premium Luxury</option>');
+    expect(ownerPage).toContain("<ThemeCustomizationStudio");
   });
 
   it("leaves Modern output on its original presentation branch", () => {
-    expect(modernView).toContain('if (theme === "luxury") return <PremiumLuxuryView {...props} />');
+    expect(modernView).toContain('if (theme === "luxury") return <PremiumLuxuryView {...themedProps} />');
     const directModern = renderToStaticMarkup(createElement(ModernFoodView, {
       restaurant: { ...restaurant, menu_theme: "modern" },
       categories: [category],

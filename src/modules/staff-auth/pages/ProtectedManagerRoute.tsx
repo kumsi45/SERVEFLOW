@@ -14,6 +14,7 @@ const ManagerOperationalReportsPage = lazy(() => import("../../manager/pages/Man
 const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages/ManagerRestaurantIntelligencePage").then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
 const ManagerAiOperationsPage = lazy(() => import("../../manager/pages/ManagerAiOperationsPage").then((module) => ({ default: module.ManagerAiOperationsPage })));
 const MenuRecipeLinkingPage = lazy(() => import("../../menu-recipes/pages/MenuRecipeLinkingPage").then((module) => ({ default: module.MenuRecipeLinkingPage })));
+const ThemeCustomizationStudio = lazy(() => import("../../menu/theme-engine/customization/ThemeCustomizationStudio").then((module) => ({ default: module.ThemeCustomizationStudio })));
 
 type AccessState =
   | { status: "loading" }
@@ -74,7 +75,14 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "reports") page = <ManagerOperationalReportsPage {...props} />;
   if (section === "intelligence") page = <ManagerRestaurantIntelligencePage {...props} />;
   if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
-  if (section === "menu") page = <MenuRecipeLinkingPage restaurantId={restaurantId} />;
+  if (section === "menu") {
+    page = (
+      <div className="manager-menu-studio-stack">
+        <ThemeCustomizationStudio restaurantId={restaurantId} role="manager" />
+        <MenuRecipeLinkingPage restaurantId={restaurantId} />
+      </div>
+    );
+  }
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>
       <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section}>

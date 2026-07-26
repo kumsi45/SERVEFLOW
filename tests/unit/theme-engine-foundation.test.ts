@@ -9,6 +9,13 @@ import { themeRegistry } from "../../src/modules/menu/theme-engine/ThemeRegistry
 import { publishMenuThemeSelection } from "../../src/modules/menu/theme-engine/themeEvents";
 import { ModernFoodView } from "../../src/modules/menu/theme-engine/themes/modern/ModernFoodView";
 import {
+  buildThemeCustomizationSurface,
+  createStoredThemeCustomization,
+  normalizeThemeCustomization,
+  readThemeCustomization,
+  resolveThemeCustomization,
+} from "../../src/modules/menu/theme-engine/customization/themeCustomization";
+import {
   MENU_THEMES,
   isMenuTheme,
   resolveMenuTheme,
@@ -28,6 +35,12 @@ const premiumGridCss = read("src/modules/menu/theme-engine/themes/premium-grid/p
 const coffeeThemeView = read("src/modules/menu/theme-engine/themes/coffee/CoffeeThemeView.tsx");
 const coffeeThemeCard = read("src/modules/menu/theme-engine/themes/coffee/CoffeeThemeCard.tsx");
 const coffeeThemeCss = read("src/modules/menu/theme-engine/themes/coffee/coffeeTheme.css");
+const customizationStudio = read("src/modules/menu/theme-engine/customization/ThemeCustomizationStudio.tsx");
+const customizationPanel = read("src/modules/menu/theme-engine/customization/ThemeCustomizationPanel.tsx");
+const livePreview = read("src/modules/menu/theme-engine/customization/ThemeLivePreview.tsx");
+const customizationCss = read("src/modules/menu/theme-engine/customization/themeCustomization.css");
+const studioCss = read("src/modules/menu/theme-engine/customization/themeCustomizationStudio.css");
+const managerRoute = read("src/modules/staff-auth/pages/ProtectedManagerRoute.tsx");
 
 const restaurant = {
   id: "restaurant-1",
@@ -83,8 +96,11 @@ describe("Phase 9.1 theme registry", () => {
 });
 
 describe("Phase 9.1 provider and renderer", () => {
-  it("renders the existing modern menu content without adding DOM wrappers", () => {
-    expect(renderTheme("modern")).toBe('<div id="existing-menu">Existing QR Menu</div>');
+  it("renders the existing modern menu inside the shared presentation surface", () => {
+    const html = renderTheme("modern");
+    expect(html).toContain("theme-customization-surface");
+    expect(html).toContain('<div id="existing-menu">Existing QR Menu</div>');
+    expect(html).not.toContain('data-theme-customized="true"');
   });
 
   it("renders fallback modern content for an invalid restaurant theme", () => {
@@ -139,12 +155,10 @@ describe("Phase 9.1 database and integration boundaries", () => {
     expect(phaseMigrations).toEqual(["185_phase9_1_menu_theme_engine_foundation.sql"]);
   });
 
-  it("persists the owner dropdown through the existing restaurant settings save", () => {
-    expect(ownerPage).toContain('<div className="od-card-title">Menu Theme</div>');
-    expect(ownerPage).toContain('<option value="modern">Modern</option>');
-    expect(ownerPage).toContain('<option value="luxury">Premium Luxury</option>');
-    expect(ownerPage).toContain('<option value="premium_grid">Premium Grid</option>');
-    expect(ownerPage).toContain('<option value="coffee">Brew &amp; Bite</option>');
+  it("integrates the owner Theme Studio while preserving the existing settings save", () => {
+    expect(ownerPage).toContain("<ThemeCustomizationStudio");
+    expect(ownerPage).toContain('role="owner"');
+    expect(ownerPage).toContain("onPublished={onSettingsChanged}");
     expect(ownerPage).toContain("menu_theme: form.menuTheme");
     expect(ownerPage).toContain("publishMenuThemeSelection(restaurantId, form.menuTheme)");
   });
@@ -339,5 +353,138 @@ describe("Phase 9.5 Brew & Bite presentation", () => {
       "subscribeCustomerTrackingEvents",
       "ModernOrdersView",
     ]) expect(qrPage).toContain(boundary);
+  });
+});
+
+describe("Phase 9.6 restaurant theme customization studio", () => {
+  it("normalizes one centralized override configuration and inherits theme defaults", () => {
+    const customization = normalizeThemeCustomization({
+      branding: {
+        accentColor: "#ABCDEF",
+        secondaryColor: "red",
+        logoUrl: " https://images.example/logo.png ",
+      },
+      typography: {
+        headingFont: "elegant_serif",
+        bodyFont: "unknown",
+        fontSize: 17,
+        headingWeight: 750,
+      },
+      heroLayout: "compact",
+      animation: "premium",
+      colorMode: "dark",
+      card: { radius: "square", imageSize: "small" },
+      spacing: { card: 19, section: 200 },
+    });
+
+    expect(customization).toEqual({
+      branding: {
+        logoUrl: "https://images.example/logo.png",
+        accentColor: "#abcdef",
+      },
+      typography: {
+        headingFont: "elegant_serif",
+        fontSize: 17,
+      },
+      heroLayout: "compact",
+      card: { radius: "square", imageSize: "small" },
+      spacing: { card: 19 },
+      animation: "premium",
+      colorMode: "dark",
+    });
+    const effective = resolveThemeCustomization("coffee", customization);
+    expect(effective.branding.accentColor).toBe("#abcdef");
+    expect(effective.branding.secondaryColor).toBe("#aa7541");
+    expect(effective.typography.bodyFont).toBe("modern_sans");
+    expect(effective.card.shadow).toBe("shadow");
+
+    const stored = createStoredThemeCustomization(
+      customization,
+      "2026-07-26T00:00:00.000Z",
+    );
+    expect(readThemeCustomization({ theme_customization: stored })).toEqual(
+      customization,
+    );
+    expect(stored.version).toBe(1);
+  });
+
+  it("applies customization through the shared theme surface without changing menu data", () => {
+    const surface = buildThemeCustomizationSurface("luxury", {
+      branding: { accentColor: "#112233" },
+      buttons: { style: "outline", shape: "square" },
+      card: { border: "outline", shadow: "shadowless" },
+      animation: "off",
+    });
+    expect(surface.className).toContain("theme-customization-luxury");
+    expect(surface.style["--theme-accent" as keyof typeof surface.style]).toBe(
+      "#112233",
+    );
+    expect(surface.attributes).toMatchObject({
+      "data-theme-customized": "true",
+      "data-button-style": "outline",
+      "data-button-shape": "square",
+      "data-card-border": "outline",
+      "data-card-shadow": "shadowless",
+      "data-animation": "off",
+    });
+  });
+
+  it("provides all controls, live preview actions, and owner/manager access", () => {
+    for (const label of [
+      "Branding",
+      "Typography",
+      "Hero Layout",
+      "Food Cards",
+      "Buttons",
+      "Spacing",
+      "Animations",
+      "Dark / Light",
+    ]) {
+      expect(customizationPanel).toContain(label);
+    }
+    for (const action of [
+      "Preview",
+      "Discard",
+      "Save Draft",
+      "Publish",
+      "Reset Theme",
+      "Restore Defaults",
+      "Confirm Reset",
+    ]) {
+      expect(customizationStudio).toContain(action);
+    }
+    for (const themeName of [
+      "Modern",
+      "Premium Luxury",
+      "Premium Grid",
+      "Brew & Bite",
+    ]) {
+      expect(Object.values(themeRegistry).map((theme) => theme.name)).toContain(
+        themeName,
+      );
+    }
+    expect(livePreview).toContain("useQRMenu(restaurantSlug");
+    expect(livePreview).toContain("<ThemeRenderer");
+    expect(ownerPage).toContain('role="owner"');
+    expect(managerRoute).toContain('role="manager"');
+    expect(managerRoute).toContain('section === "menu"');
+  });
+
+  it("keeps the customization layer accessible, responsive, and presentation-only", () => {
+    expect(studioCss).toContain("min-height: 44px");
+    expect(studioCss).toContain(":focus-visible");
+    expect(studioCss).toContain("prefers-reduced-motion: reduce");
+    expect(studioCss).toContain(".theme-live-preview-viewport");
+    expect(customizationCss).toContain(".modern-orders-theme");
+    expect(customizationCss).toContain("[data-color-mode=\"dark\"]");
+    expect(rendererSource).toContain("THEME_CUSTOMIZATION_CHANGED_EVENT");
+    expect(rendererSource).toContain("buildThemeCustomizationSurface");
+    expect(`${customizationPanel}\n${livePreview}`).not.toMatch(
+      /submitPublicQrOrder|paymentMethod|kitchen|inventory|recipe|checkout/,
+    );
+    const migrations = readdirSync(resolve(process.cwd(), "supabase/migrations"));
+    expect(
+      migrations.some((name) => /phase9_6|theme_customization/i.test(name)),
+    ).toBe(false);
   });
 });

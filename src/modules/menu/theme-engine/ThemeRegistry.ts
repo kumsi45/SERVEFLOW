@@ -7,7 +7,7 @@ import type { MenuTheme, ThemeRegistry } from "./ThemeTypes";
 export const themeRegistry = Object.freeze({
   modern: Object.freeze({
     id: "modern",
-    name: "Modern Food App",
+    name: "Modern",
     preview: "Modern mobile-first menu preview",
     component: ThemeModern,
     primaryColor: "#1457d9",

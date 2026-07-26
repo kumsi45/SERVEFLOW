@@ -23,6 +23,7 @@ import {
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
 import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
+import { ThemeCustomizationStudio } from "../../menu/theme-engine/customization/ThemeCustomizationStudio";
 import {
   searchActiveDirectInventoryItems,
   searchActiveMenuRecipes,
@@ -9172,6 +9173,12 @@ function SettingsPage({
         </div>
       )}
 
+      <ThemeCustomizationStudio
+        restaurantId={restaurantId}
+        role="owner"
+        onPublished={onSettingsChanged}
+      />
+
       <form className="od-settings-form" onSubmit={handleSave}>
         <div className="od-settings-actions">
           <button
@@ -9636,32 +9643,6 @@ function SettingsPage({
               </div>
             </section>
 
-            <section className="od-card">
-              <div className="od-card-header">
-                <div>
-                  <div className="od-card-title">Menu Theme</div>
-                  <div className="od-card-subtitle">
-                    Select the rendering theme for the public QR menu. Menu data and ordering behavior are unchanged.
-                  </div>
-                </div>
-              </div>
-              <div className="od-settings-grid compact">
-                <label>
-                  Menu Theme
-                  <select
-                    value={form.menuTheme}
-                    onChange={(event) => updateField("menuTheme", resolveMenuTheme(event.target.value))}
-                    disabled={working}
-                  >
-                    <option value="modern">Modern</option>
-                    <option value="luxury">Premium Luxury</option>
-                    <option value="premium_grid">Premium Grid</option>
-                    <option value="coffee">Brew &amp; Bite</option>
-                  </select>
-                  <small>Modern, Premium Luxury, Premium Grid, and Brew &amp; Bite are production menu themes.</small>
-                </label>
-              </div>
-            </section>
           </div>
 
           <div className="od-settings-side">

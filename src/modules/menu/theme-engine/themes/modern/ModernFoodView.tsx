@@ -1,6 +1,7 @@
 import { memo, useContext, useMemo, type CSSProperties } from "react";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
+import { applyThemeBranding, useThemeCustomization } from "../../customization/themeCustomization";
 import { MenuThemeContext } from "../../ThemeContext";
 import { CoffeeThemeView } from "../coffee/CoffeeThemeView";
 import { PremiumLuxuryView } from "../luxury/PremiumLuxuryView";
@@ -40,9 +41,17 @@ function AllCategoriesIcon() {
 
 export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodViewProps) {
   const theme = useContext(MenuThemeContext)?.theme ?? "modern";
-  if (theme === "luxury") return <PremiumLuxuryView {...props} />;
-  if (theme === "premium_grid") return <PremiumGridView {...props} />;
-  if (theme === "coffee") return <CoffeeThemeView {...props} />;
+  const { customization } = useThemeCustomization();
+  const themedProps = useMemo(
+    () => ({
+      ...props,
+      restaurant: applyThemeBranding(props.restaurant, customization),
+    }),
+    [customization, props],
+  );
+  if (theme === "luxury") return <PremiumLuxuryView {...themedProps} />;
+  if (theme === "premium_grid") return <PremiumGridView {...themedProps} />;
+  if (theme === "coffee") return <CoffeeThemeView {...themedProps} />;
 
   const {
   restaurant,
@@ -60,7 +69,7 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
   onOpenInfo,
   onOpenCart,
     onOpenOrders,
-  } = props;
+  } = themedProps;
   const categoryImages = useMemo(
     () => new Map(categories.map((category) => [category.id, category.hero_image_url])),
     [categories],
