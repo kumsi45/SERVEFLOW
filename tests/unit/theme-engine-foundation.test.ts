@@ -25,6 +25,9 @@ const ownerPage = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
 const premiumGridView = read("src/modules/menu/theme-engine/themes/premium-grid/PremiumGridView.tsx");
 const premiumGridCard = read("src/modules/menu/theme-engine/themes/premium-grid/PremiumGridCard.tsx");
 const premiumGridCss = read("src/modules/menu/theme-engine/themes/premium-grid/premiumGrid.css");
+const coffeeThemeView = read("src/modules/menu/theme-engine/themes/coffee/CoffeeThemeView.tsx");
+const coffeeThemeCard = read("src/modules/menu/theme-engine/themes/coffee/CoffeeThemeCard.tsx");
+const coffeeThemeCss = read("src/modules/menu/theme-engine/themes/coffee/coffeeTheme.css");
 
 const restaurant = {
   id: "restaurant-1",
@@ -89,15 +92,16 @@ describe("Phase 9.1 provider and renderer", () => {
     expect(renderTheme("not-a-theme")).not.toContain("Coming Soon");
   });
 
-  it("renders production luxury and premium grid themes with only coffee remaining a placeholder", () => {
+  it("renders all four production themes without placeholders", () => {
     expect(renderTheme("luxury")).toContain("premium-luxury-shell");
     expect(renderTheme("luxury")).toContain("Existing QR Menu");
     expect(renderTheme("luxury")).not.toContain("Coming Soon");
     expect(renderTheme("premium_grid")).toContain("premium-grid-shell");
     expect(renderTheme("premium_grid")).toContain("Existing QR Menu");
     expect(renderTheme("premium_grid")).not.toContain("Coming Soon");
-    expect(renderTheme("coffee")).toContain("Coffee Shop");
-    expect(renderTheme("coffee")).toContain("Coming Soon");
+    expect(renderTheme("coffee")).toContain("coffee-theme-shell");
+    expect(renderTheme("coffee")).toContain("Existing QR Menu");
+    expect(renderTheme("coffee")).not.toContain("Coming Soon");
   });
 
   it("reacts to restaurant changes and cross-tab theme events with cleanup", () => {
@@ -140,7 +144,7 @@ describe("Phase 9.1 database and integration boundaries", () => {
     expect(ownerPage).toContain('<option value="modern">Modern</option>');
     expect(ownerPage).toContain('<option value="luxury">Premium Luxury</option>');
     expect(ownerPage).toContain('<option value="premium_grid">Premium Grid</option>');
-    expect(ownerPage).toContain('<option value="coffee">Coffee</option>');
+    expect(ownerPage).toContain('<option value="coffee">Brew &amp; Bite</option>');
     expect(ownerPage).toContain("menu_theme: form.menuTheme");
     expect(ownerPage).toContain("publishMenuThemeSelection(restaurantId, form.menuTheme)");
   });
@@ -242,5 +246,98 @@ describe("Phase 9.4 Premium Grid presentation", () => {
     expect(`${premiumGridView}\n${premiumGridCard}`).not.toMatch(
       /supabase|submitPublicQrOrder|subscribe|paymentMethod|localStorage|fetch\(/,
     );
+  });
+});
+
+describe("Phase 9.5 Brew & Bite presentation", () => {
+  it("renders live restaurant and menu data through the production Theme D branch", () => {
+    const category = { id: "coffee", restaurant_id: "restaurant-1", name: "Coffee" };
+    const item = {
+      id: "drink-1",
+      restaurant_id: "restaurant-1",
+      category_id: "coffee",
+      name: "Cappuccino",
+      description: "Espresso and steamed milk",
+      price: 5,
+      image_url: "https://images.example/cappuccino.jpg",
+      available: true,
+    };
+    const coffeeRestaurant = {
+      ...restaurant,
+      name: "Brew House",
+      menu_theme: "coffee" as const,
+      logo_url: "https://images.example/brew-house-logo.png",
+    };
+    const view = createElement(ModernFoodView, {
+      restaurant: coffeeRestaurant,
+      tableNumber: "6",
+      categories: [category],
+      groups: [{ category, items: [item] }],
+      activeCategoryId: "all",
+      searchTerm: "",
+      cartItemCount: 1,
+      cartSubtotal: 5,
+      hasActiveOrder: true,
+      onSearchChange: vi.fn(),
+      onCategoryChange: vi.fn(),
+      onAddToCart: vi.fn(),
+      onOpenInfo: vi.fn(),
+      onOpenCart: vi.fn(),
+      onOpenOrders: vi.fn(),
+    });
+    const html = renderToStaticMarkup(createElement(
+      ThemeProvider,
+      { restaurant: coffeeRestaurant },
+      createElement(ThemeRenderer, {
+        restaurant: coffeeRestaurant,
+        categories: [category],
+        menu: [item],
+        cart: { items: [], itemCount: 1, subtotal: 5, visible: false },
+        order: { activeSession: null, submittedOrder: null },
+        theme: "coffee",
+      }, view),
+    ));
+
+    expect(html).toContain("coffee-theme-shell");
+    expect(html).toContain("coffee-theme-view");
+    expect(html).toContain("Brew House");
+    expect(html).toContain("Cappuccino");
+    expect(html).toContain("Table 6");
+    expect(html.match(/Add Cappuccino to cart/g)).toHaveLength(1);
+    expect(html.match(/Open food information for Cappuccino/g)).toHaveLength(1);
+    expect(html).toContain(">Home<");
+    expect(html).toContain(">Orders<");
+    expect(html).not.toContain("Coming Soon");
+  });
+
+  it("keeps Theme D responsive, accessible, memoized, and presentation-only", () => {
+    expect(themeRegistry.coffee.name).toBe("Brew & Bite");
+    expect(coffeeThemeCard).toContain("memo(function CoffeeThemeCard");
+    expect(coffeeThemeView).toContain("useMemo(");
+    expect(coffeeThemeCss).toContain("grid-template-columns: repeat(2");
+    expect(coffeeThemeCss).toContain("grid-template-columns: repeat(3");
+    expect(coffeeThemeCss).toContain("grid-template-columns: repeat(4");
+    expect(coffeeThemeCss).toContain("grid-template-columns: repeat(5");
+    expect(coffeeThemeCss).toContain("min-height: 44px");
+    expect(coffeeThemeCss).toContain(":focus-visible");
+    expect(coffeeThemeCss).toContain("prefers-reduced-motion: reduce");
+    expect(coffeeThemeCss).toContain(".food-info-panel");
+    expect(coffeeThemeCss).toContain(".modern-orders-theme");
+    expect(`${coffeeThemeView}\n${coffeeThemeCard}`).not.toMatch(
+      /supabase|submitPublicQrOrder|subscribe|paymentMethod|localStorage|fetch\(/,
+    );
+  });
+
+  it("adds no Theme D migration and retains the shared QR ordering boundary", () => {
+    const migrations = readdirSync(resolve(process.cwd(), "supabase/migrations"));
+    expect(migrations.some((name) => /phase9_5|brew|coffee_theme/i.test(name))).toBe(false);
+    for (const boundary of [
+      "usePublicQrCart",
+      "PublicQrCheckoutPanel",
+      "FoodInfoPanel",
+      "submitPublicQrOrder",
+      "subscribeCustomerTrackingEvents",
+      "ModernOrdersView",
+    ]) expect(qrPage).toContain(boundary);
   });
 });

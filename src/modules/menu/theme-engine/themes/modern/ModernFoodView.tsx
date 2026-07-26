@@ -2,6 +2,7 @@ import { memo, useContext, useMemo, type CSSProperties } from "react";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
 import { MenuThemeContext } from "../../ThemeContext";
+import { CoffeeThemeView } from "../coffee/CoffeeThemeView";
 import { PremiumLuxuryView } from "../luxury/PremiumLuxuryView";
 import { PremiumGridView } from "../premium-grid/PremiumGridView";
 import { ModernBottomNavigation } from "./ModernBottomNavigation";
@@ -41,6 +42,7 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
   const theme = useContext(MenuThemeContext)?.theme ?? "modern";
   if (theme === "luxury") return <PremiumLuxuryView {...props} />;
   if (theme === "premium_grid") return <PremiumGridView {...props} />;
+  if (theme === "coffee") return <CoffeeThemeView {...props} />;
 
   const {
   restaurant,

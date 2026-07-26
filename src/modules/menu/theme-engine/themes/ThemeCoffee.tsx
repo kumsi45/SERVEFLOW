@@ -1,5 +1,5 @@
-import { ThemePlaceholder, type PlaceholderThemeProps } from "./ThemePlaceholder";
+import type { ThemeRendererProps } from "../ThemeTypes";
 
-export function ThemeCoffee(_props: PlaceholderThemeProps) {
-  return <ThemePlaceholder name="Coffee Shop" />;
+export function ThemeCoffee({ children }: ThemeRendererProps) {
+  return <div className="coffee-theme-shell">{children}</div>;
 }
