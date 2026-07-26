@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../core/database";
 import { AiMenuUploadStep } from "../components/AiMenuUploadStep";
+import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
 import "./restaurantSetupWizard.css";
 
 type RestaurantType =
@@ -348,7 +349,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
 
   return (
     <main className="setup-page">
-      <section className="setup-panel">
+      <section className={`setup-panel${step === 5 ? " review-studio-panel" : ""}`}>
         <header className="setup-header">
           <div>
             <p className="setup-eyebrow">Welcome to ServeFlow</p>
@@ -441,18 +442,10 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           )}
 
           {step === 5 && (
-            <div className="setup-phase-placeholder review">
-              <span aria-hidden="true">RP</span>
-              <div>
-                <p className="setup-import-kicker">Placeholder</p>
-                <h2>Review &amp; Publish</h2>
-                <p>{importDraftCount} import draft{importDraftCount === 1 ? " is" : "s are"} safely stored. Review, extraction, and publishing are not enabled in this phase, so no menu data will be created.</p>
-                <div className="setup-draft-safety" role="status">
-                  <strong>Nothing will be published</strong>
-                  <span>Your uploaded files remain private import drafts.</span>
-                </div>
-              </div>
-            </div>
+            <AiMenuReviewStudio
+              restaurantId={restaurantId}
+              onBusyChange={handleImportBusyChange}
+            />
           )}
 
           {step === 6 && (
@@ -498,6 +491,10 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
                 <span>Business Hours<strong>{hours.opensAt} - {hours.closesAt}</strong></span>
                 <span>Menu Status<strong>Not published</strong></span>
               </div>
+              <div className="setup-draft-safety" role="status">
+                <strong>Nothing will be published from AI import drafts</strong>
+                <span>You can review and approve operational menu changes later.</span>
+              </div>
               <div className="setup-actions">
                 <button className="setup-primary" type="button" onClick={() => void completeSetup()} disabled={submitting || assetUploading !== null}>{submitting ? "Launching..." : "Launch My Restaurant"}</button>
               </div>
@@ -508,7 +505,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
         {step < FINAL_STEP && (
           <footer className="setup-actions">
             <button className="setup-secondary" type="button" onClick={back} disabled={step === 0 || submitting || assetUploading !== null || importUploadBusy}>Back</button>
-            <button className="setup-primary" type="button" onClick={next} disabled={submitting || assetUploading !== null || importUploadBusy}>{assetUploading ? "Uploading..." : importUploadBusy ? "Uploading drafts..." : "Continue"}</button>
+            <button className="setup-primary" type="button" onClick={next} disabled={submitting || assetUploading !== null || importUploadBusy}>{assetUploading ? "Uploading..." : importUploadBusy ? "Please wait..." : "Continue"}</button>
           </footer>
         )}
       </section>
