@@ -85,11 +85,13 @@ describe("Phase 9.1 provider and renderer", () => {
     expect(renderTheme("not-a-theme")).not.toContain("Coming Soon");
   });
 
-  it("renders placeholder-only luxury, premium grid, and coffee themes", () => {
-    expect(renderTheme("luxury")).toContain("Luxury Restaurant");
+  it("renders production luxury and placeholder-only premium grid and coffee themes", () => {
+    expect(renderTheme("luxury")).toContain("premium-luxury-shell");
+    expect(renderTheme("luxury")).toContain("Existing QR Menu");
+    expect(renderTheme("luxury")).not.toContain("Coming Soon");
     expect(renderTheme("premium_grid")).toContain("Premium Card Grid");
     expect(renderTheme("coffee")).toContain("Coffee Shop");
-    for (const theme of ["luxury", "premium_grid", "coffee"]) expect(renderTheme(theme)).toContain("Coming Soon");
+    for (const theme of ["premium_grid", "coffee"]) expect(renderTheme(theme)).toContain("Coming Soon");
   });
 
   it("reacts to restaurant changes and cross-tab theme events with cleanup", () => {
@@ -130,7 +132,7 @@ describe("Phase 9.1 database and integration boundaries", () => {
   it("persists the owner dropdown through the existing restaurant settings save", () => {
     expect(ownerPage).toContain('<div className="od-card-title">Menu Theme</div>');
     expect(ownerPage).toContain('<option value="modern">Modern</option>');
-    expect(ownerPage).toContain('<option value="luxury">Luxury</option>');
+    expect(ownerPage).toContain('<option value="luxury">Premium Luxury</option>');
     expect(ownerPage).toContain('<option value="premium_grid">Premium Grid</option>');
     expect(ownerPage).toContain('<option value="coffee">Coffee</option>');
     expect(ownerPage).toContain("menu_theme: form.menuTheme");

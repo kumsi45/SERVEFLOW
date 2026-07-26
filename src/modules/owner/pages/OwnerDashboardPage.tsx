@@ -9654,11 +9654,11 @@ function SettingsPage({
                     disabled={working}
                   >
                     <option value="modern">Modern</option>
-                    <option value="luxury">Luxury</option>
+                    <option value="luxury">Premium Luxury</option>
                     <option value="premium_grid">Premium Grid</option>
                     <option value="coffee">Coffee</option>
                   </select>
-                  <small>Modern keeps the current production menu. Other themes are foundation placeholders in Phase 9.1.</small>
+                  <small>Modern and Premium Luxury are production menu themes. Premium Grid and Coffee remain foundation placeholders.</small>
                 </label>
               </div>
             </section>

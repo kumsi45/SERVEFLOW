@@ -1,5 +1,5 @@
-import { ThemePlaceholder, type PlaceholderThemeProps } from "./ThemePlaceholder";
+import type { ThemeRendererProps } from "../ThemeTypes";
 
-export function ThemeLuxury(_props: PlaceholderThemeProps) {
-  return <ThemePlaceholder name="Luxury Restaurant" />;
+export function ThemeLuxury({ children }: ThemeRendererProps) {
+  return <div className="premium-luxury-shell">{children}</div>;
 }

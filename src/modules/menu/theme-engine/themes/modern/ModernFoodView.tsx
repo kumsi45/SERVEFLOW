@@ -1,11 +1,13 @@
-import { memo, useMemo, type CSSProperties } from "react";
+import { memo, useContext, useMemo, type CSSProperties } from "react";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
+import { MenuThemeContext } from "../../ThemeContext";
+import { PremiumLuxuryView } from "../luxury/PremiumLuxuryView";
 import { ModernBottomNavigation } from "./ModernBottomNavigation";
 import { ModernFoodCard } from "./ModernFoodCard";
 import "./modernFood.css";
 
-type Props = {
+export type ModernFoodViewProps = {
   restaurant: Restaurant;
   tableNumber?: string;
   categories: readonly MenuCategory[];
@@ -34,7 +36,11 @@ function AllCategoriesIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="2" /><rect x="14" y="3.5" width="6.5" height="6.5" rx="2" /><rect x="3.5" y="14" width="6.5" height="6.5" rx="2" /><rect x="14" y="14" width="6.5" height="6.5" rx="2" /></svg>;
 }
 
-export const ModernFoodView = memo(function ModernFoodView({
+export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodViewProps) {
+  const theme = useContext(MenuThemeContext)?.theme ?? "modern";
+  if (theme === "luxury") return <PremiumLuxuryView {...props} />;
+
+  const {
   restaurant,
   tableNumber,
   categories,
@@ -49,8 +55,8 @@ export const ModernFoodView = memo(function ModernFoodView({
   onAddToCart,
   onOpenInfo,
   onOpenCart,
-  onOpenOrders,
-}: Props) {
+    onOpenOrders,
+  } = props;
   const categoryImages = useMemo(
     () => new Map(categories.map((category) => [category.id, category.hero_image_url])),
     [categories],
