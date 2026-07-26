@@ -36,17 +36,26 @@ function stringField(value: string | null, confidence = value ? 0.9 : 0) {
   return { value, confidence };
 }
 
+const languageField = (
+  value: "en" | "om" | "am" | "mixed" | "unknown",
+  confidence = 0.9,
+) => ({ value, confidence });
+
 function menuItem(name: string, category: string | null, price: number | null) {
   return {
     category: stringField(category),
+    categoryLanguage: languageField(category ? "en" : "unknown"),
     name: stringField(name),
+    nameLanguage: languageField("en"),
     description: stringField(null),
+    descriptionLanguage: languageField("unknown", 0),
     price: { value: price, confidence: price === null ? 0 : 0.98 },
     currency: stringField(price === null ? null : "ETB"),
     variants: { value: [], confidence: 0.9 },
     comboMeal: { value: false, confidence: 0.9 },
     drink: { value: false, confidence: 0.9 },
     optionalNotes: stringField(null),
+    optionalNotesLanguage: languageField("unknown", 0),
     sourceText: stringField(`${name} ${price ?? ""}`.trim(), 1),
   };
 }
@@ -55,7 +64,11 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
   it("normalizes confidence and flags duplicates without merging them", () => {
     const raw: RawExtractionResult = {
       restaurantName: stringField("Sample Cafe", 1),
-      categories: [stringField("Breakfast")],
+      restaurantNameLanguage: languageField("en", 1),
+      categories: [{
+        name: stringField("Breakfast"),
+        detectedLanguage: languageField("en"),
+      }],
       items: [
         menuItem("Chechebsa", "Breakfast", 150),
         menuItem(" chechebsa ", null, null),
@@ -74,6 +87,7 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
   it("groups owner preview by category and highlights review issues", () => {
     const result = normalizeExtraction({
       restaurantName: stringField(null),
+      restaurantNameLanguage: languageField("unknown", 0),
       categories: [],
       items: [menuItem("Kitfo", null, null)],
       unrecognizedSections: [],
@@ -108,7 +122,9 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
     expect(registry).toContain("MENU_OCR_PROVIDER");
     expect(provider).toContain('type: "json_schema"');
     expect(provider).toContain("strict: true");
-    expect(provider).toContain("Do not infer, complete, translate, correct, or invent facts");
+    expect(provider).toContain(
+      "Do not infer, complete, translate, transliterate, correct, or invent facts",
+    );
     expect(provider).toContain("Never discard readable text");
     expect(provider).toContain("store: false");
   });

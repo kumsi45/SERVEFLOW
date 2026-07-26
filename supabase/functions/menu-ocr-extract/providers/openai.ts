@@ -9,7 +9,10 @@ const OPENAI_API_BASE = "https://api.openai.com/v1";
 
 const EXTRACTION_INSTRUCTIONS = `
 Extract only text and menu structure that are visibly present in the supplied restaurant menu.
-Do not infer, complete, translate, correct, or invent facts.
+Do not infer, complete, translate, transliterate, correct, or invent facts.
+Preserve English, Afaan Oromoo, Amharic, and mixed-language source text exactly.
+Classify each text field as en, om, am, mixed, or unknown with a separate confidence score.
+Language classification must never change or replace the extracted text.
 Use null with confidence 0 when a field is absent.
 Confidence is a number from 0 to 1 for that exact field.
 Capture category headings in categories and repeat the applicable category on each item.

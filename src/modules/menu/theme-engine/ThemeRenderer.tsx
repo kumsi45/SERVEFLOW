@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  DEFAULT_MENU_LANGUAGE,
+  menuLanguageHtmlTag,
+} from "../../../core/menu/menuLanguage";
 import { useMenuTheme } from "./hooks/useMenuTheme";
 import {
   buildThemeCustomizationSurface,
@@ -81,12 +85,15 @@ export function ThemeRenderer(props: ThemeRendererProps) {
     }),
     [customization, theme],
   );
+  const language = props.language ?? DEFAULT_MENU_LANGUAGE;
 
   return (
     <ThemeCustomizationContext.Provider value={contextValue}>
       <div
         className={surface.className}
         style={surface.style}
+        lang={menuLanguageHtmlTag(language)}
+        data-menu-language={language}
         {...surface.attributes}
       >
         <Component {...props} theme={theme} />

@@ -1,6 +1,16 @@
+import type { DetectedMenuLanguage } from "../../../core/menu/menuLanguage";
+
 export type ConfidenceField<T> = {
   value: T | null;
   confidence: number;
+};
+
+export type ExtractedLanguageDetection =
+  ConfidenceField<DetectedMenuLanguage>;
+
+export type ExtractedMenuCategory = {
+  name: ConfidenceField<string>;
+  detectedLanguage: ExtractedLanguageDetection;
 };
 
 export type ExtractedVariant = {
@@ -12,14 +22,18 @@ export type ExtractedVariant = {
 export type ExtractedMenuItem = {
   id: string;
   category: ConfidenceField<string>;
+  categoryLanguage?: ExtractedLanguageDetection;
   name: ConfidenceField<string>;
+  nameLanguage?: ExtractedLanguageDetection;
   description: ConfidenceField<string>;
+  descriptionLanguage?: ExtractedLanguageDetection;
   price: ConfidenceField<number>;
   currency: ConfidenceField<string>;
   variants: ConfidenceField<ExtractedVariant[]>;
   comboMeal: ConfidenceField<boolean>;
   drink: ConfidenceField<boolean>;
   optionalNotes: ConfidenceField<string>;
+  optionalNotesLanguage?: ExtractedLanguageDetection;
   sourceText: ConfidenceField<string>;
   duplicate: boolean;
   duplicateOf: string[];
@@ -32,7 +46,8 @@ export type UnrecognizedSection = {
 export type MenuExtractionResult = {
   schemaVersion: 1;
   restaurantName: ConfidenceField<string>;
-  categories: ConfidenceField<string>[];
+  restaurantNameLanguage?: ExtractedLanguageDetection;
+  categories: Array<ConfidenceField<string> | ExtractedMenuCategory>;
   items: ExtractedMenuItem[];
   unrecognizedSections: UnrecognizedSection[];
 };

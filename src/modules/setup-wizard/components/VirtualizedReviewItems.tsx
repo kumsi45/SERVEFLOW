@@ -45,7 +45,7 @@ export const VirtualizedReviewItems = memo(function VirtualizedReviewItems({
   }, []);
 
   const columns = width >= 1120 ? 3 : width >= 680 ? 2 : 1;
-  const rowHeight = columns === 1 ? 760 : 680;
+  const rowHeight = columns === 1 ? 1040 : 900;
   const rows = Math.ceil(items.length / columns);
   const visible = useMemo(() => {
     if (items.length <= VIRTUALIZATION_THRESHOLD) return items.map((item, index) => ({ item, index }));

@@ -1,8 +1,15 @@
-import { memo } from "react";
+import { memo, useState, type ChangeEvent } from "react";
+import {
+  MENU_LANGUAGE_OPTIONS,
+  isMenuLanguage,
+  type MenuLanguage,
+} from "../../../core/menu/menuLanguage";
 import { formatConfidence } from "../services/menuExtractionTypes";
+import { resolveMenuReviewText } from "../services/menuReviewState";
 import type {
   MenuReviewCategory,
   MenuReviewItem,
+  MenuReviewLocalization,
   MenuReviewWarning,
 } from "../services/menuReviewTypes";
 
@@ -17,6 +24,7 @@ type AiMenuReviewItemCardProps = {
     itemId: string,
     field: "name" | "description" | "currency" | "notes",
     value: string,
+    language?: MenuLanguage,
   ) => void;
   onPriceChange: (itemId: string, value: string) => void;
   onCategoryChange: (itemId: string, categoryId: string | null) => void;
@@ -42,6 +50,7 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
   onDuplicate,
 }: AiMenuReviewItemCardProps) {
   const disabled = !canEdit || item.deleted;
+  const displayName = resolveMenuReviewText(item.name, item.nameLocalization);
   return (
     <article className={`review-item-card${item.deleted ? " deleted" : ""}`}>
       <div className="review-item-image" aria-label="No image assigned">
@@ -57,7 +66,7 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
               checked={selected}
               onChange={(event) => onSelect(item.id, event.target.checked)}
               disabled={!canEdit}
-              aria-label={`Select ${item.name.value || "unnamed item"}`}
+              aria-label={`Select ${displayName || "unnamed item"}`}
             />
             Select
           </label>
@@ -75,19 +84,14 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
         )}
 
         <div className="review-item-fields">
-          <label>
-            <span>
-              Food Name
-              <small>{formatConfidence(item.name.confidence)}</small>
-            </span>
-            <input
-              value={item.name.value ?? ""}
-              onChange={(event) =>
-                onTextChange(item.id, "name", event.target.value)}
-              disabled={disabled}
-              placeholder="Food name"
-            />
-          </label>
+          <LocalizedTextEditor
+            label="Food Name"
+            source={item.name}
+            localization={item.nameLocalization}
+            disabled={disabled}
+            onChange={(language, value) =>
+              onTextChange(item.id, "name", value, language)}
+          />
           <label>
             <span>
               Category
@@ -136,34 +140,24 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
               maxLength={20}
             />
           </label>
-          <label className="wide">
-            <span>
-              Description
-              <small>{formatConfidence(item.description.confidence)}</small>
-            </span>
-            <textarea
-              value={item.description.value ?? ""}
-              onChange={(event) =>
-                onTextChange(item.id, "description", event.target.value)}
-              disabled={disabled}
-              placeholder="Missing description"
-              rows={2}
-            />
-          </label>
-          <label className="wide">
-            <span>
-              Notes
-              <small>{formatConfidence(item.notes.confidence)}</small>
-            </span>
-            <textarea
-              value={item.notes.value ?? ""}
-              onChange={(event) =>
-                onTextChange(item.id, "notes", event.target.value)}
-              disabled={disabled}
-              placeholder="Optional notes"
-              rows={2}
-            />
-          </label>
+          <LocalizedTextEditor
+            label="Description"
+            source={item.description}
+            localization={item.descriptionLocalization}
+            disabled={disabled}
+            multiline
+            onChange={(language, value) =>
+              onTextChange(item.id, "description", value, language)}
+          />
+          <LocalizedTextEditor
+            label="Notes"
+            source={item.notes}
+            localization={item.notesLocalization}
+            disabled={disabled}
+            multiline
+            onChange={(language, value) =>
+              onTextChange(item.id, "notes", value, language)}
+          />
         </div>
 
         <div className="review-item-actions">
@@ -208,3 +202,61 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
   );
 });
 
+function LocalizedTextEditor({
+  label,
+  source,
+  localization,
+  disabled,
+  multiline = false,
+  onChange,
+}: {
+  label: string;
+  source: { value: string | null; confidence: number };
+  localization: MenuReviewLocalization;
+  disabled: boolean;
+  multiline?: boolean;
+  onChange: (language: MenuLanguage, value: string) => void;
+}) {
+  const initialLanguage = isMenuLanguage(localization.detectedLanguage)
+    ? localization.detectedLanguage
+    : "en";
+  const [language, setLanguage] = useState<MenuLanguage>(initialLanguage);
+  const field = localization.values[language];
+  const inputProps = {
+    value: field.value ?? "",
+    onChange: (
+      event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => onChange(language, event.target.value),
+    disabled,
+    placeholder: "Not translated yet.",
+  };
+  return (
+    <fieldset className="review-localized-field">
+      <legend>
+        {label}
+        <small>{formatConfidence(field.confidence)}</small>
+      </legend>
+      <div className="review-language-tabs" aria-label={`${label} language`}>
+        {MENU_LANGUAGE_OPTIONS.map((option) => (
+          <button
+            type="button"
+            className={language === option.code ? "active" : ""}
+            onClick={() => setLanguage(option.code)}
+            aria-pressed={language === option.code}
+            key={option.code}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {multiline
+        ? <textarea {...inputProps} rows={2} />
+        : <input {...inputProps} />}
+      <small className="review-detected-language">
+        Detected: {localization.detectedLanguage} ·{" "}
+        {formatConfidence(localization.languageConfidence)} · Source preserved
+        {source.value ? `: ${source.value}` : ""}
+      </small>
+    </fieldset>
+  );
+}

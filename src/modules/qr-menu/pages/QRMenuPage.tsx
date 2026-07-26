@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_MENU_LANGUAGE } from "../../../core/menu/menuLanguage";
 import { subscribeCustomerTrackingEvents } from "../../../core/realtime/restaurantEventService";
 import {
   canonicalOperationalStatus,
@@ -109,6 +110,10 @@ function getReadableInvoiceNumber(
 }
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
+  // Phase 9.8.4 prepares this presentation preference without exposing a
+  // customer-facing selector. A later phase can replace the default with
+  // persisted customer choice without changing menu or theme components.
+  const menuLanguage = DEFAULT_MENU_LANGUAGE;
   const modernNavigation = useModernMenuNavigation();
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
@@ -162,7 +167,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     error,
     setActiveCategoryId,
     setSearchTerm,
-  } = useQRMenu(restaurantSlug);
+  } = useQRMenu(restaurantSlug, menuLanguage);
   setMenuCurrency(
     restaurant
       ? {
@@ -677,6 +682,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         cart={{ items: cart.items, itemCount: cart.itemCount, subtotal: cart.displaySubtotal, visible: cartVisible }}
         order={{ activeSession, submittedOrder: submittedOrder ?? null }}
         theme={resolveMenuTheme(restaurant.menu_theme)}
+        language={menuLanguage}
       >
         <main className="qr-menu-page modern-food-page">
       {realtimeState !== "connected" ? (

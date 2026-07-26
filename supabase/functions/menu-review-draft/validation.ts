@@ -78,9 +78,42 @@ function numberField(value: unknown, label: string) {
   };
 }
 
+function localization(value: unknown, label: string) {
+  const localized = record(value, `${label} localization`);
+  const values = record(localized.values, `${label} localized values`);
+  const ownerEdited = record(
+    localized.ownerEdited,
+    `${label} owner edit markers`,
+  );
+  const detected = localized.detectedLanguage;
+  if (
+    detected !== "en" &&
+    detected !== "om" &&
+    detected !== "am" &&
+    detected !== "mixed" &&
+    detected !== "unknown"
+  ) {
+    throw new Error(`${label} detected language is invalid.`);
+  }
+  return {
+    values: {
+      en: stringField(values.en, `${label} English`, 5000),
+      om: stringField(values.om, `${label} Afaan Oromoo`, 5000),
+      am: stringField(values.am, `${label} Amharic`, 5000),
+    },
+    detectedLanguage: detected,
+    languageConfidence: confidence(localized.languageConfidence),
+    ownerEdited: {
+      en: ownerEdited.en === true,
+      om: ownerEdited.om === true,
+      am: ownerEdited.am === true,
+    },
+  };
+}
+
 export function normalizeReviewState(value: unknown) {
   const state = record(value, "Review state");
-  if (state.schemaVersion !== 1) {
+  if (state.schemaVersion !== 2) {
     throw new Error("Unsupported review state version.");
   }
 
@@ -102,6 +135,7 @@ export function normalizeReviewState(value: unknown) {
       id: categoryId,
       name: text(category.name, "Category name", 160),
       confidence: confidence(category.confidence),
+      localization: localization(category.localization, "Category name"),
       order: order(category.order, "Category order"),
     };
   });
@@ -131,10 +165,16 @@ export function normalizeReviewState(value: unknown) {
       categoryId,
       categoryConfidence: confidence(item.categoryConfidence),
       name: stringField(item.name, "Food name", 240),
+      nameLocalization: localization(item.nameLocalization, "Food name"),
       description: stringField(item.description, "Description", 5000),
+      descriptionLocalization: localization(
+        item.descriptionLocalization,
+        "Description",
+      ),
       price: numberField(item.price, "Price"),
       currency: stringField(item.currency, "Currency", 20),
       notes: stringField(item.notes, "Notes", 3000),
+      notesLocalization: localization(item.notesLocalization, "Notes"),
       sourceText: stringField(item.sourceText, "Source text", 5000),
       approved: Boolean(item.approved),
       deleted: Boolean(item.deleted),
@@ -184,15 +224,18 @@ export function normalizeReviewState(value: unknown) {
   });
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     restaurantName: stringField(
       state.restaurantName,
       "Restaurant name",
       240,
+    ),
+    restaurantNameLocalization: localization(
+      state.restaurantNameLocalization,
+      "Restaurant name",
     ),
     categories,
     items,
     unrecognizedText,
   };
 }
-

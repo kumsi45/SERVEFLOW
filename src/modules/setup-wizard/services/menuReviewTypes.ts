@@ -1,11 +1,23 @@
 import type {
+  DetectedMenuLanguage,
+  MenuLanguage,
+} from "../../../core/menu/menuLanguage";
+import type {
   ConfidenceField,
   MenuExtractionResult,
 } from "./menuExtractionTypes";
 
+export type MenuReviewLocalization = {
+  values: Record<MenuLanguage, ConfidenceField<string>>;
+  detectedLanguage: DetectedMenuLanguage;
+  languageConfidence: number;
+  ownerEdited: Record<MenuLanguage, boolean>;
+};
+
 export type MenuReviewCategory = {
   id: string;
   name: string;
+  localization: MenuReviewLocalization;
   confidence: number;
   order: number;
 };
@@ -16,10 +28,13 @@ export type MenuReviewItem = {
   categoryId: string | null;
   categoryConfidence: number;
   name: ConfidenceField<string>;
+  nameLocalization: MenuReviewLocalization;
   description: ConfidenceField<string>;
+  descriptionLocalization: MenuReviewLocalization;
   price: ConfidenceField<number>;
   currency: ConfidenceField<string>;
   notes: ConfidenceField<string>;
+  notesLocalization: MenuReviewLocalization;
   sourceText: ConfidenceField<string>;
   approved: boolean;
   deleted: boolean;
@@ -41,8 +56,9 @@ export type MenuReviewUnrecognized = {
 };
 
 export type MenuReviewState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   restaurantName: ConfidenceField<string>;
+  restaurantNameLocalization: MenuReviewLocalization;
   categories: MenuReviewCategory[];
   items: MenuReviewItem[];
   unrecognizedText: MenuReviewUnrecognized[];
@@ -80,4 +96,3 @@ export type MenuReviewSummary = {
 export type MenuReviewAccess = "owner" | "manager";
 
 export type MenuReviewSource = MenuExtractionResult;
-

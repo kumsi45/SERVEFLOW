@@ -8,6 +8,7 @@ import type {
   MenuReviewAccess,
   MenuReviewState,
 } from "./menuReviewTypes";
+import { upgradeMenuReviewState } from "./menuReviewState";
 
 type MenuExtractionRow = {
   id: string;
@@ -41,7 +42,9 @@ function mapExtraction(row: MenuExtractionRow): MenuExtractionDraft {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     updatedAt: row.updated_at,
-    reviewState: row.review_state,
+    reviewState: row.review_state
+      ? upgradeMenuReviewState(row.review_state)
+      : null,
     reviewRevision: Number(row.review_revision),
     reviewUpdatedAt: row.review_updated_at,
   };

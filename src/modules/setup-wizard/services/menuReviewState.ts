@@ -1,12 +1,26 @@
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
+import {
+  MENU_LANGUAGES,
+  detectMenuTextScript,
+  isMenuLanguage,
+  normalizeDetectedMenuLanguage,
+  type MenuLanguage,
+} from "../../../core/menu/menuLanguage";
 import { LOW_CONFIDENCE_THRESHOLD } from "./menuExtractionTypes";
 import type {
+  ConfidenceField,
+  ExtractedLanguageDetection,
+  ExtractedMenuCategory,
+} from "./menuExtractionTypes";
+import type {
   MenuReviewFilter,
+  MenuReviewCategory,
   MenuReviewItem,
   MenuReviewState,
   MenuReviewSummary,
   MenuReviewWarning,
   MenuReviewSource,
+  MenuReviewLocalization,
 } from "./menuReviewTypes";
 
 function normalizedName(value: string | null) {
@@ -26,30 +40,100 @@ function looksSuspicious(value: string) {
     || /(?:\b[lI|]{4,}\b)|(?:\?{2,})/u.test(value);
 }
 
+function emptyLocalizedValues(): MenuReviewLocalization["values"] {
+  return {
+    en: { value: null, confidence: 0 },
+    om: { value: null, confidence: 0 },
+    am: { value: null, confidence: 0 },
+  };
+}
+
+export function createMenuReviewLocalization(
+  source: ConfidenceField<string>,
+  detection?: ExtractedLanguageDetection,
+): MenuReviewLocalization {
+  const detectedLanguage = normalizeDetectedMenuLanguage(
+    detection?.value ?? detectMenuTextScript(source.value),
+  );
+  const values = emptyLocalizedValues();
+  if (isMenuLanguage(detectedLanguage) && source.value !== null) {
+    values[detectedLanguage] = { ...source };
+  }
+  return {
+    values,
+    detectedLanguage,
+    languageConfidence: detection?.confidence ?? (
+      detectedLanguage === "am" ? 0.98 : detectedLanguage === "mixed" ? 0.9 : 0
+    ),
+    ownerEdited: { en: false, om: false, am: false },
+  };
+}
+
+export function resolveMenuReviewText(
+  source: ConfidenceField<string>,
+  localization: MenuReviewLocalization,
+  language?: MenuLanguage,
+) {
+  if (language) {
+    const translated = localization.values[language]?.value;
+    if (translated?.trim()) return translated;
+  }
+  if (isMenuLanguage(localization.detectedLanguage)) {
+    const detected = localization.values[localization.detectedLanguage]?.value;
+    if (detected?.trim()) return detected;
+  }
+  return source.value ?? "";
+}
+
+function asExtractedCategory(
+  category: MenuReviewSource["categories"][number],
+): ExtractedMenuCategory {
+  if ("name" in category) return category;
+  return {
+    name: category,
+    detectedLanguage: {
+      value: detectMenuTextScript(category.value),
+      confidence: 0,
+    },
+  };
+}
+
 export function createMenuReviewState(
   source: MenuReviewSource,
   createId: () => string = createBrowserUuid,
 ): MenuReviewState {
-  const categories = new Map<string, {
-    id: string;
-    name: string;
-    confidence: number;
-    order: number;
-  }>();
+  const categories = new Map<string, MenuReviewCategory>();
 
-  function ensureCategory(name: string | null, confidence: number) {
-    const trimmed = name?.trim();
-    if (!trimmed) return null;
-    const key = normalizedName(trimmed);
+  function ensureCategory(
+    name: string | null,
+    confidence: number,
+    detection?: ExtractedLanguageDetection,
+  ) {
+    const sourceName = name ?? "";
+    if (!sourceName.trim()) return null;
+    const key = normalizedName(sourceName);
     const existing = categories.get(key);
     if (existing) {
       existing.confidence = Math.max(existing.confidence, confidence);
+      if (
+        detection &&
+        existing.localization.detectedLanguage === "unknown"
+      ) {
+        existing.localization = createMenuReviewLocalization(
+          { value: sourceName, confidence },
+          detection,
+        );
+      }
       return existing.id;
     }
     const category = {
       id: createId(),
-      name: trimmed,
+      name: sourceName,
       confidence,
+      localization: createMenuReviewLocalization(
+        { value: sourceName, confidence },
+        detection,
+      ),
       order: categories.size,
     };
     categories.set(key, category);
@@ -57,19 +141,51 @@ export function createMenuReviewState(
   }
 
   source.categories.forEach((category) => {
-    ensureCategory(category.value, category.confidence);
+    const extracted = asExtractedCategory(category);
+    const categoryId = ensureCategory(
+      extracted.name.value,
+      extracted.name.confidence,
+      extracted.detectedLanguage,
+    );
+    if (categoryId) {
+      const entry = Array.from(categories.values()).find(
+        (candidate) => candidate.id === categoryId,
+      );
+      if (entry) {
+        entry.localization = createMenuReviewLocalization(
+          extracted.name,
+          extracted.detectedLanguage,
+        );
+      }
+    }
   });
 
   const items = source.items.map<MenuReviewItem>((item, index) => ({
     id: createId(),
     sourceItemId: item.id,
-    categoryId: ensureCategory(item.category.value, item.category.confidence),
+    categoryId: ensureCategory(
+      item.category.value,
+      item.category.confidence,
+      item.categoryLanguage,
+    ),
     categoryConfidence: item.category.confidence,
     name: { ...item.name },
+    nameLocalization: createMenuReviewLocalization(
+      item.name,
+      item.nameLanguage,
+    ),
     description: { ...item.description },
+    descriptionLocalization: createMenuReviewLocalization(
+      item.description,
+      item.descriptionLanguage,
+    ),
     price: { ...item.price },
     currency: { ...item.currency },
     notes: { ...item.optionalNotes },
+    notesLocalization: createMenuReviewLocalization(
+      item.optionalNotes,
+      item.optionalNotesLanguage,
+    ),
     sourceText: { ...item.sourceText },
     approved: false,
     deleted: false,
@@ -77,8 +193,12 @@ export function createMenuReviewState(
   }));
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     restaurantName: { ...source.restaurantName },
+    restaurantNameLocalization: createMenuReviewLocalization(
+      source.restaurantName,
+      source.restaurantNameLanguage,
+    ),
     categories: Array.from(categories.values()),
     items,
     unrecognizedText: source.unrecognizedSections.map((section) => ({
@@ -91,11 +211,74 @@ export function createMenuReviewState(
   };
 }
 
+function isLocalization(value: unknown): value is MenuReviewLocalization {
+  if (!value || typeof value !== "object") return false;
+  const localization = value as Partial<MenuReviewLocalization>;
+  return Boolean(
+    localization.values &&
+    typeof localization.values === "object" &&
+    localization.ownerEdited &&
+    typeof localization.ownerEdited === "object",
+  );
+}
+
+export function upgradeMenuReviewState(value: MenuReviewState): MenuReviewState {
+  const legacy = value as unknown as Record<string, unknown>;
+  const categories = Array.isArray(legacy.categories)
+    ? legacy.categories as Array<Record<string, unknown>>
+    : [];
+  const items = Array.isArray(legacy.items)
+    ? legacy.items as Array<Record<string, unknown>>
+    : [];
+  const restaurantName = legacy.restaurantName as ConfidenceField<string>;
+  return {
+    ...(value as MenuReviewState),
+    schemaVersion: 2,
+    restaurantNameLocalization: isLocalization(
+      legacy.restaurantNameLocalization,
+    )
+      ? legacy.restaurantNameLocalization
+      : createMenuReviewLocalization(restaurantName),
+    categories: categories.map((category) => {
+      const source = {
+        value: typeof category.name === "string" ? category.name : null,
+        confidence: typeof category.confidence === "number"
+          ? category.confidence
+          : 0,
+      };
+      return {
+        ...(category as unknown as MenuReviewState["categories"][number]),
+        localization: isLocalization(category.localization)
+          ? category.localization
+          : createMenuReviewLocalization(source),
+      };
+    }),
+    items: items.map((item) => {
+      const typed = item as unknown as MenuReviewItem;
+      return {
+        ...typed,
+        nameLocalization: isLocalization(item.nameLocalization)
+          ? item.nameLocalization
+          : createMenuReviewLocalization(typed.name),
+        descriptionLocalization: isLocalization(item.descriptionLocalization)
+          ? item.descriptionLocalization
+          : createMenuReviewLocalization(typed.description),
+        notesLocalization: isLocalization(item.notesLocalization)
+          ? item.notesLocalization
+          : createMenuReviewLocalization(typed.notes),
+      };
+    }),
+  };
+}
+
 export function getDuplicateItemIds(items: MenuReviewItem[]) {
   const names = new Map<string, string[]>();
   for (const item of items) {
     if (item.deleted) continue;
-    const key = normalizedName(item.name.value);
+    const key = normalizedName(resolveMenuReviewText(
+      item.name,
+      item.nameLocalization,
+    ));
     if (!key) continue;
     const ids = names.get(key) ?? [];
     ids.push(item.id);
@@ -118,6 +301,11 @@ export function getMenuReviewWarnings(
     item.description.value,
     item.notes.value,
     item.sourceText.value,
+    ...MENU_LANGUAGES.flatMap((language) => [
+      item.nameLocalization.values[language].value,
+      item.descriptionLocalization.values[language].value,
+      item.notesLocalization.values[language].value,
+    ]),
   ].filter((value): value is string => Boolean(value)).join(" ");
   if (
     [
@@ -136,7 +324,12 @@ export function getMenuReviewWarnings(
     warnings.push("Low Confidence");
   }
   if (item.price.value === null) warnings.push("Missing Price");
-  if (!item.description.value?.trim()) warnings.push("Missing Description");
+  if (!resolveMenuReviewText(
+    item.description,
+    item.descriptionLocalization,
+  ).trim()) {
+    warnings.push("Missing Description");
+  }
   if (!item.categoryId) warnings.push("Missing Category");
   if (duplicateIds.has(item.id)) warnings.push("Duplicate Name");
   if (looksSuspicious(text)) warnings.push("Suspicious OCR");
@@ -185,6 +378,10 @@ export function matchesMenuReviewSearch(
     item.name.value,
     item.description.value,
     categoryName,
+    ...MENU_LANGUAGES.flatMap((language) => [
+      item.nameLocalization.values[language].value,
+      item.descriptionLocalization.values[language].value,
+    ]),
   ].filter(Boolean).join(" ")).includes(normalizedQuery);
 }
 
@@ -204,4 +401,3 @@ export function matchesMenuReviewFilter(
   if (filter === "duplicates") return warnings.includes("Duplicate Name");
   return true;
 }
-

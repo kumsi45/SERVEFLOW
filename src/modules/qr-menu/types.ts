@@ -1,4 +1,5 @@
 import type { MenuTheme } from "../menu/theme-engine/ThemeTypes";
+import type { MenuLocalizationMap } from "../../core/menu/menuLanguage";
 
 export type Restaurant = {
   id: string;
@@ -22,6 +23,7 @@ export type MenuCategory = {
   description?: string | null;
   display_order?: number | null;
   hero_image_url?: string | null;
+  localizations?: MenuLocalizationMap | null;
 };
 
 export type MenuItem = {
@@ -47,6 +49,7 @@ export type MenuItem = {
   category_image_url?: string | null;
   effective_image_url?: string | null;
   available: boolean;
+  localizations?: MenuLocalizationMap | null;
 };
 
 export type MenuGroup = {

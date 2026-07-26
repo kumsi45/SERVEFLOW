@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import type { MenuLanguage } from "../../../core/menu/menuLanguage";
 import type { PublicQrCartItem, PublicQrOrderSession, SubmittedPublicQrOrder } from "../../public-qr-ordering/types";
 import type { MenuCategory, MenuItem, Restaurant } from "../../qr-menu/types";
 
@@ -38,6 +39,7 @@ export type ThemeRendererProps = {
   cart: ThemeCartSnapshot;
   order: ThemeOrderSnapshot;
   theme: MenuTheme;
+  language?: MenuLanguage;
   children?: ReactNode;
 };
 

@@ -1430,6 +1430,7 @@
 
 .review-search input,
 .review-category-creator input,
+.review-category-creator select,
 .review-category-actions input,
 .review-category-actions select,
 .review-bulk-bar select {
@@ -1600,6 +1601,31 @@
 
 .review-category-actions label {
   min-width: 150px;
+}
+
+.review-category-localized {
+  display: grid;
+  min-width: min(420px, 100%);
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.review-category-localized legend {
+  padding: 0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.review-category-localized small {
+  max-width: 420px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .review-category-actions select {
@@ -1788,6 +1814,68 @@
 
 .review-item-fields label.wide {
   grid-column: 1 / -1;
+}
+
+.review-localized-field {
+  display: grid;
+  min-width: 0;
+  grid-column: 1 / -1;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.review-localized-field legend {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.review-localized-field legend small {
+  color: #0f766e;
+  font-size: 9px;
+}
+
+.review-language-tabs {
+  display: flex;
+  max-width: 100%;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.review-language-tabs button {
+  min-height: 44px;
+  flex: 1 0 auto;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: #475569;
+  background: #fff;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.review-language-tabs button.active {
+  border-color: #0f766e;
+  color: #fff;
+  background: #0f766e;
+}
+
+.review-detected-language {
+  max-height: 32px;
+  overflow: hidden;
+  color: #64748b !important;
+  font-size: 9px !important;
+  line-height: 1.5;
 }
 
 .review-item-fields label > span {

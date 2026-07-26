@@ -10,6 +10,11 @@ import {
 } from "react";
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import {
+  MENU_LANGUAGE_OPTIONS,
+  isMenuLanguage,
+  type MenuLanguage,
+} from "../../../core/menu/menuLanguage";
+import {
   extractMenuImportDraft,
   getMenuReviewAccess,
   listMenuExtractionDrafts,
@@ -18,16 +23,19 @@ import {
 import { formatConfidence } from "../services/menuExtractionTypes";
 import {
   createMenuReviewState,
+  createMenuReviewLocalization,
   getDuplicateItemIds,
   getMenuReviewWarnings,
   matchesMenuReviewFilter,
   matchesMenuReviewSearch,
+  resolveMenuReviewText,
   summarizeMenuReview,
 } from "../services/menuReviewState";
 import type {
   MenuReviewAccess,
   MenuReviewFilter,
   MenuReviewItem,
+  MenuReviewCategory,
   MenuReviewState,
 } from "../services/menuReviewTypes";
 import {
@@ -54,16 +62,20 @@ const FILTERS: Array<{ id: MenuReviewFilter; label: string }> = [
 ];
 
 function freshItem(categoryId: string | null, order: number): MenuReviewItem {
+  const emptyText = { value: null, confidence: 0 };
   return {
     id: createBrowserUuid(),
     sourceItemId: null,
     categoryId,
     categoryConfidence: categoryId ? 1 : 0,
-    name: { value: null, confidence: 0 },
-    description: { value: null, confidence: 0 },
+    name: { ...emptyText },
+    nameLocalization: createMenuReviewLocalization(emptyText),
+    description: { ...emptyText },
+    descriptionLocalization: createMenuReviewLocalization(emptyText),
     price: { value: null, confidence: 0 },
     currency: { value: null, confidence: 0 },
-    notes: { value: null, confidence: 0 },
+    notes: { ...emptyText },
+    notesLocalization: createMenuReviewLocalization(emptyText),
     sourceText: { value: null, confidence: 0 },
     approved: false,
     deleted: false,
@@ -90,6 +102,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryLanguage, setNewCategoryLanguage] =
+    useState<MenuLanguage>("en");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -324,7 +338,12 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const categoryNameById = useMemo(
     () => new Map(state?.categories.map((category) => [
       category.id,
-      category.name,
+      [
+        category.name,
+        ...MENU_LANGUAGE_OPTIONS.map(
+          (option) => category.localization.values[option.code].value,
+        ),
+      ].filter(Boolean).join(" "),
     ]) ?? []),
     [state?.categories],
   );
@@ -374,7 +393,30 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     itemId: string,
     field: "name" | "description" | "currency" | "notes",
     value: string,
+    language?: MenuLanguage,
   ) {
+    if (field !== "currency" && language) {
+      const localizationKey = `${field}Localization` as
+        | "nameLocalization"
+        | "descriptionLocalization"
+        | "notesLocalization";
+      updateItem(itemId, (item) => ({
+        ...item,
+        [localizationKey]: {
+          ...item[localizationKey],
+          values: {
+            ...item[localizationKey].values,
+            [language]: { value: value || null, confidence: value ? 1 : 0 },
+          },
+          ownerEdited: {
+            ...item[localizationKey].ownerEdited,
+            [language]: true,
+          },
+        },
+        approved: false,
+      }));
+      return;
+    }
     updateItem(itemId, (item) => ({
       ...item,
       [field]: { value: value || null, confidence: 1 },
@@ -438,6 +480,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   function createCategory() {
     const name = newCategoryName.trim();
     if (!name) return;
+    const localization = createMenuReviewLocalization(
+      { value: name, confidence: 1 },
+      { value: newCategoryLanguage, confidence: 1 },
+    );
+    localization.ownerEdited[newCategoryLanguage] = true;
     changeActive((current) => ({
       ...current,
       categories: [
@@ -446,6 +493,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           id: createBrowserUuid(),
           name,
           confidence: 1,
+          localization,
           order: Math.max(-1, ...current.categories.map((entry) => entry.order)) + 1,
         },
       ],
@@ -530,6 +578,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         Math.max(-1, ...current.items.map((candidate) => candidate.order)) + 1,
       );
       item.name = { value: entry.text, confidence: entry.confidence };
+      item.nameLocalization = createMenuReviewLocalization(item.name);
       item.sourceText = { value: entry.text, confidence: entry.confidence };
       return {
         ...current,
@@ -656,7 +705,12 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           <section className="review-overview" aria-labelledby="review-summary-title">
             <div className="review-restaurant-name">
               <span>Restaurant Name</span>
-              <strong>{state.restaurantName.value || "Not recognized"}</strong>
+              <strong>
+                {resolveMenuReviewText(
+                  state.restaurantName,
+                  state.restaurantNameLocalization,
+                ) || "Not recognized"}
+              </strong>
               <small>{formatConfidence(state.restaurantName.confidence)} confidence</small>
             </div>
             <div className="review-progress">
@@ -760,6 +814,19 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                 disabled={!canEdit}
               />
             </label>
+            <select
+              value={newCategoryLanguage}
+              onChange={(event) =>
+                setNewCategoryLanguage(event.target.value as MenuLanguage)}
+              disabled={!canEdit}
+              aria-label="New category language"
+            >
+              {MENU_LANGUAGE_OPTIONS.map((option) => (
+                <option value={option.code} key={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={createCategory}
@@ -802,34 +869,50 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                         aria-expanded={!collapsed}
                       >
                         <span aria-hidden="true">{collapsed ? "+" : "−"}</span>
-                        <strong>{category.name}</strong>
+                        <strong>{resolveMenuReviewText(
+                          {
+                            value: category.name,
+                            confidence: category.confidence,
+                          },
+                          category.localization,
+                        )}</strong>
                         <small>{allCategoryItems.length} items</small>
                       </button>
                       {canEdit ? (
                         <div className="review-category-actions">
-                          <label>
-                            Rename category
-                            <input
-                              value={category.name}
-                              onChange={(event) => changeActive((current) => ({
+                          <CategoryLocalizedEditor
+                            category={category}
+                            onChange={(language, value) =>
+                              changeActive((current) => ({
                                 ...current,
                                 categories: current.categories.map((entry) =>
                                   entry.id === category.id
                                     ? {
                                         ...entry,
-                                        name: event.target.value,
-                                        confidence: 1,
+                                        localization: {
+                                          ...entry.localization,
+                                          values: {
+                                            ...entry.localization.values,
+                                            [language]: {
+                                              value: value || null,
+                                              confidence: value ? 1 : 0,
+                                            },
+                                          },
+                                          ownerEdited: {
+                                            ...entry.localization.ownerEdited,
+                                            [language]: true,
+                                          },
+                                        },
                                       }
                                     : entry
                                 ),
                               }))}
-                            />
-                          </label>
+                          />
                           <button
                             type="button"
                             onClick={() => moveCategory(category.id, -1)}
                             disabled={categoryIndex === 0}
-                            aria-label={`Move ${category.name} up`}
+                            aria-label={`Move category up`}
                           >
                             Up
                           </button>
@@ -837,7 +920,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                             type="button"
                             onClick={() => moveCategory(category.id, 1)}
                             disabled={categoryIndex === state.categories.length - 1}
-                            aria-label={`Move ${category.name} down`}
+                            aria-label={`Move category down`}
                           >
                             Down
                           </button>
@@ -854,7 +937,13 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                               .filter((entry) => entry.id !== category.id)
                               .map((entry) => (
                                 <option value={entry.id} key={entry.id}>
-                                  {entry.name}
+                                  {resolveMenuReviewText(
+                                    {
+                                      value: entry.name,
+                                      confidence: entry.confidence,
+                                    },
+                                    entry.localization,
+                                  )}
                                 </option>
                               ))}
                           </select>
@@ -1085,5 +1174,48 @@ function UncategorizedSection({
         {selectedItems.size} items selected
       </span>
     </section>
+  );
+}
+
+function CategoryLocalizedEditor({
+  category,
+  onChange,
+}: {
+  category: MenuReviewCategory;
+  onChange: (language: MenuLanguage, value: string) => void;
+}) {
+  const initialLanguage = isMenuLanguage(
+    category.localization.detectedLanguage,
+  )
+    ? category.localization.detectedLanguage
+    : "en";
+  const [language, setLanguage] = useState<MenuLanguage>(initialLanguage);
+  const field = category.localization.values[language];
+  return (
+    <fieldset className="review-category-localized">
+      <legend>Rename category</legend>
+      <div className="review-language-tabs" aria-label="Category language">
+        {MENU_LANGUAGE_OPTIONS.map((option) => (
+          <button
+            type="button"
+            className={language === option.code ? "active" : ""}
+            onClick={() => setLanguage(option.code)}
+            aria-pressed={language === option.code}
+            key={option.code}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <input
+        value={field.value ?? ""}
+        onChange={(event) => onChange(language, event.target.value)}
+        placeholder="Not translated yet."
+      />
+      <small>
+        Detected: {category.localization.detectedLanguage} · Source preserved:{" "}
+        {category.name}
+      </small>
+    </fieldset>
   );
 }

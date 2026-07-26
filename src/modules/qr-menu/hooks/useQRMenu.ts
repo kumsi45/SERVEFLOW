@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  DEFAULT_MENU_LANGUAGE,
+  type MenuLanguage,
+} from "../../../core/menu/menuLanguage";
 import { fetchQRMenuData } from "../services/qrMenuService";
 import { filterMenuItems, groupMenuItemsByCategory } from "../services/menuGrouping";
+import { localizeMenuPresentation } from "../services/menuLocalization";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../types";
 
 type QRMenuState = {
@@ -11,7 +16,10 @@ type QRMenuState = {
   error: string | null;
 };
 
-export function useQRMenu(restaurantSlug: string) {
+export function useQRMenu(
+  restaurantSlug: string,
+  language: MenuLanguage = DEFAULT_MENU_LANGUAGE,
+) {
   const [state, setState] = useState<QRMenuState>({
     restaurant: null,
     categories: [],
@@ -60,19 +68,27 @@ export function useQRMenu(restaurantSlug: string) {
     };
   }, [restaurantSlug]);
 
+  const localized = useMemo(
+    () => localizeMenuPresentation(state.categories, state.items, language),
+    [language, state.categories, state.items],
+  );
+
   const visibleItems = useMemo(
-    () => filterMenuItems(state.items, searchTerm, activeCategoryId),
-    [activeCategoryId, searchTerm, state.items]
+    () => filterMenuItems(localized.items, searchTerm, activeCategoryId),
+    [activeCategoryId, localized.items, searchTerm]
   );
 
   const groups: MenuGroup[] = useMemo(
-    () => groupMenuItemsByCategory(state.categories, visibleItems),
-    [state.categories, visibleItems]
+    () => groupMenuItemsByCategory(localized.categories, visibleItems),
+    [localized.categories, visibleItems]
   );
 
   return {
     ...state,
+    categories: localized.categories,
+    items: localized.items,
     groups,
+    language,
     activeCategoryId,
     searchTerm,
     setActiveCategoryId,

@@ -3,6 +3,20 @@ export type ConfidenceField<T> = {
   confidence: number;
 };
 
+export type DetectedMenuLanguage =
+  | "en"
+  | "om"
+  | "am"
+  | "mixed"
+  | "unknown";
+
+export type LanguageDetection = ConfidenceField<DetectedMenuLanguage>;
+
+export type RawMenuCategory = {
+  name: ConfidenceField<string>;
+  detectedLanguage: LanguageDetection;
+};
+
 export type RawVariant = {
   name: ConfidenceField<string>;
   price: ConfidenceField<number>;
@@ -11,20 +25,25 @@ export type RawVariant = {
 
 export type RawMenuItem = {
   category: ConfidenceField<string>;
+  categoryLanguage: LanguageDetection;
   name: ConfidenceField<string>;
+  nameLanguage: LanguageDetection;
   description: ConfidenceField<string>;
+  descriptionLanguage: LanguageDetection;
   price: ConfidenceField<number>;
   currency: ConfidenceField<string>;
   variants: ConfidenceField<RawVariant[]>;
   comboMeal: ConfidenceField<boolean>;
   drink: ConfidenceField<boolean>;
   optionalNotes: ConfidenceField<string>;
+  optionalNotesLanguage: LanguageDetection;
   sourceText: ConfidenceField<string>;
 };
 
 export type RawExtractionResult = {
   restaurantName: ConfidenceField<string>;
-  categories: ConfidenceField<string>[];
+  restaurantNameLanguage: LanguageDetection;
+  categories: RawMenuCategory[];
   items: RawMenuItem[];
   unrecognizedSections: Array<{ text: ConfidenceField<string> }>;
 };
@@ -38,7 +57,8 @@ export type NormalizedMenuItem = RawMenuItem & {
 export type NormalizedExtractionResult = {
   schemaVersion: 1;
   restaurantName: ConfidenceField<string>;
-  categories: ConfidenceField<string>[];
+  restaurantNameLanguage: LanguageDetection;
+  categories: RawMenuCategory[];
   items: NormalizedMenuItem[];
   unrecognizedSections: Array<{ text: ConfidenceField<string> }>;
 };
@@ -68,6 +88,10 @@ const confidenceField = (valueSchema: Record<string, unknown>) => ({
 const stringField = confidenceField({ type: "string" });
 const numberField = confidenceField({ type: "number" });
 const booleanField = confidenceField({ type: "boolean" });
+const languageField = confidenceField({
+  type: "string",
+  enum: ["en", "om", "am", "mixed", "unknown"],
+});
 
 const variantSchema = {
   type: "object",
@@ -84,9 +108,18 @@ export const MENU_EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
     restaurantName: stringField,
+    restaurantNameLanguage: languageField,
     categories: {
       type: "array",
-      items: stringField,
+      items: {
+        type: "object",
+        properties: {
+          name: stringField,
+          detectedLanguage: languageField,
+        },
+        required: ["name", "detectedLanguage"],
+        additionalProperties: false,
+      },
     },
     items: {
       type: "array",
@@ -94,8 +127,11 @@ export const MENU_EXTRACTION_SCHEMA = {
         type: "object",
         properties: {
           category: stringField,
+          categoryLanguage: languageField,
           name: stringField,
+          nameLanguage: languageField,
           description: stringField,
+          descriptionLanguage: languageField,
           price: numberField,
           currency: stringField,
           variants: confidenceField({
@@ -105,18 +141,23 @@ export const MENU_EXTRACTION_SCHEMA = {
           comboMeal: booleanField,
           drink: booleanField,
           optionalNotes: stringField,
+          optionalNotesLanguage: languageField,
           sourceText: stringField,
         },
         required: [
           "category",
+          "categoryLanguage",
           "name",
+          "nameLanguage",
           "description",
+          "descriptionLanguage",
           "price",
           "currency",
           "variants",
           "comboMeal",
           "drink",
           "optionalNotes",
+          "optionalNotesLanguage",
           "sourceText",
         ],
         additionalProperties: false,
@@ -134,6 +175,7 @@ export const MENU_EXTRACTION_SCHEMA = {
   },
   required: [
     "restaurantName",
+    "restaurantNameLanguage",
     "categories",
     "items",
     "unrecognizedSections",
@@ -149,8 +191,7 @@ function clampConfidence(value: unknown) {
 
 function stringValue(value: unknown) {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed || null;
+  return value.trim() ? value : null;
 }
 
 function stringFieldValue(value: unknown): ConfidenceField<string> {
@@ -182,6 +223,24 @@ function booleanFieldValue(value: unknown): ConfidenceField<boolean> {
     : {};
   return {
     value: typeof field.value === "boolean" ? field.value : null,
+    confidence: clampConfidence(field.confidence),
+  };
+}
+
+function languageFieldValue(value: unknown): LanguageDetection {
+  const field = value && typeof value === "object"
+    ? value as Record<string, unknown>
+    : {};
+  const language = field.value;
+  return {
+    value:
+      language === "en" ||
+      language === "om" ||
+      language === "am" ||
+      language === "mixed" ||
+      language === "unknown"
+        ? language
+        : "unknown",
     confidence: clampConfidence(field.confidence),
   };
 }
@@ -231,14 +290,18 @@ export function normalizeExtraction(
     return {
       id: `item-${index + 1}`,
       category: stringFieldValue(item.category),
+      categoryLanguage: languageFieldValue(item.categoryLanguage),
       name: stringFieldValue(item.name),
+      nameLanguage: languageFieldValue(item.nameLanguage),
       description: stringFieldValue(item.description),
+      descriptionLanguage: languageFieldValue(item.descriptionLanguage),
       price: numberFieldValue(item.price),
       currency: stringFieldValue(item.currency),
       variants: variantFieldValue(item.variants),
       comboMeal: booleanFieldValue(item.comboMeal),
       drink: booleanFieldValue(item.drink),
       optionalNotes: stringFieldValue(item.optionalNotes),
+      optionalNotesLanguage: languageFieldValue(item.optionalNotesLanguage),
       sourceText: stringFieldValue(item.sourceText),
       duplicate: false,
       duplicateOf: [],
@@ -267,7 +330,18 @@ export function normalizeExtraction(
   return {
     schemaVersion: 1,
     restaurantName: stringFieldValue(record.restaurantName),
-    categories: rawCategories.map(stringFieldValue),
+    restaurantNameLanguage: languageFieldValue(
+      record.restaurantNameLanguage,
+    ),
+    categories: rawCategories.map((entry) => {
+      const category = entry && typeof entry === "object"
+        ? entry as Record<string, unknown>
+        : {};
+      return {
+        name: stringFieldValue(category.name),
+        detectedLanguage: languageFieldValue(category.detectedLanguage),
+      };
+    }),
     items,
     unrecognizedSections: rawUnrecognized.map((entry) => {
       const section = entry && typeof entry === "object"
