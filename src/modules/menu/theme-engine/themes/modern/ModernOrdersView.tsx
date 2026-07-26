@@ -85,7 +85,6 @@ export const ModernOrdersView = memo(function ModernOrdersView({ restaurant, act
             {previousOrders.length > 0
               ? previousOrders.map((order, index) => <article className="modern-previous-order-card" key={index}>{order}</article>)
               : <p className="modern-orders-section-empty">No previous orders in this visit.</p>}
-            <button className="modern-reorder-placeholder" type="button" disabled title="Reorder will be available in a future release">Reorder - Coming Soon</button>
           </div>
         </details>
       </div>

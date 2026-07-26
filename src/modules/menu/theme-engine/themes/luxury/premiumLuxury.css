@@ -48,8 +48,8 @@
   background: radial-gradient(circle at 78% 34%, rgba(215, 181, 109, .13), transparent 34%);
 }
 
-.premium-luxury-topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.premium-luxury-brand { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.premium-luxury-topbar { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; gap: 14px; }
+.premium-luxury-brand { min-width: 0; display: flex; flex: 1; align-items: center; gap: 10px; overflow: hidden; }
 .premium-luxury-brand > img,
 .premium-luxury-brand > span { display: grid; flex: 0 0 auto; width: 44px; height: 44px; overflow: hidden; place-items: center; border: 1px solid rgba(215, 181, 109, .65); border-radius: 50%; color: var(--luxury-black); background: var(--luxury-gold); object-fit: cover; font-family: Georgia, serif; font-size: 19px; font-weight: 900; }
 .premium-luxury-brand strong { overflow: hidden; color: #fff; font-family: Georgia, "Times New Roman", serif; font-size: 16px; letter-spacing: .02em; text-overflow: ellipsis; white-space: nowrap; }
@@ -114,6 +114,7 @@
 .premium-luxury-categories::-webkit-scrollbar { display: none; }
 .premium-luxury-categories button { position: relative; flex: 0 0 auto; display: flex; min-height: 46px; align-items: center; gap: 8px; overflow: hidden; padding: 0 17px; border: 1px solid #39372f; border-radius: 999px; color: #c6bfae; background: #181714; scroll-snap-align: start; font-weight: 800; cursor: pointer; transition: border-color 180ms ease, color 180ms ease, background 180ms ease; }
 .premium-luxury-categories img { width: 27px; height: 27px; border-radius: 50%; object-fit: cover; }
+.premium-luxury-category-fallback { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 50%; color: #17140e; background: var(--luxury-gold); font-size: 11px; }
 .premium-luxury-categories button.active { border-color: var(--luxury-gold); color: #17140e; background: var(--luxury-gold); }
 
 .premium-luxury-menu-content { display: grid; gap: 34px; padding: 8px 14px 42px; }
@@ -213,7 +214,6 @@
 .premium-luxury-shell .modern-previous-orders > summary svg { stroke: var(--luxury-gold); }
 .premium-luxury-shell .modern-previous-orders-body { border-top-color: #39362e; }
 .premium-luxury-shell .modern-orders-section-empty { border-color: #494438; color: var(--luxury-muted); background: #191814; }
-.premium-luxury-shell .modern-reorder-placeholder { border-color: #464136; color: #7f796d; background: #24221d; }
 .premium-luxury-shell .modern-orders-empty { border-color: #3c382f; background: var(--luxury-surface); box-shadow: 0 16px 40px rgba(0, 0, 0, .28); }
 .premium-luxury-shell .modern-orders-empty > svg { fill: #27241c; stroke: var(--luxury-gold); }
 .premium-luxury-shell .modern-orders-empty h2 { color: var(--luxury-cream); font-family: Georgia, serif; font-weight: 500; }

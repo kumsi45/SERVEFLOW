@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -43,22 +44,16 @@ export const CoffeeThemeCard = memo(function CoffeeThemeCard({
       className={`coffee-theme-card${item.available ? "" : " unavailable"}`}
     >
       <div className="coffee-theme-card-media">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={item.name}
-            loading={priority ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={priority ? "high" : "auto"}
-          />
-        ) : (
-          <span
-            className="coffee-theme-image-fallback"
-            aria-label={`${item.name} image unavailable`}
-          >
-            {initial}
-          </span>
-        )}
+        <ResilientImage
+          src={imageUrl}
+          alt={item.name}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          fallback={initial}
+          fallbackClassName="coffee-theme-image-fallback"
+          fallbackLabel={`${item.name} image unavailable`}
+        />
       </div>
 
       <div className="coffee-theme-card-body">

@@ -48,7 +48,7 @@ describe("Phase 9.2.1 independent Modern pages", () => {
     expect(html).toContain("Previous Orders");
     expect(html).toContain("Kitchen Progress and ETA");
     expect(html).toContain("Receipt 12");
-    expect(html).toContain("Reorder - Coming Soon");
+    expect(html).not.toContain("Coming Soon");
   });
 
   it("keeps the Home component free of tracker, payment, and kitchen UI", () => {

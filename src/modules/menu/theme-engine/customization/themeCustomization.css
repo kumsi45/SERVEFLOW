@@ -1,5 +1,77 @@
 .theme-customization-surface {
+  width: 100%;
+  min-width: 0;
   min-height: 100%;
+  overflow-x: clip;
+}
+
+.theme-customization-surface img {
+  max-width: 100%;
+}
+
+.theme-customization-surface .qr-realtime-state {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  margin: 8px auto;
+  transform: none;
+  text-align: center;
+}
+
+.theme-customization-surface
+  :is(
+    .modern-food-card-copy,
+    .premium-luxury-card-body,
+    .premium-grid-card-body,
+    .premium-grid-card-heading,
+    .coffee-theme-card-body,
+    .modern-food-card-actions,
+    .premium-luxury-card-actions,
+    .premium-grid-card-actions,
+    .coffee-theme-card-actions
+  ) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.theme-customization-surface
+  :is(
+    .modern-food-card-copy,
+    .premium-luxury-card-body,
+    .premium-grid-card-body,
+    .coffee-theme-card-body
+  ) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.theme-customization-surface
+  :is(
+    .modern-food-card-copy,
+    .premium-luxury-card-body,
+    .premium-grid-card-heading,
+    .coffee-theme-card-body
+  )
+  > :is(div, h3) {
+  min-width: 0;
+}
+
+.theme-customization-surface
+  :is(
+    .modern-food-info,
+    .modern-food-add,
+    .premium-luxury-info,
+    .premium-luxury-add,
+    .premium-grid-info,
+    .premium-grid-add,
+    .coffee-theme-info,
+    .coffee-theme-add
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .theme-customization-surface[data-theme-customized="true"] {
@@ -19,7 +91,7 @@
   background-image: var(--theme-background-image);
   background-position: center;
   background-size: cover;
-  background-attachment: fixed;
+  background-attachment: scroll;
   font-family: var(--theme-body-font);
 }
 
@@ -417,6 +489,24 @@
 }
 
 .theme-customization-surface[data-color-mode="dark"]
+  :is(
+    .modern-bottom-nav,
+    .modern-food-search,
+    .premium-luxury-search,
+    .premium-grid-search,
+    .coffee-theme-search
+  ) {
+  color: #f8efe3;
+  background-color: #302720;
+  border-color: #57483b;
+}
+
+.theme-customization-surface[data-color-mode="dark"]
+  :is(input, textarea, select) {
+  color: #fff8ef;
+}
+
+.theme-customization-surface[data-color-mode="dark"]
   :is(h1, h2, h3, strong) {
   color: #fff8ef;
 }
@@ -432,6 +522,37 @@
   ) {
   color: #281f19;
   background-color: #fff9f0;
+}
+
+.theme-customization-surface[data-color-mode="light"]
+  :is(
+    .modern-food-card,
+    .premium-luxury-card,
+    .premium-grid-card,
+    .coffee-theme-card,
+    .modern-orders-header,
+    .modern-active-order-card .public-order-tracker,
+    .modern-previous-orders,
+    .public-cart-panel,
+    .public-checkout-panel,
+    .food-info-panel,
+    .modern-bottom-nav
+  ) {
+  color: #281f19;
+  background-color: #fffdf9;
+  border-color: #e5d8ca;
+}
+
+.theme-customization-surface[data-color-mode="light"]
+  :is(
+    .modern-food-card,
+    .premium-luxury-card,
+    .premium-grid-card,
+    .coffee-theme-card,
+    .modern-orders-theme
+  )
+  :is(h1, h2, h3, strong) {
+  color: #281f19;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -459,6 +580,19 @@
       .public-cart-panel,
       .public-checkout-panel,
       .food-info-panel
+    ) {
+    color: #f8efe3;
+    background-color: #302720;
+    border-color: #57483b;
+  }
+
+  .theme-customization-surface[data-color-mode="auto"]
+    :is(
+      .modern-bottom-nav,
+      .modern-food-search,
+      .premium-luxury-search,
+      .premium-grid-search,
+      .coffee-theme-search
     ) {
     color: #f8efe3;
     background-color: #302720;

@@ -12,7 +12,6 @@ import {
   type ThemeCustomizationChangedDetail,
 } from "./customization/themeCustomization";
 import type { ThemeRendererProps } from "./ThemeTypes";
-import "./themeEngine.css";
 import "./customization/themeCustomization.css";
 
 export function ThemeRenderer(props: ThemeRendererProps) {

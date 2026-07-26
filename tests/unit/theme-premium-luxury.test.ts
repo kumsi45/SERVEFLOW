@@ -91,7 +91,7 @@ describe("Phase 9.3 Premium Luxury rendering", () => {
   it("renders luxury cards with accessible existing cart and info callbacks", () => {
     const html = renderLuxury();
     expect(html).toContain("Add Grilled Sea Bass to cart");
-    expect(html).toContain("Open information for Grilled Sea Bass");
+    expect(html).toContain("Open food information for Grilled Sea Bass");
     expect(html).toContain('loading="eager"');
     expect(luxuryCard).toContain("memo(function PremiumLuxuryCard");
     expect(luxuryView).toContain("onAddToCart={onAddToCart}");

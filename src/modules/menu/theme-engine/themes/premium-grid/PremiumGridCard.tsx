@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -51,22 +52,16 @@ export const PremiumGridCard = memo(function PremiumGridCard({
         onClick={() => onOpenInfo(item)}
         aria-label={`View information for ${item.name}`}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={item.name}
-            loading={priority ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={priority ? "high" : "auto"}
-          />
-        ) : (
-          <span
-            className="premium-grid-image-fallback"
-            aria-label={`${item.name} image unavailable`}
-          >
-            {initial}
-          </span>
-        )}
+        <ResilientImage
+          src={imageUrl}
+          alt={item.name}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          fallback={initial}
+          fallbackClassName="premium-grid-image-fallback"
+          fallbackLabel={`${item.name} image unavailable`}
+        />
       </button>
 
       <div className="premium-grid-card-body">

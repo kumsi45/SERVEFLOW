@@ -1,4 +1,5 @@
 import { memo, useMemo, type CSSProperties } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -43,7 +44,14 @@ export const PremiumLuxuryView = memo(function PremiumLuxuryView({
       <header className="premium-luxury-hero">
         <div className="premium-luxury-topbar">
           <div className="premium-luxury-brand">
-            {restaurant.logo_url ? <img src={restaurant.logo_url} alt={`${restaurant.name} logo`} loading="eager" decoding="async" /> : <span aria-hidden="true">{restaurant.name.slice(0, 1).toUpperCase()}</span>}
+            <ResilientImage
+              src={restaurant.logo_url}
+              alt={`${restaurant.name} logo`}
+              loading="eager"
+              decoding="async"
+              fallback={restaurant.name.slice(0, 1).toUpperCase()}
+              fallbackClassName="premium-luxury-logo-fallback"
+            />
             <strong>{restaurant.name}</strong>
           </div>
           <button type="button" className="premium-luxury-cart" onClick={onOpenCart} aria-label={`Open cart with ${cartItemCount} items`}>
@@ -73,7 +81,15 @@ export const PremiumLuxuryView = memo(function PremiumLuxuryView({
           {categories.map((category) => {
             const image = categoryImages.get(category.id);
             return <button className={activeCategoryId === category.id ? "active" : ""} type="button" key={category.id} aria-current={activeCategoryId === category.id ? "page" : undefined} onClick={() => onCategoryChange(category.id)}>
-              {image && <img src={image} alt="" loading="lazy" decoding="async" />}<span>{category.name}</span>
+              <ResilientImage
+                src={image}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                fallback={category.name.slice(0, 1).toUpperCase()}
+                fallbackClassName="premium-luxury-category-fallback"
+              />
+              <span>{category.name}</span>
             </button>;
           })}
         </nav>

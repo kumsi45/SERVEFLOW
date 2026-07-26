@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useModalFocus } from "../../../../core/accessibility/useModalFocus";
 import { supabase } from "../../../../core/database";
 import { publishMenuThemeSelection } from "../themeEvents";
 import { themeRegistry } from "../ThemeRegistry";
@@ -105,6 +106,15 @@ export const ThemeCustomizationStudio = memo(
     const [error, setError] = useState<string | null>(null);
     const [resetAction, setResetAction] = useState<ResetAction>(null);
     const previewRef = useRef<HTMLDivElement>(null);
+    const resetDialogRef = useRef<HTMLElement>(null);
+    const resetCancelRef = useRef<HTMLButtonElement>(null);
+
+    useModalFocus(
+      resetAction !== null,
+      () => setResetAction(null),
+      resetDialogRef,
+      resetCancelRef,
+    );
 
     const loadStudio = useCallback(async () => {
       setLoading(true);
@@ -475,10 +485,13 @@ export const ThemeCustomizationStudio = memo(
               onClick={() => setResetAction(null)}
             />
             <section
+              ref={resetDialogRef}
               className="tcs-confirm-dialog"
               role="dialog"
               aria-modal="true"
               aria-labelledby="theme-reset-title"
+              aria-describedby="theme-reset-description"
+              tabIndex={-1}
             >
               <span aria-hidden="true">!</span>
               <h3 id="theme-reset-title">
@@ -486,13 +499,17 @@ export const ThemeCustomizationStudio = memo(
                   ? "Reset the theme?"
                   : "Restore theme defaults?"}
               </h3>
-              <p>
+              <p id="theme-reset-description">
                 {resetAction === "theme"
                   ? "This prepares Modern with no custom overrides. The live menu changes only after publishing."
                   : "This clears visual overrides for the selected theme. The live menu changes only after publishing."}
               </p>
               <div>
-                <button type="button" onClick={() => setResetAction(null)}>
+                <button
+                  ref={resetCancelRef}
+                  type="button"
+                  onClick={() => setResetAction(null)}
+                >
                   Cancel
                 </button>
                 <button

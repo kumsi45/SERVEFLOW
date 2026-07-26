@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
+import { ResilientImage } from "../../../core/presentation/ResilientImage";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
 import { formatMenuPrice } from "./menuPresentation";
@@ -82,21 +84,14 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setQuantity(1);
     setNotes("");
   }, [item?.id]);
 
-  useEffect(() => {
-    if (!item) return;
-    closeButtonRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [item, onClose]);
+  useModalFocus(Boolean(item), onClose, panelRef, closeButtonRef);
 
   if (!item) {
     return null;
@@ -115,7 +110,14 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
         aria-label="Close food information"
         onClick={onClose}
       />
-      <aside className="food-info-panel" role="dialog" aria-modal="true" aria-label={`${item.name} food information`}>
+      <aside
+        ref={panelRef}
+        className="food-info-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.name} food information`}
+        tabIndex={-1}
+      >
         <div className="food-info-topbar">
           <button ref={closeButtonRef} className="panel-close-button" type="button" onClick={onClose} aria-label="Close food information">
             Back
@@ -124,11 +126,14 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
         </div>
 
         <div className="food-info-media">
-          {imageUrl ? (
-            <img src={imageUrl} alt={item.name} loading="eager" decoding="async" />
-          ) : (
-            <div className="food-info-placeholder" aria-hidden="true" />
-          )}
+          <ResilientImage
+            src={imageUrl}
+            alt={item.name}
+            loading="eager"
+            decoding="async"
+            fallback={null}
+            fallbackClassName="food-info-placeholder"
+          />
         </div>
 
         <div className="food-info-body">

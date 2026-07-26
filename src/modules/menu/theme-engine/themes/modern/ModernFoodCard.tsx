@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -16,11 +17,16 @@ export const ModernFoodCard = memo(function ModernFoodCard({ item, priority = fa
   return (
     <article className={`modern-food-card${item.available ? "" : " unavailable"}`}>
       <button className="modern-food-card-media" type="button" onClick={() => onOpenInfo(item)} aria-label={`View information for ${item.name}`}>
-        {imageUrl ? (
-          <img src={imageUrl} alt={item.name} loading={priority ? "eager" : "lazy"} decoding="async" fetchPriority={priority ? "high" : "auto"} />
-        ) : (
-          <span className="modern-food-image-fallback" aria-label={`${item.name} image unavailable`}>{initial}</span>
-        )}
+        <ResilientImage
+          src={imageUrl}
+          alt={item.name}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          fallback={initial}
+          fallbackClassName="modern-food-image-fallback"
+          fallbackLabel={`${item.name} image unavailable`}
+        />
         <span className="modern-food-price">{formatMenuPrice(Number(item.price))}</span>
       </button>
       <div className="modern-food-card-copy">

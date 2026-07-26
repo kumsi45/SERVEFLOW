@@ -1,4 +1,5 @@
 import { memo, useMemo, type CSSProperties } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import type { MenuItem } from "../../../../qr-menu/types";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -53,18 +54,14 @@ export const PremiumGridView = memo(function PremiumGridView({
       <header className="premium-grid-hero">
         <div className="premium-grid-hero-shade" aria-hidden="true" />
         <div className="premium-grid-brand">
-          {restaurant.logo_url ? (
-            <img
-              src={restaurant.logo_url}
-              alt={`${restaurant.name} logo`}
-              loading="eager"
-              decoding="async"
-            />
-          ) : (
-            <span aria-hidden="true">
-              {restaurant.name.slice(0, 1).toUpperCase()}
-            </span>
-          )}
+          <ResilientImage
+            src={restaurant.logo_url}
+            alt={`${restaurant.name} logo`}
+            loading="eager"
+            decoding="async"
+            fallback={restaurant.name.slice(0, 1).toUpperCase()}
+            fallbackClassName="premium-grid-logo-fallback"
+          />
           <div>
             <small>Welcome to</small>
             <h1>{restaurant.name}</h1>

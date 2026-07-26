@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import type { MenuItem } from "../../../../qr-menu/types";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -52,19 +53,15 @@ export const CoffeeThemeView = memo(function CoffeeThemeView({
             <h1>{restaurant.name}</h1>
             {tableNumber ? <span>Table {tableNumber}</span> : null}
           </div>
-          {restaurant.logo_url ? (
-            <img
-              className="coffee-theme-logo"
-              src={restaurant.logo_url}
-              alt={`${restaurant.name} logo`}
-              loading="eager"
-              decoding="async"
-            />
-          ) : (
-            <span className="coffee-theme-logo fallback" aria-hidden="true">
-              {restaurant.name.slice(0, 1).toUpperCase()}
-            </span>
-          )}
+          <ResilientImage
+            className="coffee-theme-logo"
+            src={restaurant.logo_url}
+            alt={`${restaurant.name} logo`}
+            loading="eager"
+            decoding="async"
+            fallback={restaurant.name.slice(0, 1).toUpperCase()}
+            fallbackClassName="coffee-theme-logo fallback"
+          />
         </div>
 
         <label className="coffee-theme-search">

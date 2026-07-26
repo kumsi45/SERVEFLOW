@@ -140,12 +140,7 @@ export const ThemeCustomizationContext =
   createContext<ThemeCustomizationContextValue | null>(null);
 
 export function useThemeCustomization() {
-  return (
-    useContext(ThemeCustomizationContext) ?? {
-      customization: EMPTY_CUSTOMIZATION,
-      effective: getThemeCustomizationDefaults("modern"),
-    }
-  );
+  return useContext(ThemeCustomizationContext) ?? FALLBACK_CONTEXT;
 }
 
 const THEME_DEFAULTS: Record<MenuTheme, EffectiveThemeCustomization> = {
@@ -278,6 +273,11 @@ const THEME_DEFAULTS: Record<MenuTheme, EffectiveThemeCustomization> = {
     colorMode: "light",
   },
 };
+
+const FALLBACK_CONTEXT: ThemeCustomizationContextValue = Object.freeze({
+  customization: EMPTY_CUSTOMIZATION,
+  effective: THEME_DEFAULTS.modern,
+});
 
 const FONT_IDS = new Set(FONT_PRESETS.map((preset) => preset.id));
 const HERO_LAYOUTS = new Set<ThemeHeroLayout>(["large", "medium", "compact"]);
@@ -500,12 +500,19 @@ function fontStack(preset: ThemeFontPreset) {
 }
 
 function contrastColor(hex: string) {
-  const red = Number.parseInt(hex.slice(1, 3), 16);
-  const green = Number.parseInt(hex.slice(3, 5), 16);
-  const blue = Number.parseInt(hex.slice(5, 7), 16);
+  const channels = [1, 3, 5].map((offset) => {
+    const channel = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return channel <= 0.04045
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4;
+  });
   const luminance =
-    (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
-  return luminance > 0.58 ? "#241c16" : "#ffffff";
+    0.2126 * channels[0] +
+    0.7152 * channels[1] +
+    0.0722 * channels[2];
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  return whiteContrast >= blackContrast ? "#ffffff" : "#000000";
 }
 
 export type ThemeCustomizationSurface = {

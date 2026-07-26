@@ -1,4 +1,5 @@
 import { memo, useContext, useMemo, type CSSProperties } from "react";
+import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
 import { applyThemeBranding, useThemeCustomization } from "../../customization/themeCustomization";
@@ -83,11 +84,14 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
       <header className="modern-food-header">
         <div className="modern-food-brand-row">
           <div className="modern-food-brand">
-            {restaurant.logo_url ? (
-              <img src={restaurant.logo_url} alt={`${restaurant.name} logo`} loading="eager" decoding="async" />
-            ) : (
-              <span aria-hidden="true">{restaurant.name.slice(0, 1).toUpperCase()}</span>
-            )}
+            <ResilientImage
+              src={restaurant.logo_url}
+              alt={`${restaurant.name} logo`}
+              loading="eager"
+              decoding="async"
+              fallback={restaurant.name.slice(0, 1).toUpperCase()}
+              fallbackClassName="modern-food-logo-fallback"
+            />
             <div>
               <small>{greeting()}</small>
               <strong>{restaurant.name}</strong>
@@ -117,7 +121,14 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
           return (
             <button className={activeCategoryId === category.id ? "active" : ""} type="button" key={category.id} aria-current={activeCategoryId === category.id ? "page" : undefined} onClick={() => onCategoryChange(category.id)}>
               <span className="modern-category-icon">
-                {image ? <img src={image} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">{category.name.slice(0, 1).toUpperCase()}</span>}
+                <ResilientImage
+                  src={image}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  fallback={category.name.slice(0, 1).toUpperCase()}
+                  fallbackClassName="modern-category-image-fallback"
+                />
               </span>
               <strong>{category.name}</strong>
             </button>

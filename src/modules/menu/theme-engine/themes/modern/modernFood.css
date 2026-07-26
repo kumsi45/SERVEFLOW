@@ -628,17 +628,6 @@
   font-size: 13px;
 }
 
-.modern-reorder-placeholder {
-  width: 100%;
-  min-height: 44px;
-  margin-top: 10px;
-  border: 1px solid #ded0c7;
-  border-radius: 999px;
-  color: #8f8179;
-  background: #f1ece8;
-  font-weight: 850;
-}
-
 .modern-orders-empty {
   display: grid;
   width: min(100%, 430px);
