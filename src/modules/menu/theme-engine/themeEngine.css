@@ -1,0 +1,43 @@
+.menu-theme-placeholder {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding-block: clamp(24px, 7vw, 80px);
+  padding-inline: clamp(16px, 5vw, 64px);
+  color: CanvasText;
+  background: Canvas;
+  color-scheme: light dark;
+}
+
+.menu-theme-placeholder section {
+  width: min(680px, 100%);
+  padding: clamp(28px, 7vw, 72px);
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: clamp(18px, 4vw, 32px);
+  text-align: center;
+}
+
+.menu-theme-placeholder span {
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.menu-theme-placeholder h1 {
+  margin-block: 12px 8px;
+  font-size: clamp(2rem, 8vw, 4.5rem);
+}
+
+.menu-theme-placeholder p {
+  margin: 0;
+  font-size: clamp(1rem, 3vw, 1.3rem);
+}
+
+[dir="rtl"] .menu-theme-placeholder {
+  direction: rtl;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-theme-placeholder * { animation: none !important; transition: none !important; }
+}

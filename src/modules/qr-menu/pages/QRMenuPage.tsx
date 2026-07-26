@@ -11,6 +11,9 @@ import {
 } from "../../../core/payment/lifecycle";
 import { CanonicalLifecycleStatus } from "../../../core/payment/LifecycleBadge";
 import type { RealtimeConnectionState } from "../../../core/realtime/realtimeNotifications";
+import { ThemeProvider } from "../../menu/theme-engine/ThemeProvider";
+import { ThemeRenderer } from "../../menu/theme-engine/ThemeRenderer";
+import { resolveMenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { CategoryFilter } from "../components/CategoryFilter";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
 import { MenuGroup } from "../components/MenuGroup";
@@ -666,7 +669,16 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   ];
 
   return (
-    <main className="qr-menu-page">
+    <ThemeProvider restaurant={restaurant}>
+      <ThemeRenderer
+        restaurant={restaurant}
+        categories={categories}
+        menu={items}
+        cart={{ items: cart.items, itemCount: cart.itemCount, subtotal: cart.displaySubtotal, visible: cartVisible }}
+        order={{ activeSession, submittedOrder: submittedOrder ?? null }}
+        theme={resolveMenuTheme(restaurant.menu_theme)}
+      >
+        <main className="qr-menu-page">
       {realtimeState !== "connected" ? (
         <div role="status" className="qr-realtime-state">
           Realtime reconnecting…
@@ -1025,6 +1037,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           setCartVisible(true);
         }}
       />
-    </main>
+        </main>
+      </ThemeRenderer>
+    </ThemeProvider>
   );
 }

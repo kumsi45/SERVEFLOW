@@ -1,3 +1,5 @@
+import type { MenuTheme } from "../menu/theme-engine/ThemeTypes";
+
 export type Restaurant = {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export type Restaurant = {
   currency_code?: string | null;
   currency_symbol?: string | null;
   locale?: string | null;
+  menu_theme?: MenuTheme | null;
 };
 
 export type MenuCategory = {

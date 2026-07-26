@@ -21,6 +21,8 @@ import {
   type PaymentPolicy,
 } from "../../../core/payment/lifecycle";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
+import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import {
   searchActiveDirectInventoryItems,
   searchActiveMenuRecipes,
@@ -233,6 +235,7 @@ type RestaurantConfig = {
   locale: string;
   date_format: string;
   time_format: string;
+  menu_theme: MenuTheme;
 };
 
 type RestaurantTable = {
@@ -467,6 +470,7 @@ function buildRestaurantConfig(
     date_format:
       typeof row.date_format === "string" ? row.date_format : "medium",
     time_format: typeof row.time_format === "string" ? row.time_format : "24h",
+    menu_theme: resolveMenuTheme(row.menu_theme),
   };
 }
 
@@ -692,7 +696,7 @@ export function OwnerDashboardPage({
           supabase
             .from("restaurants")
             .select(
-              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme",
             )
             .eq("id", restaurantId)
             .maybeSingle(),
@@ -1456,7 +1460,7 @@ export function OwnerDashboardPage({
       supabase
         .from("restaurants")
         .select(
-          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format",
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme",
         )
         .eq("id", restaurantId)
         .maybeSingle(),
@@ -8715,6 +8719,7 @@ type SettingsFormState = {
   smsNotifications: boolean;
   requireStrongPasswords: boolean;
   sessionTimeoutMinutes: string;
+  menuTheme: MenuTheme;
 };
 
 const BUSINESS_DAYS = [
@@ -8794,8 +8799,9 @@ function configToSettingsForm(
     ),
     sessionTimeoutMinutes: String(
       (config?.security_settings?.session_timeout_minutes as
-        number | undefined) ?? 480,
+      number | undefined) ?? 480,
     ),
+    menuTheme: config?.menu_theme ?? "modern",
   };
 }
 
@@ -9048,6 +9054,7 @@ function SettingsPage({
           locale,
           date_format: form.dateFormat,
           time_format: form.timeFormat,
+          menu_theme: form.menuTheme,
         })
         .eq("id", restaurantId);
       if (regionalError) throw new Error(regionalError.message);
@@ -9071,6 +9078,7 @@ function SettingsPage({
       );
       if (financialError) throw new Error(financialError.message);
       await onSettingsChanged();
+      publishMenuThemeSelection(restaurantId, form.menuTheme);
       setNotice("Settings saved.");
     } catch (saveError) {
       setSettingsError(
@@ -9624,6 +9632,33 @@ function SettingsPage({
                     }
                     disabled={working}
                   />
+                </label>
+              </div>
+            </section>
+
+            <section className="od-card">
+              <div className="od-card-header">
+                <div>
+                  <div className="od-card-title">Menu Theme</div>
+                  <div className="od-card-subtitle">
+                    Select the rendering theme for the public QR menu. Menu data and ordering behavior are unchanged.
+                  </div>
+                </div>
+              </div>
+              <div className="od-settings-grid compact">
+                <label>
+                  Menu Theme
+                  <select
+                    value={form.menuTheme}
+                    onChange={(event) => updateField("menuTheme", resolveMenuTheme(event.target.value))}
+                    disabled={working}
+                  >
+                    <option value="modern">Modern</option>
+                    <option value="luxury">Luxury</option>
+                    <option value="premium_grid">Premium Grid</option>
+                    <option value="coffee">Coffee</option>
+                  </select>
+                  <small>Modern keeps the current production menu. Other themes are foundation placeholders in Phase 9.1.</small>
                 </label>
               </div>
             </section>

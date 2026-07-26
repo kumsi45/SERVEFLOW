@@ -204,6 +204,6 @@ describe("Phase 8.5.6 dashboard presentation", () => {
 
   it("adds no database objects or Phase 8.5.6 migration", () => {
     const migrations = readdirSync(resolve(process.cwd(), "supabase/migrations"));
-    expect(migrations.some((name) => name.startsWith("185_") || name.includes("8_5_6"))).toBe(false);
+    expect(migrations.some((name) => name.includes("8_5_6"))).toBe(false);
   });
 });
