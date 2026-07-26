@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_APP_URL?: string;
   readonly VITE_PUBLIC_APP_URL?: string;
   readonly VITE_APP_URL?: string;
+  readonly VITE_MENU_IMPORT_MAX_FILE_MB?: string;
 }
 
 interface ImportMeta {
