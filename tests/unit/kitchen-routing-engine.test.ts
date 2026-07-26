@@ -65,6 +65,16 @@ describe("Kitchen Station Routing Engine", () => {
     expect(realtime).toContain("restaurant_id=eq.");
   });
 
+  it("allows starter menu creation before station setup without weakening live order routing", () => {
+    const routing = readFileSync(resolve(process.cwd(), "supabase/migrations/166_kitchen_station_routing_engine_fix.sql"), "utf8");
+    const onboarding = readFileSync(resolve(process.cwd(), "supabase/migrations/186_setup_wizard_nonblocking_kitchen_assignment.sql"), "utf8");
+    expect(onboarding).toContain("new.kitchen_station_id := target_station_id");
+    expect(onboarding).toContain("if new.kitchen_station_id is null then\n      return new;");
+    expect(onboarding).not.toContain("new.kitchen_station_id := public.resolve_kitchen_station_route");
+    expect(routing).toContain("new.kitchen_station_id := public.resolve_kitchen_station_route");
+    expect(routing).toContain("Restaurant has no active kitchen station for routing.");
+  });
+
   it("contains no runtime routing by station name or menu keywords", () => {
     const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/166_kitchen_station_routing_engine_fix.sql"), "utf8").toLowerCase();
     expect(migration).not.toContain("lower(btrim(stations.name))");
