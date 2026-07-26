@@ -143,7 +143,8 @@ describe("Phase 9.1 database and integration boundaries", () => {
     for (const existingBoundary of [
       "usePublicQrCart", "usePublicQrCheckoutState", "submitPublicQrOrder",
       "PublicQrCheckoutPanel", "PublicQrCartPanel", "subscribeCustomerTrackingEvents",
-      "logPublicQrScan", "CategoryFilter", "MenuSearch", "MenuGroup",
+      "logPublicQrScan", "ModernFoodView", "setSearchTerm", "setActiveCategoryId",
+      "addItemToCart",
     ]) expect(qrPage).toContain(existingBoundary);
   });
 

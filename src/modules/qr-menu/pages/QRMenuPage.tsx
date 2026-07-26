@@ -14,11 +14,8 @@ import type { RealtimeConnectionState } from "../../../core/realtime/realtimeNot
 import { ThemeProvider } from "../../menu/theme-engine/ThemeProvider";
 import { ThemeRenderer } from "../../menu/theme-engine/ThemeRenderer";
 import { resolveMenuTheme } from "../../menu/theme-engine/ThemeTypes";
-import { CategoryFilter } from "../components/CategoryFilter";
+import { ModernFoodView } from "../../menu/theme-engine/themes/modern/ModernFoodView";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
-import { MenuGroup } from "../components/MenuGroup";
-import { MenuSearch } from "../components/MenuSearch";
-import { RestaurantHeader } from "../components/RestaurantHeader";
 import {
   formatMenuPrice,
   setMenuCurrency,
@@ -678,19 +675,44 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         order={{ activeSession, submittedOrder: submittedOrder ?? null }}
         theme={resolveMenuTheme(restaurant.menu_theme)}
       >
-        <main className="qr-menu-page">
+        <main className="qr-menu-page modern-food-page">
       {realtimeState !== "connected" ? (
         <div role="status" className="qr-realtime-state">
           Realtime reconnecting…
         </div>
       ) : null}
-      <RestaurantHeader
+      <ModernFoodView
         restaurant={restaurant}
         tableNumber={checkout.tableNumber}
-        tableNumberFromQr={checkout.tableNumberFromQr}
+        categories={categories}
+        groups={groups}
+        activeCategoryId={activeCategoryId}
+        searchTerm={searchTerm}
+        cartItemCount={cart.itemCount}
+        cartSubtotal={cart.displaySubtotal}
+        hasActiveOrder={Boolean(trackingOrderId)}
+        onSearchChange={setSearchTerm}
+        onCategoryChange={setActiveCategoryId}
+        onAddToCart={addItemToCart}
+        onOpenInfo={setFoodInfoItem}
+        onOpenCart={() => {
+          checkout.setCheckoutVisible(false);
+          setCartVisible(true);
+        }}
+        onOpenOrders={() => {
+          if (!trackingOrderId) return;
+          setTrackerExpanded(true);
+          requestAnimationFrame(() => {
+            document.getElementById("modern-order-tracker")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        }}
       />
       {trackingOrderId ? (
         <section
+          id="modern-order-tracker"
           className={`public-order-tracker${trackerExpanded ? " expanded" : ""}${showTrackerSuccess ? " success" : ""}`}
           aria-label="Order tracking"
           aria-live="polite"
@@ -910,45 +932,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           )}
         </section>
       ) : null}
-      <div className="qr-menu-shell">
-        <div className="qr-menu-main">
-          <section className="menu-controls">
-            <MenuSearch value={searchTerm} onChange={setSearchTerm} />
-            <CategoryFilter
-              categories={categories}
-              activeCategoryId={activeCategoryId}
-              onChange={setActiveCategoryId}
-            />
-          </section>
-          <section className="menu-content">
-            {groups.length > 0 ? (
-              groups.map((group) => (
-                <MenuGroup
-                  group={group}
-                  key={group.category.id}
-                  onAddToCart={addItemToCart}
-                  onOpenFoodInfo={setFoodInfoItem}
-                />
-              ))
-            ) : (
-              <div className="menu-state">
-                <div className="empty-state-icon" aria-hidden="true">
-                  SF
-                </div>
-                <h2>
-                  {searchTerm
-                    ? "No matching dishes"
-                    : "No menu items available"}
-                </h2>
-                <p>
-                  {searchTerm
-                    ? "Try another search or browse the categories above."
-                    : "Ask staff for today's specials."}
-                </p>
-              </div>
-            )}
-          </section>
-        </div>
+      <div className="qr-menu-shell modern-food-order-shell">
         <aside className="qr-menu-side" aria-label="Order panel">
           {checkout.checkoutVisible && cart.items.length > 0 ? (
             <PublicQrCheckoutPanel

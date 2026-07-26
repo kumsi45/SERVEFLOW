@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
@@ -24,15 +24,22 @@ function DetailChipSection({
   title,
   values,
   warning = false,
+  emptyMessage,
 }: {
   title: string;
   values: string[] | null | undefined;
   warning?: boolean;
+  emptyMessage?: string;
 }) {
   const clean = cleanList(values);
 
   if (clean.length === 0) {
-    return null;
+    return emptyMessage ? (
+      <section className="food-info-section" aria-label={title}>
+        <h3>{title}</h3>
+        <p className="food-info-missing">{emptyMessage}</p>
+      </section>
+    ) : null;
   }
 
   return (
@@ -74,11 +81,22 @@ function SpiceLevel({ value }: { value: number | null | undefined }) {
 export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps) {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setQuantity(1);
     setNotes("");
   }, [item?.id]);
+
+  useEffect(() => {
+    if (!item) return;
+    closeButtonRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [item, onClose]);
 
   if (!item) {
     return null;
@@ -97,9 +115,9 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
         aria-label="Close food information"
         onClick={onClose}
       />
-      <aside className="food-info-panel" aria-label={`${item.name} food information`}>
+      <aside className="food-info-panel" role="dialog" aria-modal="true" aria-label={`${item.name} food information`}>
         <div className="food-info-topbar">
-          <button className="panel-close-button" type="button" onClick={onClose} aria-label="Close food information">
+          <button ref={closeButtonRef} className="panel-close-button" type="button" onClick={onClose} aria-label="Close food information">
             Back
           </button>
           <strong>Dish Information</strong>
@@ -117,21 +135,33 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
           <div className="food-info-heading">
             <div>
               <h2>{item.name}</h2>
-              {item.description ? <p>{item.description}</p> : null}
+              <p>{item.description?.trim() || "Description not provided."}</p>
             </div>
             <strong>{formatMenuPrice(Number(item.price))}</strong>
           </div>
 
-          <IngredientList ingredients={item.ingredients} />
+          {cleanList(item.ingredients).length > 0 ? (
+            <IngredientList ingredients={item.ingredients} />
+          ) : (
+            <section className="food-info-section" aria-label="Ingredients">
+              <h3>Ingredients</h3>
+              <p className="food-info-missing">Ingredients not provided.</p>
+            </section>
+          )}
 
           {hasFullNutrition(item) ? (
             <section className="food-info-section" aria-label="Nutrition">
               <h3>Nutrition</h3>
               <NutritionSummary item={item} scope="full" />
             </section>
-          ) : null}
+          ) : (
+            <section className="food-info-section" aria-label="Nutrition">
+              <h3>Nutrition</h3>
+              <p className="food-info-missing">Nutrition information not provided.</p>
+            </section>
+          )}
 
-          <DetailChipSection title="Allergens" values={item.allergens} warning />
+          <DetailChipSection title="Allergens" values={item.allergens} warning emptyMessage="Allergen information not provided." />
           <SpiceLevel value={item.spice_level} />
 
           {preparationEstimate ? (
@@ -139,7 +169,12 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
               <h3>Preparation Time</h3>
               <p className="prep-time-display">{preparationEstimate}</p>
             </section>
-          ) : null}
+          ) : (
+            <section className="food-info-section" aria-label="Estimated preparation time">
+              <h3>Preparation Time</h3>
+              <p className="food-info-missing">Preparation time not provided.</p>
+            </section>
+          )}
 
           <DetailChipSection title="Dietary Info" values={item.dietary_tags} />
 
