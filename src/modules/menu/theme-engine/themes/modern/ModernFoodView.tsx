@@ -1,6 +1,7 @@
 import { memo, useMemo, type CSSProperties } from "react";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
+import { ModernBottomNavigation } from "./ModernBottomNavigation";
 import { ModernFoodCard } from "./ModernFoodCard";
 import "./modernFood.css";
 
@@ -27,14 +28,6 @@ function greeting() {
   if (hour < 12) return "Good Morning";
   if (hour < 18) return "Good Afternoon";
   return "Good Evening";
-}
-
-function HomeIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10.6 8.5-7 8.5 7v9.2a1 1 0 0 1-1 1h-5.2v-6.2H9.7v6.2H4.5a1 1 0 0 1-1-1z" /></svg>;
-}
-
-function OrdersIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10v17H7zM9.5 8h5M9.5 12h5M9.5 16h3" /></svg>;
 }
 
 function AllCategoriesIcon() {
@@ -65,12 +58,6 @@ export const ModernFoodView = memo(function ModernFoodView({
   const coverStyle = restaurant.cover_url
     ? ({ "--modern-cover": `url("${restaurant.cover_url}")` } as CSSProperties)
     : undefined;
-
-  function goHome() {
-    onSearchChange("");
-    onCategoryChange("all");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
 
   return (
     <div className="modern-food-theme" style={coverStyle}>
@@ -149,10 +136,7 @@ export const ModernFoodView = memo(function ModernFoodView({
         </button>
       )}
 
-      <nav className="modern-bottom-nav" aria-label="Customer menu navigation">
-        <button className="active" type="button" onClick={goHome} aria-current="page"><HomeIcon /><span>Home</span></button>
-        <button className={hasActiveOrder ? "has-order" : ""} type="button" onClick={onOpenOrders}><OrdersIcon /><span>Orders</span>{hasActiveOrder && <em aria-label="Active order" />}</button>
-      </nav>
+      <ModernBottomNavigation activePage="home" hasActiveOrder={hasActiveOrder} onNavigateHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} onNavigateOrders={onOpenOrders} />
     </div>
   );
 });

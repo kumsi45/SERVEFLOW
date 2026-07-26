@@ -15,6 +15,8 @@ import { ThemeProvider } from "../../menu/theme-engine/ThemeProvider";
 import { ThemeRenderer } from "../../menu/theme-engine/ThemeRenderer";
 import { resolveMenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { ModernFoodView } from "../../menu/theme-engine/themes/modern/ModernFoodView";
+import { ModernOrdersView } from "../../menu/theme-engine/themes/modern/ModernOrdersView";
+import { useModernMenuNavigation } from "../../menu/theme-engine/themes/modern/useModernMenuNavigation";
 import { FoodInfoPanel } from "../components/FoodInfoPanel";
 import {
   formatMenuPrice,
@@ -107,6 +109,7 @@ function getReadableInvoiceNumber(
 }
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
+  const modernNavigation = useModernMenuNavigation();
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
   const [submitError, setSubmitError] = useState<string>();
@@ -681,7 +684,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           Realtime reconnecting…
         </div>
       ) : null}
-      <ModernFoodView
+      {modernNavigation.page === "home" ? (
+        <ModernFoodView
         restaurant={restaurant}
         tableNumber={checkout.tableNumber}
         categories={categories}
@@ -700,17 +704,17 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           setCartVisible(true);
         }}
         onOpenOrders={() => {
-          if (!trackingOrderId) return;
-          setTrackerExpanded(true);
-          requestAnimationFrame(() => {
-            document.getElementById("modern-order-tracker")?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          });
+          checkout.setCheckoutVisible(false);
+          setCartVisible(false);
+          setFoodInfoItem(undefined);
+          modernNavigation.navigate("orders");
         }}
-      />
-      {trackingOrderId ? (
+        />
+      ) : (
+        <ModernOrdersView
+          restaurant={restaurant}
+          onNavigateHome={() => modernNavigation.navigate("home")}
+          activeOrder={trackingOrderId ? (
         <section
           id="modern-order-tracker"
           className={`public-order-tracker${trackerExpanded ? " expanded" : ""}${showTrackerSuccess ? " success" : ""}`}
@@ -750,7 +754,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                   submittedOrder?.dining_session_display_number ??
                     activeSession?.dining_session_display_number,
                 )}{" "}
-                · Bill{" "}
+                · Receipt{" "}
                 {getReadableInvoiceNumber(trackingInvoice, submittedOrder)}
               </strong>
               <span>{formatMenuPrice(trackingTotal)}</span>
@@ -819,8 +823,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             </div>
           ) : null}
         </section>
-      ) : null}
-      {servedFeedbackOrder ? (
+          ) : null}
+          previousOrder={servedFeedbackOrder ? (
         <section className="public-feedback-card" aria-label="Meal feedback">
           {feedbackSubmitted ? (
             <div className="feedback-thank-you" role="status">
@@ -835,7 +839,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                   <span className="feedback-eyebrow">Order served</span>
                   <h2>Before you leave, how was your meal?</h2>
                   <p>
-                    Order {servedFeedbackOrder.orderLabel} · Bill{" "}
+                    Order {servedFeedbackOrder.orderLabel} · Receipt{" "}
                     {servedFeedbackOrder.invoiceNumber}
                   </p>
                 </div>
@@ -931,7 +935,11 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             </>
           )}
         </section>
-      ) : null}
+          ) : null}
+        />
+      )}
+      {modernNavigation.page === "home" ? (
+        <>
       <div className="qr-menu-shell modern-food-order-shell">
         <aside className="qr-menu-side" aria-label="Order panel">
           {checkout.checkoutVisible && cart.items.length > 0 ? (
@@ -1021,6 +1029,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           setCartVisible(true);
         }}
       />
+        </>
+      ) : null}
         </main>
       </ThemeRenderer>
     </ThemeProvider>
