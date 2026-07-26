@@ -3,6 +3,7 @@ import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
 import { MenuThemeContext } from "../../ThemeContext";
 import { PremiumLuxuryView } from "../luxury/PremiumLuxuryView";
+import { PremiumGridView } from "../premium-grid/PremiumGridView";
 import { ModernBottomNavigation } from "./ModernBottomNavigation";
 import { ModernFoodCard } from "./ModernFoodCard";
 import "./modernFood.css";
@@ -39,6 +40,7 @@ function AllCategoriesIcon() {
 export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodViewProps) {
   const theme = useContext(MenuThemeContext)?.theme ?? "modern";
   if (theme === "luxury") return <PremiumLuxuryView {...props} />;
+  if (theme === "premium_grid") return <PremiumGridView {...props} />;
 
   const {
   restaurant,

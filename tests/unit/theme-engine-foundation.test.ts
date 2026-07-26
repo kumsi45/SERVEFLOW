@@ -7,6 +7,7 @@ import { ThemeProvider } from "../../src/modules/menu/theme-engine/ThemeProvider
 import { ThemeRenderer } from "../../src/modules/menu/theme-engine/ThemeRenderer";
 import { themeRegistry } from "../../src/modules/menu/theme-engine/ThemeRegistry";
 import { publishMenuThemeSelection } from "../../src/modules/menu/theme-engine/themeEvents";
+import { ModernFoodView } from "../../src/modules/menu/theme-engine/themes/modern/ModernFoodView";
 import {
   MENU_THEMES,
   isMenuTheme,
@@ -21,6 +22,9 @@ const providerSource = read("src/modules/menu/theme-engine/ThemeProvider.tsx");
 const rendererSource = read("src/modules/menu/theme-engine/ThemeRenderer.tsx");
 const qrPage = read("src/modules/qr-menu/pages/QRMenuPage.tsx");
 const ownerPage = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
+const premiumGridView = read("src/modules/menu/theme-engine/themes/premium-grid/PremiumGridView.tsx");
+const premiumGridCard = read("src/modules/menu/theme-engine/themes/premium-grid/PremiumGridCard.tsx");
+const premiumGridCss = read("src/modules/menu/theme-engine/themes/premium-grid/premiumGrid.css");
 
 const restaurant = {
   id: "restaurant-1",
@@ -85,13 +89,15 @@ describe("Phase 9.1 provider and renderer", () => {
     expect(renderTheme("not-a-theme")).not.toContain("Coming Soon");
   });
 
-  it("renders production luxury and placeholder-only premium grid and coffee themes", () => {
+  it("renders production luxury and premium grid themes with only coffee remaining a placeholder", () => {
     expect(renderTheme("luxury")).toContain("premium-luxury-shell");
     expect(renderTheme("luxury")).toContain("Existing QR Menu");
     expect(renderTheme("luxury")).not.toContain("Coming Soon");
-    expect(renderTheme("premium_grid")).toContain("Premium Card Grid");
+    expect(renderTheme("premium_grid")).toContain("premium-grid-shell");
+    expect(renderTheme("premium_grid")).toContain("Existing QR Menu");
+    expect(renderTheme("premium_grid")).not.toContain("Coming Soon");
     expect(renderTheme("coffee")).toContain("Coffee Shop");
-    for (const theme of ["premium_grid", "coffee"]) expect(renderTheme(theme)).toContain("Coming Soon");
+    expect(renderTheme("coffee")).toContain("Coming Soon");
   });
 
   it("reacts to restaurant changes and cross-tab theme events with cleanup", () => {
@@ -157,5 +163,84 @@ describe("Phase 9.1 database and integration boundaries", () => {
       "RestaurantHero.tsx", "CartButton.tsx", "BottomNavigation.tsx", "FoodBadge.tsx",
       "Price.tsx", "EmptyState.tsx", "LoadingState.tsx",
     ]) expect(shared).toContain(file);
+  });
+});
+
+describe("Phase 9.4 Premium Grid presentation", () => {
+  it("renders live menu data through the production Theme C branch", () => {
+    const category = { id: "mains", restaurant_id: "restaurant-1", name: "Mains" };
+    const item = {
+      id: "dish-1",
+      restaurant_id: "restaurant-1",
+      category_id: "mains",
+      name: "Grilled Prawns",
+      description: "Lemon and herbs",
+      price: 34,
+      image_url: "https://images.example/prawns.jpg",
+      available: true,
+    };
+    const premiumRestaurant = {
+      ...restaurant,
+      menu_theme: "premium_grid" as const,
+      logo_url: "https://images.example/logo.png",
+      cover_url: "https://images.example/cover.jpg",
+    };
+    const view = createElement(ModernFoodView, {
+      restaurant: premiumRestaurant,
+      tableNumber: "8",
+      categories: [category],
+      groups: [{ category, items: [item] }],
+      activeCategoryId: "all",
+      searchTerm: "",
+      cartItemCount: 1,
+      cartSubtotal: 34,
+      hasActiveOrder: true,
+      onSearchChange: vi.fn(),
+      onCategoryChange: vi.fn(),
+      onAddToCart: vi.fn(),
+      onOpenInfo: vi.fn(),
+      onOpenCart: vi.fn(),
+      onOpenOrders: vi.fn(),
+    });
+    const html = renderToStaticMarkup(createElement(
+      ThemeProvider,
+      { restaurant: premiumRestaurant },
+      createElement(ThemeRenderer, {
+        restaurant: premiumRestaurant,
+        categories: [category],
+        menu: [item],
+        cart: { items: [], itemCount: 1, subtotal: 34, visible: false },
+        order: { activeSession: null, submittedOrder: null },
+        theme: "premium_grid",
+      }, view),
+    ));
+
+    expect(html).toContain("premium-grid-shell");
+    expect(html).toContain("premium-grid-view");
+    expect(html).toContain("Grilled Prawns");
+    expect(html).toContain("Table 8");
+    expect(html).toContain("Add Grilled Prawns to cart");
+    expect(html).toContain("Open food information for Grilled Prawns");
+    expect(html).toContain(">Home<");
+    expect(html).toContain(">Orders<");
+    expect(html).not.toContain("Coming Soon");
+  });
+
+  it("keeps Theme C responsive, accessible, memoized, and presentation-only", () => {
+    expect(themeRegistry.premium_grid.name).toBe("Premium Grid");
+    expect(premiumGridCard).toContain("memo(function PremiumGridCard");
+    expect(premiumGridView).toContain("useMemo(");
+    expect(premiumGridCss).toContain("grid-template-columns: repeat(2");
+    expect(premiumGridCss).toContain("grid-template-columns: repeat(3");
+    expect(premiumGridCss).toContain("grid-template-columns: repeat(4");
+    expect(premiumGridCss).toContain("grid-template-columns: repeat(6");
+    expect(premiumGridCss).toContain("min-height: 44px");
+    expect(premiumGridCss).toContain(":focus-visible");
+    expect(premiumGridCss).toContain("prefers-reduced-motion: reduce");
+    expect(premiumGridCss).toContain(".food-info-panel");
+    expect(premiumGridCss).toContain(".modern-orders-theme");
+    expect(`${premiumGridView}\n${premiumGridCard}`).not.toMatch(
+      /supabase|submitPublicQrOrder|subscribe|paymentMethod|localStorage|fetch\(/,
+    );
   });
 });

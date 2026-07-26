@@ -1,5 +1,5 @@
-import { ThemePlaceholder, type PlaceholderThemeProps } from "./ThemePlaceholder";
+import type { ThemeRendererProps } from "../ThemeTypes";
 
-export function ThemePremiumGrid(_props: PlaceholderThemeProps) {
-  return <ThemePlaceholder name="Premium Card Grid" />;
+export function ThemePremiumGrid({ children }: ThemeRendererProps) {
+  return <div className="premium-grid-shell">{children}</div>;
 }

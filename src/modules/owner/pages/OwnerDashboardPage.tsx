@@ -9658,7 +9658,7 @@ function SettingsPage({
                     <option value="premium_grid">Premium Grid</option>
                     <option value="coffee">Coffee</option>
                   </select>
-                  <small>Modern and Premium Luxury are production menu themes. Premium Grid and Coffee remain foundation placeholders.</small>
+                  <small>Modern, Premium Luxury, and Premium Grid are production menu themes. Coffee remains a foundation placeholder.</small>
                 </label>
               </div>
             </section>
