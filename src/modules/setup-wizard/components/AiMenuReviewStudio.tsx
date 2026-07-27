@@ -24,6 +24,7 @@ import { formatConfidence } from "../services/menuExtractionTypes";
 import {
   createMenuReviewState,
   createMenuReviewLocalization,
+  createPendingImageDraft,
   getDuplicateItemIds,
   getMenuReviewWarnings,
   matchesMenuReviewFilter,
@@ -31,6 +32,10 @@ import {
   resolveMenuReviewText,
   summarizeMenuReview,
 } from "../services/menuReviewState";
+import {
+  createImageVersion,
+  generateMenuItemImageDraft,
+} from "../services/menuImageDraftService";
 import type {
   MenuReviewAccess,
   MenuReviewFilter,
@@ -79,6 +84,7 @@ function freshItem(categoryId: string | null, order: number): MenuReviewItem {
     sourceText: { value: null, confidence: 0 },
     approved: false,
     deleted: false,
+    imageDraft: createPendingImageDraft(),
     order,
   };
 }
@@ -470,6 +476,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             sourceItemId: null,
             approved: false,
             deleted: false,
+            imageDraft: createPendingImageDraft(),
             order: Math.max(-1, ...current.items.map((item) => item.order)) + 1,
           },
         ],
@@ -567,6 +574,143 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       }),
     }));
     setSelectedItems(new Set());
+  }
+
+  async function generateImageDraft(itemId: string) {
+    if (!activeExtraction || !state || !canEdit) return;
+    const target = state.items.find((item) => item.id === itemId);
+    if (!target || !target.approved || target.deleted || target.hidden || target.rejected) return;
+    if (target.imageDraft.status === "Generating") return;
+    const promptVersion = Math.max(
+      0,
+      ...target.imageDraft.versions.map((entry) => entry.version),
+    ) + 1;
+    changeState(activeExtraction.id, (current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              imageDraft: {
+                ...item.imageDraft,
+                status: "Generating",
+                generationProgress: 0.35,
+                errorMessage: null,
+              },
+            }
+          : item
+      ),
+    }));
+    try {
+      const generated = await generateMenuItemImageDraft(
+        target,
+        state.categories,
+        activeExtraction.id,
+        revisionsRef.current[activeExtraction.id] ?? activeExtraction.reviewRevision,
+      );
+      if (generated.reviewRevision !== null) {
+        revisionsRef.current[activeExtraction.id] = generated.reviewRevision;
+        setExtractions((current) => current.map((entry) =>
+          entry.id === activeExtraction.id
+            ? { ...entry, reviewRevision: generated.reviewRevision ?? entry.reviewRevision }
+            : entry
+        ));
+      }
+      const version = generated.version;
+      changeState(activeExtraction.id, (current) => ({
+        ...current,
+        items: current.items.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                imageDraft: {
+                  ...item.imageDraft,
+                  status: version.imageUrl
+                    ? "Ready"
+                    : item.imageDraft.versions.length
+                      ? "Ready"
+                      : "Pending",
+                  selectedVersionId: version.imageUrl
+                    ? version.id
+                    : item.imageDraft.selectedVersionId,
+                  versions: [...item.imageDraft.versions, version],
+                  lastPrompt: version.prompt,
+                  generationProgress: generated.generationProgress,
+                  errorMessage: version.errorMessage,
+                },
+              }
+            : item
+        ),
+      }));
+    } catch (imageError) {
+      changeState(activeExtraction.id, (current) => ({
+        ...current,
+        items: current.items.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                imageDraft: {
+                  ...item.imageDraft,
+                  status: "Pending",
+                  generationProgress: 0,
+                  errorMessage: imageError instanceof Error
+                    ? imageError.message
+                    : "Image generation failed.",
+                  lastPrompt: item.imageDraft.lastPrompt,
+                  selectedVersionId: item.imageDraft.selectedVersionId,
+                  versions: [
+                    ...item.imageDraft.versions,
+                    {
+                      id: createBrowserUuid(),
+                      version: promptVersion,
+                      status: "Rejected",
+                      source: "ai",
+                      imageUrl: null,
+                      thumbnailUrl: null,
+                      prompt: item.imageDraft.lastPrompt ?? "",
+                      createdAt: new Date().toISOString(),
+                      errorMessage: "Image generation failed.",
+                      crop: null,
+                    },
+                  ],
+                },
+              }
+            : item
+        ),
+      }));
+    }
+  }
+
+  function changeImageDraft(
+    itemId: string,
+    update: (item: MenuReviewItem) => MenuReviewItem,
+  ) {
+    updateItem(itemId, update);
+  }
+
+  function uploadOwnImage(itemId: string, file: File | null) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    updateItem(itemId, (item) => {
+      const version = createImageVersion(
+        Math.max(0, ...item.imageDraft.versions.map((entry) => entry.version)) + 1,
+        "owner",
+        objectUrl,
+        objectUrl,
+        "Owner uploaded image.",
+      );
+      return {
+        ...item,
+        imageDraft: {
+          ...item.imageDraft,
+          status: "Owner Upload",
+          selectedVersionId: version.id,
+          versions: [...item.imageDraft.versions, version],
+          generationProgress: 1,
+          errorMessage: null,
+        },
+      };
+    });
   }
 
   function convertUnrecognized(entryId: string) {
@@ -1005,6 +1149,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                             deleted: false,
                           }))}
                           onDuplicate={duplicateItem}
+                          onGenerateImage={generateImageDraft}
+                          onImageDraftChange={changeImageDraft}
+                          onOwnerImageUpload={uploadOwnImage}
                         />
                       ) : (
                         <p className="review-category-empty">
@@ -1028,6 +1175,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               updateCategory={updateCategory}
               updateItem={updateItem}
               duplicateItem={duplicateItem}
+              generateImageDraft={generateImageDraft}
+              changeImageDraft={changeImageDraft}
+              uploadOwnImage={uploadOwnImage}
             />
           </div>
 
@@ -1116,6 +1266,12 @@ type UncategorizedSectionProps = {
     update: (item: MenuReviewItem) => MenuReviewItem,
   ) => void;
   duplicateItem: (itemId: string) => void;
+  generateImageDraft: (itemId: string) => Promise<void>;
+  changeImageDraft: (
+    itemId: string,
+    update: (item: MenuReviewItem) => MenuReviewItem,
+  ) => void;
+  uploadOwnImage: (itemId: string, file: File | null) => void;
 };
 
 function UncategorizedSection({
@@ -1130,6 +1286,9 @@ function UncategorizedSection({
   updateCategory,
   updateItem,
   duplicateItem,
+  generateImageDraft,
+  changeImageDraft,
+  uploadOwnImage,
 }: UncategorizedSectionProps) {
   if (items.length === 0) return null;
   return (
@@ -1169,6 +1328,9 @@ function UncategorizedSection({
           deleted: false,
         }))}
         onDuplicate={duplicateItem}
+        onGenerateImage={generateImageDraft}
+        onImageDraftChange={changeImageDraft}
+        onOwnerImageUpload={uploadOwnImage}
       />
       <span className="setup-visually-hidden">
         {selectedItems.size} items selected

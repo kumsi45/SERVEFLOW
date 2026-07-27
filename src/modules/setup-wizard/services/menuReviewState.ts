@@ -21,6 +21,7 @@ import type {
   MenuReviewWarning,
   MenuReviewSource,
   MenuReviewLocalization,
+  MenuReviewImageDraft,
 } from "./menuReviewTypes";
 
 function normalizedName(value: string | null) {
@@ -83,6 +84,17 @@ export function resolveMenuReviewText(
     if (detected?.trim()) return detected;
   }
   return source.value ?? "";
+}
+
+export function createPendingImageDraft(): MenuReviewImageDraft {
+  return {
+    status: "Pending",
+    selectedVersionId: null,
+    versions: [],
+    lastPrompt: null,
+    generationProgress: 0,
+    errorMessage: null,
+  };
 }
 
 function asExtractedCategory(
@@ -189,6 +201,9 @@ export function createMenuReviewState(
     sourceText: { ...item.sourceText },
     approved: false,
     deleted: false,
+    hidden: false,
+    rejected: false,
+    imageDraft: createPendingImageDraft(),
     order: index,
   }));
 
@@ -266,8 +281,28 @@ export function upgradeMenuReviewState(value: MenuReviewState): MenuReviewState 
         notesLocalization: isLocalization(item.notesLocalization)
           ? item.notesLocalization
           : createMenuReviewLocalization(typed.notes),
+        hidden: Boolean(item.hidden),
+        rejected: Boolean(item.rejected),
+        imageDraft: isImageDraft(item.imageDraft)
+          ? normalizeImageDraft(item.imageDraft)
+          : createPendingImageDraft(),
       };
     }),
+  };
+}
+
+function isImageDraft(value: unknown): value is MenuReviewImageDraft {
+  return Boolean(value && typeof value === "object" && "versions" in value);
+}
+
+function normalizeImageDraft(value: MenuReviewImageDraft): MenuReviewImageDraft {
+  return {
+    status: value.status ?? "Pending",
+    selectedVersionId: value.selectedVersionId ?? null,
+    versions: Array.isArray(value.versions) ? value.versions : [],
+    lastPrompt: value.lastPrompt ?? null,
+    generationProgress: Number(value.generationProgress ?? 0),
+    errorMessage: value.errorMessage ?? null,
   };
 }
 

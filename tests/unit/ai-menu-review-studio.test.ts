@@ -27,6 +27,21 @@ const virtualized = read(
 const service = read(
   "src/modules/setup-wizard/services/menuExtractionService.ts",
 );
+const imageService = read(
+  "src/modules/setup-wizard/services/menuImageDraftService.ts",
+);
+const imageDraftEdgeFunction = read(
+  "supabase/functions/menu-item-image-draft/index.ts",
+);
+const imageDraftRegistry = read(
+  "supabase/functions/menu-item-image-draft/providers/registry.ts",
+);
+const imageDraftOpenAi = read(
+  "supabase/functions/menu-item-image-draft/providers/openai.ts",
+);
+const imageDraftMigration = read(
+  "supabase/migrations/191_phase9_8_5_ai_food_image_drafts.sql",
+);
 const edgeFunction = read(
   "supabase/functions/menu-review-draft/index.ts",
 );
@@ -228,13 +243,66 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
     expect(css).toContain("prefers-reduced-motion: reduce");
   });
 
-  it("keeps Review Studio data draft-only with no image generation or publishing", () => {
-    const productionSource = `${studio}\n${service}\n${edgeFunction}\n${migration}`;
+  it("supports draft-only AI food image generation with owner version control", () => {
+    const state = createMenuReviewState(extractionResult(), () => "review-id");
+    expect(state.items[0].imageDraft).toMatchObject({
+      status: "Pending",
+      selectedVersionId: null,
+      versions: [],
+    });
+    for (const label of [
+      "Generate Image",
+      "Regenerate",
+      "Upload Own Image",
+      "Accept",
+      "Reject",
+      "Crop",
+      "Remove",
+      "Compare Versions",
+    ]) {
+      expect(card).toContain(label);
+    }
+    expect(imageService).toContain("Professional restaurant food photography");
+    expect(imageService).toContain("do not add unmentioned");
+    expect(imageService).toContain('"menu-item-image-draft"');
+  });
+
+  it("routes image generation through a pluggable provider registry", () => {
+    expect(imageDraftEdgeFunction).toContain("getImageGenerationProvider");
+    expect(imageDraftEdgeFunction).not.toContain("OpenAiImageGenerationProvider");
+    expect(imageDraftRegistry).toContain("MENU_IMAGE_PROVIDER");
+    expect(imageDraftRegistry).toContain("openai");
+    expect(imageDraftOpenAi).toContain("OPENAI_MENU_IMAGE_MODEL");
+    expect(imageDraftOpenAi).toContain("/images/generations");
+  });
+
+  it("stores AI image drafts in versioned deterministic storage paths", () => {
+    expect(imageDraftMigration).toContain("'menu-item-image-drafts'");
+    expect(imageDraftMigration).toContain("public = excluded.public");
+    expect(imageDraftMigration).toContain("for update");
+    expect(imageDraftMigration).toContain("using (false)");
+    expect(imageDraftEdgeFunction).toContain('const BUCKET = "menu-item-image-drafts"');
+    expect(imageDraftEdgeFunction).toContain("upsert: false");
+    expect(imageDraftEdgeFunction).toContain('"ai-menu"');
+    expect(imageDraftEdgeFunction).toContain("version-${versionNumber}.webp");
+    expect(imageDraftEdgeFunction).toContain("getPublicUrl");
+  });
+
+  it("authoritatively generates only from approved canonical Review Studio data", () => {
+    expect(imageDraftEdgeFunction).toContain('draft.status !== "completed"');
+    expect(imageDraftEdgeFunction).toContain("assertEligibleItem");
+    expect(imageDraftEdgeFunction).toContain('selectedVersion?.status === "Approved"');
+    expect(imageDraftEdgeFunction).toContain("review_revision");
+    expect(imageDraftEdgeFunction).toContain("reviewRevision");
+    expect(imageDraftEdgeFunction).not.toMatch(/translation|translated/i);
+  });
+
+  it("keeps Review Studio image data draft-only with no publishing", () => {
+    const productionSource = `${studio}\n${service}\n${imageService}\n${edgeFunction}\n${migration}\n${imageDraftEdgeFunction}\n${imageDraftMigration}`;
     expect(productionSource).not.toMatch(
-      /generateImage|publishMenu|\.from\("(menu_items|categories|inventory_items|recipes|orders|payments)"\)/,
+      /publishMenu|\.from\("(menu_items|categories|inventory_items|recipes|orders|payments)"\)/,
     );
     expect(studio).toContain("publishing is not available");
     expect(studio).toContain("Nothing reaches the live menu");
   });
 });
-

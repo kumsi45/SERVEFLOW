@@ -124,12 +124,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 6,
+                  "duration": 8,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:49.278Z",
+                  "startTime": "2026-07-27T19:31:00.168Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -175,15 +175,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 6,
+                  "duration": 12,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:49.298Z",
+                  "startTime": "2026-07-27T19:31:04.197Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -230,12 +230,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 5734,
+                  "duration": 9095,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:49.345Z",
+                  "startTime": "2026-07-27T19:31:00.219Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -274,12 +274,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "skipped",
-                  "duration": 4,
+                  "duration": 5,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:55.452Z",
+                  "startTime": "2026-07-27T19:31:09.856Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -328,12 +328,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "skipped",
-                  "duration": 484,
+                  "duration": 811,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:55.482Z",
+                  "startTime": "2026-07-27T19:31:09.910Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -382,12 +382,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "skipped",
-                  "duration": 2,
+                  "duration": 3,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:56.000Z",
+                  "startTime": "2026-07-27T19:31:10.767Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -426,12 +426,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5289,
+                  "duration": 12856,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:54.321Z",
+                  "startTime": "2026-07-27T19:31:05.129Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -470,12 +470,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 1,
+                  "duration": 4,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:59.986Z",
+                  "startTime": "2026-07-27T19:31:18.036Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -524,12 +524,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 379,
+                  "duration": 1006,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:02:00.002Z",
+                  "startTime": "2026-07-27T19:31:18.091Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -578,12 +578,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 1,
+                  "duration": 3,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:02:00.400Z",
+                  "startTime": "2026-07-27T19:31:19.260Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -640,12 +640,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 893,
+                  "duration": 997,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:49.327Z",
+                  "startTime": "2026-07-27T19:31:00.145Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -694,12 +694,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 610,
+                  "duration": 791,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:50.608Z",
+                  "startTime": "2026-07-27T19:31:01.527Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -748,12 +748,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 532,
+                  "duration": 600,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:51.248Z",
+                  "startTime": "2026-07-27T19:31:02.359Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -802,12 +802,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 615,
+                  "duration": 616,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:51.807Z",
+                  "startTime": "2026-07-27T19:31:02.991Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -856,12 +856,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 696,
+                  "duration": 645,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:52.448Z",
+                  "startTime": "2026-07-27T19:31:03.642Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -910,12 +910,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 555,
+                  "duration": 1210,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:53.171Z",
+                  "startTime": "2026-07-27T19:31:04.325Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -934,6 +934,60 @@
             }
           ],
           "id": "79cf665fed4f79af3b28-746f72ab75c2e4accfba",
+          "file": "staff-workflows.spec.ts",
+          "line": 6,
+          "column": 3
+        },
+        {
+          "title": "inventory_officer workflow route is guarded and renderable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "inventory_officer authenticated storage fixture/URL is not configured.",
+                  "location": {
+                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\staff-workflows.spec.ts",
+                    "line": 8,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "skipped",
+                  "duration": 1481,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:05.575Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "inventory_officer authenticated storage fixture/URL is not configured.",
+                      "location": {
+                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\staff-workflows.spec.ts",
+                        "line": 8,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "79cf665fed4f79af3b28-b170c29e1c483a83ff11",
           "file": "staff-workflows.spec.ts",
           "line": 6,
           "column": 3
@@ -964,12 +1018,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 446,
+                  "duration": 1132,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:53.757Z",
+                  "startTime": "2026-07-27T19:31:07.093Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1018,12 +1072,12 @@
                   "workerIndex": 2,
                   "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 601,
+                  "duration": 991,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:54.234Z",
+                  "startTime": "2026-07-27T19:31:08.292Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1069,15 +1123,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 959,
+                  "duration": 1168,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:49.664Z",
+                  "startTime": "2026-07-27T19:31:13.256Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1123,15 +1177,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 727,
+                  "duration": 1463,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:50.652Z",
+                  "startTime": "2026-07-27T19:31:15.080Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1177,15 +1231,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 687,
+                  "duration": 1968,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:51.411Z",
+                  "startTime": "2026-07-27T19:31:16.585Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1231,15 +1285,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 713,
+                  "duration": 948,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:52.126Z",
+                  "startTime": "2026-07-27T19:31:18.610Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1285,15 +1339,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 674,
+                  "duration": 948,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:52.870Z",
+                  "startTime": "2026-07-27T19:31:19.596Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1339,15 +1393,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 508,
+                  "duration": 1061,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:53.595Z",
+                  "startTime": "2026-07-27T19:31:20.598Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1366,6 +1420,60 @@
             }
           ],
           "id": "79cf665fed4f79af3b28-c7732997cff3a2a08d59",
+          "file": "staff-workflows.spec.ts",
+          "line": 6,
+          "column": 3
+        },
+        {
+          "title": "inventory_officer workflow route is guarded and renderable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "inventory_officer authenticated storage fixture/URL is not configured.",
+                  "location": {
+                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\staff-workflows.spec.ts",
+                    "line": 8,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
+                  "status": "skipped",
+                  "duration": 1059,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:21.693Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "inventory_officer authenticated storage fixture/URL is not configured.",
+                      "location": {
+                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\staff-workflows.spec.ts",
+                        "line": 8,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "79cf665fed4f79af3b28-10dc570a9e0c2dccb950",
           "file": "staff-workflows.spec.ts",
           "line": 6,
           "column": 3
@@ -1393,15 +1501,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 662,
+                  "duration": 751,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:54.132Z",
+                  "startTime": "2026-07-27T19:31:22.784Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1447,15 +1555,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
                   "status": "skipped",
-                  "duration": 693,
+                  "duration": 1115,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-16T20:01:54.819Z",
+                  "startTime": "2026-07-27T19:31:23.574Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -1479,14 +1587,294 @@
           "column": 3
         }
       ]
+    },
+    {
+      "title": "theme-engine-hardening.spec.ts",
+      "file": "theme-engine-hardening.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "modern is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 11394,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:00.234Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-b26babec34a0bc0763b4",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "luxury is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 8342,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:12.167Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-fd39de8975a9eefb952e",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "premium_grid is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 6603,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:20.543Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-0c7fb1e4d8d6d29ae221",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "coffee is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 5173,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:27.184Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-76964bb031da416c403e",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "modern is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 9428,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:13.752Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-384629d8e9d1222f44fb",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "luxury is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 7904,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:23.933Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-35d61e312a4cae0a0858",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "premium_grid is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6294,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:31.871Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-efb89f7bd189e0c20196",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        },
+        {
+          "title": "coffee is feature-parity responsive from 320px to 1920px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5325,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-27T19:31:38.194Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "45c0bb92a07bc6b97f1e-41f7191e15f4e6c24a2c",
+          "file": "theme-engine-hardening.spec.ts",
+          "line": 137,
+          "column": 3
+        }
+      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-16T20:01:45.572Z",
-    "duration": 15534.814999999999,
-    "expected": 2,
-    "skipped": 24,
+    "startTime": "2026-07-27T19:30:56.575Z",
+    "duration": 47698.305,
+    "expected": 10,
+    "skipped": 26,
     "unexpected": 0,
     "flaky": 0
   }

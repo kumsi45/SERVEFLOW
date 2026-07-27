@@ -78,6 +78,10 @@ function numberField(value: unknown, label: string) {
   };
 }
 
+function optionalBoolean(value: unknown) {
+  return value === true;
+}
+
 function localization(value: unknown, label: string) {
   const localized = record(value, `${label} localization`);
   const values = record(localized.values, `${label} localized values`);
@@ -108,6 +112,75 @@ function localization(value: unknown, label: string) {
       om: ownerEdited.om === true,
       am: ownerEdited.am === true,
     },
+  };
+}
+
+function imageDraft(value: unknown) {
+  if (value === undefined || value === null) {
+    return {
+      status: "Pending",
+      selectedVersionId: null,
+      versions: [],
+      lastPrompt: null,
+      generationProgress: 0,
+      errorMessage: null,
+    };
+  }
+  const draft = record(value, "Image draft");
+  const allowedStatuses = new Set([
+    "Pending",
+    "Generating",
+    "Ready",
+    "Approved",
+    "Rejected",
+    "Owner Upload",
+  ]);
+  if (
+    typeof draft.status !== "string" ||
+    !allowedStatuses.has(draft.status)
+  ) {
+    throw new Error("Image draft status is invalid.");
+  }
+  if (!Array.isArray(draft.versions) || draft.versions.length > 20) {
+    throw new Error("Image draft versions are invalid.");
+  }
+  const versionIds = new Set<string>();
+  const versions = draft.versions.map((value, index) => {
+    const version = record(value, `Image version ${index + 1}`);
+    const versionId = id(version.id, "Image version ID");
+    if (versionIds.has(versionId)) {
+      throw new Error("Duplicate image version IDs are not allowed.");
+    }
+    versionIds.add(versionId);
+    if (version.source !== "ai" && version.source !== "owner") {
+      throw new Error("Image version source is invalid.");
+    }
+    return {
+      id: versionId,
+      version: order(version.version, "Image version"),
+      status: text(version.status, "Image version status", 40),
+      source: version.source,
+      imageUrl: text(version.imageUrl, "Image URL", 5000, true),
+      thumbnailUrl: text(version.thumbnailUrl, "Image thumbnail URL", 5000, true),
+      prompt: text(version.prompt, "Image prompt", 8000),
+      createdAt: text(version.createdAt, "Image creation date", 80),
+      errorMessage: text(version.errorMessage, "Image error", 1000, true),
+      crop: version.crop === null ? null : record(version.crop, "Image crop"),
+    };
+  });
+  const selectedVersionId = draft.selectedVersionId === null
+    ? null
+    : id(draft.selectedVersionId, "Selected image version ID");
+  if (selectedVersionId && !versionIds.has(selectedVersionId)) {
+    throw new Error("Selected image version is invalid.");
+  }
+  return {
+    status: draft.status,
+    selectedVersionId,
+    versions,
+    lastPrompt: text(draft.lastPrompt, "Last image prompt", 8000, true),
+    generationProgress: confidence(draft.generationProgress),
+    errorMessage: text(draft.errorMessage, "Image draft error", 1000, true),
   };
 }
 
@@ -178,6 +251,9 @@ export function normalizeReviewState(value: unknown) {
       sourceText: stringField(item.sourceText, "Source text", 5000),
       approved: Boolean(item.approved),
       deleted: Boolean(item.deleted),
+      hidden: optionalBoolean(item.hidden),
+      rejected: optionalBoolean(item.rejected),
+      imageDraft: imageDraft(item.imageDraft),
       order: order(item.order, "Item order"),
     };
   });

@@ -38,7 +38,46 @@ export type MenuReviewItem = {
   sourceText: ConfidenceField<string>;
   approved: boolean;
   deleted: boolean;
+  hidden?: boolean;
+  rejected?: boolean;
+  imageDraft: MenuReviewImageDraft;
   order: number;
+};
+
+export type MenuReviewImageStatus =
+  | "Pending"
+  | "Generating"
+  | "Ready"
+  | "Approved"
+  | "Rejected"
+  | "Owner Upload";
+
+export type MenuReviewImageVersionSource = "ai" | "owner";
+
+export type MenuReviewImageVersion = {
+  id: string;
+  version: number;
+  status: MenuReviewImageStatus;
+  source: MenuReviewImageVersionSource;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  prompt: string;
+  createdAt: string;
+  errorMessage: string | null;
+  crop: {
+    x: number;
+    y: number;
+    scale: number;
+  } | null;
+};
+
+export type MenuReviewImageDraft = {
+  status: MenuReviewImageStatus;
+  selectedVersionId: string | null;
+  versions: MenuReviewImageVersion[];
+  lastPrompt: string | null;
+  generationProgress: number;
+  errorMessage: string | null;
 };
 
 export type MenuReviewUnrecognizedStatus =

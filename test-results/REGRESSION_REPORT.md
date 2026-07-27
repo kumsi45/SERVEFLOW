@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-16T20:02:02.158Z
+Generated: 2026-07-27T19:30:47.481Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 44 | 0 | 41 |
+| 469 | 0 | 42 |
 
 ## Regressions
 
@@ -42,6 +42,7 @@ No failing regressions.
 - SKIP - staff-workflows.spec.ts / manager workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / owner workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / inventory workflow route is guarded and renderable
+- SKIP - staff-workflows.spec.ts / inventory_officer workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / reports workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / ai workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / waiter workflow route is guarded and renderable
@@ -50,8 +51,17 @@ No failing regressions.
 - SKIP - staff-workflows.spec.ts / manager workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / owner workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / inventory workflow route is guarded and renderable
+- SKIP - staff-workflows.spec.ts / inventory_officer workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / reports workflow route is guarded and renderable
 - SKIP - staff-workflows.spec.ts / ai workflow route is guarded and renderable
+- PASS - theme-engine-hardening.spec.ts / modern is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / luxury is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / premium_grid is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / coffee is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / modern is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / luxury is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / premium_grid is feature-parity responsive from 320px to 1920px
+- PASS - theme-engine-hardening.spec.ts / coffee is feature-parity responsive from 320px to 1920px
 - SKIP - guarded Supabase multi-tenant regression tenant A cannot read tenant B orders
 - SKIP - guarded Supabase multi-tenant regression tenant A cannot read tenant B order_items
 - SKIP - guarded Supabase multi-tenant regression tenant A cannot read tenant B order_invoices
@@ -67,18 +77,222 @@ No failing regressions.
 - SKIP - guarded Supabase multi-tenant regression isolates kitchen_inventory_requests across four simultaneous restaurants
 - SKIP - guarded Supabase multi-tenant regression tenant sessions cannot poison each other's analytics
 - SKIP - guarded Supabase multi-tenant regression supports payment policy fixture pay_before_kitchen
-- SKIP - guarded Supabase multi-tenant regression supports payment policy fixture hold_payment
-- SKIP - guarded Supabase multi-tenant regression supports payment policy fixture mixed
+- SKIP - guarded Supabase multi-tenant regression supports payment policy fixture kitchen_before_payment
+- PASS - Phase 9.8.3 AI Menu Review Studio creates a complete editable draft without creating operational records
+- PASS - Phase 9.8.3 AI Menu Review Studio summarizes confidence, missing fields, categories, duplicates, and progress
+- PASS - Phase 9.8.3 AI Menu Review Studio supports debounced search semantics and every requested filter
+- PASS - Phase 9.8.3 AI Menu Review Studio validates and normalizes the complete autosave payload
+- PASS - Phase 9.8.3 AI Menu Review Studio exposes all category, item, unrecognized, search, filter, and bulk actions
+- PASS - Phase 9.8.3 AI Menu Review Studio autosaves with optimistic revisions and enforces owner/manager boundaries
+- PASS - Phase 9.8.3 AI Menu Review Studio is memoized, virtualized, lazy, debounced, responsive, and accessible
+- PASS - Phase 9.8.3 AI Menu Review Studio supports draft-only AI food image generation with owner version control
+- PASS - Phase 9.8.3 AI Menu Review Studio routes image generation through a pluggable provider registry
+- PASS - Phase 9.8.3 AI Menu Review Studio stores AI image drafts in versioned deterministic storage paths
+- PASS - Phase 9.8.3 AI Menu Review Studio authoritatively generates only from approved canonical Review Studio data
+- PASS - Phase 9.8.3 AI Menu Review Studio keeps Review Studio image data draft-only with no publishing
+- PASS - Phase 9.8.2 AI menu structured extraction normalizes confidence and flags duplicates without merging them
+- PASS - Phase 9.8.2 AI menu structured extraction groups owner preview by category and highlights review issues
+- PASS - Phase 9.8.2 AI menu structured extraction keeps extraction drafts isolated and owner-readable only
+- PASS - Phase 9.8.2 AI menu structured extraction uses a swappable provider and strict structured output
+- PASS - Phase 9.8.2 AI menu structured extraction shows confidence, missing data, duplicates, and unrecognized text
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation uses the requested eight-step wizard flow and removes Staff Setup
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.pdf
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.png
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.jpg
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.jpeg
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.webp
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.docx
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation rejects unsupported, empty, mismatched, and oversized files
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation provides a configurable, storage-capped maximum file size
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation supports multiple browse/drop uploads, progress, preview, replace, and delete
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation stores private owner-scoped import drafts only
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation implements no extraction, generation, or publishing integration
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation keeps the upload surface responsive and accessible
 - PASS - historical analytics windows uses restaurant midnight converted to UTC
 - PASS - historical analytics windows makes custom end dates inclusive through an exclusive next midnight
 - PASS - historical analytics windows handles DST 23-hour and 25-hour days
 - PASS - historical analytics windows keeps cross-midnight events in their own canonical periods
 - PASS - historical analytics windows builds completed-day history by calendar boundaries
+- PASS - Phase 8.4.2 atomic inventory deduction database contract enforces one deduction receipt per order item in PostgreSQL
+- PASS - Phase 8.4.2 atomic inventory deduction database contract locks the order item and every affected inventory item before balance reads
+- PASS - Phase 8.4.2 atomic inventory deduction database contract builds and validates the complete plan before applying any movement
+- PASS - Phase 8.4.2 atomic inventory deduction database contract reuses recipe expansion, yield, ordered quantity, and the conversion engine
+- PASS - Phase 8.4.2 atomic inventory deduction database contract supports ready-to-serve direct inventory and multiple order quantities
+- PASS - Phase 8.4.2 atomic inventory deduction database contract reuses the existing decision and negative-stock policies
+- PASS - Phase 8.4.2 atomic inventory deduction database contract keeps receipt and movements atomic and lets exceptions roll everything back
+- PASS - Phase 8.4.2 atomic inventory deduction database contract uses the canonical derived kitchen batch identity instead of a nonexistent order-item column
+- PASS - Phase 8.4.2 atomic inventory deduction database contract does not add triggers or edits to workflow, routing, payment, ordering, or reports
 - PASS - authentication and tenant isolation contracts isolates staff auth by browser tab instead of shared localStorage
 - PASS - authentication and tenant isolation contracts keeps every active restaurant selection inside its role and tab
 - PASS - authentication and tenant isolation contracts binds waiter authentication and offline orders to one restaurant
 - PASS - authentication and tenant isolation contracts never clears another restaurant's QR browser state
 - PASS - authentication and tenant isolation contracts contains no PostgreSQL format calls in the migration chain
+- PASS - cashier invoice creator identity stamps new cashier invoices with staff identity
+- PASS - cashier invoice creator identity repairs and safely projects historical cashier identity
+- PASS - cashier order payment timing keeps cashier and QR orders on the payment-first path
+- PASS - cashier order payment timing keeps deferred policy scoped to waiter orders
+- PASS - canonical tenant billing Restaurant A keeps menu price as base subtotal
+- PASS - canonical tenant billing Restaurant B keeps menu price as base subtotal
+- PASS - canonical tenant billing Restaurant C keeps menu price as base subtotal
+- PASS - canonical tenant billing owns every financial amount in the backend
+- PASS - canonical tenant billing isolates dashboard and reconciliation by exact shift id
+- PASS - canonical tenant billing contains no inclusive reverse-tax formula
+- PASS - Phase 8.5.3 inventory adjustment database creates immutable tenant-scoped adjustment and item records
+- PASS - Phase 8.5.3 inventory adjustment database supports every required increase and decrease reason
+- PASS - Phase 8.5.3 inventory adjustment database reuses the existing movement ledger with the required audit classifications
+- PASS - Phase 8.5.3 inventory adjustment database increases and decreases current quantity only inside the confirmation transaction
+- PASS - Phase 8.5.3 inventory adjustment database prevents negative stock and invalid, inactive, deleted, or cross-tenant items
+- PASS - Phase 8.5.3 inventory adjustment database is idempotent, row locked, concurrency safe, and rollback safe
+- PASS - Phase 8.5.3 inventory adjustment database permits only inventory administrators to create while tenant staff are read only
+- PASS - Phase 8.5.3 inventory adjustment database contains no out-of-scope business systems
+- PASS - Phase 8.5.3 adjustment validation and UI accepts valid increases, waste, spoilage, and supplier returns
+- PASS - Phase 8.5.3 adjustment validation and UI rejects zero, negative, excessive, duplicate, inactive, and invalid-direction lines
+- PASS - Phase 8.5.3 adjustment validation and UI maps adjustment history and immutable movement snapshots
+- PASS - Phase 8.5.3 adjustment validation and UI implements create, review, confirm, history, search, and all requested filters
+- PASS - Phase 8.1 inventory administration contracts creates isolated master-data tables with owner and manager RLS
+- PASS - Phase 8.1 inventory administration contracts validates tenant-safe references and prevents deleting units already in use
+- PASS - Phase 8.1 inventory administration contracts keeps the inventory admin UI isolated from kitchen, realtime, and request workflows
+- PASS - Phase 8.1 inventory administration contracts routes the complete inventory navigation surface
+- PASS - inventory administration validation prevents duplicate category names inside the same restaurant only
+- PASS - inventory administration validation requires valid item references and stock ranges
+- PASS - inventory administration validation supports storage and unit duplicate validation through the shared simple validator
+- PASS - Phase 8.5.6 inventory dashboard KPIs calculates every KPI from existing read models
+- PASS - Phase 8.5.6 inventory dashboard KPIs prioritizes out-of-stock, critical, then low-stock items
+- PASS - Phase 8.5.6 inventory dashboard KPIs provides professional labels for requested statuses
+- PASS - Phase 8.5.6 dashboard presentation renders all KPI cards and recent operational activity groups
+- PASS - Phase 8.5.6 dashboard presentation routes every quick action to the existing module
+- PASS - Phase 8.5.6 dashboard presentation renders every requested empty state with a call to action
+- PASS - Phase 8.5.6 dashboard presentation uses memoized calculations and independent read-only insight loading
+- PASS - Phase 8.5.6 dashboard presentation supports desktop, tablet, mobile, large monitors, focus, and reduced motion
+- PASS - Phase 8.5.6 dashboard presentation adds no database objects or Phase 8.5.6 migration
+- PASS - InventoryDeductionDecisionEngine returns TRUE when the workflow reaches final service completion
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen accepts the batch
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen begins preparing
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen marks ready
+- PASS - InventoryDeductionDecisionEngine returns FALSE when cashier accepts payment
+- PASS - InventoryDeductionDecisionEngine returns FALSE when a QR order is paid before kitchen acceptance
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen work is cancelled
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen work is rejected
+- PASS - InventoryDeductionDecisionEngine returns FALSE when kitchen work is voided
+- PASS - InventoryDeductionDecisionEngine respects the frozen workflow policy snapshot instead of a live setting
+- PASS - InventoryDeductionDecisionEngine is idempotent and does not mutate inputs
+- PASS - Phase 8.4.1 database decision contract adds one pure boolean decision resolver and one service-completion adapter
+- PASS - Phase 8.4.1 database decision contract uses the frozen workflow policy snapshot and delegates to the workflow engine
+- PASS - Phase 8.4.1 database decision contract does not deduct inventory, create movements, update quantities, or emit realtime/report work
+- PASS - Phase 8.2.8 inventory default master data architecture performs no write RPC when inventory is already initialized
+- PASS - Phase 8.2.8 inventory default master data architecture initializes an uninitialized restaurant without automatic repair
+- PASS - Phase 8.2.8 inventory default master data architecture gates repository initialization on the persistent restaurant flag
+- PASS - Phase 8.2.8 inventory default master data architecture keeps repair as a manual owner or manager operation
+- PASS - Phase 8.2.8 inventory default master data architecture returns from initialize_inventory before seeding initialized restaurants
+- PASS - Phase 8.2.8 inventory default master data architecture uses one canonical seed function for initialize and repair
+- PASS - Inventory initialization flag foundation adds persistent restaurant-scoped initialization fields with a false default
+- PASS - Inventory initialization flag foundation requires completion state and timestamp to change together
+- PASS - Inventory initialization flag foundation does not implement the initialization engine or touch domain tables
+- PASS - Phase 8.4.3 inventory movement and audit engine enriches the existing immutable movement inside the deduction INSERT transaction
+- PASS - Phase 8.4.3 inventory movement and audit engine captures every required order, recipe, actor, workflow, and balance field
+- PASS - Phase 8.4.3 inventory movement and audit engine rejects orphan or plan-mismatched movements and preserves exactly-once linkage
+- PASS - Phase 8.4.3 inventory movement and audit engine keeps movement records immutable and rollback-coupled to deduction
+- PASS - Phase 8.4.3 inventory movement and audit engine exposes only FOOD_CONSUMPTION history with strict tenant and role access
+- PASS - Phase 8.4.3 inventory movement and audit engine does not implement other future movement audit types or touch prohibited engines
+- PASS - Phase 8.4.3 inventory movement and audit engine maps movement history records without exposing write behavior
+- PASS - Phase 8.4.3 movement history page routes the read-only page through the existing inventory role guard
+- PASS - Phase 8.4.3 movement history page shows the required columns and all requested filters
+- PASS - inventory dashboard navigation and access grants inventory access for owner: true
+- PASS - inventory dashboard navigation and access grants inventory access for manager: true
+- PASS - inventory dashboard navigation and access grants inventory access for inventory_officer: true
+- PASS - inventory dashboard navigation and access grants inventory access for kitchen: false
+- PASS - inventory dashboard navigation and access grants inventory access for cashier: false
+- PASS - inventory dashboard navigation and access grants inventory access for waiter: false
+- PASS - inventory dashboard navigation and access grants inventory access for customer: false
+- PASS - inventory dashboard navigation and access grants inventory access for inventory: false
+- PASS - inventory dashboard navigation and access shows Inventory in owner and manager navigation only
+- PASS - inventory dashboard navigation and access protects every inventory route with the owner-manager guard
+- PASS - inventory dashboard navigation and access keeps the selected restaurant when owner or manager opens Inventory
+- PASS - Inventory Officer role logs in through the existing staff destination flow and sees only Inventory
+- PASS - Inventory Officer role allows Owner and Manager creation while excluding Inventory Officer from staff authority
+- PASS - Inventory Officer role adds the enum, login session support, tenant isolation, and inventory RLS in one new migration
+- PASS - Inventory Officer role keeps route guards role-specific and redirects Inventory Officer back to Inventory
+- PASS - Inventory Officer role does not alter existing inventory or stock migrations
+- PASS - Phase 8.4.4 inventory realtime database and transport publishes only legitimate inventory source tables
+- PASS - Phase 8.4.4 inventory realtime database and transport adds a tenant-authorized, read-only targeted stock projection
+- PASS - Phase 8.4.4 inventory realtime database and transport retains database role and restaurant isolation for every realtime row
+- PASS - Phase 8.4.4 inventory subscription lifecycle subscribes only from the authorized inventory surface through the shared channel
+- PASS - Phase 8.4.4 inventory subscription lifecycle batches transaction bursts and disposes every local listener and timer
+- PASS - Phase 8.4.4 inventory subscription lifecycle recovers on reconnect and browser resume without polling
+- PASS - Phase 8.4.4 inventory subscription lifecycle contains synchronization only and no inventory business writes
+- PASS - Phase 8.4.4 targeted UI reducers replaces only affected stock lines so low/out-of-stock widgets derive live state
+- PASS - Phase 8.4.4 targeted UI reducers appends movement history idempotently and keeps newest records first
+- PASS - Phase 8.4.4 targeted UI reducers patches only changed inventory administration records from event payloads
+- PASS - Phase 8.4.4 targeted UI reducers uses targeted loaders during events and full reconciliation only after interruption
+- PASS - Phase 8.2.6 Inventory navigation architecture places the inert global theme placeholder immediately before the one hamburger control
+- PASS - Phase 8.2.6 Inventory navigation architecture keeps only the requested workflow links in the hamburger and excludes theme
+- PASS - Phase 8.2.6 Inventory navigation architecture uses exactly four large primary mobile actions without More, Settings, or Theme
+- PASS - Phase 8.2.6 Inventory navigation architecture uses phone navigation below 601px and keeps the grouped sidebar on tablet
+- PASS - Phase 8.2.6 Inventory navigation architecture groups desktop and tablet navigation into accessible, mutually exclusive accordions
+- PASS - Phase 8.2.6 Inventory navigation architecture keeps suppliers direct, Reports as a placeholder, and Settings owner-scoped
+- PASS - Phase 8.2.6 Inventory navigation architecture adds responsive labels to all wide Inventory table cells
+- PASS - Phase 8.4.5 existing safety invariants retains order-item locking, stable inventory lock ordering, and full-plan validation
+- PASS - Phase 8.4.5 existing safety invariants retains database idempotency and duplicate movement guards
+- PASS - Phase 8.4.5 existing safety invariants retains atomic rollback and immutable movement protection
+- PASS - Phase 8.4.5 read-only integrity diagnostics defines every required consistency check
+- PASS - Phase 8.4.5 read-only integrity diagnostics is owner-only and tenant-scoped in the database
+- PASS - Phase 8.4.5 read-only integrity diagnostics contains diagnostics only and no write or repair operation
+- PASS - Phase 8.4.5 read-only integrity diagnostics maps PASS and detected issue responses correctly
+- PASS - Phase 8.4.5 owner integrity action renders the action only for the owner inventory surface
+- PASS - Phase 8.4.5 owner integrity action reports PASS or Detected Issues and never offers repair
+- PASS - Phase 8.2 stock operation database contracts keeps a single immutable movement ledger with all supported movement types
+- PASS - Phase 8.2 stock operation database contracts derives balances from signed movements and never writes an item balance column
+- PASS - Phase 8.2 stock operation database contracts enforces tenant-safe references, RLS, and role-gated RPC access
+- PASS - Phase 8.2 stock operation database contracts records transfers as one balanced pair and guards duplicates
+- PASS - Phase 8.2 stock operation database contracts exposes dedicated RPCs for stock, ledger, adjustment, waste, and opening balance
+- PASS - Phase 8.2 stock operation validation prevents zero, negative, and cross-restaurant stock movement inputs
+- PASS - Phase 8.2 stock operation validation prevents outgoing movements that would make stock negative
+- PASS - Phase 8.2 stock operation validation requires reasons for adjustments and waste
+- PASS - Phase 8.2 stock operation validation validates transfer locations, available source stock, and opening balance uniqueness
+- PASS - Restaurant A canonical kitchen pipeline routes QR through cashier first under pay_before_kitchen
+- PASS - Restaurant A canonical kitchen pipeline routes QR through cashier first under kitchen_before_payment
+- PASS - Restaurant A canonical kitchen pipeline applies pay_before_kitchen only to waiter orders
+- PASS - Restaurant A canonical kitchen pipeline applies kitchen_before_payment only to waiter orders
+- PASS - Restaurant A canonical kitchen pipeline preserves waiter kitchen-before-payment and the complete kitchen lifecycle
+- PASS - Restaurant A canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'served' }
+- PASS - Restaurant A canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'closed' }
+- PASS - Restaurant A canonical kitchen pipeline excludes historical or closed work: { sessionStatus: 'closed' }
+- PASS - Restaurant A canonical kitchen pipeline excludes historical or closed work: { tableReleased: true }
+- PASS - Restaurant B canonical kitchen pipeline routes QR through cashier first under pay_before_kitchen
+- PASS - Restaurant B canonical kitchen pipeline routes QR through cashier first under kitchen_before_payment
+- PASS - Restaurant B canonical kitchen pipeline applies pay_before_kitchen only to waiter orders
+- PASS - Restaurant B canonical kitchen pipeline applies kitchen_before_payment only to waiter orders
+- PASS - Restaurant B canonical kitchen pipeline preserves waiter kitchen-before-payment and the complete kitchen lifecycle
+- PASS - Restaurant B canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'served' }
+- PASS - Restaurant B canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'closed' }
+- PASS - Restaurant B canonical kitchen pipeline excludes historical or closed work: { sessionStatus: 'closed' }
+- PASS - Restaurant B canonical kitchen pipeline excludes historical or closed work: { tableReleased: true }
+- PASS - Restaurant C canonical kitchen pipeline routes QR through cashier first under pay_before_kitchen
+- PASS - Restaurant C canonical kitchen pipeline routes QR through cashier first under kitchen_before_payment
+- PASS - Restaurant C canonical kitchen pipeline applies pay_before_kitchen only to waiter orders
+- PASS - Restaurant C canonical kitchen pipeline applies kitchen_before_payment only to waiter orders
+- PASS - Restaurant C canonical kitchen pipeline preserves waiter kitchen-before-payment and the complete kitchen lifecycle
+- PASS - Restaurant C canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'served' }
+- PASS - Restaurant C canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'closed' }
+- PASS - Restaurant C canonical kitchen pipeline excludes historical or closed work: { sessionStatus: 'closed' }
+- PASS - Restaurant C canonical kitchen pipeline excludes historical or closed work: { tableReleased: true }
+- PASS - Restaurant D canonical kitchen pipeline routes QR through cashier first under pay_before_kitchen
+- PASS - Restaurant D canonical kitchen pipeline routes QR through cashier first under kitchen_before_payment
+- PASS - Restaurant D canonical kitchen pipeline applies pay_before_kitchen only to waiter orders
+- PASS - Restaurant D canonical kitchen pipeline applies kitchen_before_payment only to waiter orders
+- PASS - Restaurant D canonical kitchen pipeline preserves waiter kitchen-before-payment and the complete kitchen lifecycle
+- PASS - Restaurant D canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'served' }
+- PASS - Restaurant D canonical kitchen pipeline excludes historical or closed work: { operationalStatus: 'closed' }
+- PASS - Restaurant D canonical kitchen pipeline excludes historical or closed work: { sessionStatus: 'closed' }
+- PASS - Restaurant D canonical kitchen pipeline excludes historical or closed work: { tableReleased: true }
+- PASS - Kitchen Station Routing Engine routes a single item only to its assigned station
+- PASS - Kitchen Station Routing Engine splits one customer order into station-local item groups
+- PASS - Kitchen Station Routing Engine never loses an unassigned item
+- PASS - Kitchen Station Routing Engine does not cross restaurant boundaries
+- PASS - Kitchen Station Routing Engine uses a changed owner/manager assignment for the next ordered item
+- PASS - Kitchen Station Routing Engine installs routing before insert and publishes routed item changes
+- PASS - Kitchen Station Routing Engine allows starter menu creation before station setup without weakening live order routing
+- PASS - Kitchen Station Routing Engine contains no runtime routing by station name or menu keywords
 - PASS - canonical lifecycle preserves operational state new
 - PASS - canonical lifecycle preserves operational state accepted
 - PASS - canonical lifecycle preserves operational state preparing
@@ -101,16 +315,228 @@ No failing regressions.
 - PASS - payment methods normalizes Mobile Banking
 - PASS - payment methods normalizes Mixed
 - PASS - payment policy matrix has a deterministic policy fixture for pay_before_kitchen
-- PASS - payment policy matrix has a deterministic policy fixture for hold_payment
-- PASS - payment policy matrix has a deterministic policy fixture for mixed
+- PASS - payment policy matrix has a deterministic policy fixture for kitchen_before_payment
+- PASS - payment policy matrix labels unpaid state pending as Payment Due
+- PASS - payment policy matrix labels unpaid state held as Payment Due
+- PASS - Phase 8.5.5 stock classification and suggestions classifies out of stock, critical, low, and healthy with explicit precedence
+- PASS - Phase 8.5.5 stock classification and suggestions suggests maximum stock minus current stock without negative or implicit maximum values
+- PASS - Phase 8.5.5 stock classification and suggestions aggregates locations while preserving tenant isolation
+- PASS - Phase 8.5.5 filters and permissions searches inventory item, supplier, and category
+- PASS - Phase 8.5.5 filters and permissions filters storage, category, supplier, adjustment type, and stock level
+- PASS - Phase 8.5.5 filters and permissions gives draft creation to inventory roles and keeps every other role read only
+- PASS - Phase 8.5.5 purchase draft shortcut builds only selected non-healthy suggestions and never selects a supplier automatically
+- PASS - Phase 8.5.5 purchase draft shortcut reuses the existing purchase draft engine and contains no stock or movement write path
+- PASS - Phase 8.5.5 purchase draft shortcut is routed as a dedicated responsive inventory page
+- PASS - Phase 8.3.4 Menu to Recipe Linking adds one optional same-restaurant recipe relationship to menu items
+- PASS - Phase 8.3.4 Menu to Recipe Linking allows only active, non-deleted same-tenant recipes
+- PASS - Phase 8.3.4 Menu to Recipe Linking allows owner and manager linking while preserving read-only roles
+- PASS - Phase 8.3.4 Menu to Recipe Linking centralizes search, link mutation, and reverse usage lookup
+- PASS - Phase 8.3.4 Menu to Recipe Linking warns but does not block menu items without recipes
+- PASS - Phase 8.3.4 Menu to Recipe Linking does not implement downstream operational behavior
+- PASS - Phase 9.8.4 multilingual menu foundation supports exactly English, Afaan Oromoo, and Amharic
+- PASS - Phase 9.8.4 multilingual menu foundation preserves source text and populates only its detected language
+- PASS - Phase 9.8.4 multilingual menu foundation detects Ethiopic and mixed scripts without guessing Latin language
+- PASS - Phase 9.8.4 multilingual menu foundation makes extraction language-aware without translation instructions
+- PASS - Phase 9.8.4 multilingual menu foundation provides language tabs and owner-edit protection in Review Studio
+- PASS - Phase 9.8.4 multilingual menu foundation resolves multilingual presentation without duplicating canonical items
+- PASS - Phase 9.8.4 multilingual menu foundation prepares one QR/theme language boundary without building a selector
+- PASS - Phase 9.8.4 multilingual menu foundation creates normalized localization tables with future empty-only safeguards
+- PASS - central workflow architecture provides one documented database resolver
+- PASS - central workflow architecture makes legacy timing and kitchen gates delegate to the resolver
+- PASS - central workflow architecture exposes a dining-session read model for realtime and future modules
+- PASS - OrderWorkflowEngine always routes Customer QR through payment under pay_before_kitchen
+- PASS - OrderWorkflowEngine always routes Customer QR through payment under kitchen_before_payment
+- PASS - OrderWorkflowEngine routes waiter pay-before to cashier and then kitchen
+- PASS - OrderWorkflowEngine routes waiter kitchen-before directly to kitchen
+- PASS - OrderWorkflowEngine routes ready and deferred completed sessions correctly
+- PASS - OrderWorkflowEngine completes paid service and instructs the caller to close the session
+- PASS - OrderWorkflowEngine treats POS and future sources as safe pay-before integrations
+- PASS - OrderWorkflowEngine is deterministic and tenant input is mandatory
+- PASS - OrderWorkflowEngine keeps additional batches governed by their dining session facts
+- PASS - OrderWorkflowEngine makes a closed session terminal
+- PASS - Owner staff-management JWT handling refreshes the Owner session and explicitly sends the current access token
+- PASS - Phase 8.5.4 purchase history database uses existing purchase tables through a read-only tenant function
+- PASS - Phase 8.5.4 purchase history database returns complete summary and detail fields
+- PASS - Phase 8.5.4 purchase history database enforces tenant isolation and permits active restaurant staff read-only access
+- PASS - Phase 8.5.4 search, filters, sorting, and export searches by purchase number, supplier, and inventory item
+- PASS - Phase 8.5.4 search, filters, sorting, and export filters by supplier, status, date range, and creator
+- PASS - Phase 8.5.4 search, filters, sorting, and export sorts newest, oldest, highest cost, and lowest cost
+- PASS - Phase 8.5.4 search, filters, sorting, and export exports CSV with purchase summaries and line detail, and never PDF
+- PASS - Phase 8.5.4 search, filters, sorting, and export maps database summaries and purchase lines
+- PASS - Phase 8.5.4 purchase history UI shows every summary and detail field
+- PASS - Phase 8.5.4 purchase history UI offers all statuses, filters, sort options, detail navigation, and CSV only
+- PASS - Phase 8.5.4 purchase history UI is routed separately from the purchasing and receiving engines
+- PASS - Phase 8.5.1 purchase order draft database creates draft-only header and multi-line tables
+- PASS - Phase 8.5.1 purchase order draft database enforces restaurant-safe suppliers, items, units, staff, and lines
+- PASS - Phase 8.5.1 purchase order draft database saves complete drafts atomically and locks edits and deletes
+- PASS - Phase 8.5.1 purchase order draft database does not implement receiving or any inventory/accounting side effect
+- PASS - Phase 8.5.1 purchase order draft validation and totals accepts a valid multi-item draft and calculates totals only
+- PASS - Phase 8.5.1 purchase order draft validation and totals rejects duplicate items, invalid suppliers, quantities, units, and prices
+- PASS - Phase 8.5.1 purchase order draft validation and totals maps draft lines and database totals
+- PASS - Phase 8.5.1 purchase order draft UI is routed through the existing owner-manager-inventory-officer guard
+- PASS - Phase 8.5.1 purchase order draft UI supports create, edit, delete, search, supplier and status filters
+- PASS - Phase 8.5.1 purchase order draft UI has explicit tablet and mobile responsive layouts
+- PASS - Phase 8.5.2 purchase receipt database supports draft, partial, and completed status with remaining quantities
+- PASS - Phase 8.5.2 purchase receipt database locks the order, selected lines, and inventory in a stable order
+- PASS - Phase 8.5.2 purchase receipt database is idempotent and prevents duplicate receipt movements
+- PASS - Phase 8.5.2 purchase receipt database atomically increases stock and creates one immutable PURCHASE_RECEIPT movement
+- PASS - Phase 8.5.2 purchase receipt database preserves purchase prices and reuses the existing unit conversion engine
+- PASS - Phase 8.5.2 purchase receipt database enforces restaurant ownership through composite keys and access checks
+- PASS - Phase 8.5.2 purchase receipt database does not introduce returns, payments, accounting, or reports
+- PASS - Phase 8.5.2 receiving validation and UI accepts partial receipt quantities
+- PASS - Phase 8.5.2 receiving validation and UI rejects empty, excessive, negative, and over-precision quantities
+- PASS - Phase 8.5.2 receiving validation and UI maps database receipt progress and statuses
+- PASS - Phase 8.5.2 receiving validation and UI exposes partial and full receiving without unrelated purchasing features
+- PASS - Ready-to-Serve Product Architecture keeps recipes optional for menu items
+- PASS - Ready-to-Serve Product Architecture adds an optional direct inventory path without forcing it
+- PASS - Ready-to-Serve Product Architecture shows a warning badge instead of blocking saves or publishing
+- PASS - Ready-to-Serve Product Architecture centralizes active direct inventory lookup for menu management
+- PASS - Ready-to-Serve Product Architecture does not implement automatic inventory deduction yet
+- PASS - Phase 8.3.3 Recipe Cost Engine derives precise recipe cost as the sum of current ingredient costs
+- PASS - Phase 8.3.3 Recipe Cost Engine converts mass, volume, and count units centrally
+- PASS - Phase 8.3.3 Recipe Cost Engine always reads the latest item price and retains archived historical ingredients
+- PASS - Phase 8.3.3 Recipe Cost Engine isolates every calculation by restaurant and preserves read-only officer access
+- PASS - Phase 8.3.3 Recipe Cost Engine displays unit and ingredient costs to two decimal places without manual recalculation
+- PASS - Phase 8.3.3 Recipe Cost Engine does not touch downstream operational domains
+- PASS - Phase 8.3.2 Recipe Ingredient Management defines a tenant-scoped ingredient model with composite integrity
+- PASS - Phase 8.3.2 Recipe Ingredient Management validates positive quantities, active raw items, active units, and duplicates
+- PASS - Phase 8.3.2 Recipe Ingredient Management allows Owner and Manager writes while Inventory Officer remains read-only
+- PASS - Phase 8.3.2 Recipe Ingredient Management supports add, edit, remove, search, and duplicate including ingredients
+- PASS - Phase 8.3.2 Recipe Ingredient Management keeps ingredient definitions disconnected from stock and downstream behavior
+- PASS - Phase 8.3.2 Recipe Ingredient Management documents responsive layouts
+- PASS - Phase 8.3.1 Recipe Management defines independent recipe and category records with all required fields
+- PASS - Phase 8.3.1 Recipe Management supports create, edit, duplicate, archive, restore, soft delete, and view
+- PASS - Phase 8.3.1 Recipe Management generates tenant-scoped immutable recipe codes atomically
+- PASS - Phase 8.3.1 Recipe Management supports required search and filtering at the paginated database boundary
+- PASS - Phase 8.3.1 Recipe Management enforces full access for owners/managers and read-only inventory officers
+- PASS - Phase 8.3.1 Recipe Management isolates every query and mutation by restaurant
+- PASS - Phase 8.3.1 Recipe Management exposes only authorized role routes and has responsive layouts
 - PASS - production source contracts keeps all application realtime channels inside RestaurantEventService
 - PASS - production source contracts keeps kitchen independent from payment and invoices
+- PASS - production source contracts keeps Phase 7A.3 kitchen RPCs canonical and exact-batch
+- PASS - production source contracts keeps QR permanently pay-before while waiter orders follow tenant policy
+- PASS - production source contracts keeps station status independent in the canonical kitchen UI payload
+- PASS - production source contracts writes complete order audit pairs for every kitchen transition
+- PASS - production source contracts keeps runtime kitchen state named accepted outside payment lifecycle
 - PASS - production source contracts filters every realtime subscription by restaurant
 - PASS - production source contracts defines canonical historical timestamps
 - PASS - production source contracts uses one tenant realtime recovery implementation across manager surfaces
 - PASS - production source contracts keeps feedback photos private and tenant-readable
+- PASS - staff creation authorization allows an owner to create manager
+- PASS - staff creation authorization allows an owner to create inventory_officer
+- PASS - staff creation authorization allows an owner to create cashier
+- PASS - staff creation authorization allows an owner to create kitchen
+- PASS - staff creation authorization allows an owner to create waiter
+- PASS - staff creation authorization allows a manager to create inventory_officer
+- PASS - staff creation authorization allows a manager to create cashier
+- PASS - staff creation authorization allows a manager to create kitchen
+- PASS - staff creation authorization allows a manager to create waiter
+- PASS - staff creation authorization does not allow a manager to create manager
+- PASS - staff creation authorization does not allow a manager to create reception
+- PASS - staff creation authorization does not allow a manager to create inventory
+- PASS - Phase 9.1 theme registry registers exactly the four foundation themes
+- PASS - Phase 9.1 theme registry provides every required definition property
+- PASS - Phase 9.1 theme registry falls back invalid, missing, and future values to modern
+- PASS - Phase 9.1 provider and renderer renders the existing modern menu inside the shared presentation surface
+- PASS - Phase 9.1 provider and renderer renders fallback modern content for an invalid restaurant theme
+- PASS - Phase 9.1 provider and renderer renders all four production themes without placeholders
+- PASS - Phase 9.1 provider and renderer reacts to restaurant changes and cross-tab theme events with cleanup
+- PASS - Phase 9.1 provider and renderer publishes and persists a validated live theme selection
+- PASS - Phase 9.1 database and integration boundaries adds one constrained setting with modern as the default
+- PASS - Phase 9.1 database and integration boundaries integrates the owner Theme Studio while preserving the existing settings save
+- PASS - Phase 9.1 database and integration boundaries routes only rendering through the engine and preserves QR ordering logic
+- PASS - Phase 9.1 database and integration boundaries creates every requested reusable shared component
+- PASS - Phase 9.4 Premium Grid presentation renders live menu data through the production Theme C branch
+- PASS - Phase 9.4 Premium Grid presentation keeps Theme C responsive, accessible, memoized, and presentation-only
+- PASS - Phase 9.5 Brew & Bite presentation renders live restaurant and menu data through the production Theme D branch
+- PASS - Phase 9.5 Brew & Bite presentation keeps Theme D responsive, accessible, memoized, and presentation-only
+- PASS - Phase 9.5 Brew & Bite presentation adds no Theme D migration and retains the shared QR ordering boundary
+- PASS - Phase 9.6 restaurant theme customization studio normalizes one centralized override configuration and inherits theme defaults
+- PASS - Phase 9.6 restaurant theme customization studio applies customization through the shared theme surface without changing menu data
+- PASS - Phase 9.6 restaurant theme customization studio provides all controls, live preview actions, and owner/manager access
+- PASS - Phase 9.6 restaurant theme customization studio keeps the customization layer accessible, responsive, and presentation-only
+- PASS - Phase 9.7 production theme parity modern retains the same searchable, orderable, accessible customer surface
+- PASS - Phase 9.7 production theme parity luxury retains the same searchable, orderable, accessible customer surface
+- PASS - Phase 9.7 production theme parity premium_grid retains the same searchable, orderable, accessible customer surface
+- PASS - Phase 9.7 production theme parity coffee retains the same searchable, orderable, accessible customer surface
+- PASS - Phase 9.7 production theme parity modern handles no menu items and no categories without demo content
+- PASS - Phase 9.7 production theme parity luxury handles no menu items and no categories without demo content
+- PASS - Phase 9.7 production theme parity premium_grid handles no menu items and no categories without demo content
+- PASS - Phase 9.7 production theme parity coffee handles no menu items and no categories without demo content
+- PASS - Phase 9.7 production theme parity keeps cart, checkout, order placement, tracking, offline, and reconnect in one shared path
+- PASS - Phase 9.7 customization parity modern resolves every centralized option without losing defaults
+- PASS - Phase 9.7 customization parity luxury resolves every centralized option without losing defaults
+- PASS - Phase 9.7 customization parity premium_grid resolves every centralized option without losing defaults
+- PASS - Phase 9.7 customization parity coffee resolves every centralized option without losing defaults
+- PASS - Phase 9.7 customization parity keeps preview, draft, discard, publish, and restore actions wired once
+- PASS - Phase 9.7 responsive and accessibility certification modern has mobile, tablet, desktop, touch, focus, and reduced-motion contracts
+- PASS - Phase 9.7 responsive and accessibility certification luxury has mobile, tablet, desktop, touch, focus, and reduced-motion contracts
+- PASS - Phase 9.7 responsive and accessibility certification premium_grid has mobile, tablet, desktop, touch, focus, and reduced-motion contracts
+- PASS - Phase 9.7 responsive and accessibility certification coffee has mobile, tablet, desktop, touch, focus, and reduced-motion contracts
+- PASS - Phase 9.7 responsive and accessibility certification contains the page at every target width while preserving intentional category scrolling
+- PASS - Phase 9.7 responsive and accessibility certification traps modal focus, restores the trigger, handles Escape, and provides resilient images
+- PASS - Phase 9.7 responsive and accessibility certification selects an accessible foreground for the #777777 accent
+- PASS - Phase 9.7 responsive and accessibility certification selects an accessible foreground for the #f5e9d4 accent
+- PASS - Phase 9.7 responsive and accessibility certification selects an accessible foreground for the #221811 accent
+- PASS - Phase 9.7 performance and cleanup boundaries modern keeps memoized views/cards and efficient image rendering
+- PASS - Phase 9.7 performance and cleanup boundaries luxury keeps memoized views/cards and efficient image rendering
+- PASS - Phase 9.7 performance and cleanup boundaries premium_grid keeps memoized views/cards and efficient image rendering
+- PASS - Phase 9.7 performance and cleanup boundaries coffee keeps memoized views/cards and efficient image rendering
+- PASS - Phase 9.7 performance and cleanup boundaries keeps the Studio route split and preview memoized
+- PASS - Phase 9.7 performance and cleanup boundaries removes obsolete placeholders and adds no Phase 9.7 database work
+- PASS - Phase 9.7 performance and cleanup boundaries contains no debug statements or temporary work markers in production theme files
+- PASS - Phase 9.2 Modern Food rendering renders live restaurant branding and menu data without demo content
+- PASS - Phase 9.2 Modern Food rendering keeps search and category filtering in the existing menu service
+- PASS - Phase 9.2 Modern Food rendering renders retina-friendly lazy images, accessible actions, and the two-tab navigation
+- PASS - Phase 9.2 Modern Food rendering shows clean information placeholders without inventing missing values
+- PASS - Phase 9.2 integration and responsive boundaries wires presentation events to the existing QR state and cart callbacks
+- PASS - Phase 9.2 integration and responsive boundaries renders through the theme engine and preserves QR route compatibility
+- PASS - Phase 9.2 integration and responsive boundaries supports target mobile sizes, tablet, desktop, touch targets, and reduced motion
+- PASS - Phase 9.2 integration and responsive boundaries contains no duplicated ordering, payment, realtime, or persistence engine
+- PASS - Phase 9.2.1 independent Modern pages renders the dedicated no-orders page without menu or cart presentation
+- PASS - Phase 9.2.1 independent Modern pages renders active and previous order slots on Orders only
+- PASS - Phase 9.2.1 independent Modern pages keeps the Home component free of tracker, payment, and kitchen UI
+- PASS - Phase 9.2.1 independent Modern pages renders exactly Home and Orders in shared bottom navigation
+- PASS - Phase 9.2.1 navigation and business boundaries switches views without refresh and supports browser back with cleanup
+- PASS - Phase 9.2.1 navigation and business boundaries keeps order presentation off Home and cart presentation off Orders
+- PASS - Phase 9.2.1 navigation and business boundaries reuses existing cart, checkout, order tracking, payment, and realtime code
+- PASS - Phase 9.2.1 navigation and business boundaries does not alter the QR route parser
+- PASS - Phase 9.2.2 professional customer orders presentation uses a minimal order-focused header and dining visit summary
+- PASS - Phase 9.2.2 professional customer orders presentation keeps supplied kitchen orders independent in individual presentation cards
+- PASS - Phase 9.2.2 professional customer orders presentation keeps previous orders collapsed and provides the professional empty state
+- PASS - Phase 9.2.2 professional customer orders presentation styles one clean status timeline with completed, current, and future states
+- PASS - Phase 9.2.2 professional customer orders presentation maintains touch, focus, reduced-motion, and query-preserving navigation
+- PASS - Phase 9.2.2 protected boundaries contains presentation only and reuses the supplied tracker nodes
+- PASS - Phase 9.2.2 protected boundaries leaves the QR engine and routing integration untouched
+- PASS - Phase 9.3 Premium Luxury rendering renders live restaurant and menu data through the Theme Engine
+- PASS - Phase 9.3 Premium Luxury rendering renders luxury cards with accessible existing cart and info callbacks
+- PASS - Phase 9.3 Premium Luxury rendering registers Premium Luxury with black, gold, serif identity
+- PASS - Phase 9.3 Premium Luxury rendering leaves Modern output on its original presentation branch
+- PASS - Phase 9.3 presentation and architecture boundaries restyles the professional Orders page without replacing its workflow
+- PASS - Phase 9.3 presentation and architecture boundaries supports responsive, accessible, reduced-motion presentation
+- PASS - Phase 9.3 presentation and architecture boundaries reuses food detail, checkout, navigation, and QR engines
+- PASS - Phase 9.3 presentation and architecture boundaries creates no Phase 9.3 migration
 - PASS - customer tracking persistence restores restaurant, session, order and invoice after browser restart
 - PASS - customer tracking persistence never restores another restaurant's tracking record
+- PASS - waiter appended order batch reuses the open-session base and preserves a separate invoice batch
+- PASS - waiter appended order batch stamps the authenticated waiter identity
+- PASS - waiter appended order batch applies kitchen-before-payment or payment-first behavior from canonical timing
+- PASS - official waiter order lifecycle engine exposes exactly the two supported restaurant waiter modes
+- PASS - official waiter order lifecycle engine keeps Customer QR permanently payment-before-kitchen
+- PASS - official waiter order lifecycle engine routes waiter Pay Before Kitchen through cashier before kitchen
+- PASS - official waiter order lifecycle engine routes waiter Kitchen Before Payment immediately to kitchen with Payment Due
+- PASS - official waiter order lifecycle engine attaches additional orders to the same dining session and increases its running bill
+- PASS - official waiter order lifecycle engine settles every due batch atomically at dining-session scope
+- PASS - official waiter order lifecycle engine keeps restaurant policies and session payments tenant isolated
+- PASS - official waiter order lifecycle engine keeps every affected dashboard on tenant realtime tables
+- PASS - dining-session workflow policy snapshot captures policy, version, restaurant, and timestamp on creation
+- PASS - dining-session workflow policy snapshot preserves an existing kitchen-before session after settings change
+- PASS - dining-session workflow policy snapshot uses the changed setting only for a newly opened session
+- PASS - dining-session workflow policy snapshot makes the snapshot immutable and appended batches inherit it
+- PASS - dining-session workflow policy snapshot makes kitchen gates and read models use the snapshot, not live settings
+- PASS - dining-session workflow policy snapshot backfills existing sessions from persisted timing rather than current settings
+- PASS - dining-session workflow policy snapshot keeps tenant snapshots independent and realtime-owned by orders
+- PASS - dining-session workflow policy snapshot does not delete or hide a batch when a transition fails
 
 ## Screenshots
 

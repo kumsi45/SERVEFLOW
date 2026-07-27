@@ -11,6 +11,7 @@ import type {
   MenuReviewItem,
   MenuReviewLocalization,
   MenuReviewWarning,
+  MenuReviewImageVersion,
 } from "../services/menuReviewTypes";
 
 type AiMenuReviewItemCardProps = {
@@ -32,6 +33,12 @@ type AiMenuReviewItemCardProps = {
   onDelete: (itemId: string) => void;
   onRestore: (itemId: string) => void;
   onDuplicate: (itemId: string) => void;
+  onGenerateImage: (itemId: string) => void | Promise<void>;
+  onImageDraftChange: (
+    itemId: string,
+    update: (item: MenuReviewItem) => MenuReviewItem,
+  ) => void;
+  onOwnerImageUpload: (itemId: string, file: File | null) => void;
 };
 
 export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
@@ -48,15 +55,21 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
   onDelete,
   onRestore,
   onDuplicate,
+  onGenerateImage,
+  onImageDraftChange,
+  onOwnerImageUpload,
 }: AiMenuReviewItemCardProps) {
   const disabled = !canEdit || item.deleted;
   const displayName = resolveMenuReviewText(item.name, item.nameLocalization);
   return (
     <article className={`review-item-card${item.deleted ? " deleted" : ""}`}>
-      <div className="review-item-image" aria-label="No image assigned">
-        <span aria-hidden="true">IMG</span>
-        <strong>No Image Yet</strong>
-      </div>
+      <ImageDraftPanel
+        item={item}
+        canEdit={canEdit}
+        onGenerateImage={onGenerateImage}
+        onImageDraftChange={onImageDraftChange}
+        onOwnerImageUpload={onOwnerImageUpload}
+      />
 
       <div className="review-item-card-body">
         <header className="review-item-heading">
@@ -201,6 +214,166 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
     </article>
   );
 });
+
+function ImageDraftPanel({
+  item,
+  canEdit,
+  onGenerateImage,
+  onImageDraftChange,
+  onOwnerImageUpload,
+}: {
+  item: MenuReviewItem;
+  canEdit: boolean;
+  onGenerateImage: (itemId: string) => void | Promise<void>;
+  onImageDraftChange: (
+    itemId: string,
+    update: (item: MenuReviewItem) => MenuReviewItem,
+  ) => void;
+  onOwnerImageUpload: (itemId: string, file: File | null) => void;
+}) {
+  const imageDraft = item.imageDraft;
+  const selected = imageDraft.versions.find(
+    (version) => version.id === imageDraft.selectedVersionId,
+  ) ?? imageDraft.versions[imageDraft.versions.length - 1] ?? null;
+  const eligible = item.approved && !item.deleted && !item.hidden && !item.rejected;
+  const busy = imageDraft.status === "Generating";
+
+  function selectVersion(versionId: string) {
+    const version = imageDraft.versions.find((entry) => entry.id === versionId);
+    if (!version) return;
+    onImageDraftChange(item.id, (current) => ({
+      ...current,
+      imageDraft: {
+        ...current.imageDraft,
+        selectedVersionId: versionId,
+        status: version.source === "owner" ? "Owner Upload" : "Ready",
+      },
+    }));
+  }
+
+  function setSelectedStatus(status: MenuReviewImageVersion["status"]) {
+    onImageDraftChange(item.id, (current) => ({
+      ...current,
+      imageDraft: {
+        ...current.imageDraft,
+        status,
+        versions: current.imageDraft.versions.map((version) =>
+          version.id === current.imageDraft.selectedVersionId
+            ? { ...version, status }
+            : version
+        ),
+      },
+    }));
+  }
+
+  function cropSelected() {
+    onImageDraftChange(item.id, (current) => ({
+      ...current,
+      imageDraft: {
+        ...current.imageDraft,
+        versions: current.imageDraft.versions.map((version) =>
+          version.id === current.imageDraft.selectedVersionId
+            ? { ...version, crop: { x: 0.5, y: 0.5, scale: 1 } }
+            : version
+        ),
+      },
+    }));
+  }
+
+  function removeSelected() {
+    onImageDraftChange(item.id, (current) => {
+      const versions = current.imageDraft.versions.filter(
+        (version) => version.id !== current.imageDraft.selectedVersionId,
+      );
+      return {
+        ...current,
+        imageDraft: {
+          ...current.imageDraft,
+          status: versions.length ? "Ready" : "Pending",
+          selectedVersionId: versions[versions.length - 1]?.id ?? null,
+          versions,
+          generationProgress: versions.length ? 1 : 0,
+        },
+      };
+    });
+  }
+
+  return (
+    <section className="review-item-image" aria-label="AI image draft">
+      {selected?.thumbnailUrl ? (
+        <img
+          src={selected.thumbnailUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div className="review-image-placeholder" role="status">
+          <span aria-hidden="true">IMG</span>
+          <strong>{imageDraft.errorMessage ? "Image Failed" : "No Image Yet"}</strong>
+        </div>
+      )}
+      <div className="review-image-meta">
+        <strong>{imageDraft.status}</strong>
+        <small>
+          {busy
+            ? `${Math.round(imageDraft.generationProgress * 100)}%`
+            : `${imageDraft.versions.length} versions`}
+        </small>
+      </div>
+      <progress value={imageDraft.generationProgress} max={1}>
+        {Math.round(imageDraft.generationProgress * 100)}%
+      </progress>
+      {imageDraft.errorMessage ? (
+        <small className="review-image-error">{imageDraft.errorMessage}</small>
+      ) : null}
+      <div className="review-image-actions">
+        <button
+          type="button"
+          onClick={() => void onGenerateImage(item.id)}
+          disabled={!canEdit || !eligible || busy}
+        >
+          {selected ? "Regenerate" : "Generate Image"}
+        </button>
+        <label>
+          Upload Own Image
+          <input
+            type="file"
+            accept="image/*"
+            disabled={!canEdit || item.deleted}
+            onChange={(event) =>
+              onOwnerImageUpload(item.id, event.target.files?.[0] ?? null)}
+          />
+        </label>
+        <button type="button" onClick={() => setSelectedStatus("Approved")} disabled={!canEdit || !selected}>
+          Accept
+        </button>
+        <button type="button" onClick={() => setSelectedStatus("Rejected")} disabled={!canEdit || !selected}>
+          Reject
+        </button>
+        <button type="button" onClick={cropSelected} disabled={!canEdit || !selected}>
+          Crop
+        </button>
+        <button type="button" onClick={removeSelected} disabled={!canEdit || !selected}>
+          Remove
+        </button>
+      </div>
+      {imageDraft.versions.length > 1 ? (
+        <select
+          value={imageDraft.selectedVersionId ?? ""}
+          onChange={(event) => selectVersion(event.target.value)}
+          aria-label="Compare Versions"
+        >
+          {imageDraft.versions.map((version) => (
+            <option value={version.id} key={version.id}>
+              Version {version.version} - {version.status}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </section>
+  );
+}
 
 function LocalizedTextEditor({
   label,
