@@ -203,6 +203,7 @@ export function createMenuReviewState(
     deleted: false,
     hidden: false,
     rejected: false,
+    trackingType: "no_tracking",
     imageDraft: createPendingImageDraft(),
     order: index,
   }));
@@ -283,6 +284,9 @@ export function upgradeMenuReviewState(value: MenuReviewState): MenuReviewState 
           : createMenuReviewLocalization(typed.notes),
         hidden: Boolean(item.hidden),
         rejected: Boolean(item.rejected),
+        trackingType: item.trackingType === "recipe" || item.trackingType === "ready_to_sell"
+          ? item.trackingType
+          : "no_tracking",
         imageDraft: isImageDraft(item.imageDraft)
           ? normalizeImageDraft(item.imageDraft)
           : createPendingImageDraft(),
@@ -367,7 +371,7 @@ export function getMenuReviewWarnings(
   }
   if (!item.categoryId) warnings.push("Missing Category");
   if (duplicateIds.has(item.id)) warnings.push("Duplicate Name");
-  if (looksSuspicious(text)) warnings.push("Suspicious OCR");
+  if (looksSuspicious(text)) warnings.push("Suspicious Text");
   if (hasUnknownCharacters(text)) warnings.push("Unknown Characters");
   return warnings;
 }

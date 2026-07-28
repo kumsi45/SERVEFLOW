@@ -180,11 +180,11 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
   return (
     <div className="setup-import-builder">
       <div className="setup-step-copy">
-        <p className="setup-import-kicker">Import drafts only</p>
-        <h2>Bring your existing menu files</h2>
+        <p className="setup-import-kicker">AI Menu Import</p>
+        <h2>Upload your paper menu</h2>
         <p>
-          Upload one or more source files now. They remain private drafts and
-          are not added to your restaurant menu.
+          ServeFlow AI turns your paper menu into a private digital draft for
+          you to verify before anything is published.
         </p>
       </div>
 
@@ -205,7 +205,7 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
         <span className="setup-import-icon" aria-hidden="true">
           UP
         </span>
-        <strong>Drag and drop menu files here</strong>
+        <strong>Drag and drop your paper menu here</strong>
         <span>PDF, PNG, JPG, JPEG, WEBP, or DOCX</span>
         <span>Maximum {formatMenuImportFileSize(maxFileBytes)} per file</span>
         <button

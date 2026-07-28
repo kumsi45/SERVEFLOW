@@ -12,6 +12,8 @@ type RestaurantType =
   | "Fast Food"
   | "Bakery"
   | "Juice Bar"
+  | "Bar"
+  | "Lounge"
   | "Fine Dining"
   | "Mixed Restaurant";
 type SetupWizardProps = {
@@ -39,6 +41,8 @@ const RESTAURANT_TYPES: RestaurantType[] = [
   "Fast Food",
   "Bakery",
   "Juice Bar",
+  "Bar",
+  "Lounge",
   "Fine Dining",
   "Mixed Restaurant",
 ];
@@ -57,7 +61,8 @@ const STEPS = [
   "Finish",
 ] as const;
 
-const FINAL_STEP = STEPS.length - 1;
+const SETUP_FLOW_STEPS = [0, 1, 2, 4, 5] as const;
+const FINAL_STEP = 5;
 
 function getDraftStorageKey(restaurantId: string) {
   return `serveflow:setup-wizard:${restaurantId}`;
@@ -114,7 +119,8 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
     closesAt: "22:00",
     closedDays: [] as string[],
   });
-  const progress = Math.round(((step + 1) / STEPS.length) * 100);
+  const flowStepIndex = Math.max(0, SETUP_FLOW_STEPS.indexOf(step as (typeof SETUP_FLOW_STEPS)[number]));
+  const progress = Math.round(((flowStepIndex + 1) / SETUP_FLOW_STEPS.length) * 100);
   const existingTables = tables.length > 0;
   const handleDraftCountChange = useCallback((count: number) => {
     setImportDraftCount(count);
@@ -223,12 +229,12 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
       return;
     }
     setError(null);
-    setStep((current) => Math.min(current + 1, FINAL_STEP));
+    setStep((current) => current === 2 ? 4 : Math.min(current + 1, FINAL_STEP));
   }
 
   function back() {
     setError(null);
-    setStep((current) => Math.max(current - 1, 0));
+    setStep((current) => current === 4 ? 2 : Math.max(current - 1, 0));
   }
 
   function toggleClosedDay(day: string) {
@@ -355,12 +361,12 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
             <p className="setup-eyebrow">Welcome to ServeFlow</p>
             <h1>{STEPS[step]}</h1>
           </div>
-          <div className="setup-progress-label">Step {step + 1} of {STEPS.length}</div>
+          <div className="setup-progress-label">Step {flowStepIndex + 1} of {SETUP_FLOW_STEPS.length}</div>
         </header>
 
         <div className="setup-progress"><span style={{ width: `${progress}%` }} /></div>
         <nav className="setup-steps" aria-label="Setup progress">
-          {STEPS.map((label, index) => <span key={label} className={index <= step ? "active" : ""}>{index + 1}</span>)}
+          {SETUP_FLOW_STEPS.map((stepIndex, index) => <span key={STEPS[stepIndex]} className={index <= flowStepIndex ? "active" : ""} title={STEPS[stepIndex]}>{index + 1}</span>)}
         </nav>
 
         {error && <div className="setup-error">{error}</div>}
@@ -445,6 +451,7 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
             <AiMenuReviewStudio
               restaurantId={restaurantId}
               onBusyChange={handleImportBusyChange}
+              onFinishSetup={completeSetup}
             />
           )}
 

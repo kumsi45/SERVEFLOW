@@ -111,6 +111,7 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
     ]);
     expect(state.items).toHaveLength(2);
     expect(state.items.every((item) => !item.approved && !item.deleted)).toBe(true);
+    expect(state.items.every((item) => item.trackingType === "no_tracking")).toBe(true);
     expect(state.unrecognizedText[0].text).toBe("Call for catering");
   });
 
@@ -126,7 +127,7 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
       "Missing Price",
       "Missing Description",
       "Duplicate Name",
-      "Suspicious OCR",
+      "Suspicious Text",
     ]));
     expect(getMenuReviewWarnings(state.items[1], duplicateIds)).toContain(
       "Missing Category",
@@ -171,6 +172,10 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
       ...state,
       items: [{ ...state.items[0], categoryId: "missing-category" }],
     })).toThrow("unknown review category");
+    expect(() => normalizeReviewState({
+      ...state,
+      items: [{ ...state.items[0], trackingType: "invalid" as "no_tracking" }],
+    })).toThrow("inventory consumption is invalid");
   });
 
   it("exposes all category, item, unrecognized, search, filter, and bulk actions", () => {
@@ -184,6 +189,7 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
       "Bulk Move",
       "Bulk Approve",
       "Bulk Restore",
+      "Generate Missing Images",
       "Convert into Menu Item",
       "Ignore",
       "Unrecognized Text",
@@ -199,6 +205,11 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
       "Notes",
       "Restore Item",
       "Duplicate",
+      "Inventory Consumption",
+      "No Inventory Tracking",
+      "Recipe Item",
+      "Ready-to-Sell Item",
+      "Hide from Customers",
     ]) {
       expect(card).toContain(label);
     }

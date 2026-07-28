@@ -22,6 +22,11 @@ export type MenuReviewCategory = {
   order: number;
 };
 
+export type MenuInventoryTrackingType =
+  | "recipe"
+  | "ready_to_sell"
+  | "no_tracking";
+
 export type MenuReviewItem = {
   id: string;
   sourceItemId: string | null;
@@ -40,6 +45,7 @@ export type MenuReviewItem = {
   deleted: boolean;
   hidden?: boolean;
   rejected?: boolean;
+  trackingType?: MenuInventoryTrackingType;
   imageDraft: MenuReviewImageDraft;
   order: number;
 };
@@ -117,7 +123,7 @@ export type MenuReviewWarning =
   | "Missing Description"
   | "Missing Category"
   | "Duplicate Name"
-  | "Suspicious OCR"
+  | "Suspicious Text"
   | "Unknown Characters";
 
 export type MenuReviewSummary = {

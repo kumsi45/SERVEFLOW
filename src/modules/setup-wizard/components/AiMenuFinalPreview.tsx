@@ -4,42 +4,64 @@ import { ThemeProvider } from "../../menu/theme-engine/ThemeProvider";
 import { ThemeRenderer } from "../../menu/theme-engine/ThemeRenderer";
 import { MENU_THEMES, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { ModernFoodView } from "../../menu/theme-engine/themes/modern/ModernFoodView";
+import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrCartPanel";
+import type { PublicQrCartItem } from "../../public-qr-ordering/types";
+import { FoodInfoPanel } from "../../qr-menu/components/FoodInfoPanel";
 import { groupMenuItemsByCategory } from "../../qr-menu/services/menuGrouping";
 import { localizeMenuPresentation } from "../../qr-menu/services/menuLocalization";
 import type { MenuCategory, MenuItem, Restaurant } from "../../qr-menu/types";
+import { certifyMenuPreview } from "../services/menuPreviewCertification";
 import type { MenuReviewState } from "../services/menuReviewTypes";
 import type { MenuPreviewRestaurant } from "../services/menuPublishService";
 
-type Props = { restaurant: MenuPreviewRestaurant; state: MenuReviewState; onReturn: () => void; onPublish: () => void; publishing: boolean };
+type Props = { restaurant: MenuPreviewRestaurant; state: MenuReviewState; draftVersion: number; lastUpdated: string; onReturn: () => void; onPublish: (theme: MenuTheme) => void; publishing: boolean };
 type Device = "desktop" | "tablet" | "mobile";
 type Orientation = "portrait" | "landscape";
 
-export function AiMenuFinalPreview({ restaurant: sourceRestaurant, state, onReturn, onPublish, publishing }: Props) {
+export function AiMenuFinalPreview({ restaurant: sourceRestaurant, state, draftVersion, lastUpdated, onReturn, onPublish, publishing }: Props) {
   const [device, setDevice] = useState<Device>("mobile");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [language, setLanguage] = useState<MenuLanguage>("en");
   const [theme, setTheme] = useState<MenuTheme>(sourceRestaurant.menu_theme ?? "modern");
   const [activeCategoryId, setActiveCategoryId] = useState("all");
   const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<PublicQrCartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [foodInfoItem, setFoodInfoItem] = useState<MenuItem>();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const certification = useMemo(() => certifyMenuPreview(sourceRestaurant, state), [sourceRestaurant, state]);
   const restaurant: Restaurant = { ...sourceRestaurant, menu_theme: theme };
   const categories = useMemo<MenuCategory[]>(() => state.categories.map((category) => ({ id: category.id, restaurant_id: sourceRestaurant.id, name: category.name, display_order: category.order, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: category.localization.values[code].value, description: null }])) })), [sourceRestaurant.id, state.categories]);
-  const items = useMemo<MenuItem[]>(() => state.items.filter((item) => item.approved && !item.deleted && !item.hidden && !item.rejected && item.categoryId).map((item) => {
+  const items = useMemo<MenuItem[]>(() => certification.items.filter((item) => item.categoryId).map((item) => {
     const selected = item.imageDraft.versions.find((version) => version.id === item.imageDraft.selectedVersionId && (version.status === "Approved" || version.status === "Owner Upload"));
     return { id: item.id, restaurant_id: sourceRestaurant.id, category_id: item.categoryId!, name: item.name.value ?? "Untitled item", description: item.description.value, price: item.price.value ?? 0, image_url: selected?.imageUrl ?? null, effective_image_url: selected?.imageUrl ?? null, available: true, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: item.nameLocalization.values[code].value, description: item.descriptionLocalization.values[code].value }])) };
-  }), [sourceRestaurant.id, state.items]);
+  }), [certification.items, sourceRestaurant.id]);
   const localized = useMemo(() => localizeMenuPresentation(categories, items, language), [categories, items, language]);
-  const groups = useMemo(() => groupMenuItemsByCategory(localized.categories, localized.items.filter((item) => activeCategoryId === "all" || item.category_id === activeCategoryId).filter((item) => !search.trim() || item.name.toLowerCase().includes(search.trim().toLowerCase()))), [activeCategoryId, localized, search]);
+  const groups = useMemo(() => groupMenuItemsByCategory(localized.categories, localized.items.filter((item) => activeCategoryId === "all" || item.category_id === activeCategoryId).filter((item) => !search.trim() || `${item.name} ${item.description ?? ""}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))), [activeCategoryId, localized, search]);
+  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const updateQuantity = (id: string, quantity: number) => setCart((current) => quantity < 1 ? current.filter((item) => item.menuItemId !== id) : current.map((item) => item.menuItemId === id ? { ...item, quantity } : item));
+  const addToCart = (item: MenuItem, quantity = 1, notes?: string) => { setCart((current) => { const existing = current.find((entry) => entry.menuItemId === item.id); return existing ? current.map((entry) => entry.menuItemId === item.id ? { ...entry, quantity: entry.quantity + quantity, notes: notes ?? entry.notes } : entry) : [...current, { menuItemId: item.id, name: item.name, price: item.price, quantity, notes }]; }); setCartOpen(true); };
+  const refresh = () => { setSearch(""); setActiveCategoryId("all"); setCart([]); setCartOpen(false); setFoodInfoItem(undefined); setRefreshKey((value) => value + 1); };
+
   return <section className="menu-final-preview" aria-label="Final digital menu preview">
-    <header><div><span>Customer simulation</span><h2>Preview Digital Menu</h2><p>This is the production QR menu renderer. Nothing is published yet.</p></div><div><button type="button" onClick={onReturn}>Return to Review Studio</button><button className="setup-primary" type="button" disabled={publishing} onClick={onPublish}>{publishing ? "Publishing..." : "Publish Menu"}</button></div></header>
+    <header className="menu-preview-toolbar"><div><span>Customer preview</span><h2>Preview Digital Menu</h2></div><div className="menu-preview-actions"><button type="button" onClick={refresh}>Refresh Preview</button><button type="button" onClick={onReturn}>Back to Edit</button><button className="setup-primary" type="button" disabled={publishing || !certification.canPublish} onClick={() => onPublish(theme)}>{publishing ? "Publishing..." : "Publish Menu"}</button></div></header>
     <div className="menu-preview-controls" aria-label="Preview controls">
-      {(["desktop", "tablet", "mobile"] as Device[]).map((value) => <button type="button" className={device === value ? "active" : ""} onClick={() => setDevice(value)} key={value}>{value[0].toUpperCase() + value.slice(1)}</button>)}
-      {(["portrait", "landscape"] as Orientation[]).map((value) => <button type="button" className={orientation === value ? "active" : ""} onClick={() => setOrientation(value)} key={value}>{value[0].toUpperCase() + value.slice(1)}</button>)}
-      <select aria-label="Preview language" value={language} onChange={(event) => setLanguage(event.target.value as MenuLanguage)}>{MENU_LANGUAGE_OPTIONS.map((option) => <option value={option.code} key={option.code}>{option.label}</option>)}</select>
-      <select aria-label="Preview theme" value={theme} onChange={(event) => setTheme(event.target.value as MenuTheme)}>{MENU_THEMES.map((value) => <option value={value} key={value}>{value.replace("_", " ")}</option>)}</select>
+      <div role="group" aria-label="Device size">{(["desktop", "tablet", "mobile"] as Device[]).map((value) => <button type="button" aria-pressed={device === value} className={device === value ? "active" : ""} onClick={() => setDevice(value)} key={value}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div>
+      <div role="group" aria-label="Screen orientation">{(["portrait", "landscape"] as Orientation[]).map((value) => <button type="button" aria-pressed={orientation === value} className={orientation === value ? "active" : ""} onClick={() => setOrientation(value)} key={value}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div>
+      <label><span>Theme</span><select aria-label="Preview theme" value={theme} onChange={(event) => setTheme(event.target.value as MenuTheme)}>{MENU_THEMES.map((value) => <option value={value} key={value}>{value.replace("_", " ")}</option>)}</select></label>
+      <label><span>Language</span><select aria-label="Preview language" value={language} onChange={(event) => setLanguage(event.target.value as MenuLanguage)}>{MENU_LANGUAGE_OPTIONS.map((option) => <option value={option.code} key={option.code}>{option.label}</option>)}</select></label>
     </div>
-    <div className={`menu-preview-stage ${device} ${orientation}`}><div className="menu-preview-device">
-      <ThemeProvider restaurant={restaurant}><ThemeRenderer restaurant={restaurant} categories={localized.categories} menu={localized.items} cart={{ items: [], itemCount: 0, subtotal: 0, visible: false }} order={{ activeSession: null, submittedOrder: null }} theme={theme} language={language}>
-        <ModernFoodView restaurant={restaurant} categories={localized.categories} groups={groups} activeCategoryId={activeCategoryId} searchTerm={search} cartItemCount={0} cartSubtotal={0} hasActiveOrder={false} onSearchChange={setSearch} onCategoryChange={setActiveCategoryId} onAddToCart={() => undefined} onOpenInfo={() => undefined} onOpenCart={() => undefined} onOpenOrders={() => undefined} />
+    <div className="menu-preview-certification">
+      <section className="menu-ready-checklist" aria-labelledby="menu-ready-title"><header><div><span>Pre-publish certification</span><h3 id="menu-ready-title">Menu Ready Checklist</h3></div><strong className={certification.canPublish ? "ready" : "attention"}>Menu Readiness {certification.readiness}%</strong></header><div className="menu-readiness-meter" role="progressbar" aria-label="Menu readiness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={certification.readiness}><span style={{ width: `${certification.readiness}%` }} /></div><div>{certification.checks.map((check) => <article className={check.ready ? "ready" : "attention"} key={check.id}><span aria-hidden="true">{check.ready ? "✓" : "!"}</span><div><strong>{check.label}</strong><small>{check.detail}</small></div>{!check.ready ? <button type="button" onClick={onReturn}>Fix Now</button> : null}</article>)}</div></section>
+      <section className="menu-preview-summary" aria-labelledby="menu-summary-title"><h3 id="menu-summary-title">Menu Summary</h3><dl><div><dt>Menu Items</dt><dd>{certification.summary.itemCount}</dd></div><div><dt>Categories</dt><dd>{certification.summary.categoryCount}</dd></div><div><dt>Languages</dt><dd>{certification.summary.languageCount}</dd></div><div><dt>Theme</dt><dd>{theme.replace("_", " ")}</dd></div><div><dt>Last Updated</dt><dd>{new Date(lastUpdated).toLocaleString()}</dd></div><div><dt>Draft Version</dt><dd>{draftVersion}</dd></div><div><dt>Images Generated</dt><dd>{certification.summary.itemCount - certification.summary.missingImages}</dd></div><div><dt>Missing Images</dt><dd>{certification.summary.missingImages}</dd></div><div><dt>Missing Price</dt><dd>{certification.summary.missingPrices}</dd></div><div><dt>Missing Description</dt><dd>{certification.summary.missingDescriptions}</dd></div><div><dt>Hidden Items</dt><dd>{certification.summary.hiddenItems}</dd></div></dl></section>
+    </div>
+    <div className={`menu-preview-stage ${device} ${orientation}`}><div className="menu-preview-device" key={refreshKey}>
+      <ThemeProvider restaurant={restaurant}><ThemeRenderer restaurant={restaurant} categories={localized.categories} menu={localized.items} cart={{ items: cart, itemCount, subtotal, visible: cartOpen }} order={{ activeSession: null, submittedOrder: null }} theme={theme} language={language}>
+        <main className="qr-menu-page modern-food-page preview-customer-menu"><ModernFoodView restaurant={restaurant} categories={localized.categories} groups={groups} activeCategoryId={activeCategoryId} searchTerm={search} cartItemCount={itemCount} cartSubtotal={subtotal} hasActiveOrder={false} onSearchChange={setSearch} onCategoryChange={setActiveCategoryId} onAddToCart={(item) => addToCart(item)} onOpenInfo={setFoodInfoItem} onOpenCart={() => setCartOpen(true)} onOpenOrders={() => undefined} />
+          <PublicQrCartPanel items={cart} itemCount={itemCount} displaySubtotal={subtotal} isOpen={cartOpen} onClose={() => setCartOpen(false)} onIncrease={updateQuantity} onDecrease={updateQuantity} onRemove={(id) => setCart((current) => current.filter((item) => item.menuItemId !== id))} onReviewOrder={() => setCartOpen(false)} />
+          <FoodInfoPanel item={foodInfoItem} onClose={() => setFoodInfoItem(undefined)} onAddToCart={(item, quantity, notes) => { addToCart(item, quantity, notes); setFoodInfoItem(undefined); }} />
+        </main>
       </ThemeRenderer></ThemeProvider>
     </div></div>
   </section>;

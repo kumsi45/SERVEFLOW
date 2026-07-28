@@ -12,6 +12,7 @@ import type {
   MenuReviewLocalization,
   MenuReviewWarning,
   MenuReviewImageVersion,
+  MenuInventoryTrackingType,
 } from "../services/menuReviewTypes";
 
 type AiMenuReviewItemCardProps = {
@@ -29,6 +30,8 @@ type AiMenuReviewItemCardProps = {
   ) => void;
   onPriceChange: (itemId: string, value: string) => void;
   onCategoryChange: (itemId: string, categoryId: string | null) => void;
+  onTrackingTypeChange: (itemId: string, trackingType: MenuInventoryTrackingType) => void;
+  onVisibilityChange: (itemId: string) => void;
   onApprove: (itemId: string) => void;
   onDelete: (itemId: string) => void;
   onRestore: (itemId: string) => void;
@@ -51,6 +54,8 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
   onTextChange,
   onPriceChange,
   onCategoryChange,
+  onTrackingTypeChange,
+  onVisibilityChange,
   onApprove,
   onDelete,
   onRestore,
@@ -140,6 +145,18 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
             />
           </label>
           <label>
+            <span>Inventory Consumption</span>
+            <select
+              value={item.trackingType ?? "no_tracking"}
+              onChange={(event) => onTrackingTypeChange(item.id, event.target.value as MenuInventoryTrackingType)}
+              disabled={disabled}
+            >
+              <option value="no_tracking">No Inventory Tracking</option>
+              <option value="recipe">Recipe Item</option>
+              <option value="ready_to_sell">Ready-to-Sell Item</option>
+            </select>
+          </label>
+          <label>
             <span>
               Currency
               <small>{formatConfidence(item.currency.confidence)}</small>
@@ -184,6 +201,14 @@ export const AiMenuReviewItemCard = memo(function AiMenuReviewItemCard({
             </button>
           ) : (
             <>
+              <button
+                type="button"
+                className={item.hidden ? "visibility-off" : ""}
+                onClick={() => onVisibilityChange(item.id)}
+                disabled={!canEdit}
+              >
+                {item.hidden ? "Show to Customers" : "Hide from Customers"}
+              </button>
               <button
                 type="button"
                 className={item.approved ? "approved" : ""}

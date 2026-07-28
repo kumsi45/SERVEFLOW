@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 
 export type MenuPublishSummary = {
   publishedVersion: number;
@@ -44,6 +45,11 @@ export async function publishMenuDraft(restaurantId: string, draftId: string, ex
   const payload = data as MenuPublishSummary & { error?: string };
   if (payload.error) throw new Error(payload.error);
   return payload;
+}
+
+export async function persistMenuPreviewTheme(restaurantId: string, theme: MenuTheme) {
+  const { error } = await supabase.from("restaurants").update({ menu_theme: theme }).eq("id", restaurantId);
+  if (error) throw new Error(error.message);
 }
 
 export async function loadMenuPublishHistory(restaurantId: string, draftId: string): Promise<MenuPublishHistoryEntry[]> {

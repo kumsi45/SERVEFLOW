@@ -122,9 +122,9 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
     expect(registry).toContain("MENU_OCR_PROVIDER");
     expect(provider).toContain('type: "json_schema"');
     expect(provider).toContain("strict: true");
-    expect(provider).toContain(
-      "Do not infer, complete, translate, transliterate, correct, or invent facts",
-    );
+    expect(provider).toContain("Never infer or invent those fields");
+    expect(provider).toContain("restaurant-quality description");
+    expect(provider).toContain("under 160 characters");
     expect(provider).toContain("Never discard readable text");
     expect(provider).toContain("store: false");
   });

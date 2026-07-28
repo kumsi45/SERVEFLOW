@@ -230,6 +230,16 @@ export function normalizeReviewState(value: unknown) {
     if (categoryId && !categoryIds.has(categoryId)) {
       throw new Error("An item references an unknown review category.");
     }
+    const trackingType = item.trackingType === undefined
+      ? "no_tracking"
+      : item.trackingType;
+    if (
+      trackingType !== "recipe" &&
+      trackingType !== "ready_to_sell" &&
+      trackingType !== "no_tracking"
+    ) {
+      throw new Error("Item inventory consumption is invalid.");
+    }
     return {
       id: itemId,
       sourceItemId: item.sourceItemId === null
@@ -253,6 +263,7 @@ export function normalizeReviewState(value: unknown) {
       deleted: Boolean(item.deleted),
       hidden: optionalBoolean(item.hidden),
       rejected: optionalBoolean(item.rejected),
+      trackingType,
       imageDraft: imageDraft(item.imageDraft),
       order: order(item.order, "Item order"),
     };

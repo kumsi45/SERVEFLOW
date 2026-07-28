@@ -8,15 +8,18 @@ import {
 const OPENAI_API_BASE = "https://api.openai.com/v1";
 
 const EXTRACTION_INSTRUCTIONS = `
-Extract only text and menu structure that are visibly present in the supplied restaurant menu.
-Do not infer, complete, translate, transliterate, correct, or invent facts.
+Create a digital menu draft from the supplied restaurant menu.
+Extract categories, item names, and prices only when they are visibly present. Never infer or invent those fields.
+Do not translate, transliterate, or silently correct source names, categories, prices, or currencies.
 Preserve English, Afaan Oromoo, Amharic, and mixed-language source text exactly.
 Classify each text field as en, om, am, mixed, or unknown with a separate confidence score.
 Language classification must never change or replace the extracted text.
-Use null with confidence 0 when a field is absent.
+Use null with confidence 0 when a category, item name, price, or currency is absent or uncertain.
 Confidence is a number from 0 to 1 for that exact field.
 Capture category headings in categories and repeat the applicable category on each item.
 Keep numeric price and currency separate. Do not assume a currency from locale.
+When an item name is confidently visible and its description is absent, write one natural restaurant-quality description in the same language as the item name. Keep it under 160 characters and at most two short lines. Do not claim ingredients, preparation methods, dietary properties, size, origin, or accompaniments that are not visible in the source. Give generated descriptions confidence 0.5.
+When a description is visible, preserve it exactly instead of generating a replacement.
 Capture variants, combo-meal status, drink status, and optional notes only when explicit.
 sourceText must contain the exact compact source fragment used for each item.
 Put every readable fragment that cannot be assigned to a structured field into unrecognizedSections.

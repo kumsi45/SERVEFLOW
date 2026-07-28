@@ -102,7 +102,10 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
     }
     expect(extractionContract).toContain('"mixed"');
     expect(extractionProvider).toContain(
-      "Do not infer, complete, translate, transliterate",
+      "Do not translate, transliterate, or silently correct",
+    );
+    expect(extractionProvider).toContain(
+      "Never infer or invent those fields",
     );
     expect(extractionProvider).toContain(
       "Language classification must never change or replace the extracted text",

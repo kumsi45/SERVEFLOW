@@ -8,6 +8,7 @@ const migration = readFileSync("supabase/migrations/193_phase9_8_6_ai_menu_publi
 const restoreMigration = readFileSync("supabase/migrations/194_phase9_8_6_publish_draft_restore.sql", "utf8");
 const publishStabilityMigration = readFileSync("supabase/migrations/195_production_publish_variable_conflict_fix.sql", "utf8");
 const edge = readFileSync("supabase/functions/menu-publish/index.ts", "utf8");
+const setup = readFileSync("src/modules/setup-wizard/pages/RestaurantSetupWizardPage.tsx", "utf8");
 
 describe("Phase 9.8.6 AI menu publish engine", () => {
   it("reuses the production theme and food renderers for preview", () => {
@@ -18,6 +19,10 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(preview).toContain('type Orientation = "portrait" | "landscape"');
     expect(preview).toContain("MENU_LANGUAGE_OPTIONS");
     expect(preview).toContain("MENU_THEMES");
+    expect(preview).toContain("PublicQrCartPanel");
+    expect(preview).toContain("FoodInfoPanel");
+    expect(preview).toContain("Menu Ready Checklist");
+    expect(preview).toContain("Refresh Preview");
   });
 
   it("publishes only through the owner-authenticated Edge Function", () => {
@@ -55,11 +60,25 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(migration).toContain("ai_menu_publish_versions");
     expect(migration).toContain("published_by");
     expect(restoreMigration).toContain("restore_ai_menu_publish_version");
-    expect(studio).toContain('const stages = ["Preparing", "Categories", "Menu Items", "Images", "Translations", "Finalizing"]');
-    expect(studio).toContain("Menu Published Successfully");
+    expect(studio).toContain('setPublishStage("Publishing")');
+    expect(studio).not.toContain("window.setInterval");
+    expect(studio).toContain("committing the menu atomically");
+    expect(studio).toContain("Your Restaurant Is Live");
+    expect(studio).toContain("Download QR");
+    expect(studio).toContain("Print QR");
+    expect(studio).toContain("Share Menu");
+    expect(studio).toContain("finishPublishedSetup");
     expect(studio).toContain("Publish History");
     expect(studio).toContain("Restore Previous Draft");
-    expect(studio).toContain("onPublish={() => void publishReviewedMenu()}");
+    expect(studio).toContain("onPublish={(theme) => void publishReviewedMenu(theme)}");
+    expect(studio).toContain("persistMenuPreviewTheme");
+  });
+
+  it("finishes onboarding through the existing setup RPC after confirmed publish", () => {
+    expect(setup).toContain("const SETUP_FLOW_STEPS = [0, 1, 2, 4, 5] as const");
+    expect(setup).toContain("onFinishSetup={completeSetup}");
+    expect(setup).toContain('current === 2 ? 4');
+    expect(studio).toContain("await onFinishSetup()");
   });
 
   it("keeps publish variables distinct from SQL column names", () => {

@@ -8,6 +8,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import QRCode from "qrcode";
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import {
   MENU_LANGUAGE_OPTIONS,
@@ -48,13 +49,15 @@ import {
   type MenuImportDraft,
 } from "../services/menuImportDraftService";
 import type { MenuExtractionDraft } from "../services/menuExtractionTypes";
+import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { VirtualizedReviewItems } from "./VirtualizedReviewItems";
 import { AiMenuFinalPreview } from "./AiMenuFinalPreview";
-import { loadMenuPreviewRestaurant, loadMenuPublishHistory, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
+import { loadMenuPreviewRestaurant, loadMenuPublishHistory, persistMenuPreviewTheme, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
 
 type AiMenuReviewStudioProps = {
   restaurantId: string;
   onBusyChange: (busy: boolean) => void;
+  onFinishSetup?: () => Promise<void>;
 };
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
@@ -86,6 +89,9 @@ function freshItem(categoryId: string | null, order: number): MenuReviewItem {
     sourceText: { value: null, confidence: 0 },
     approved: false,
     deleted: false,
+    hidden: false,
+    rejected: false,
+    trackingType: "no_tracking",
     imageDraft: createPendingImageDraft(),
     order,
   };
@@ -94,6 +100,7 @@ function freshItem(categoryId: string | null, order: number): MenuReviewItem {
 export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   restaurantId,
   onBusyChange,
+  onFinishSetup,
 }: AiMenuReviewStudioProps) {
   const [sourceDrafts, setSourceDrafts] = useState<MenuImportDraft[]>([]);
   const [extractions, setExtractions] = useState<MenuExtractionDraft[]>([]);
@@ -119,7 +126,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const [publishing, setPublishing] = useState(false);
   const [publishStage, setPublishStage] = useState<string | null>(null);
   const [publishResult, setPublishResult] = useState<MenuPublishSummary | null>(null);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [publishHistory, setPublishHistory] = useState<MenuPublishHistoryEntry[]>([]);
+  const [finishingSetup, setFinishingSetup] = useState(false);
 
   const reviewStatesRef = useRef(reviewStates);
   const revisionsRef = useRef<Record<string, number>>({});
@@ -336,7 +345,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         }));
       }
       if (extraction.status === "failed") {
-        setError(extraction.errorMessage || "Extraction failed.");
+        setError(extraction.errorMessage || "AI menu import failed.");
       }
     } catch (extractionError) {
       setError(
@@ -689,6 +698,17 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     }
   }
 
+  async function generateMissingImages() {
+    if (!state || !canEdit) return;
+    const itemIds = state.items
+      .filter((item) => item.approved && !item.deleted && !item.hidden && !item.rejected)
+      .filter((item) => !item.imageDraft.selectedVersionId && item.imageDraft.status !== "Generating")
+      .map((item) => item.id);
+    for (const itemId of itemIds) {
+      await generateImageDraft(itemId);
+    }
+  }
+
   function changeImageDraft(
     itemId: string,
     update: (item: MenuReviewItem) => MenuReviewItem,
@@ -761,29 +781,88 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     }
   }
 
-  async function publishReviewedMenu() {
+  async function publishReviewedMenu(selectedTheme: MenuTheme) {
     if (!activeExtraction || publishing) return;
     setPublishing(true);
     setPublishResult(null);
+    setPublishedAt(null);
     setError(null);
-    const stages = ["Preparing", "Categories", "Menu Items", "Images", "Translations", "Finalizing"];
-    let stageIndex = 0;
-    setPublishStage(stages[0]);
-    const timer = window.setInterval(() => {
-      stageIndex = Math.min(stageIndex + 1, stages.length - 1);
-      setPublishStage(stages[stageIndex]);
-    }, 650);
+    setPublishStage("Publishing");
     try {
+      await persistMenuPreviewTheme(restaurantId, selectedTheme);
+      setPreviewRestaurant((current) => current ? { ...current, menu_theme: selectedTheme } : current);
       const result = await publishMenuDraft(restaurantId, activeExtraction.id, revisionsRef.current[activeExtraction.id]);
       setPublishStage("Published");
       setPublishResult(result);
+      setPublishedAt(new Date().toISOString());
       setPublishHistory(await loadMenuPublishHistory(restaurantId, activeExtraction.id));
     } catch (publishError) {
       setPublishStage("Failed");
       setError(publishError instanceof Error ? publishError.message : "The menu could not be published. No menu changes were committed.");
     } finally {
-      window.clearInterval(timer);
       setPublishing(false);
+    }
+  }
+
+  async function downloadPublishedQr() {
+    if (!previewRestaurant) return;
+    const link = document.createElement("a");
+    link.href = await QRCode.toDataURL(`${window.location.origin}/r/${previewRestaurant.slug}`, { width: 1200, margin: 2 });
+    link.download = `${previewRestaurant.slug}-menu-qr.png`;
+    link.click();
+  }
+
+  async function sharePublishedMenu() {
+    if (!previewRestaurant) return;
+    try {
+      const url = `${window.location.origin}/r/${previewRestaurant.slug}`;
+      if (navigator.share) {
+        await navigator.share({ title: `${previewRestaurant.name} menu`, text: `View ${previewRestaurant.name}'s digital menu.`, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setPublishStage("Link copied");
+    } catch (shareError) {
+      if (shareError instanceof DOMException && shareError.name === "AbortError") return;
+      setError(shareError instanceof Error ? shareError.message : "The menu link could not be shared.");
+    }
+  }
+
+  async function printPublishedQr() {
+    if (!previewRestaurant) return;
+    const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${previewRestaurant.slug}`, { width: 1200, margin: 2 });
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) throw new Error("Allow pop-ups to print the QR code.");
+    printWindow.opener = null;
+    const title = printWindow.document.createElement("title");
+    title.textContent = `${previewRestaurant.name} QR Menu`;
+    const main = printWindow.document.createElement("main");
+    main.style.cssText = "font-family:system-ui;text-align:center;padding:40px";
+    const heading = printWindow.document.createElement("h1");
+    heading.textContent = previewRestaurant.name;
+    const copy = printWindow.document.createElement("p");
+    copy.textContent = "Scan to view our digital menu";
+    const image = printWindow.document.createElement("img");
+    image.src = dataUrl;
+    image.alt = "Digital menu QR code";
+    image.style.cssText = "width:min(80vw,520px)";
+    image.addEventListener("load", () => { printWindow.print(); printWindow.close(); });
+    main.append(heading, copy, image);
+    printWindow.document.head.append(title);
+    printWindow.document.body.append(main);
+    printWindow.document.close();
+  }
+
+  async function finishPublishedSetup() {
+    if (!onFinishSetup || finishingSetup) return;
+    try {
+      setFinishingSetup(true);
+      setError(null);
+      await onFinishSetup();
+    } catch (finishError) {
+      setError(finishError instanceof Error ? finishError.message : "Restaurant setup could not be completed.");
+    } finally {
+      setFinishingSetup(false);
     }
   }
 
@@ -806,9 +885,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   if (previewOpen && previewRestaurant && state) {
     return <div className="ai-review-studio">
       {error ? <div className="setup-warning" role="alert">{error}</div> : null}
-      {publishStage ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><strong>{publishStage}</strong><div><span className={publishing ? "running" : "complete"} /></div></section> : null}
-      {publishResult ? <section className="menu-publish-success" role="status"><span aria-hidden="true">✓</span><h2>Menu Published Successfully</h2><div><strong>{publishResult.categoriesPublished}</strong><span>Categories Published</span><strong>{publishResult.itemsPublished}</strong><span>Menu Items Published</span><strong>{publishResult.imagesPublished}</strong><span>Images Published</span><strong>{publishResult.languagesPublished}</strong><span>Languages Published</span><strong>{publishResult.skippedItems}</strong><span>Skipped Items</span></div><div><a href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live QR Menu</a><a href="/owner/menu">Go To Menu Management</a><button type="button" onClick={() => setPreviewOpen(false)}>Finish Restaurant Setup</button></div></section> : null}
-      <AiMenuFinalPreview restaurant={previewRestaurant} state={state} onReturn={() => setPreviewOpen(false)} onPublish={() => void publishReviewedMenu()} publishing={publishing} />
+      {publishStage && !publishResult ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><span>Publishing menu</span><strong>{publishStage === "Failed" ? "Publish failed" : "Publishing approved menu securely..."}</strong><div><span className={publishing ? "running" : "complete"} /></div><small>The publish engine is copying approved images and committing the menu atomically. This screen will update when the server confirms completion.</small></section> : null}
+      {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your Restaurant Is Live</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>QR Ordering</dt><dd><strong>READY</strong></dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live Menu</a><button type="button" onClick={() => void downloadPublishedQr()}>Download QR</button><button type="button" onClick={() => void printPublishedQr()}>Print QR</button><button type="button" onClick={() => void sharePublishedMenu()}>Share Menu</button>{onFinishSetup ? <button type="button" disabled={finishingSetup} onClick={() => void finishPublishedSetup()}>{finishingSetup ? "Opening Dashboard..." : "Go To Dashboard"}</button> : <a href="/owner">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={() => setPreviewOpen(false)} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
       {publishHistory.length ? <section className="menu-publish-history"><h3>Publish History</h3>{publishHistory.map((entry) => <article key={entry.id}><strong>Version {entry.publishedVersion}</strong><span>{new Date(entry.publishedAt).toLocaleString()}</span><small>{entry.itemsPublished} items · {entry.imagesPublished} images · revision {entry.reviewRevision}</small><button type="button" disabled={publishing} onClick={() => void restorePublishedDraft(entry.id)}>Restore Previous Draft</button></article>)}</section> : null}
     </div>;
   }
@@ -872,7 +950,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               <strong>{draft.fileName}</strong>
               <span>
                 {stale
-                  ? "Needs extraction"
+                  ? "Needs AI import"
                   : extraction?.status === "completed"
                     ? "Review draft"
                     : extraction?.status ?? "Not extracted"}
@@ -896,8 +974,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               {staleExtraction
                 ? "This source was replaced and must be extracted again."
                 : activeExtraction?.status === "failed"
-                  ? activeExtraction.errorMessage || "Extraction failed."
-                  : "Run structured extraction before starting review."}
+                  ? activeExtraction.errorMessage || "AI menu import failed."
+                  : "Run AI Menu Import before starting review."}
             </p>
           </div>
           {canEdit ? (
@@ -909,7 +987,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             >
               {busyExtractionId === selectedSource.id
                 ? "Extracting..."
-                : "Extract Menu"}
+                : "Import Menu with AI"}
             </button>
           ) : null}
         </section>
@@ -998,6 +1076,13 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               </button>
               <button type="button" onClick={() => applyBulk("restore")} disabled={!selectedItems.size}>
                 Bulk Restore
+              </button>
+              <button
+                type="button"
+                onClick={() => void generateMissingImages()}
+                disabled={!state.items.some((item) => item.approved && !item.deleted && !item.hidden && !item.rejected && !item.imageDraft.selectedVersionId)}
+              >
+                Generate Missing Images
               </button>
               <select
                 value={bulkCategoryId}
@@ -1204,6 +1289,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                           onTextChange={updateText}
                           onPriceChange={updatePrice}
                           onCategoryChange={updateCategory}
+                          onTrackingTypeChange={(itemId, trackingType) => updateItem(itemId, (item) => ({ ...item, trackingType }))}
+                          onVisibilityChange={(itemId) => updateItem(itemId, (item) => ({ ...item, hidden: !item.hidden }))}
                           onApprove={(itemId) => updateItem(itemId, (item) => ({
                             ...item,
                             approved: !item.approved,
@@ -1384,6 +1471,8 @@ function UncategorizedSection({
         onTextChange={updateText}
         onPriceChange={updatePrice}
         onCategoryChange={updateCategory}
+        onTrackingTypeChange={(itemId, trackingType) => updateItem(itemId, (item) => ({ ...item, trackingType }))}
+        onVisibilityChange={(itemId) => updateItem(itemId, (item) => ({ ...item, hidden: !item.hidden }))}
         onApprove={(itemId) => updateItem(itemId, (item) => ({
           ...item,
           approved: !item.approved,
