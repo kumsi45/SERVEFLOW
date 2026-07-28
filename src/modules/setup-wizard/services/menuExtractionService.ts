@@ -13,7 +13,9 @@ import { upgradeMenuReviewState } from "./menuReviewState";
 type MenuExtractionRow = {
   id: string;
   restaurant_id: string;
-  source_draft_id: string;
+  source_draft_id: string | null;
+  source_kind: "upload" | "starter" | "manual";
+  source_reference: string | null;
   source_updated_at: string;
   provider: string;
   model: string;
@@ -33,6 +35,8 @@ function mapExtraction(row: MenuExtractionRow): MenuExtractionDraft {
     id: row.id,
     restaurantId: row.restaurant_id,
     sourceDraftId: row.source_draft_id,
+    sourceKind: row.source_kind,
+    sourceReference: row.source_reference,
     sourceUpdatedAt: row.source_updated_at,
     provider: row.provider,
     model: row.model,
@@ -51,7 +55,7 @@ function mapExtraction(row: MenuExtractionRow): MenuExtractionDraft {
 }
 
 const extractionColumns =
-  "id,restaurant_id,source_draft_id,source_updated_at,provider,model,status,structured_result,error_message,started_at,completed_at,updated_at,review_state,review_revision,review_updated_at";
+  "id,restaurant_id,source_draft_id,source_kind,source_reference,source_updated_at,provider,model,status,structured_result,error_message,started_at,completed_at,updated_at,review_state,review_revision,review_updated_at";
 
 async function readFunctionError(error: unknown) {
   const context = (error as { context?: Response })?.context;
@@ -76,20 +80,35 @@ export async function listMenuExtractionDrafts(restaurantId: string) {
   return ((data ?? []) as MenuExtractionRow[]).map(mapExtraction);
 }
 
-export async function extractMenuImportDraft(draftId: string) {
+export async function createAiMenuImportDraft(draftId: string) {
   const { data, error } = await supabase.functions.invoke(
-    "menu-ocr-extract",
-    { body: { draftId } },
+    "menu-ai-import",
+    { body: { mode: "ai", draftId } },
   );
   if (error) {
     throw new Error(await readFunctionError(error));
   }
-  if (!data || typeof data !== "object" || !("extraction" in data)) {
-    throw new Error("The extraction service returned an invalid response.");
+  if (!data || typeof data !== "object" || !("importDraft" in data)) {
+    throw new Error("AI Menu Import returned an invalid response.");
   }
   return mapExtraction(
-    (data as { extraction: MenuExtractionRow }).extraction,
+    (data as { importDraft: MenuExtractionRow }).importDraft,
   );
+}
+
+export async function createStarterMenuReviewDraft(
+  restaurantId: string,
+  restaurantType: string,
+  templateKey?: string,
+) {
+  const { data, error } = await supabase.functions.invoke("menu-ai-import", {
+    body: { mode: "starter", restaurantId, restaurantType, templateKey },
+  });
+  if (error) throw new Error(await readFunctionError(error));
+  if (!data || typeof data !== "object" || !("importDraft" in data)) {
+    throw new Error("Smart Starter Menu returned an invalid response.");
+  }
+  return mapExtraction((data as { importDraft: MenuExtractionRow }).importDraft);
 }
 
 export async function getMenuReviewAccess(
@@ -129,10 +148,10 @@ export async function saveMenuReviewDraft(
     },
   );
   if (error) throw new Error(await readFunctionError(error));
-  if (!data || typeof data !== "object" || !("extraction" in data)) {
+  if (!data || typeof data !== "object" || !("importDraft" in data)) {
     throw new Error("The review service returned an invalid response.");
   }
   return mapExtraction(
-    (data as { extraction: MenuExtractionRow }).extraction,
+    (data as { importDraft: MenuExtractionRow }).importDraft,
   );
 }

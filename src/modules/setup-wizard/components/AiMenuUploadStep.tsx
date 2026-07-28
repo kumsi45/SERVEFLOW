@@ -19,11 +19,15 @@ import {
   MENU_IMPORT_ACCEPT,
   validateMenuImportFile,
 } from "../services/menuImportFileValidation";
+import { createStarterMenuReviewDraft } from "../services/menuExtractionService";
 
 type AiMenuUploadStepProps = {
   restaurantId: string;
   onDraftCountChange: (count: number) => void;
   onBusyChange: (busy: boolean) => void;
+  showStarterMenuOption?: boolean;
+  restaurantType?: string;
+  onStarterCreated?: () => void;
 };
 
 const maxFileBytes = getMenuImportMaxFileBytes(
@@ -34,6 +38,9 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
   restaurantId,
   onDraftCountChange,
   onBusyChange,
+  showStarterMenuOption = false,
+  restaurantType = "Restaurant",
+  onStarterCreated,
 }: AiMenuUploadStepProps) {
   const browseRef = useRef<HTMLInputElement>(null);
   const [drafts, setDrafts] = useState<MenuImportDraft[]>([]);
@@ -177,17 +184,21 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
     }
   }
 
-  return (
-    <div className="setup-import-builder">
-      <div className="setup-step-copy">
-        <p className="setup-import-kicker">AI Menu Import</p>
-        <h2>Upload your paper menu</h2>
-        <p>
-          ServeFlow AI turns your paper menu into a private digital draft for
-          you to verify before anything is published.
-        </p>
-      </div>
+  async function createStarterMenu() {
+    try {
+      setBusyDraftId("starter-menu");
+      setWarnings([]);
+      await createStarterMenuReviewDraft(restaurantId, restaurantType);
+      onStarterCreated?.();
+    } catch {
+      setWarnings(["We couldn't create your starter menu right now. Please retry or upload a menu."]);
+    } finally {
+      setBusyDraftId(null);
+    }
+  }
 
+  return (
+    <div className="setup-import-builder setup-import-hero">
       <div
         className={`setup-import-dropzone${dragActive ? " dragging" : ""}`}
         onDragEnter={(event) => {
@@ -202,10 +213,9 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
         }}
         onDrop={handleDrop}
       >
-        <span className="setup-import-icon" aria-hidden="true">
-          UP
-        </span>
-        <strong>Drag and drop your paper menu here</strong>
+        <span className="setup-import-icon" aria-hidden="true">↑</span>
+        <strong>Upload Menu</strong>
+        <span>Take a photo or choose a menu from your device</span>
         <span>PDF, PNG, JPG, JPEG, WEBP, or DOCX</span>
         <span>Maximum {formatMenuImportFileSize(maxFileBytes)} per file</span>
         <button
@@ -214,7 +224,7 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
           onClick={() => browseRef.current?.click()}
           disabled={busyDraftId !== null}
         >
-          Browse Files
+          Choose Menu
         </button>
         <input
           ref={browseRef}
@@ -227,6 +237,15 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
           disabled={busyDraftId !== null}
         />
       </div>
+
+      {showStarterMenuOption ? (
+        <div className="setup-starter-option">
+          <span aria-hidden="true">✦</span>
+          <div><strong>Start With Smart Starter Menu</strong><p>Choose a professionally prepared menu for your restaurant type, then edit it in Review Studio.</p></div>
+          <button type="button" className="setup-secondary" disabled={busyDraftId !== null} onClick={() => void createStarterMenu()}>{busyDraftId === "starter-menu" ? "Creating..." : "Choose starter"}</button>
+          <small>Your starter opens as a private draft. Nothing is published until you approve it.</small>
+        </div>
+      ) : null}
 
       <div className="setup-import-warnings" aria-live="polite">
         {warnings.map((warning, index) => (
@@ -264,7 +283,7 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
           <p className="setup-import-empty">Loading import drafts...</p>
         ) : drafts.length === 0 ? (
           <p className="setup-import-empty">
-            No files uploaded yet. You may continue and return later.
+            No menu uploaded yet. You can continue and return at any time.
           </p>
         ) : (
           <div className="setup-import-files">

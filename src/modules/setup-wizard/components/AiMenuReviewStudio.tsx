@@ -16,7 +16,8 @@ import {
   type MenuLanguage,
 } from "../../../core/menu/menuLanguage";
 import {
-  extractMenuImportDraft,
+  createAiMenuImportDraft,
+  createStarterMenuReviewDraft,
   getMenuReviewAccess,
   listMenuExtractionDrafts,
   saveMenuReviewDraft,
@@ -58,6 +59,9 @@ type AiMenuReviewStudioProps = {
   restaurantId: string;
   onBusyChange: (busy: boolean) => void;
   onFinishSetup?: () => Promise<void>;
+  mode?: "review" | "preview";
+  onBack?: () => void;
+  onContinue?: () => void;
 };
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
@@ -101,6 +105,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   restaurantId,
   onBusyChange,
   onFinishSetup,
+  mode = "review",
+  onBack,
+  onContinue,
 }: AiMenuReviewStudioProps) {
   const [sourceDrafts, setSourceDrafts] = useState<MenuImportDraft[]>([]);
   const [extractions, setExtractions] = useState<MenuExtractionDraft[]>([]);
@@ -217,10 +224,14 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       setAccess(loadedAccess);
       setReviewStates(states);
       setSaveStatuses(statuses);
+      const standalone = loadedExtractions.filter((entry) => !entry.sourceDraftId);
       setSelectedSourceId((current) =>
-        current && drafts.some((draft) => draft.id === current)
+        current && (
+          drafts.some((draft) => draft.id === current)
+          || standalone.some((entry) => `draft:${entry.id}` === current)
+        )
           ? current
-          : drafts[0]?.id ?? null
+          : drafts[0]?.id ?? (standalone[0] ? `draft:${standalone[0].id}` : null)
       );
     } catch (loadError) {
       setError(
@@ -266,7 +277,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   }, [selectedSourceId]);
 
   const extractionBySource = useMemo(
-    () => new Map(extractions.map((extraction) => [
+    () => new Map(extractions.filter((entry) => entry.sourceDraftId).map((extraction) => [
       extraction.sourceDraftId,
       extraction,
     ])),
@@ -275,9 +286,12 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const selectedSource = sourceDrafts.find(
     (draft) => draft.id === selectedSourceId,
   ) ?? null;
+  const selectedStandaloneExtraction = selectedSourceId?.startsWith("draft:")
+    ? extractions.find((entry) => entry.id === selectedSourceId.slice(6)) ?? null
+    : null;
   const selectedExtraction = selectedSource
     ? extractionBySource.get(selectedSource.id) ?? null
-    : null;
+    : selectedStandaloneExtraction;
   const staleExtraction = Boolean(
     selectedSource &&
     selectedExtraction &&
@@ -325,7 +339,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     setBusyExtractionId(draft.id);
     setError(null);
     try {
-      const extraction = await extractMenuImportDraft(draft.id);
+      const extraction = await createAiMenuImportDraft(draft.id);
       setExtractions((current) => [
         ...current.filter((entry) => entry.sourceDraftId !== draft.id),
         extraction,
@@ -345,14 +359,24 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         }));
       }
       if (extraction.status === "failed") {
-        setError(extraction.errorMessage || "AI menu import failed.");
+        setError("We couldn't create your digital menu.");
       }
-    } catch (extractionError) {
-      setError(
-        extractionError instanceof Error
-          ? extractionError.message
-          : "The source could not be extracted.",
-      );
+    } catch {
+      setError("We couldn't create your digital menu.");
+    } finally {
+      setBusyExtractionId(null);
+    }
+  }
+
+  async function createStarterFallback() {
+    if (!canEdit) return;
+    try {
+      setBusyExtractionId("starter-menu");
+      setError(null);
+      await createStarterMenuReviewDraft(restaurantId, "Restaurant");
+      await load();
+    } catch {
+      setError("We couldn't create your digital menu.");
     } finally {
       setBusyExtractionId(null);
     }
@@ -781,6 +805,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     }
   }
 
+  useEffect(() => {
+    if (mode !== "preview" || previewOpen || !activeExtraction || !state || !canEdit) return;
+    void openPreview();
+  }, [activeExtraction, canEdit, mode, previewOpen, state]);
+
   async function publishReviewedMenu(selectedTheme: MenuTheme) {
     if (!activeExtraction || publishing) return;
     setPublishing(true);
@@ -886,7 +915,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     return <div className="ai-review-studio">
       {error ? <div className="setup-warning" role="alert">{error}</div> : null}
       {publishStage && !publishResult ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><span>Publishing menu</span><strong>{publishStage === "Failed" ? "Publish failed" : "Publishing approved menu securely..."}</strong><div><span className={publishing ? "running" : "complete"} /></div><small>The publish engine is copying approved images and committing the menu atomically. This screen will update when the server confirms completion.</small></section> : null}
-      {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your Restaurant Is Live</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>QR Ordering</dt><dd><strong>READY</strong></dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live Menu</a><button type="button" onClick={() => void downloadPublishedQr()}>Download QR</button><button type="button" onClick={() => void printPublishedQr()}>Print QR</button><button type="button" onClick={() => void sharePublishedMenu()}>Share Menu</button>{onFinishSetup ? <button type="button" disabled={finishingSetup} onClick={() => void finishPublishedSetup()}>{finishingSetup ? "Opening Dashboard..." : "Go To Dashboard"}</button> : <a href="/owner">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={() => setPreviewOpen(false)} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
+      {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your Restaurant Is Live</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>QR Ordering</dt><dd><strong>READY</strong></dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live Menu</a><button type="button" onClick={() => void downloadPublishedQr()}>Download QR</button><button type="button" onClick={() => void printPublishedQr()}>Print QR</button><button type="button" onClick={() => void sharePublishedMenu()}>Share Menu</button>{onFinishSetup ? <button type="button" disabled={finishingSetup} onClick={() => void finishPublishedSetup()}>{finishingSetup ? "Opening Dashboard..." : "Go To Dashboard"}</button> : <a href="/owner">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={onBack ?? (() => setPreviewOpen(false))} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
       {publishHistory.length ? <section className="menu-publish-history"><h3>Publish History</h3>{publishHistory.map((entry) => <article key={entry.id}><strong>Version {entry.publishedVersion}</strong><span>{new Date(entry.publishedAt).toLocaleString()}</span><small>{entry.itemsPublished} items · {entry.imagesPublished} images · revision {entry.reviewRevision}</small><button type="button" disabled={publishing} onClick={() => void restorePublishedDraft(entry.id)}>Restore Previous Draft</button></article>)}</section> : null}
     </div>;
   }
@@ -898,8 +927,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           <p className="setup-import-kicker">AI Import Draft only</p>
           <h2>AI Menu Review Studio</h2>
           <p>
-            Verify, edit, organize, and approve extracted information before a
-            future publishing phase.
+            Verify, edit, organize, and approve the digital menu created by AI.
           </p>
         </div>
         <div className="review-access-status">
@@ -953,16 +981,27 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
                   ? "Needs AI import"
                   : extraction?.status === "completed"
                     ? "Review draft"
-                    : extraction?.status ?? "Not extracted"}
+                    : extraction?.status ?? "Not imported"}
               </span>
             </button>
           );
         })}
+        {extractions.filter((entry) => !entry.sourceDraftId).map((entry) => (
+          <button
+            type="button"
+            className={selectedSourceId === `draft:${entry.id}` ? "active" : ""}
+            onClick={() => setSelectedSourceId(`draft:${entry.id}`)}
+            key={entry.id}
+          >
+            <strong>{entry.sourceKind === "starter" ? "Smart Starter Menu" : "Manual Menu"}</strong>
+            <span>{entry.status === "completed" ? "Review draft" : entry.status}</span>
+          </button>
+        ))}
       </nav>
 
-      {sourceDrafts.length === 0 ? (
+      {sourceDrafts.length === 0 && extractions.length === 0 ? (
         <p className="setup-import-empty">
-          No uploaded source is available. Return to AI Menu Builder first.
+          No menu draft is available. Return to AI Menu Import first.
         </p>
       ) : selectedSource && (
         !activeExtraction || activeExtraction.status !== "completed" || !state
@@ -972,23 +1011,18 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             <h3>{selectedSource.fileName}</h3>
             <p>
               {staleExtraction
-                ? "This source was replaced and must be extracted again."
+                ? "This menu was replaced and must be imported again."
                 : activeExtraction?.status === "failed"
-                  ? activeExtraction.errorMessage || "AI menu import failed."
+                  ? "We couldn't create your digital menu. Retry AI Import, use Smart Starter Menu, or cancel. Your uploaded menu is still available. Nothing will be published until you approve it."
                   : "Run AI Menu Import before starting review."}
             </p>
           </div>
           {canEdit ? (
-            <button
-              className="setup-primary"
-              type="button"
-              onClick={() => void runExtraction(selectedSource)}
-              disabled={busyExtractionId !== null}
-            >
-              {busyExtractionId === selectedSource.id
-                ? "Extracting..."
-                : "Import Menu with AI"}
-            </button>
+            <div className="review-import-failure-actions">
+              <button className="setup-primary" type="button" onClick={() => void runExtraction(selectedSource)} disabled={busyExtractionId !== null}>{busyExtractionId === selectedSource.id ? "Creating..." : activeExtraction?.status === "failed" ? "Retry AI Import" : "Import Menu with AI"}</button>
+              {activeExtraction?.status === "failed" ? <button className="setup-secondary" type="button" onClick={() => void createStarterFallback()} disabled={busyExtractionId !== null}>{busyExtractionId === "starter-menu" ? "Creating..." : "Use Smart Starter Menu"}</button> : null}
+              {activeExtraction?.status === "failed" && onBack ? <button type="button" onClick={onBack}>Cancel</button> : null}
+            </div>
           ) : null}
         </section>
       ) : state && summary && activeExtraction ? (
@@ -1348,7 +1382,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               </strong>
             </header>
             {state.unrecognizedText.length === 0 ? (
-              <p className="review-category-empty">No unrecognized text was extracted.</p>
+              <p className="review-category-empty">No unrecognized text was found.</p>
             ) : (
               <ul>
                 {state.unrecognizedText.map((entry) => (
@@ -1392,14 +1426,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         </>
       ) : null}
 
-      <div className="setup-draft-safety phase-985-safety-retired" role="status">
-        <strong>AI Import Draft only — publishing is not available</strong>
-        <span>
-          Nothing reaches the live menu, categories, ordering, inventory,
-          recipes, or QR menu in this phase.
-        </span>
-      </div>
-      {state && activeExtraction ? <div className="setup-draft-safety review-publish-actions" role="status"><div><strong>Review Studio is the publishing source</strong><span>Preview the customer menu before publishing. Nothing changes until Publish Menu is confirmed.</span></div>{canEdit ? <button className="setup-primary" type="button" disabled={saveStatus !== "saved" || summary?.progress !== 100} onClick={() => void openPreview()}>Preview Digital Menu</button> : null}</div> : null}
+      {state && activeExtraction && mode === "review" ? <div className="setup-draft-safety review-publish-actions" role="status"><div><strong>Your changes save automatically</strong><span>Nothing is published until you approve it from Customer Preview.</span></div><div className="onboarding-studio-navigation">{onBack ? <button className="setup-secondary" type="button" onClick={onBack}>Back</button> : null}{canEdit ? <button className="setup-primary" type="button" disabled={saveStatus !== "saved" || summary?.progress !== 100} onClick={onContinue}>Continue to Branding</button> : null}</div></div> : null}
+      {mode === "review" && !state && onBack ? <div className="onboarding-studio-navigation"><button className="setup-secondary" type="button" onClick={onBack}>Back</button></div> : null}
+      {mode === "preview" && !state ? <div className="setup-warning" role="alert">A reviewed menu is required before Customer Preview. Go back to Review Studio and finish your menu.{onBack ? <button className="setup-secondary" type="button" onClick={onBack}>Back to Branding</button> : null}</div> : null}
     </div>
   );
 });

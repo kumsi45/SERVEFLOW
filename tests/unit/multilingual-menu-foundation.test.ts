@@ -21,10 +21,10 @@ const read = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 const extractionContract = read(
-  "supabase/functions/menu-ocr-extract/contracts.ts",
+  "supabase/functions/menu-ai-import/contracts.ts",
 );
 const extractionProvider = read(
-  "supabase/functions/menu-ocr-extract/providers/openai.ts",
+  "supabase/functions/menu-ai-import/providers/openai.ts",
 );
 const studio = read(
   "src/modules/setup-wizard/components/AiMenuReviewStudio.tsx",
@@ -96,7 +96,6 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
       "categoryLanguage",
       "nameLanguage",
       "descriptionLanguage",
-      "optionalNotesLanguage",
     ]) {
       expect(extractionContract).toContain(field);
     }

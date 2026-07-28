@@ -145,9 +145,8 @@ Deno.serve(async (request) => {
         error: "This draft changed in another session. Reload before editing.",
       });
     }
-    return jsonResponse(200, { extraction: savedDraft });
+    return jsonResponse(200, { importDraft: savedDraft });
   } catch (error) {
     return jsonResponse(400, { error: message(error) });
   }
 });
-

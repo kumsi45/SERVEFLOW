@@ -70,14 +70,16 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(studio).toContain("finishPublishedSetup");
     expect(studio).toContain("Publish History");
     expect(studio).toContain("Restore Previous Draft");
+    expect(studio).toContain("onReturn={onBack ?? (() => setPreviewOpen(false))}");
     expect(studio).toContain("onPublish={(theme) => void publishReviewedMenu(theme)}");
     expect(studio).toContain("persistMenuPreviewTheme");
   });
 
   it("finishes onboarding through the existing setup RPC after confirmed publish", () => {
-    expect(setup).toContain("const SETUP_FLOW_STEPS = [0, 1, 2, 4, 5] as const");
+    expect(setup).toContain('title: "Customer Preview"');
+    expect(setup).toContain('mode="preview"');
     expect(setup).toContain("onFinishSetup={completeSetup}");
-    expect(setup).toContain('current === 2 ? 4');
+    expect(setup).toContain('supabase.rpc("complete_restaurant_setup"');
     expect(studio).toContain("await onFinishSetup()");
   });
 

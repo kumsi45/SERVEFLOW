@@ -151,7 +151,7 @@ describe("Phase 9.1 database and integration boundaries", () => {
     expect(migration).toContain("'menu_theme', coalesce(restaurants.menu_theme, 'modern')");
     expect(migration).not.toMatch(/create table|create view|create trigger|create policy/i);
     const phaseMigrations = readdirSync(resolve(process.cwd(), "supabase/migrations"))
-      .filter((name) => name.includes("phase9_1"));
+      .filter((name) => name.includes("phase9_1_menu_theme"));
     expect(phaseMigrations).toEqual(["185_phase9_1_menu_theme_engine_foundation.sql"]);
   });
 

@@ -117,6 +117,20 @@ try {
   }
   if (!restaurant) throw new Error("Owner signup did not create the restaurant membership.");
 
+  if (process.argv.includes("--starter-draft")) {
+    const starterPayload = await invoke(owner, "menu-ai-import", { mode: "starter", restaurantId: restaurant.id, restaurantType: "Cafe" });
+    const starterDraft = starterPayload.importDraft;
+    if (starterDraft?.status !== "completed" || starterDraft?.source_kind !== "starter" || !starterDraft?.structured_result?.items?.length) {
+      throw new Error("Smart Starter Menu did not create a completed Review Studio draft.");
+    }
+    const { data: visibleDraft, error: visibleError } = await owner.from("ai_menu_import_drafts").select("id,source_kind,status,structured_result").eq("id", starterDraft.id).single();
+    if (visibleError || visibleDraft?.id !== starterDraft.id) throw new Error(visibleError?.message ?? "Review Studio could not load the starter draft.");
+    pass("Smart Starter Menu", `${starterDraft.structured_result.items.length} items created in private Review Studio draft ${String(starterDraft.id).slice(0, 8)}`);
+    process.stdout.write(`CANARY_RESULT ${JSON.stringify({ status: "PASS", mode: "starter-draft", slug, restaurantId: restaurant.id, steps: results })}\n`);
+    await cleanupCanary(slug);
+    process.exit(0);
+  }
+
   const sourcePath = await createPaperMenu();
   const bytes = readFileSync(sourcePath);
   draftId = crypto.randomUUID();
@@ -127,8 +141,8 @@ try {
   if (draftError) throw new Error(draftError.message);
   pass("Upload Paper Menu", `${bytes.length} bytes stored as a private draft`);
 
-  const extractionPayload = await invoke(owner, "menu-ocr-extract", { draftId });
-  const extraction = extractionPayload.extraction;
+  const extractionPayload = await invoke(owner, "menu-ai-import", { mode: "ai", draftId });
+  const extraction = extractionPayload.importDraft;
   if (extraction.status !== "completed" || !extraction.structured_result?.items?.length) throw new Error(extraction.error_message ?? "AI Menu Import returned no items.");
   extractionId = extraction.id;
   const extracted = extraction.structured_result;
@@ -147,8 +161,8 @@ try {
   let reviewState = { schemaVersion: 2, restaurantName: extracted.restaurantName, restaurantNameLocalization: localization(extracted.restaurantName, extracted.restaurantNameLanguage), categories, items, unrecognizedText: extracted.unrecognizedSections.map((section, index) => ({ id: `canary-text-${index + 1}`, text: section.text.value ?? "", confidence: section.text.confidence, status: "ignored", convertedItemId: null })) };
   let reviewRevision = Number(extraction.review_revision ?? 0);
   const saved = await invoke(owner, "menu-review-draft", { extractionId, expectedRevision: reviewRevision, reviewState });
-  reviewRevision = Number(saved.extraction.review_revision);
-  reviewState = saved.extraction.review_state;
+  reviewRevision = Number(saved.importDraft.review_revision);
+  reviewState = saved.importDraft.review_state;
   pass("Review Studio", `${items.length} approved items; tracking defaults preserved`);
 
   const image = await invoke(owner, "menu-item-image-draft", { extractionId, itemId: items[0].id, expectedRevision: reviewRevision });
@@ -156,8 +170,8 @@ try {
   const approvedVersion = { ...image.version, status: "Approved" };
   reviewState = { ...reviewState, items: reviewState.items.map((item) => item.id === items[0].id ? { ...item, imageDraft: { ...item.imageDraft, status: "Approved", selectedVersionId: approvedVersion.id, versions: [...item.imageDraft.versions, approvedVersion], generationProgress: 1 } } : item) };
   const imageApproved = await invoke(owner, "menu-review-draft", { extractionId, expectedRevision: reviewRevision, reviewState });
-  reviewRevision = Number(imageApproved.extraction.review_revision);
-  reviewState = imageApproved.extraction.review_state;
+  reviewRevision = Number(imageApproved.importDraft.review_revision);
+  reviewState = imageApproved.importDraft.review_state;
   pass("Generate AI Images", "one generated food image approved in Review Studio");
 
   const { error: themeError } = await owner.from("restaurants").update({ menu_theme: "luxury" }).eq("id", restaurant.id);

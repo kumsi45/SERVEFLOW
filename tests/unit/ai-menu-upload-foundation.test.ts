@@ -28,16 +28,13 @@ const css = read(
 );
 
 describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
-  it("uses the requested eight-step wizard flow and removes Staff Setup", () => {
+  it("uses the five-step menu-first onboarding flow", () => {
     const flow = [
-      "Restaurant Info",
-      "Branding",
-      "Business Hours",
-      "Payment Accounts",
-      "AI Menu Builder",
-      "Review & Publish",
-      "Generate QR",
-      "Finish",
+      "Restaurant Basics",
+      "Bring Your Menu To Life",
+      "AI Menu Review Studio",
+      "Restaurant Branding",
+      "Customer Preview",
     ];
     let previousIndex = -1;
     for (const label of flow) {
@@ -46,6 +43,8 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
       previousIndex = index;
     }
     expect(wizard).not.toContain('"Staff"');
+    expect(wizard).not.toContain('"Payment Accounts"');
+    expect(wizard).toContain("Step {step + 1} of {STEPS.length}");
     expect(wizard).toContain("starter_template_keys: []");
     expect(wizard).toContain("staff_invitations_payload: []");
   });
@@ -104,7 +103,7 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
   it("supports multiple browse/drop uploads, progress, preview, replace, and delete", () => {
     expect(uploadStep).toContain("multiple");
     expect(uploadStep).toContain("onDrop={handleDrop}");
-    expect(uploadStep).toContain("Browse Files");
+    expect(uploadStep).toContain("Choose Menu");
     expect(uploadStep).toContain('role="progressbar"');
     expect(uploadStep).toContain("Preview");
     expect(uploadStep).toContain("Replace");
@@ -127,13 +126,12 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
     );
   });
 
-  it("implements no extraction, generation, or publishing integration", () => {
-    const productionSource = `${wizard}\n${uploadStep}\n${uploadService}`;
-    expect(productionSource).not.toMatch(
-      /openai|anthropic|gemini|vision api|tesseract|ocr endpoint|generateImage|publishMenu/i,
-    );
-    expect(wizard).toContain("Nothing will be published");
-    expect(wizard).toContain("Menu Status<strong>Not published");
+  it("keeps upload storage isolated while handing off to the existing review and publish flow", () => {
+    expect(uploadStep).not.toMatch(/openai|anthropic|gemini|vision api|tesseract/i);
+    expect(uploadService).not.toMatch(/generateImage|publishMenu/i);
+    expect(wizard).toContain('mode="review"');
+    expect(wizard).toContain('mode="preview"');
+    expect(uploadStep).toContain("Start With Smart Starter Menu");
   });
 
   it("keeps the upload surface responsive and accessible", () => {

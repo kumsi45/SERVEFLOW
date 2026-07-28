@@ -1,13 +1,13 @@
 import {
-  MENU_EXTRACTION_SCHEMA,
-  type ExtractionProvider,
-  type ExtractionSource,
-  type RawExtractionResult,
+  AI_MENU_JSON_SCHEMA,
+  type AiMenuProvider,
+  type AiMenuSource,
+  type RawAiMenuResult,
 } from "../contracts.ts";
 
 const OPENAI_API_BASE = "https://api.openai.com/v1";
 
-const EXTRACTION_INSTRUCTIONS = `
+const AI_MENU_IMPORT_INSTRUCTIONS = `
 Create a digital menu draft from the supplied restaurant menu.
 Extract categories, item names, and prices only when they are visibly present. Never infer or invent those fields.
 Do not translate, transliterate, or silently correct source names, categories, prices, or currencies.
@@ -20,10 +20,9 @@ Capture category headings in categories and repeat the applicable category on ea
 Keep numeric price and currency separate. Do not assume a currency from locale.
 When an item name is confidently visible and its description is absent, write one natural restaurant-quality description in the same language as the item name. Keep it under 160 characters and at most two short lines. Do not claim ingredients, preparation methods, dietary properties, size, origin, or accompaniments that are not visible in the source. Give generated descriptions confidence 0.5.
 When a description is visible, preserve it exactly instead of generating a replacement.
-Capture variants, combo-meal status, drink status, and optional notes only when explicit.
-sourceText must contain the exact compact source fragment used for each item.
-Put every readable fragment that cannot be assigned to a structured field into unrecognizedSections.
-Never discard readable text. Preserve duplicates as separate items; duplicate detection is performed later.
+Return only the structured restaurant name, categories, menu items, prices, currencies, short descriptions, languages, and confidence values defined by the JSON schema.
+Do not create recipes, inventory links, preparation times, nutrition, kitchen stations, food cost, or stock deductions.
+Preserve duplicate items as separate entries; deterministic duplicate validation is performed after the provider response.
 `.trim();
 
 function requireValue(value: string | undefined, name: string) {
@@ -69,7 +68,7 @@ async function openAiRequest(
 
 async function uploadInputFile(
   apiKey: string,
-  source: ExtractionSource,
+  source: AiMenuSource,
 ) {
   const form = new FormData();
   form.append("purpose", "user_data");
@@ -108,7 +107,7 @@ function readOutputText(payload: Record<string, unknown>) {
   throw new Error("The extraction provider returned no structured output.");
 }
 
-export class OpenAiMenuExtractionProvider implements ExtractionProvider {
+export class OpenAiMenuImportProvider implements AiMenuProvider {
   readonly name = "openai";
   readonly model: string;
   private readonly apiKey: string;
@@ -116,10 +115,10 @@ export class OpenAiMenuExtractionProvider implements ExtractionProvider {
   constructor() {
     this.apiKey = requireValue(Deno.env.get("OPENAI_API_KEY"), "OPENAI_API_KEY");
     this.model =
-      Deno.env.get("OPENAI_MENU_EXTRACTION_MODEL")?.trim() || "gpt-5.6";
+      Deno.env.get("OPENAI_MENU_IMPORT_MODEL")?.trim() || "gpt-5.6";
   }
 
-  async extract(source: ExtractionSource): Promise<RawExtractionResult> {
+  async importMenu(source: AiMenuSource): Promise<RawAiMenuResult> {
     const isImage = source.mimeType.startsWith("image/");
     let uploadedFileId: string | null = null;
 
@@ -145,22 +144,22 @@ export class OpenAiMenuExtractionProvider implements ExtractionProvider {
           input: [{
             role: "user",
             content: [
-              { type: "input_text", text: EXTRACTION_INSTRUCTIONS },
+              { type: "input_text", text: AI_MENU_IMPORT_INSTRUCTIONS },
               sourceContent,
             ],
           }],
           text: {
             format: {
               type: "json_schema",
-              name: "serveflow_menu_extraction",
+              name: "serveflow_ai_menu_import",
               strict: true,
-              schema: MENU_EXTRACTION_SCHEMA,
+              schema: AI_MENU_JSON_SCHEMA,
             },
           },
         }),
       });
       const payload = await response.json() as Record<string, unknown>;
-      return JSON.parse(readOutputText(payload)) as RawExtractionResult;
+      return JSON.parse(readOutputText(payload)) as RawAiMenuResult;
     } finally {
       if (uploadedFileId) {
         await fetch(`${OPENAI_API_BASE}/files/${uploadedFileId}`, {

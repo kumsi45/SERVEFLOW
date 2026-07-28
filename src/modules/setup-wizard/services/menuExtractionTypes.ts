@@ -57,7 +57,9 @@ export type MenuExtractionStatus = "processing" | "completed" | "failed";
 export type MenuExtractionDraft = {
   id: string;
   restaurantId: string;
-  sourceDraftId: string;
+  sourceDraftId: string | null;
+  sourceKind: "upload" | "starter" | "manual";
+  sourceReference: string | null;
   sourceUpdatedAt: string;
   provider: string;
   model: string;

@@ -1,68 +1,85 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../core/database";
+import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { AiMenuUploadStep } from "../components/AiMenuUploadStep";
 import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
+import { persistMenuPreviewTheme } from "../services/menuPublishService";
 import "./restaurantSetupWizard.css";
 
 type RestaurantType =
-  | "Ethiopian Restaurant"
-  | "International Restaurant"
+  | "Restaurant"
   | "Cafe"
-  | "Hotel Restaurant"
   | "Fast Food"
-  | "Bakery"
-  | "Juice Bar"
   | "Bar"
-  | "Lounge"
-  | "Fine Dining"
-  | "Mixed Restaurant";
+  | "Hotel"
+  | "Coffee Shop"
+  | "Pizza"
+  | "Bakery"
+  | "Lounge";
+
 type SetupWizardProps = {
   restaurantId: string;
   restaurantName: string;
   onFinished: () => void;
 };
 
-type ExistingTable = {
-  id: string;
-  table_number: number;
-  label: string;
-  qr_path: string;
-  qr_url: string | null;
-  active: boolean;
-};
-
 type BrandingAssetType = "logo" | "cover";
 
 const RESTAURANT_TYPES: RestaurantType[] = [
-  "Ethiopian Restaurant",
-  "International Restaurant",
+  "Restaurant",
   "Cafe",
-  "Hotel Restaurant",
   "Fast Food",
-  "Bakery",
-  "Juice Bar",
   "Bar",
+  "Hotel",
+  "Coffee Shop",
+  "Pizza",
+  "Bakery",
   "Lounge",
-  "Fine Dining",
-  "Mixed Restaurant",
 ];
-const TABLE_PRESETS = [10, 20, 30, 40, 50] as const;
-const CUSTOM_TABLES = [75, 120, 150] as const;
-const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
-const STEPS = [
-  "Restaurant Info",
-  "Branding",
-  "Business Hours",
-  "Payment Accounts",
-  "AI Menu Builder",
-  "Review & Publish",
-  "Generate QR",
-  "Finish",
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ] as const;
 
-const SETUP_FLOW_STEPS = [0, 1, 2, 4, 5] as const;
-const FINAL_STEP = 5;
+const LANGUAGES = [
+  { id: "en", label: "English" },
+  { id: "am", label: "Amharic" },
+  { id: "om", label: "Afaan Oromoo" },
+] as const;
+
+const THEMES: Array<{ id: MenuTheme; label: string }> = [
+  { id: "modern", label: "Modern" },
+  { id: "luxury", label: "Premium" },
+];
+
+const STEPS = [
+  {
+    title: "Restaurant Basics",
+    subtitle: "Tell us the essentials. You can refine everything later.",
+  },
+  {
+    title: "Bring Your Menu To Life",
+    subtitle: "Upload your paper menu and ServeFlow will build your digital menu in minutes.",
+  },
+  {
+    title: "AI Menu Review Studio",
+    subtitle: "Review every item, make quick edits, and approve your menu.",
+  },
+  {
+    title: "Restaurant Branding",
+    subtitle: "Make the customer experience feel unmistakably yours.",
+  },
+  {
+    title: "Customer Preview",
+    subtitle: "See exactly what customers will see, then publish when ready.",
+  },
+] as const;
 
 function getDraftStorageKey(restaurantId: string) {
   return `serveflow:setup-wizard:${restaurantId}`;
@@ -76,27 +93,29 @@ function readJsonRecord(value: string | null) {
   if (!value) return null;
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
 }
 
-
-export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFinished }: SetupWizardProps) {
+export function RestaurantSetupWizardPage({
+  restaurantId,
+  restaurantName,
+  onFinished,
+}: SetupWizardProps) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [assetUploading, setAssetUploading] = useState<BrandingAssetType | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tables, setTables] = useState<ExistingTable[]>([]);
-  const [importDraftCount, setImportDraftCount] = useState(0);
-  const [importUploadBusy, setImportUploadBusy] = useState(false);
+  const [tableCount, setTableCount] = useState(20);
   const [restaurantInfo, setRestaurantInfo] = useState({
     restaurantName,
-    restaurantType: "Mixed Restaurant" as RestaurantType,
+    restaurantType: "Restaurant" as RestaurantType,
     phone: "",
     address: "",
     description: "",
@@ -104,58 +123,57 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   const [branding, setBranding] = useState({
     logoUrl: "",
     coverUrl: "",
-    phone: "",
-    address: "",
-    tinVat: "",
-    receiptFooter: "Thank you for dining with us.",
     instagram: "",
     facebook: "",
     website: "",
+    tinVat: "",
+    receiptFooter: "Thank you for dining with us.",
+    theme: "modern" as MenuTheme,
+    languages: ["en"] as string[],
   });
-  const [tablesChoice, setTablesChoice] = useState<"preset" | "custom">("preset");
-  const [tableCount, setTableCount] = useState(20);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState("");
   const [hours, setHours] = useState({
     opensAt: "08:00",
     closesAt: "22:00",
     closedDays: [] as string[],
   });
-  const flowStepIndex = Math.max(0, SETUP_FLOW_STEPS.indexOf(step as (typeof SETUP_FLOW_STEPS)[number]));
-  const progress = Math.round(((flowStepIndex + 1) / SETUP_FLOW_STEPS.length) * 100);
-  const existingTables = tables.length > 0;
-  const handleDraftCountChange = useCallback((count: number) => {
-    setImportDraftCount(count);
-  }, []);
-  const handleImportBusyChange = useCallback((busy: boolean) => {
-    setImportUploadBusy(busy);
-  }, []);
+
+  const progress = useMemo(() => Math.round(((step + 1) / STEPS.length) * 100), [step]);
+  const currentStep = STEPS[step];
+  const handleImportBusyChange = useCallback((busy: boolean) => setImportBusy(busy), []);
 
   useEffect(() => {
-    let mounted = true;
+    let active = true;
     async function load() {
       try {
         setLoading(true);
-        setError(null);
-        const [{ data: restaurantData, error: restaurantError }, { data: tableData, error: tableError }] = await Promise.all([
-          supabase
-            .from("restaurants")
-            .select("name,total_tables,profile,branding,business_hours,kitchen_settings")
-            .eq("id", restaurantId)
-            .maybeSingle(),
-          supabase
-            .from("restaurant_tables")
-            .select("id,table_number,label,qr_path,qr_url,active")
-            .eq("restaurant_id", restaurantId)
-            .order("table_number", { ascending: true }),
-        ]);
-        if (restaurantError) throw new Error(restaurantError.message);
-        if (tableError) throw new Error(tableError.message);
-        if (!mounted) return;
+        const { data, error: loadError } = await supabase
+          .from("restaurants")
+          .select("name,total_tables,profile,branding,business_hours,menu_theme")
+          .eq("id", restaurantId)
+          .maybeSingle();
+        if (loadError) throw new Error(loadError.message);
+        if (!active) return;
 
-        const profile = restaurantData?.profile && typeof restaurantData.profile === "object" ? restaurantData.profile as Record<string, unknown> : {};
-        const brand = restaurantData?.branding && typeof restaurantData.branding === "object" ? restaurantData.branding as Record<string, unknown> : {};
+        const profile = data?.profile && typeof data.profile === "object"
+          ? data.profile as Record<string, unknown>
+          : {};
+        const brand = data?.branding && typeof data.branding === "object"
+          ? data.branding as Record<string, unknown>
+          : {};
+        const social = profile.social_links && typeof profile.social_links === "object"
+          ? profile.social_links as Record<string, unknown>
+          : {};
+        const businessHours = data?.business_hours && typeof data.business_hours === "object"
+          ? data.business_hours as Record<string, unknown>
+          : {};
+
         setRestaurantInfo({
-          restaurantName: typeof restaurantData?.name === "string" ? restaurantData.name : restaurantName,
-          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as RestaurantType) ? profile.restaurant_type as RestaurantType : "Mixed Restaurant",
+          restaurantName: typeof data?.name === "string" ? data.name : restaurantName,
+          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as RestaurantType)
+            ? profile.restaurant_type as RestaurantType
+            : "Restaurant",
           phone: typeof profile.phone === "string" ? profile.phone : "",
           address: typeof profile.address === "string" ? profile.address : "",
           description: typeof profile.description === "string" ? profile.description : "",
@@ -164,78 +182,56 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           ...previous,
           logoUrl: typeof brand.logo_url === "string" ? brand.logo_url : "",
           coverUrl: typeof brand.cover_url === "string" ? brand.cover_url : "",
+          instagram: typeof social.instagram === "string" ? social.instagram : "",
+          facebook: typeof social.facebook === "string" ? social.facebook : "",
+          website: typeof social.website === "string" ? social.website : "",
           tinVat: typeof profile.tin_vat === "string" ? profile.tin_vat : "",
-          receiptFooter: typeof profile.receipt_footer === "string" ? profile.receipt_footer : previous.receiptFooter,
+          receiptFooter: typeof profile.receipt_footer === "string"
+            ? profile.receipt_footer
+            : previous.receiptFooter,
+          theme: data?.menu_theme === "luxury" ? "luxury" : "modern",
         }));
         setLogoPreviewUrl(typeof brand.logo_url === "string" ? brand.logo_url : "");
         setCoverPreviewUrl(typeof brand.cover_url === "string" ? brand.cover_url : "");
-        setTableCount(Number(restaurantData?.total_tables ?? 20));
-        setTables((tableData ?? []).map((row) => ({
-          id: String(row.id),
-          table_number: Number(row.table_number),
-          label: String(row.label),
-          qr_path: String(row.qr_path ?? ""),
-          qr_url: typeof row.qr_url === "string" ? row.qr_url : null,
-          active: Boolean(row.active),
-        })));
+        setTableCount(Number(data?.total_tables ?? 20));
+        setHours((previous) => ({
+          opensAt: typeof businessHours.opens_at === "string" ? businessHours.opens_at : previous.opensAt,
+          closesAt: typeof businessHours.closes_at === "string" ? businessHours.closes_at : previous.closesAt,
+          closedDays: Array.isArray(businessHours.closed_days)
+            ? businessHours.closed_days.filter((day): day is string => typeof day === "string")
+            : previous.closedDays,
+        }));
 
         const draft = readJsonRecord(window.localStorage.getItem(getDraftStorageKey(restaurantId)));
         if (draft) {
-          const draftRestaurantInfo = draft.restaurantInfo && typeof draft.restaurantInfo === "object" ? draft.restaurantInfo as Partial<typeof restaurantInfo> : null;
-          const draftBranding = draft.branding && typeof draft.branding === "object" ? draft.branding as Partial<typeof branding> : null;
-          const draftHours = draft.hours && typeof draft.hours === "object" ? draft.hours as Partial<typeof hours> : null;
-          const draftTableCount = typeof draft.tableCount === "number" ? draft.tableCount : null;
-
-          if (draftRestaurantInfo) setRestaurantInfo((previous) => ({ ...previous, ...draftRestaurantInfo }));
-          if (draftBranding) {
-            setBranding((previous) => ({ ...previous, ...draftBranding }));
-            if (typeof draftBranding.logoUrl === "string") setLogoPreviewUrl(draftBranding.logoUrl);
-            if (typeof draftBranding.coverUrl === "string") setCoverPreviewUrl(draftBranding.coverUrl);
+          if (draft.restaurantInfo && typeof draft.restaurantInfo === "object") {
+            setRestaurantInfo((previous) => ({ ...previous, ...draft.restaurantInfo as Partial<typeof previous> }));
           }
-          if (draftHours) setHours((previous) => ({ ...previous, ...draftHours }));
-          if (draftTableCount && Number.isInteger(draftTableCount)) setTableCount(draftTableCount);
+          if (draft.branding && typeof draft.branding === "object") {
+            setBranding((previous) => ({ ...previous, ...draft.branding as Partial<typeof previous> }));
+          }
+          if (draft.hours && typeof draft.hours === "object") {
+            setHours((previous) => ({ ...previous, ...draft.hours as Partial<typeof previous> }));
+          }
         }
       } catch (loadError) {
-        if (mounted) setError(loadError instanceof Error ? loadError.message : "Could not load setup.");
+        if (active) setError(loadError instanceof Error ? loadError.message : "Could not load setup.");
       } finally {
-        if (mounted) setLoading(false);
+        if (active) setLoading(false);
       }
     }
     void load();
-    return () => { mounted = false; };
+    return () => { active = false; };
   }, [restaurantId, restaurantName]);
 
   useEffect(() => {
     if (loading) return;
-
     window.localStorage.setItem(getDraftStorageKey(restaurantId), JSON.stringify({
       restaurantInfo,
       branding,
-      tableCount,
       hours,
     }));
-  }, [branding, hours, loading, restaurantId, restaurantInfo, tableCount]);
-
-  function canContinue() {
-    if (step === 0) return restaurantInfo.restaurantName.trim().length >= 2;
-    if (step === 2) return Boolean(hours.opensAt && hours.closesAt);
-    if (step === 6) return Number.isInteger(tableCount) && tableCount >= 1 && tableCount <= 500;
-    return true;
-  }
-
-  function next() {
-    if (!canContinue()) {
-      setError("Please complete this step before continuing.");
-      return;
-    }
-    setError(null);
-    setStep((current) => current === 2 ? 4 : Math.min(current + 1, FINAL_STEP));
-  }
-
-  function back() {
-    setError(null);
-    setStep((current) => current === 4 ? 2 : Math.max(current - 1, 0));
-  }
+  }, [branding, hours, loading, restaurantId, restaurantInfo]);
 
   function toggleClosedDay(day: string) {
     setHours((previous) => ({
@@ -246,56 +242,93 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
     }));
   }
 
-  function updateCustomTableCount(value: string) {
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed)) {
-      setTableCount(1);
-      return;
-    }
-    setTableCount(Math.max(1, Math.min(500, parsed)));
+  function toggleLanguage(language: string) {
+    setBranding((previous) => {
+      const selected = previous.languages.includes(language);
+      if (selected && previous.languages.length === 1) return previous;
+      return {
+        ...previous,
+        languages: selected
+          ? previous.languages.filter((entry) => entry !== language)
+          : [...previous.languages, language],
+      };
+    });
   }
 
   async function uploadBrandingAsset(assetType: BrandingAssetType, file: File | null) {
     if (!file) return;
-    const localPreviewUrl = URL.createObjectURL(file);
-
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image for your restaurant branding.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Branding images must be 5 MB or smaller.");
+      return;
+    }
+    const localUrl = URL.createObjectURL(file);
     try {
       setAssetUploading(assetType);
       setError(null);
-      if (assetType === "logo") setLogoPreviewUrl(localPreviewUrl);
-      if (assetType === "cover") setCoverPreviewUrl(localPreviewUrl);
-
-      if (!file.type.startsWith("image/")) {
-        throw new Error("Branding asset must be an image file.");
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error("Branding asset must be 5 MB or smaller.");
-      }
-
+      if (assetType === "logo") setLogoPreviewUrl(localUrl);
+      else setCoverPreviewUrl(localUrl);
       const path = buildBrandingAssetPath(restaurantId, assetType);
       const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, file, {
         cacheControl: "0",
         upsert: true,
         contentType: file.type,
       });
-
       if (uploadError) throw new Error(uploadError.message);
-
       const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
       setBranding((previous) => assetType === "logo"
         ? { ...previous, logoUrl: data.publicUrl }
         : { ...previous, coverUrl: data.publicUrl });
       if (assetType === "logo") setLogoPreviewUrl(data.publicUrl);
-      if (assetType === "cover") setCoverPreviewUrl(data.publicUrl);
+      else setCoverPreviewUrl(data.publicUrl);
     } catch (uploadError) {
       if (assetType === "logo") setLogoPreviewUrl(branding.logoUrl);
-      if (assetType === "cover") setCoverPreviewUrl(branding.coverUrl);
-      setError(uploadError instanceof Error ? uploadError.message : "Could not upload branding asset.");
+      else setCoverPreviewUrl(branding.coverUrl);
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload the image.");
     } finally {
       setAssetUploading(null);
-      URL.revokeObjectURL(localPreviewUrl);
+      URL.revokeObjectURL(localUrl);
     }
+  }
+
+  function canContinue() {
+    if (step === 0) {
+      return restaurantInfo.restaurantName.trim().length >= 2
+        && restaurantInfo.phone.trim().length > 0
+        && restaurantInfo.address.trim().length > 0;
+    }
+    if (step === 3) return Boolean(hours.opensAt && hours.closesAt && branding.languages.length);
+    return true;
+  }
+
+  async function next() {
+    if (!canContinue()) {
+      setError("Complete the required fields before continuing.");
+      return;
+    }
+    setError(null);
+    if (step === 3) {
+      try {
+        setSubmitting(true);
+        await persistMenuPreviewTheme(restaurantId, branding.theme);
+      } catch (themeError) {
+        setError(themeError instanceof Error ? themeError.message : "Could not save the selected theme.");
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function back() {
+    setError(null);
+    setStep((current) => Math.max(current - 1, 0));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function completeSetup() {
@@ -318,24 +351,20 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
           cover_url: branding.coverUrl.trim(),
           tin_vat: branding.tinVat.trim(),
           receipt_footer: branding.receiptFooter.trim(),
+          languages: branding.languages,
           social_links: {
             instagram: branding.instagram.trim(),
             facebook: branding.facebook.trim(),
             website: branding.website.trim(),
           },
         },
-        table_payload: {
-          table_count: tableCount,
-        },
+        table_payload: { table_count: tableCount },
         business_hours_payload: {
           opens_at: hours.opensAt,
           closes_at: hours.closesAt,
           closed_days: hours.closedDays,
         },
-        kitchen_payload: {
-          mode: "single",
-          skipped: true,
-        },
+        kitchen_payload: { mode: "single", skipped: true },
         staff_invitations_payload: [],
         starter_template_keys: [],
       });
@@ -350,171 +379,100 @@ export function RestaurantSetupWizardPage({ restaurantId, restaurantName, onFini
   }
 
   if (loading) {
-    return <main className="setup-page"><section className="setup-panel"><p>Preparing your setup...</p></section></main>;
+    return <main className="setup-page"><section className="setup-panel setup-loading" aria-live="polite">Preparing your restaurant...</section></main>;
   }
 
   return (
     <main className="setup-page">
-      <section className={`setup-panel${step === 5 ? " review-studio-panel" : ""}`}>
+      <section className={`setup-panel setup-step-${step + 1}${step === 2 || step === 4 ? " review-studio-panel" : ""}`}>
         <header className="setup-header">
-          <div>
-            <p className="setup-eyebrow">Welcome to ServeFlow</p>
-            <h1>{STEPS[step]}</h1>
+          <div className="setup-heading-copy">
+            <p className="setup-eyebrow">ServeFlow setup</p>
+            <h1>{currentStep.title}</h1>
+            <p>{currentStep.subtitle}</p>
           </div>
-          <div className="setup-progress-label">Step {flowStepIndex + 1} of {SETUP_FLOW_STEPS.length}</div>
+          <div className="setup-progress-label" aria-label={`Step ${step + 1} of ${STEPS.length}, ${progress}% complete`}>
+            <span>Step {step + 1} of {STEPS.length}</span>
+            <strong>{progress}%</strong>
+          </div>
         </header>
-
-        <div className="setup-progress"><span style={{ width: `${progress}%` }} /></div>
-        <nav className="setup-steps" aria-label="Setup progress">
-          {SETUP_FLOW_STEPS.map((stepIndex, index) => <span key={STEPS[stepIndex]} className={index <= flowStepIndex ? "active" : ""} title={STEPS[stepIndex]}>{index + 1}</span>)}
-        </nav>
-
-        {error && <div className="setup-error">{error}</div>}
-
-        <div className="setup-body">
-          {step === 0 && (
-            <div className="setup-grid">
-              <label>Restaurant Name<input value={restaurantInfo.restaurantName} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantName: event.target.value })} /></label>
-              <label>Restaurant Type<select value={restaurantInfo.restaurantType} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantType: event.target.value as RestaurantType })}>{RESTAURANT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
-              <label>Phone<input value={restaurantInfo.phone} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, phone: event.target.value })} /></label>
-              <label className="wide">Address<input value={restaurantInfo.address} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, address: event.target.value })} /></label>
-              <label className="wide">Description<textarea value={restaurantInfo.description} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, description: event.target.value })} /></label>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="setup-grid">
-              <div className="setup-asset-field wide">
-                <div className="setup-asset-preview logo">
-                  {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : <span>No logo</span>}
-                </div>
-                <label className="setup-upload-button">
-                  {assetUploading === "logo" ? "Uploading..." : "Upload Logo"}
-                  <input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} disabled={assetUploading !== null} />
-                </label>
-                <label className="setup-asset-url-fallback">Paste URL fallback<input value={branding.logoUrl} onChange={(event) => { setBranding({ ...branding, logoUrl: event.target.value }); setLogoPreviewUrl(event.target.value); }} /></label>
-              </div>
-              <div className="setup-asset-field wide">
-                <div className="setup-asset-preview cover">
-                  {coverPreviewUrl ? <img src={coverPreviewUrl} alt="" /> : <span>No cover</span>}
-                </div>
-                <label className="setup-upload-button">
-                  {assetUploading === "cover" ? "Uploading..." : "Upload Cover"}
-                  <input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} disabled={assetUploading !== null} />
-                </label>
-                <label className="setup-asset-url-fallback">Paste URL fallback<input value={branding.coverUrl} onChange={(event) => { setBranding({ ...branding, coverUrl: event.target.value }); setCoverPreviewUrl(event.target.value); }} /></label>
-              </div>
-              <label>TIN/VAT<input value={branding.tinVat} onChange={(event) => setBranding({ ...branding, tinVat: event.target.value })} /></label>
-              <label className="wide">Receipt Footer<input value={branding.receiptFooter} onChange={(event) => setBranding({ ...branding, receiptFooter: event.target.value })} /></label>
-              <label>Instagram<input value={branding.instagram} onChange={(event) => setBranding({ ...branding, instagram: event.target.value })} /></label>
-              <label>Facebook<input value={branding.facebook} onChange={(event) => setBranding({ ...branding, facebook: event.target.value })} /></label>
-              <label>Website<input value={branding.website} onChange={(event) => setBranding({ ...branding, website: event.target.value })} /></label>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="setup-stack">
-              <div className="setup-step-copy">
-                <h2>Set your regular opening hours</h2>
-                <p>You can add special schedules from the Owner dashboard later.</p>
-              </div>
-              <div className="setup-grid">
-                <label>Opening<input type="time" value={hours.opensAt} onChange={(event) => setHours({ ...hours, opensAt: event.target.value })} /></label>
-                <label>Closing<input type="time" value={hours.closesAt} onChange={(event) => setHours({ ...hours, closesAt: event.target.value })} /></label>
-              </div>
-              <div className="setup-choice-row wrap">
-                {WEEK_DAYS.map((day) => <button type="button" className={hours.closedDays.includes(day) ? "selected" : ""} onClick={() => toggleClosedDay(day)} key={day}>{day}</button>)}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="setup-phase-placeholder">
-              <span aria-hidden="true">PA</span>
-              <div>
-                <p className="setup-import-kicker">Configure later</p>
-                <h2>Payment accounts</h2>
-                <p>No payment account is created or changed during this upload-foundation phase. Continue now and configure payment settings securely from the Owner dashboard.</p>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <AiMenuUploadStep
-              restaurantId={restaurantId}
-              onDraftCountChange={handleDraftCountChange}
-              onBusyChange={handleImportBusyChange}
-            />
-          )}
-
-          {step === 5 && (
-            <AiMenuReviewStudio
-              restaurantId={restaurantId}
-              onBusyChange={handleImportBusyChange}
-              onFinishSetup={completeSetup}
-            />
-          )}
-
-          {step === 6 && (
-            <div className="setup-stack">
-              <div className="setup-step-copy">
-                <h2>Prepare your table QR codes</h2>
-                <p>Choose how many table QR codes ServeFlow should create for this restaurant.</p>
-              </div>
-              {existingTables && (
-                <div className="setup-notice">
-                  <strong>{tables.length} table records already exist.</strong>
-                  <span>Setup will save the configured table count and let the database keep table records idempotent.</span>
-                </div>
-              )}
-              <div className="setup-choice-row">
-                {TABLE_PRESETS.map((count) => <button type="button" className={tablesChoice === "preset" && tableCount === count ? "selected" : ""} onClick={() => { setTablesChoice("preset"); setTableCount(count); }} key={count}>{count}</button>)}
-                <button type="button" className={tablesChoice === "custom" ? "selected" : ""} onClick={() => setTablesChoice("custom")}>Custom</button>
-              </div>
-              {tablesChoice === "custom" && (
-                <div className="setup-custom-tables">
-                  {CUSTOM_TABLES.map((count) => <button type="button" className={tableCount === count ? "selected" : ""} onClick={() => setTableCount(count)} key={count}>{count}</button>)}
-                  <label>
-                    Exact Table Count
-                    <input type="number" min={1} max={500} value={tableCount} onChange={(event) => updateCustomTableCount(event.target.value)} />
-                  </label>
-                </div>
-              )}
-              <div className="setup-table-summary">
-                <span>Selected tables</span>
-                <strong>{tableCount}</strong>
-              </div>
-            </div>
-          )}
-
-          {step === 7 && (
-            <div className="setup-finish">
-              <h2>Ready to launch</h2>
-              <div className="setup-summary">
-                <span className="with-image">Logo<strong>{logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : "Not added"}</strong></span>
-                <span>Restaurant Name<strong>{restaurantInfo.restaurantName}</strong></span>
-                <span>Import Drafts<strong>{importDraftCount}</strong></span>
-                <span>Tables<strong>{tableCount}</strong></span>
-                <span>Business Hours<strong>{hours.opensAt} - {hours.closesAt}</strong></span>
-                <span>Menu Status<strong>Not published</strong></span>
-              </div>
-              <div className="setup-draft-safety" role="status">
-                <strong>Nothing will be published from AI import drafts</strong>
-                <span>You can review and approve operational menu changes later.</span>
-              </div>
-              <div className="setup-actions">
-                <button className="setup-primary" type="button" onClick={() => void completeSetup()} disabled={submitting || assetUploading !== null}>{submitting ? "Launching..." : "Launch My Restaurant"}</button>
-              </div>
-            </div>
-          )}
+        <div className="setup-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Restaurant setup progress">
+          <span style={{ width: `${progress}%` }} />
         </div>
 
-        {step < FINAL_STEP && (
+        {error ? <div className="setup-error" role="alert">{error}</div> : null}
+
+        <div className="setup-body">
+          {step === 0 ? (
+            <div className="setup-grid setup-basics-form">
+              <label>Restaurant Name<input autoFocus required autoComplete="organization" value={restaurantInfo.restaurantName} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantName: event.target.value })} /></label>
+              <label>Restaurant Type<select value={restaurantInfo.restaurantType} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantType: event.target.value as RestaurantType })}>{RESTAURANT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
+              <label>Phone<input required inputMode="tel" autoComplete="tel" value={restaurantInfo.phone} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, phone: event.target.value })} /></label>
+              <label>Address<input required autoComplete="street-address" value={restaurantInfo.address} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, address: event.target.value })} /></label>
+              <label className="wide">Short Description<textarea maxLength={240} value={restaurantInfo.description} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, description: event.target.value })} /><small>{restaurantInfo.description.length}/240</small></label>
+            </div>
+          ) : null}
+
+          {step === 1 ? (
+            <AiMenuUploadStep restaurantId={restaurantId} restaurantType={restaurantInfo.restaurantType} onDraftCountChange={() => undefined} onBusyChange={handleImportBusyChange} onStarterCreated={() => void next()} showStarterMenuOption />
+          ) : null}
+
+          {step === 2 ? (
+            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} />
+          ) : null}
+
+          {step === 3 ? (
+            <div className="setup-branding">
+              <section className="setup-branding-assets" aria-label="Restaurant images">
+                <label className="setup-asset-card logo">
+                  <span>Logo</span>
+                  <span className="setup-asset-preview">{logoPreviewUrl ? <img src={logoPreviewUrl} alt="Restaurant logo preview" /> : <span aria-hidden="true">Logo</span>}</span>
+                  <span className="setup-upload-button">{assetUploading === "logo" ? "Uploading..." : "Choose Logo"}<input type="file" accept="image/*" disabled={assetUploading !== null} onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} /></span>
+                </label>
+                <label className="setup-asset-card cover">
+                  <span>Cover Image</span>
+                  <span className="setup-asset-preview cover">{coverPreviewUrl ? <img src={coverPreviewUrl} alt="Restaurant cover preview" /> : <span aria-hidden="true">Cover</span>}</span>
+                  <span className="setup-upload-button">{assetUploading === "cover" ? "Uploading..." : "Choose Cover"}<input type="file" accept="image/*" disabled={assetUploading !== null} onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} /></span>
+                </label>
+              </section>
+
+              <section className="setup-branding-section">
+                <h2>Menu style</h2>
+                <div className="setup-theme-options">{THEMES.map((theme) => <button type="button" aria-pressed={branding.theme === theme.id} className={branding.theme === theme.id ? "selected" : ""} onClick={() => setBranding({ ...branding, theme: theme.id })} key={theme.id}><span className={`setup-theme-swatch ${theme.id}`} />{theme.label}</button>)}</div>
+              </section>
+
+              <section className="setup-branding-section">
+                <h2>Business hours</h2>
+                <div className="setup-grid"><label>Opening<input type="time" value={hours.opensAt} onChange={(event) => setHours({ ...hours, opensAt: event.target.value })} /></label><label>Closing<input type="time" value={hours.closesAt} onChange={(event) => setHours({ ...hours, closesAt: event.target.value })} /></label></div>
+                <div className="setup-choice-row wrap" aria-label="Closed days">{WEEK_DAYS.map((day) => <button type="button" aria-pressed={hours.closedDays.includes(day)} className={hours.closedDays.includes(day) ? "selected" : ""} onClick={() => toggleClosedDay(day)} key={day}>{day.slice(0, 3)}</button>)}</div>
+              </section>
+
+              <section className="setup-branding-section">
+                <h2>Menu languages</h2>
+                <div className="setup-choice-row">{LANGUAGES.map((language) => <button type="button" aria-pressed={branding.languages.includes(language.id)} className={branding.languages.includes(language.id) ? "selected" : ""} onClick={() => toggleLanguage(language.id)} key={language.id}>{language.label}</button>)}</div>
+              </section>
+
+              <section className="setup-grid setup-branding-details">
+                <label>Instagram<input placeholder="@restaurant" value={branding.instagram} onChange={(event) => setBranding({ ...branding, instagram: event.target.value })} /></label>
+                <label>Facebook<input placeholder="Page name or URL" value={branding.facebook} onChange={(event) => setBranding({ ...branding, facebook: event.target.value })} /></label>
+                <label>Website<input inputMode="url" placeholder="https://" value={branding.website} onChange={(event) => setBranding({ ...branding, website: event.target.value })} /></label>
+                <label>VAT / TIN<input value={branding.tinVat} onChange={(event) => setBranding({ ...branding, tinVat: event.target.value })} /></label>
+                <label className="wide">Receipt Footer<input value={branding.receiptFooter} onChange={(event) => setBranding({ ...branding, receiptFooter: event.target.value })} /></label>
+              </section>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} />
+          ) : null}
+        </div>
+
+        {step !== 2 && step !== 4 ? (
           <footer className="setup-actions">
-            <button className="setup-secondary" type="button" onClick={back} disabled={step === 0 || submitting || assetUploading !== null || importUploadBusy}>Back</button>
-            <button className="setup-primary" type="button" onClick={next} disabled={submitting || assetUploading !== null || importUploadBusy}>{assetUploading ? "Uploading..." : importUploadBusy ? "Please wait..." : "Continue"}</button>
+            <button className="setup-secondary" type="button" onClick={back} disabled={step === 0 || submitting || assetUploading !== null || importBusy}>Back</button>
+            <button className="setup-primary" type="button" onClick={() => void next()} disabled={submitting || assetUploading !== null || importBusy}>{submitting ? "Saving..." : importBusy ? "Please wait..." : "Continue"}</button>
           </footer>
-        )}
+        ) : null}
       </section>
     </main>
   );

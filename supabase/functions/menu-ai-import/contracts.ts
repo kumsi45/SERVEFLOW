@@ -17,12 +17,6 @@ export type RawMenuCategory = {
   detectedLanguage: LanguageDetection;
 };
 
-export type RawVariant = {
-  name: ConfidenceField<string>;
-  price: ConfidenceField<number>;
-  currency: ConfidenceField<string>;
-};
-
 export type RawMenuItem = {
   category: ConfidenceField<string>;
   categoryLanguage: LanguageDetection;
@@ -32,29 +26,32 @@ export type RawMenuItem = {
   descriptionLanguage: LanguageDetection;
   price: ConfidenceField<number>;
   currency: ConfidenceField<string>;
-  variants: ConfidenceField<RawVariant[]>;
+};
+
+export type RawAiMenuResult = {
+  restaurantName: ConfidenceField<string>;
+  restaurantNameLanguage: LanguageDetection;
+  categories: RawMenuCategory[];
+  items: RawMenuItem[];
+};
+
+export type NormalizedMenuItem = RawMenuItem & {
+  variants: ConfidenceField<Array<{
+    name: ConfidenceField<string>;
+    price: ConfidenceField<number>;
+    currency: ConfidenceField<string>;
+  }>>;
   comboMeal: ConfidenceField<boolean>;
   drink: ConfidenceField<boolean>;
   optionalNotes: ConfidenceField<string>;
   optionalNotesLanguage: LanguageDetection;
   sourceText: ConfidenceField<string>;
-};
-
-export type RawExtractionResult = {
-  restaurantName: ConfidenceField<string>;
-  restaurantNameLanguage: LanguageDetection;
-  categories: RawMenuCategory[];
-  items: RawMenuItem[];
-  unrecognizedSections: Array<{ text: ConfidenceField<string> }>;
-};
-
-export type NormalizedMenuItem = RawMenuItem & {
   id: string;
   duplicate: boolean;
   duplicateOf: string[];
 };
 
-export type NormalizedExtractionResult = {
+export type NormalizedAiMenuResult = {
   schemaVersion: 1;
   restaurantName: ConfidenceField<string>;
   restaurantNameLanguage: LanguageDetection;
@@ -63,16 +60,16 @@ export type NormalizedExtractionResult = {
   unrecognizedSections: Array<{ text: ConfidenceField<string> }>;
 };
 
-export type ExtractionSource = {
+export type AiMenuSource = {
   bytes: Uint8Array;
   fileName: string;
   mimeType: string;
 };
 
-export type ExtractionProvider = {
+export type AiMenuProvider = {
   name: string;
   model: string;
-  extract(source: ExtractionSource): Promise<RawExtractionResult>;
+  importMenu(source: AiMenuSource): Promise<RawAiMenuResult>;
 };
 
 const confidenceField = (valueSchema: Record<string, unknown>) => ({
@@ -87,24 +84,12 @@ const confidenceField = (valueSchema: Record<string, unknown>) => ({
 
 const stringField = confidenceField({ type: "string" });
 const numberField = confidenceField({ type: "number" });
-const booleanField = confidenceField({ type: "boolean" });
 const languageField = confidenceField({
   type: "string",
   enum: ["en", "om", "am", "mixed", "unknown"],
 });
 
-const variantSchema = {
-  type: "object",
-  properties: {
-    name: stringField,
-    price: numberField,
-    currency: stringField,
-  },
-  required: ["name", "price", "currency"],
-  additionalProperties: false,
-};
-
-export const MENU_EXTRACTION_SCHEMA = {
+export const AI_MENU_JSON_SCHEMA = {
   type: "object",
   properties: {
     restaurantName: stringField,
@@ -134,15 +119,6 @@ export const MENU_EXTRACTION_SCHEMA = {
           descriptionLanguage: languageField,
           price: numberField,
           currency: stringField,
-          variants: confidenceField({
-            type: "array",
-            items: variantSchema,
-          }),
-          comboMeal: booleanField,
-          drink: booleanField,
-          optionalNotes: stringField,
-          optionalNotesLanguage: languageField,
-          sourceText: stringField,
         },
         required: [
           "category",
@@ -153,22 +129,7 @@ export const MENU_EXTRACTION_SCHEMA = {
           "descriptionLanguage",
           "price",
           "currency",
-          "variants",
-          "comboMeal",
-          "drink",
-          "optionalNotes",
-          "optionalNotesLanguage",
-          "sourceText",
         ],
-        additionalProperties: false,
-      },
-    },
-    unrecognizedSections: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: { text: stringField },
-        required: ["text"],
         additionalProperties: false,
       },
     },
@@ -178,7 +139,6 @@ export const MENU_EXTRACTION_SCHEMA = {
     "restaurantNameLanguage",
     "categories",
     "items",
-    "unrecognizedSections",
   ],
   additionalProperties: false,
 } as const;
@@ -210,21 +170,31 @@ function numberFieldValue(value: unknown): ConfidenceField<number> {
     : {};
   return {
     value:
-      typeof field.value === "number" && Number.isFinite(field.value)
+      typeof field.value === "number" && Number.isFinite(field.value) && field.value > 0
         ? field.value
         : null,
     confidence: clampConfidence(field.confidence),
   };
 }
 
-function booleanFieldValue(value: unknown): ConfidenceField<boolean> {
-  const field = value && typeof value === "object"
-    ? value as Record<string, unknown>
-    : {};
-  return {
-    value: typeof field.value === "boolean" ? field.value : null,
-    confidence: clampConfidence(field.confidence),
-  };
+const KNOWN_CURRENCIES = new Set([
+  "ETB", "USD", "EUR", "GBP", "KES", "UGX", "TZS", "RWF", "ZAR",
+  "NGN", "GHS", "AED", "SAR",
+]);
+
+function currencyFieldValue(value: unknown): ConfidenceField<string> {
+  const field = stringFieldValue(value);
+  const currency = field.value?.toUpperCase() ?? null;
+  return currency && KNOWN_CURRENCIES.has(currency)
+    ? { value: currency, confidence: field.confidence }
+    : { value: null, confidence: 0 };
+}
+
+function descriptionFieldValue(value: unknown): ConfidenceField<string> {
+  const field = stringFieldValue(value);
+  if (!field.value) return field;
+  const compact = field.value.split(/\r?\n/).slice(0, 2).join("\n").slice(0, 160).trim();
+  return { value: compact || null, confidence: compact ? field.confidence : 0 };
 }
 
 function languageFieldValue(value: unknown): LanguageDetection {
@@ -245,28 +215,6 @@ function languageFieldValue(value: unknown): LanguageDetection {
   };
 }
 
-function variantFieldValue(value: unknown): ConfidenceField<RawVariant[]> {
-  const field = value && typeof value === "object"
-    ? value as Record<string, unknown>
-    : {};
-  const variants = Array.isArray(field.value)
-    ? field.value.map((entry) => {
-        const variant = entry && typeof entry === "object"
-          ? entry as Record<string, unknown>
-          : {};
-        return {
-          name: stringFieldValue(variant.name),
-          price: numberFieldValue(variant.price),
-          currency: stringFieldValue(variant.currency),
-        };
-      })
-    : null;
-  return {
-    value: variants,
-    confidence: clampConfidence(field.confidence),
-  };
-}
-
 function duplicateKey(item: NormalizedMenuItem) {
   const name = item.name.value
     ?.normalize("NFKC")
@@ -276,9 +224,9 @@ function duplicateKey(item: NormalizedMenuItem) {
   return name || null;
 }
 
-export function normalizeExtraction(
-  raw: RawExtractionResult,
-): NormalizedExtractionResult {
+export function normalizeAiMenuResult(
+  raw: RawAiMenuResult,
+): NormalizedAiMenuResult {
   const record = raw && typeof raw === "object"
     ? raw as unknown as Record<string, unknown>
     : {};
@@ -293,16 +241,16 @@ export function normalizeExtraction(
       categoryLanguage: languageFieldValue(item.categoryLanguage),
       name: stringFieldValue(item.name),
       nameLanguage: languageFieldValue(item.nameLanguage),
-      description: stringFieldValue(item.description),
+      description: descriptionFieldValue(item.description),
       descriptionLanguage: languageFieldValue(item.descriptionLanguage),
       price: numberFieldValue(item.price),
-      currency: stringFieldValue(item.currency),
-      variants: variantFieldValue(item.variants),
-      comboMeal: booleanFieldValue(item.comboMeal),
-      drink: booleanFieldValue(item.drink),
-      optionalNotes: stringFieldValue(item.optionalNotes),
-      optionalNotesLanguage: languageFieldValue(item.optionalNotesLanguage),
-      sourceText: stringFieldValue(item.sourceText),
+      currency: currencyFieldValue(item.currency),
+      variants: { value: [], confidence: 1 },
+      comboMeal: { value: null, confidence: 0 },
+      drink: { value: null, confidence: 0 },
+      optionalNotes: { value: null, confidence: 0 },
+      optionalNotesLanguage: { value: "unknown", confidence: 0 },
+      sourceText: { value: null, confidence: 0 },
       duplicate: false,
       duplicateOf: [],
     };
@@ -323,10 +271,6 @@ export function normalizeExtraction(
   const rawCategories = Array.isArray(record.categories)
     ? record.categories
     : [];
-  const rawUnrecognized = Array.isArray(record.unrecognizedSections)
-    ? record.unrecognizedSections
-    : [];
-
   return {
     schemaVersion: 1,
     restaurantName: stringFieldValue(record.restaurantName),
@@ -343,11 +287,6 @@ export function normalizeExtraction(
       };
     }),
     items,
-    unrecognizedSections: rawUnrecognized.map((entry) => {
-      const section = entry && typeof entry === "object"
-        ? entry as Record<string, unknown>
-        : {};
-      return { text: stringFieldValue(section.text) };
-    }),
+    unrecognizedSections: [],
   };
 }

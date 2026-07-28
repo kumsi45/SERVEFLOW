@@ -1,20 +1,20 @@
 # Phase 9 production canary
 
-Date: 2026-07-28 (Africa/Nairobi)
+Date: 2026-07-28 (Africa/Nairobi), refreshed for Phase 9.11
 
 Project: `dbdhuuanfsniqvcyuscd`
 
-Canary slug: `phase9-canary-1785257669040`
+Latest AI canary slug: `phase9-canary-1785265703739` (cleaned up)
 
 ## Result
 
-FAILED — Phase 9 is not production certified.
+PARTIAL — the Phase 9.11 architecture and hosted starter adapter pass, while the configured AI provider remains unavailable.
 
 ## Steps executed
 
 1. Create Restaurant — PASS. The deployed `owner-signup` function created an authenticated owner and isolated canary restaurant.
 2. Upload Paper Menu — PASS. A 37,586-byte PNG paper-menu image was uploaded to the private `menu-import-drafts` bucket and registered through `menu_import_drafts`.
-3. AI Menu Import — FAIL. The deployed `menu-ocr-extract` function reached the configured OpenAI provider, which returned: `You exceeded your current quota, please check your plan and billing details.`
+3. AI Menu Import — FAIL with the safe owner message `We couldn't create your digital menu.` The uploaded source remained available. Provider details were not exposed.
 4. Review Studio — NOT RUN because AI Menu Import produced no draft.
 5. Generate AI Images — NOT RUN.
 6. Preview and Menu Health Check — NOT RUN.
@@ -26,6 +26,10 @@ FAILED — Phase 9 is not production certified.
 ## Cleanup
 
 The uploaded object, menu draft, application user, staff membership, restaurant tables, restaurant, and Auth user created for the failed canary were removed. The canary slug no longer exists.
+
+## Smart Starter Menu certification
+
+`node supabase/audits/phase9-production-canary.mjs --starter-draft` passed against the linked project. It created seven items in a private `ai_menu_import_drafts` Review Studio draft with `source_kind = starter`, verified owner visibility, created no production menu rows through the adapter, and removed the isolated canary restaurant afterward.
 
 ## Exact reproduction
 
@@ -39,4 +43,4 @@ The audit stops at the first failed production dependency and emits one `CANARY_
 
 ## Required remediation
 
-Restore quota/billing for the configured `OPENAI_API_KEY`, or explicitly approve and configure a production OCR provider fallback. Then rerun the canary from step 1 until all ten steps pass.
+Restore quota/billing for the configured `OPENAI_API_KEY`, or configure another implementation behind `MENU_AI_PROVIDER`. Then rerun the canary from step 1 until all ten steps pass.

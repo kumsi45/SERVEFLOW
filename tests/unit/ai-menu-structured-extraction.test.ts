@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  normalizeExtraction,
-  type RawExtractionResult,
-} from "../../supabase/functions/menu-ocr-extract/contracts.ts";
+  normalizeAiMenuResult,
+  type RawAiMenuResult,
+} from "../../supabase/functions/menu-ai-import/contracts.ts";
 import {
   getExtractionIssues,
   groupExtractionItems,
@@ -17,13 +17,13 @@ const migration = read(
   "supabase/migrations/188_phase9_8_2_ai_menu_structured_extraction.sql",
 );
 const edgeFunction = read(
-  "supabase/functions/menu-ocr-extract/index.ts",
+  "supabase/functions/menu-ai-import/index.ts",
 );
 const provider = read(
-  "supabase/functions/menu-ocr-extract/providers/openai.ts",
+  "supabase/functions/menu-ai-import/providers/openai.ts",
 );
 const registry = read(
-  "supabase/functions/menu-ocr-extract/providers/registry.ts",
+  "supabase/functions/menu-ai-import/providers/registry.ts",
 );
 const review = read(
   "src/modules/setup-wizard/components/AiMenuReviewStudio.tsx",
@@ -51,18 +51,12 @@ function menuItem(name: string, category: string | null, price: number | null) {
     descriptionLanguage: languageField("unknown", 0),
     price: { value: price, confidence: price === null ? 0 : 0.98 },
     currency: stringField(price === null ? null : "ETB"),
-    variants: { value: [], confidence: 0.9 },
-    comboMeal: { value: false, confidence: 0.9 },
-    drink: { value: false, confidence: 0.9 },
-    optionalNotes: stringField(null),
-    optionalNotesLanguage: languageField("unknown", 0),
-    sourceText: stringField(`${name} ${price ?? ""}`.trim(), 1),
   };
 }
 
-describe("Phase 9.8.2 AI menu structured extraction", () => {
+describe("Phase 9.11 AI Menu Import", () => {
   it("normalizes confidence and flags duplicates without merging them", () => {
-    const raw: RawExtractionResult = {
+    const raw: RawAiMenuResult = {
       restaurantName: stringField("Sample Cafe", 1),
       restaurantNameLanguage: languageField("en", 1),
       categories: [{
@@ -73,24 +67,22 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
         menuItem("Chechebsa", "Breakfast", 150),
         menuItem(" chechebsa ", null, null),
       ],
-      unrecognizedSections: [{ text: stringField("Call us", 0.7) }],
     };
 
-    const result = normalizeExtraction(raw);
+    const result = normalizeAiMenuResult(raw);
     expect(result.items).toHaveLength(2);
     expect(result.items.every((item) => item.duplicate)).toBe(true);
     expect(result.items[0].duplicateOf).toEqual(["item-2"]);
     expect(result.items[1].duplicateOf).toEqual(["item-1"]);
-    expect(result.unrecognizedSections[0].text.value).toBe("Call us");
+    expect(result.unrecognizedSections).toEqual([]);
   });
 
   it("groups owner preview by category and highlights review issues", () => {
-    const result = normalizeExtraction({
+    const result = normalizeAiMenuResult({
       restaurantName: stringField(null),
       restaurantNameLanguage: languageField("unknown", 0),
       categories: [],
       items: [menuItem("Kitfo", null, null)],
-      unrecognizedSections: [],
     });
     expect(groupExtractionItems(result.items)).toHaveProperty(
       "Missing Category",
@@ -98,6 +90,22 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
     expect(getExtractionIssues(result.items[0])).toEqual(
       expect.arrayContaining(["Missing price", "Missing category"]),
     );
+  });
+
+  it("repairs invalid prices, unknown currencies, and overlong descriptions safely", () => {
+    const item = menuItem("Coffee", "Drinks", -10);
+    item.currency = stringField("NOT-A-CURRENCY");
+    item.description = stringField(`${"A".repeat(170)}\nsecond\nthird`, 0.8);
+    const result = normalizeAiMenuResult({
+      restaurantName: stringField(null),
+      restaurantNameLanguage: languageField("unknown", 0),
+      categories: [],
+      items: [item],
+    });
+    expect(result.items[0].price.value).toBeNull();
+    expect(result.items[0].currency.value).toBeNull();
+    expect(result.items[0].description.value?.length).toBeLessThanOrEqual(160);
+    expect(result.items[0].description.value?.split("\n")).toHaveLength(1);
   });
 
   it("keeps extraction drafts isolated and owner-readable only", () => {
@@ -118,24 +126,23 @@ describe("Phase 9.8.2 AI menu structured extraction", () => {
   });
 
   it("uses a swappable provider and strict structured output", () => {
-    expect(registry).toContain("getMenuExtractionProvider");
-    expect(registry).toContain("MENU_OCR_PROVIDER");
+    expect(registry).toContain("getAiMenuProvider");
+    expect(registry).toContain("MENU_AI_PROVIDER");
     expect(provider).toContain('type: "json_schema"');
     expect(provider).toContain("strict: true");
     expect(provider).toContain("Never infer or invent those fields");
     expect(provider).toContain("restaurant-quality description");
     expect(provider).toContain("under 160 characters");
-    expect(provider).toContain("Never discard readable text");
+    expect(provider).toContain("Return only the structured restaurant name");
     expect(provider).toContain("store: false");
   });
 
-  it("shows confidence, missing data, duplicates, and unrecognized text", () => {
+  it("shows confidence, missing data, and duplicates", () => {
     const previewSource = `${review}\n${extractionTypes}`;
     expect(previewSource).toContain("formatConfidence");
     expect(previewSource).toContain("Missing price");
     expect(previewSource).toContain("Possible duplicate");
     expect(previewSource).toContain("Missing Category");
-    expect(review).toContain("Unrecognized Text");
-    expect(review).toContain("Nothing reaches the live menu");
+    expect(review).toContain("Nothing is published until you approve it");
   });
 });
