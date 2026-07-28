@@ -91,6 +91,8 @@ describe("Phase 9.2 Modern Food rendering", () => {
     expect(filterMenuItems(items, "", "drinks").map((item) => item.id)).toEqual(["item-2"]);
     expect(renderModern("prawn")).toContain('value="prawn"');
     expect(renderModern("", "drinks")).not.toContain("Prawn Ceviche");
+    expect(filterMenuItems(items, "prwan", "all").map((item) => item.id)).toEqual(["item-1"]);
+    expect(filterMenuItems(items, "citrus", "all").map((item) => item.id)).toEqual(["item-1"]);
   });
 
   it("renders retina-friendly lazy images, accessible actions, and the two-tab navigation", () => {

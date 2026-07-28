@@ -49,6 +49,8 @@ import {
 } from "../services/menuImportDraftService";
 import type { MenuExtractionDraft } from "../services/menuExtractionTypes";
 import { VirtualizedReviewItems } from "./VirtualizedReviewItems";
+import { AiMenuFinalPreview } from "./AiMenuFinalPreview";
+import { loadMenuPreviewRestaurant, loadMenuPublishHistory, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
 
 type AiMenuReviewStudioProps = {
   restaurantId: string;
@@ -112,6 +114,12 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     useState<MenuLanguage>("en");
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({});
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [previewRestaurant, setPreviewRestaurant] = useState<MenuPreviewRestaurant | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStage, setPublishStage] = useState<string | null>(null);
+  const [publishResult, setPublishResult] = useState<MenuPublishSummary | null>(null);
+  const [publishHistory, setPublishHistory] = useState<MenuPublishHistoryEntry[]>([]);
 
   const reviewStatesRef = useRef(reviewStates);
   const revisionsRef = useRef<Record<string, number>>({});
@@ -740,8 +748,69 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     });
   }
 
+  async function openPreview() {
+    if (!activeExtraction || !state || !canEdit) return;
+    if (saveStatus === "dirty" || saveStatus === "saving") await persistRef.current(activeExtraction.id);
+    try {
+      setError(null);
+      setPreviewRestaurant(await loadMenuPreviewRestaurant(restaurantId));
+      setPublishHistory(await loadMenuPublishHistory(restaurantId, activeExtraction.id));
+      setPreviewOpen(true);
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "The final menu preview could not be opened.");
+    }
+  }
+
+  async function publishReviewedMenu() {
+    if (!activeExtraction || publishing) return;
+    setPublishing(true);
+    setPublishResult(null);
+    setError(null);
+    const stages = ["Preparing", "Categories", "Menu Items", "Images", "Translations", "Finalizing"];
+    let stageIndex = 0;
+    setPublishStage(stages[0]);
+    const timer = window.setInterval(() => {
+      stageIndex = Math.min(stageIndex + 1, stages.length - 1);
+      setPublishStage(stages[stageIndex]);
+    }, 650);
+    try {
+      const result = await publishMenuDraft(restaurantId, activeExtraction.id, revisionsRef.current[activeExtraction.id]);
+      setPublishStage("Published");
+      setPublishResult(result);
+      setPublishHistory(await loadMenuPublishHistory(restaurantId, activeExtraction.id));
+    } catch (publishError) {
+      setPublishStage("Failed");
+      setError(publishError instanceof Error ? publishError.message : "The menu could not be published. No menu changes were committed.");
+    } finally {
+      window.clearInterval(timer);
+      setPublishing(false);
+    }
+  }
+
+  async function restorePublishedDraft(versionId: string) {
+    if (!activeExtraction || publishing) return;
+    try {
+      setError(null);
+      await restoreMenuPublishVersion(restaurantId, activeExtraction.id, versionId);
+      setPreviewOpen(false);
+      await load();
+    } catch (restoreError) {
+      setError(restoreError instanceof Error ? restoreError.message : "The previous draft could not be restored.");
+    }
+  }
+
   if (loading) {
     return <p className="setup-import-empty">Loading AI Review Studio...</p>;
+  }
+
+  if (previewOpen && previewRestaurant && state) {
+    return <div className="ai-review-studio">
+      {error ? <div className="setup-warning" role="alert">{error}</div> : null}
+      {publishStage ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><strong>{publishStage}</strong><div><span className={publishing ? "running" : "complete"} /></div></section> : null}
+      {publishResult ? <section className="menu-publish-success" role="status"><span aria-hidden="true">✓</span><h2>Menu Published Successfully</h2><div><strong>{publishResult.categoriesPublished}</strong><span>Categories Published</span><strong>{publishResult.itemsPublished}</strong><span>Menu Items Published</span><strong>{publishResult.imagesPublished}</strong><span>Images Published</span><strong>{publishResult.languagesPublished}</strong><span>Languages Published</span><strong>{publishResult.skippedItems}</strong><span>Skipped Items</span></div><div><a href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live QR Menu</a><a href="/owner/menu">Go To Menu Management</a><button type="button" onClick={() => setPreviewOpen(false)}>Finish Restaurant Setup</button></div></section> : null}
+      <AiMenuFinalPreview restaurant={previewRestaurant} state={state} onReturn={() => setPreviewOpen(false)} onPublish={() => void publishReviewedMenu()} publishing={publishing} />
+      {publishHistory.length ? <section className="menu-publish-history"><h3>Publish History</h3>{publishHistory.map((entry) => <article key={entry.id}><strong>Version {entry.publishedVersion}</strong><span>{new Date(entry.publishedAt).toLocaleString()}</span><small>{entry.itemsPublished} items · {entry.imagesPublished} images · revision {entry.reviewRevision}</small><button type="button" disabled={publishing} onClick={() => void restorePublishedDraft(entry.id)}>Restore Previous Draft</button></article>)}</section> : null}
+    </div>;
   }
 
   return (
@@ -1236,13 +1305,14 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         </>
       ) : null}
 
-      <div className="setup-draft-safety" role="status">
+      <div className="setup-draft-safety phase-985-safety-retired" role="status">
         <strong>AI Import Draft only — publishing is not available</strong>
         <span>
           Nothing reaches the live menu, categories, ordering, inventory,
           recipes, or QR menu in this phase.
         </span>
       </div>
+      {state && activeExtraction ? <div className="setup-draft-safety review-publish-actions" role="status"><div><strong>Review Studio is the publishing source</strong><span>Preview the customer menu before publishing. Nothing changes until Publish Menu is confirmed.</span></div>{canEdit ? <button className="setup-primary" type="button" disabled={saveStatus !== "saved" || summary?.progress !== 100} onClick={() => void openPreview()}>Preview Digital Menu</button> : null}</div> : null}
     </div>
   );
 });

@@ -3340,6 +3340,111 @@ h1 {
   padding: 14px;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.resilient-image {
+  transition: opacity 180ms ease;
+}
+
+.resilient-image.is-loading {
+  opacity: 0;
+}
+
+.resilient-image.is-loaded {
+  opacity: 1;
+}
+
+.menu-state button,
+.qr-offline-state button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  color: #fff;
+  background: #1e5b4c;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.qr-language-selector {
+  position: fixed;
+  top: max(72px, calc(env(safe-area-inset-top) + 62px));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 40;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(38, 33, 30, .12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 4px 14px rgba(38, 33, 30, .12);
+  backdrop-filter: blur(8px);
+}
+
+.qr-language-selector button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  color: #5d554f;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.qr-language-selector button.active {
+  color: #fff;
+  background: #1e5b4c;
+}
+
+.qr-offline-state {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: #4b3514;
+  background: #fff0c2;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.qr-offline-state button {
+  flex: 0 0 auto;
+  color: #4b3514;
+  background: #fff;
+}
+
+.modern-food-card,
+.premium-grid-card,
+.premium-luxury-card,
+.coffee-theme-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
+@media (max-width: 430px) {
+  .qr-offline-state {
+    align-items: flex-start;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+}
+
 .skeleton-hero,
 .skeleton-controls,
 .skeleton-card {

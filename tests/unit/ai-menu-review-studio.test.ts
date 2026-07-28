@@ -297,12 +297,12 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
     expect(imageDraftEdgeFunction).not.toMatch(/translation|translated/i);
   });
 
-  it("keeps Review Studio image data draft-only with no publishing", () => {
-    const productionSource = `${studio}\n${service}\n${imageService}\n${edgeFunction}\n${migration}\n${imageDraftEdgeFunction}\n${imageDraftMigration}`;
+  it("keeps Phase 9.8.5 image generation draft-only", () => {
+    const productionSource = `${service}\n${imageService}\n${edgeFunction}\n${migration}\n${imageDraftEdgeFunction}\n${imageDraftMigration}`;
     expect(productionSource).not.toMatch(
       /publishMenu|\.from\("(menu_items|categories|inventory_items|recipes|orders|payments)"\)/,
     );
-    expect(studio).toContain("publishing is not available");
-    expect(studio).toContain("Nothing reaches the live menu");
+    expect(imageDraftMigration).toContain("Generated assets remain Review Studio drafts");
+    expect(imageDraftEdgeFunction).not.toContain("publish_ai_menu_draft");
   });
 });

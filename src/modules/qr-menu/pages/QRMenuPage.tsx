@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DEFAULT_MENU_LANGUAGE } from "../../../core/menu/menuLanguage";
+import {
+  DEFAULT_MENU_LANGUAGE,
+  MENU_LANGUAGE_OPTIONS,
+  isMenuLanguage,
+  type MenuLanguage,
+} from "../../../core/menu/menuLanguage";
 import { subscribeCustomerTrackingEvents } from "../../../core/realtime/restaurantEventService";
 import {
   canonicalOperationalStatus,
@@ -110,10 +115,14 @@ function getReadableInvoiceNumber(
 }
 
 export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
-  // Phase 9.8.4 prepares this presentation preference without exposing a
-  // customer-facing selector. A later phase can replace the default with
-  // persisted customer choice without changing menu or theme components.
-  const menuLanguage = DEFAULT_MENU_LANGUAGE;
+  const [menuLanguage, setMenuLanguage] = useState<MenuLanguage>(() => {
+    try {
+      const saved = window.localStorage.getItem("serveflow:menu-language");
+      return isMenuLanguage(saved) ? saved : DEFAULT_MENU_LANGUAGE;
+    } catch {
+      return DEFAULT_MENU_LANGUAGE;
+    }
+  });
   const modernNavigation = useModernMenuNavigation();
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
@@ -165,6 +174,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     searchTerm,
     loading,
     error,
+    usingCachedMenu,
+    retry,
     setActiveCategoryId,
     setSearchTerm,
   } = useQRMenu(restaurantSlug, menuLanguage);
@@ -192,6 +203,16 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       restaurant?.id,
     ],
   );
+
+  useEffect(() => {
+    const previousHtmlLanguage = document.documentElement.lang;
+    document.documentElement.lang = MENU_LANGUAGE_OPTIONS.find(
+      ({ code }) => code === menuLanguage,
+    )?.htmlLang ?? "en";
+    try { window.localStorage.setItem("serveflow:menu-language", menuLanguage); }
+    catch { /* Language persistence is optional. */ }
+    return () => { document.documentElement.lang = previousHtmlLanguage; };
+  }, [menuLanguage]);
 
   useEffect(() => {
     currentSessionKeyRef.current = checkout.sessionKey;
@@ -593,7 +614,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   if (loading) {
     return (
       <main className="qr-menu-page">
-        <section className="menu-loading" aria-label="Loading menu">
+        <section className="menu-loading" aria-label="Loading menu" role="status" aria-live="polite">
+          <span className="visually-hidden">Loading menu</span>
           <div className="skeleton-hero" />
           <div className="skeleton-controls" />
           <div className="skeleton-grid">
@@ -609,9 +631,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   if (error || !restaurant) {
     return (
       <main className="qr-menu-page">
-        <section className="menu-state">
+        <section className="menu-state" role="alert">
           <h1>Menu unavailable</h1>
-          <p>{error || "This restaurant menu could not be loaded."}</p>
+          <p>We could not load this menu. Check your connection and try again.</p>
+          <button type="button" onClick={retry}>Try Again</button>
         </section>
       </main>
     );
@@ -685,6 +708,27 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         language={menuLanguage}
       >
         <main className="qr-menu-page modern-food-page">
+      <nav className="qr-language-selector" aria-label="Menu language">
+        {MENU_LANGUAGE_OPTIONS.map((option) => (
+          <button
+            key={option.code}
+            type="button"
+            className={menuLanguage === option.code ? "active" : undefined}
+            aria-pressed={menuLanguage === option.code}
+            aria-label={`Show menu in ${option.label}`}
+            title={option.nativeLabel}
+            onClick={() => setMenuLanguage(option.code)}
+          >
+            {option.code.toUpperCase()}
+          </button>
+        ))}
+      </nav>
+      {usingCachedMenu ? (
+        <div role="status" className="qr-offline-state">
+          <span>Showing the last saved menu. Prices and availability may have changed.</span>
+          <button type="button" onClick={retry}>Refresh</button>
+        </div>
+      ) : null}
       {realtimeState !== "connected" ? (
         <div role="status" className="qr-realtime-state">
           Realtime reconnecting…

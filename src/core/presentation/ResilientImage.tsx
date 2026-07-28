@@ -21,12 +21,16 @@ export const ResilientImage = memo(function ResilientImage({
   fallback,
   fallbackClassName,
   fallbackLabel,
+  className,
+  onLoad,
   ...imageProps
 }: ResilientImageProps) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setFailed(false);
+    setLoaded(false);
   }, [src]);
 
   if (!src || failed) {
@@ -46,6 +50,12 @@ export const ResilientImage = memo(function ResilientImage({
     <img
       {...imageProps}
       src={src}
+      className={["resilient-image", loaded ? "is-loaded" : "is-loading", className].filter(Boolean).join(" ")}
+      data-image-state={loaded ? "loaded" : "loading"}
+      onLoad={(event) => {
+        setLoaded(true);
+        onLoad?.(event);
+      }}
       onError={() => setFailed(true)}
     />
   );

@@ -154,10 +154,11 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
       .toBe("Coffee");
   });
 
-  it("prepares one QR/theme language boundary without building a selector", () => {
-    expect(qrPage).toContain("const menuLanguage = DEFAULT_MENU_LANGUAGE");
+  it("provides one persisted QR/theme language boundary", () => {
+    expect(qrPage).toContain("MENU_LANGUAGE_OPTIONS.map");
+    expect(qrPage).toContain("setMenuLanguage(option.code)");
     expect(qrPage).toContain("language={menuLanguage}");
-    expect(qrPage).not.toMatch(/language-selector|setMenuLanguage|Google Translate/i);
+    expect(qrPage).not.toMatch(/Google Translate/i);
     expect(themeTypes).toContain("language?: MenuLanguage");
     expect(themeRenderer).toContain("data-menu-language");
     expect(themeRenderer).toContain("menuLanguageHtmlTag");
@@ -185,4 +186,3 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
     );
   });
 });
-
