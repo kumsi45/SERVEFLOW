@@ -180,7 +180,7 @@ describe("Phase 8.2 stock operation validation", () => {
     }, context, "r1");
     expect(invalid.errors).toEqual(expect.arrayContaining([
       "Movement quantity must be greater than zero.",
-      "Selected inventory item is invalid.",
+      "Selected ingredient is invalid.",
       "Selected storage location is invalid.",
       "Selected supplier is invalid.",
     ]));

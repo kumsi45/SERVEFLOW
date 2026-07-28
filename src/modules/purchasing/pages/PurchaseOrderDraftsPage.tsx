@@ -216,14 +216,14 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
             <label>Expected Delivery Date<input required type="date" value={form.expectedDeliveryDate} onChange={(event) => setForm({ ...form, expectedDeliveryDate: event.target.value })} /></label>
             <label className="wide">Notes<textarea maxLength={2000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional supplier or delivery notes" /></label>
           </div>
-          <div className="po-lines-heading"><h3>Inventory Items</h3><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })}>Add Item</button></div>
+          <div className="po-lines-heading"><h3>Ingredients</h3><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })}>Add Ingredient</button></div>
           <div className="po-lines">
             {form.lines.map((line, index) => (
               <div className="po-line" key={`${index}:${line.inventoryItemId}`}>
-                <label>Inventory Item<select required value={line.inventoryItemId} onChange={(event) => {
+                <label>Ingredient<select required value={line.inventoryItemId} onChange={(event) => {
                   const item = activeItems.find((candidate) => candidate.id === event.target.value);
                   updateLine(index, { inventoryItemId: event.target.value, purchaseUnitId: item?.unitId ?? line.purchaseUnitId });
-                }}><option value="">Select item</option>{activeItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                }}><option value="">Select ingredient</option>{activeItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                 <label>Quantity<input required min="0.001" step="0.001" type="number" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></label>
                 <label>Purchase Unit<select required value={line.purchaseUnitId} onChange={(event) => updateLine(index, { purchaseUnitId: event.target.value })}><option value="">Select unit</option>{activeUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
                 <label>Unit Price<input required min="0" step="0.01" type="number" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} /></label>

@@ -93,7 +93,7 @@ export function MovementHistoryPage({ movements, onRefresh }: Props) {
       <section className="ia-toolbar">
         <label className="ia-search">
           <span>Search movement history</span>
-          <input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Search stock item, order, menu item, recipe, station, or staff" />
+          <input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Search ingredient, order, menu item, recipe, station, or staff" />
         </label>
         <div className="ia-actions">
           <button type="button" onClick={() => setFilters(EMPTY_FILTERS)}>Clear Filters</button>
@@ -103,7 +103,7 @@ export function MovementHistoryPage({ movements, onRefresh }: Props) {
       <section className="ia-filters movement-history-filters" aria-label="Movement history filters">
         <label><span>From</span><input type="date" value={filters.dateFrom} onChange={(event) => setFilter("dateFrom", event.target.value)} /></label>
         <label><span>To</span><input type="date" value={filters.dateTo} onChange={(event) => setFilter("dateTo", event.target.value)} /></label>
-        <label><span>Inventory Item</span><select value={filters.inventoryItemId} onChange={(event) => setFilter("inventoryItemId", event.target.value)}><option value="">All inventory items</option>{inventoryItems.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+        <label><span>Ingredient</span><select value={filters.inventoryItemId} onChange={(event) => setFilter("inventoryItemId", event.target.value)}><option value="">All ingredients</option>{inventoryItems.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
         <label><span>Menu Item</span><select value={filters.menuItemId} onChange={(event) => setFilter("menuItemId", event.target.value)}><option value="">All menu items</option>{menuItems.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
         <label><span>Recipe</span><select value={filters.recipeId} onChange={(event) => setFilter("recipeId", event.target.value)}><option value="">All recipes</option>{recipes.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
         <label><span>Kitchen Station</span><select value={filters.kitchenStationId} onChange={(event) => setFilter("kitchenStationId", event.target.value)}><option value="">All kitchen stations</option>{stations.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
@@ -115,14 +115,14 @@ export function MovementHistoryPage({ movements, onRefresh }: Props) {
       </section>
       <section className="ia-table-wrap">
         <table className="ia-table movement-history">
-          <thead><tr><th>Date &amp; Time</th><th>Inventory Item</th><th>Movement Type</th><th>Quantity</th><th>Unit</th><th>Order Number</th><th>Menu Item</th><th>Recipe</th><th>Dining Session</th><th>Kitchen Station</th><th>Performed By</th><th>Current Stock After Movement</th></tr></thead>
+          <thead><tr><th>Date &amp; Time</th><th>Ingredient</th><th>Movement Type</th><th>Quantity</th><th>Unit</th><th>Order Number</th><th>Menu Item</th><th>Recipe</th><th>Dining Session</th><th>Kitchen Station</th><th>Performed By</th><th>Current Stock After Movement</th></tr></thead>
           <tbody>{rows.map((movement) => <tr key={movement.id}>
             <td data-label="Date & Time">{dateTimeLabel(movement.createdAt)}</td>
-            <td data-label="Inventory Item"><strong>{movement.inventoryItemName}</strong><small>Before: {quantityLabel(movement.quantityBefore)} {movement.unit}</small></td>
+            <td data-label="Ingredient"><strong>{movement.inventoryItemName}</strong><small>Before: {quantityLabel(movement.quantityBefore)} {movement.unit}</small></td>
             <td data-label="Movement Type"><span className="ia-status food-consumption">Food Consumption</span></td>
             <td data-label="Quantity"><strong className="ia-negative">-{quantityLabel(movement.quantity)}</strong></td>
             <td data-label="Unit">{movement.unit}</td>
-            <td data-label="Order Number"><strong>{movement.orderNumber}</strong><small>Item {movement.orderItemId.slice(0, 8)}</small></td>
+            <td data-label="Order Number"><strong>{movement.orderNumber}</strong><small>Order line {movement.orderItemId.slice(0, 8)}</small></td>
             <td data-label="Menu Item">{movement.menuItemName}</td>
             <td data-label="Recipe">{movement.recipeName ?? "Ready-to-Serve"}</td>
             <td data-label="Dining Session"><strong>{movement.diningSessionNumber}</strong><small>Batch {movement.kitchenBatchId}</small></td>

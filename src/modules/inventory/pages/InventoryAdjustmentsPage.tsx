@@ -165,7 +165,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
             <label>Reason<select required value={form.adjustmentType} onChange={(event) => setForm({ ...form, adjustmentType: event.target.value as InventoryAdjustmentType })}><option value="">Select reason</option>{validAdjustmentTypes(form.direction).map((type) => <option key={type} value={type}>{ADJUSTMENT_TYPE_LABELS[type]}</option>)}</select></label>
             <label className="wide">Notes<textarea maxLength={1000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional operational details" /></label>
           </div>
-          <div className="iad-lines-heading"><h3>Inventory Items</h3><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })}>Add Item</button></div>
+          <div className="iad-lines-heading"><h3>Ingredients</h3><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })}>Add Ingredient</button></div>
           <div className="iad-lines">
             {form.lines.map((line, index) => {
               const item = activeItems.find((candidate) => candidate.id === line.inventoryItemId);
@@ -174,7 +174,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
               const after = form.direction === "increase" ? current + quantity : current - quantity;
               return (
                 <div className="iad-line" key={`${index}:${line.inventoryItemId}`}>
-                  <label>Inventory Item<select required value={line.inventoryItemId} onChange={(event) => updateLine(index, { inventoryItemId: event.target.value })}><option value="">Select item</option>{activeItems.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+                  <label>Ingredient<select required value={line.inventoryItemId} onChange={(event) => updateLine(index, { inventoryItemId: event.target.value })}><option value="">Select ingredient</option>{activeItems.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
                   <label>Quantity<input required min="0.001" step="0.001" type="number" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></label>
                   <div className="iad-stock-preview"><span>Current → After</span><strong>{quantityLabel(current)} → {quantityLabel(after)}</strong>{item && <small>{currentStock.find((stock) => stock.inventoryItemId === item.id)?.unitName ?? "units"}</small>}</div>
                   <button className="danger" disabled={form.lines.length === 1} type="button" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })}>Remove</button>
@@ -203,14 +203,14 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
         </section>
       )}
 
-      <section className="iad-filters" aria-label="Adjustment history filters">
+      <details className="ia-collapsible-filters"><summary>Filters <span aria-hidden="true">▼</span></summary><section className="iad-filters" aria-label="Adjustment history filters">
         <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search item, reason, user, or movement" /></label>
         <label>Date From<input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label>
         <label>Date To<input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "confirmed")}><option value="all">All statuses</option><option value="confirmed">Confirmed</option></select></label>
-        <label>Inventory Item<select value={itemFilter} onChange={(event) => setItemFilter(event.target.value)}><option value="">All items</option>{items.filter((item) => item.status !== "deleted").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Ingredient<select value={itemFilter} onChange={(event) => setItemFilter(event.target.value)}><option value="">All ingredients</option>{items.filter((item) => item.status !== "deleted").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>Adjustment Type<select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | InventoryAdjustmentType)}><option value="all">All types</option>{Object.entries(ADJUSTMENT_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      </section>
+      </section></details>
 
       {loading ? <div className="ia-empty">Loading adjustment history...</div> : (
         <section className="iad-history" aria-label="Adjustment history">

@@ -103,7 +103,7 @@ export function PurchaseHistoryPage({ restaurantId }: Props) {
             <div><dt>Number of Items</dt><dd>{selected.itemCount}</dd></div>
           </dl>
           <section className="ph-lines" aria-label="Purchase lines">
-            <div className="ph-line header"><span>Inventory Item</span><span>Ordered</span><span>Received</span><span>Remaining</span><span>Purchase Unit</span><span>Unit Price</span><span>Line Total</span></div>
+            <div className="ph-line header"><span>Ingredient</span><span>Ordered</span><span>Received</span><span>Remaining</span><span>Purchase Unit</span><span>Unit Price</span><span>Line Total</span></div>
             {selected.lines.map((line) => <div className="ph-line" key={line.id}><strong>{line.inventoryItemName}</strong><span data-label="Ordered">{quantity(line.orderedQuantity)}</span><span data-label="Received">{quantity(line.receivedQuantity)}</span><span data-label="Remaining">{quantity(line.remainingQuantity)}</span><span data-label="Purchase Unit">{line.purchaseUnitName}</span><span data-label="Unit Price">{money(line.unitPrice)}</span><strong data-label="Line Total">{money(line.lineTotal)}</strong></div>)}
           </section>
           {selected.notes && <section className="ph-notes"><h3>Notes</h3><p>{selected.notes}</p></section>}
@@ -122,7 +122,7 @@ export function PurchaseHistoryPage({ restaurantId }: Props) {
       {error && <div className="ia-alert error">{error}</div>}
 
       <section className="ph-filters" aria-label="Purchase history filters">
-        <label className="search">Search<input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Purchase number, supplier, or inventory item" /></label>
+        <label className="search">Search<input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Purchase number, supplier, or ingredient" /></label>
         <label>Supplier<select value={filters.supplierId} onChange={(event) => setFilter("supplierId", event.target.value)}><option value="">All suppliers</option>{suppliers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
         <label>Status<select value={filters.status} onChange={(event) => setFilter("status", event.target.value as PurchaseHistoryFilters["status"])}><option value="all">All statuses</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Date From<input type="date" value={filters.dateFrom} onChange={(event) => setFilter("dateFrom", event.target.value)} /></label>

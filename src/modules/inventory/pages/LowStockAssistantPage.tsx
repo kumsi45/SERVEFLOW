@@ -134,12 +134,12 @@ export function LowStockAssistantPage({
   function openDraft() {
     if (!canCreate) return;
     if (!selectedItemIds.length) {
-      setError("Select at least one out-of-stock, critical, or low-stock item with a maximum stock value.");
+      setError("Select at least one out-of-stock, critical, or low-stock ingredient with a maximum stock value.");
       return;
     }
     const form = suggestedPurchaseDraft({ rows, selectedItemIds, supplierId: "", expectedDeliveryDate: "", items });
     if (!form.lines.length) {
-      setError("The selected items do not have a positive suggested purchase quantity.");
+      setError("The selected ingredients do not have a positive suggested purchase quantity.");
       return;
     }
     setDraft(form);
@@ -198,7 +198,7 @@ export function LowStockAssistantPage({
       </section>
 
       <section className="lsa-filters" aria-label="Low stock assistant filters">
-        <label className="wide">Search<input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Inventory item, supplier, or category" /></label>
+        <label className="wide">Search<input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Ingredient, supplier, or category" /></label>
         <label>Storage Location<select value={filters.storageLocationId} onChange={(event) => setFilter("storageLocationId", event.target.value)}><option value="">All locations</option>{storageLocations.filter((row) => row.status !== "deleted").map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
         <label>Category<select value={filters.categoryId} onChange={(event) => setFilter("categoryId", event.target.value)}><option value="">All categories</option>{categories.filter((row) => row.status !== "deleted").map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
         <label>Supplier<select value={filters.supplierId} onChange={(event) => setFilter("supplierId", event.target.value)}><option value="">All suppliers</option>{suppliers.filter((row) => row.status !== "deleted").map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
@@ -209,14 +209,14 @@ export function LowStockAssistantPage({
       {canCreate && selectableRows.length > 0 && (
         <div className="lsa-selection-bar">
           <span>{selectedItemIds.length} selected</span>
-          <button type="button" onClick={() => setSelectedItemIds(selectableRows.map((row) => row.inventoryItemId))}>Select Visible Suggested Items</button>
+          <button type="button" onClick={() => setSelectedItemIds(selectableRows.map((row) => row.inventoryItemId))}>Select Visible Suggested Ingredients</button>
           <button type="button" onClick={() => setSelectedItemIds([])}>Clear</button>
         </div>
       )}
 
       <section className="lsa-table-wrap">
         <table className="lsa-table">
-          <thead><tr>{canCreate && <th aria-label="Select" />}<th>Inventory Item</th><th>Stock Level</th><th>Current Quantity</th><th>Minimum Stock</th><th>Maximum Stock</th><th>Suggested Purchase</th><th>Supplier</th><th>Category</th><th>Storage Location</th><th>Adjustment Type</th></tr></thead>
+          <thead><tr>{canCreate && <th aria-label="Select" />}<th>Ingredient</th><th>Stock Level</th><th>Current Quantity</th><th>Minimum Stock</th><th>Maximum Stock</th><th>Suggested Purchase</th><th>Supplier</th><th>Category</th><th>Storage Location</th><th>Adjustment Type</th></tr></thead>
           <tbody>
             {filteredRows.map((row) => {
               const selectable = row.classification !== "healthy" && row.suggestedPurchase > 0;
@@ -236,12 +236,12 @@ export function LowStockAssistantPage({
             })}
           </tbody>
         </table>
-        {!filteredRows.length && <div className="ia-empty">No inventory items match these filters.</div>}
+        {!filteredRows.length && <div className="ia-empty">No ingredients match these filters.</div>}
       </section>
 
       {draft && canCreate && (
         <div className="lsa-overlay" role="presentation">
-          <section className="lsa-draft" role="dialog" aria-modal="true" aria-label="Create purchase draft from low stock items">
+          <section className="lsa-draft" role="dialog" aria-modal="true" aria-label="Create purchase draft from low stock ingredients">
             <header><div><span>Purchase Shortcut</span><h3>Create Purchase Draft</h3><p>Review every value. Nothing is created until you select Save Draft.</p></div><button type="button" onClick={() => setDraft(null)} aria-label="Close">×</button></header>
             <div className="lsa-draft-fields">
               <label>Supplier<select required value={draft.supplierId} onChange={(event) => setDraft({ ...draft, supplierId: event.target.value })}><option value="">Select supplier manually</option>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
@@ -253,7 +253,7 @@ export function LowStockAssistantPage({
                 const item = items.find((candidate) => candidate.id === line.inventoryItemId);
                 const unit = units.find((candidate) => candidate.id === line.purchaseUnitId);
                 return <div key={line.inventoryItemId}>
-                  <strong>{item?.name ?? "Inventory Item"}</strong>
+                  <strong>{item?.name ?? "Ingredient"}</strong>
                   <label>Quantity<input min="0.001" step="0.001" type="number" value={line.quantity} onChange={(event) => updateDraftLine(index, "quantity", event.target.value)} /></label>
                   <span>{unit?.name ?? "Base unit"}</span>
                   <label>Unit Price<input min="0" step="0.01" type="number" value={line.unitPrice} onChange={(event) => updateDraftLine(index, "unitPrice", event.target.value)} /></label>

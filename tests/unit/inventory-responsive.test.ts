@@ -24,7 +24,7 @@ describe("Phase 8.2.6 Inventory navigation architecture", () => {
   it("keeps only the requested workflow links in the hamburger and excludes theme", () => {
     const menu = page.slice(page.indexOf("const MOBILE_MENU_NAV"), page.indexOf("const MOBILE_PRIMARY_NAV"));
     expect(menu.match(/label: "/g)).toHaveLength(6);
-    for (const label of ["Dashboard", "Stock Management", "Inventory Records", "Suppliers", "Reports", "Settings"]) {
+    for (const label of ["Inventory Reports", "Suppliers", "Inventory Setup", "Settings", "Export", "Help"]) {
       expect(menu).toContain(`label: "${label}"`);
     }
     expect(menu).not.toContain("Theme");
@@ -34,12 +34,14 @@ describe("Phase 8.2.6 Inventory navigation architecture", () => {
     expect(page).toContain('onClick={() => setMobileMenuOpen((open) => !open)}');
   });
 
-  it("uses exactly four large primary mobile actions without More, Settings, or Theme", () => {
+  it("uses exactly four large primary mobile actions without More, Reports, Settings, Profile, or Theme", () => {
     const bottom = page.slice(page.indexOf("const MOBILE_PRIMARY_NAV"), page.indexOf("const DEFAULT_FILTERS"));
     expect(bottom.match(/label: "/g)).toHaveLength(4);
-    for (const label of ["Home", "Stock", "Add", "Reports"]) expect(bottom).toContain(`label: "${label}"`);
+    for (const label of ["Home", "Stock", "Add", "Purchasing"]) expect(bottom).toContain(`label: "${label}"`);
     expect(bottom).not.toContain("More");
     expect(bottom).not.toContain("Settings");
+    expect(bottom).not.toContain("Profile");
+    expect(bottom).not.toContain("Reports");
     expect(bottom).not.toContain("Theme");
     expect(css).toContain("min-height: 56px");
   });
@@ -60,26 +62,19 @@ describe("Phase 8.2.6 Inventory navigation architecture", () => {
   });
 
   it("groups desktop and tablet navigation into accessible, mutually exclusive accordions", () => {
-    const stock = page.slice(page.indexOf("const STOCK_MANAGEMENT_NAV"), page.indexOf("const INVENTORY_RECORDS_NAV"));
-    const records = page.slice(page.indexOf("const INVENTORY_RECORDS_NAV"), page.indexOf("const MOBILE_MENU_NAV"));
-    for (const label of ["Current Stock", "Stock In", "Stock Out", "Transfers", "Adjustments", "Waste", "Movement History"]) {
-      expect(stock).toContain(`label: "${label}"`);
-    }
-    for (const label of ["Items", "Categories", "Units", "Storage Locations"]) {
-      expect(records).toContain(`label: "${label}"`);
-    }
+    const architecture = page.slice(page.indexOf("const OPERATIONS_NAV"), page.indexOf("const MOBILE_MENU_NAV"));
+    for (const label of ["Inventory Setup", "Operations", "Purchasing", "Reports", "Current Stock", "Receive Stock", "Issue Stock", "Ingredients", "Ingredient Categories", "Purchase Orders", "Inventory Value", "Consumption", "Waste Report"]) expect(architecture).toContain(`label: "${label}"`);
     expect(page).toContain('useState<InventoryNavGroup | null>(null)');
     expect(page).toContain('setExpandedNavGroup((current) => current === group ? null : group)');
-    expect(page).toContain('aria-controls="inventory-stock-navigation"');
-    expect(page).toContain('aria-controls="inventory-records-navigation"');
-    expect(page.match(/aria-expanded=\{expandedNavGroup === /g)).toHaveLength(2);
+    expect(page).toContain('aria-controls={`inventory-${group.key}-navigation`}');
+    expect(page).toContain("NAV_GROUPS.map");
   });
 
-  it("keeps suppliers direct, Reports as a placeholder, and Settings owner-scoped", () => {
-    expect(page).toContain('onClick={() => navigate("suppliers")}');
-    expect(page).toContain('onClick={() => navigateUtility("reports")}');
+  it("places suppliers in Master Data, provides report views, and keeps Settings owner-scoped", () => {
+    expect(page).toContain('{ key: "suppliers", label: "Suppliers" }');
+    expect(page).toContain('reportView("Consumption"');
+    expect(page).toContain('reportView("Waste Report"');
     expect(page).toContain('onClick={() => navigateUtility("settings")}');
-    expect(page).toContain("Inventory reports are coming in a future phase.");
     expect(page).toContain('utilityView === "settings" && staffRole === "owner"');
     expect(page).toContain("Inventory integrity tools are owner-only.");
   });

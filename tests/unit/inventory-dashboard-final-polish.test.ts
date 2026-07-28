@@ -151,30 +151,26 @@ describe("Phase 8.5.6 inventory dashboard KPIs", () => {
 describe("Phase 8.5.6 dashboard presentation", () => {
   it("renders all KPI cards and recent operational activity groups", () => {
     for (const label of [
-      "Total Inventory Value", "Total Inventory Items", "Low Stock Items",
-      "Out of Stock Items", "Active Suppliers", "Pending Purchase Orders",
-      "Recent Purchases", "Recent Receipts", "Recent Inventory Adjustments",
-      "Recent Consumption", "Recent Waste", "Recent Movements",
+      "Pending Purchase Orders", "Low Stock", "Today's Operations",
+      "Today's Waste", "Today's Adjustments", "Today's Transfers", "Recent Activities",
     ]) expect(dashboard).toContain(label);
   });
 
   it("routes every quick action to the existing module", () => {
     for (const action of [
-      "Add Inventory Item", "Create Purchase Order", "Receive Purchase",
-      "Inventory Adjustment", "Movement History", "Purchase History",
-      "Low Stock Assistant", "Recipes", "Suppliers",
+      "Receive Stock", "Issue Stock", "Adjustment", "Waste",
+      "Purchase Order", "Search Ingredient", "Transfer",
     ]) expect(dashboard).toContain(action);
     for (const route of [
       'navigate("items")', 'navigate("purchase-orders")', 'navigate("adjustments")',
-      'navigate("movement-history")', 'navigate("purchase-history")',
-      'navigate("low-stock-assistant")', 'navigate("suppliers")',
+      'navigate("stock-in")', 'navigate("stock-out")', 'navigate("waste")',
+      'navigate("low-stock-assistant")', 'navigate("transfers")',
     ]) expect(dashboard).toContain(route);
-    expect(dashboard).toContain('window.location.assign("/inventory/recipes")');
   });
 
   it("renders every requested empty state with a call to action", () => {
     for (const emptyState of [
-      "No Inventory", "No Purchases", "No Suppliers", "No Recipes", "No Movements", "No Low Stock",
+      "No Ingredients", "No Purchases", "No Suppliers", "No Recipes", "No Movements", "No Low Stock",
     ]) expect(dashboard).toContain(emptyState);
     expect(dashboard).toContain("DashboardEmptyState");
     expect(dashboard).toContain("actionLabel");

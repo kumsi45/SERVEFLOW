@@ -112,7 +112,7 @@ describe("inventory administration validation", () => {
       description: "",
     }, baseData, "r1");
     expect(invalid.errors).toEqual(expect.arrayContaining([
-      "Item names must be unique inside the restaurant.",
+      "Ingredient names must be unique inside the restaurant.",
       "Unit is required.",
       "Selected category is invalid.",
       "Selected supplier is invalid.",

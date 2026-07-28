@@ -168,7 +168,7 @@ describe("Phase 8.5.4 purchase history UI", () => {
     for (const marker of [
       "Purchase Number", "Supplier", "Created By", "Created Date", "Received Date",
       "Status", "Total Cost", "Items", "Delivery Date", "Received By", "Notes",
-      "Inventory Item", "Ordered", "Received", "Remaining", "Purchase Unit",
+      "Ingredient", "Ordered", "Received", "Remaining", "Purchase Unit",
       "Unit Price", "Line Total", "Overall Total",
     ]) expect(page).toContain(marker);
   });

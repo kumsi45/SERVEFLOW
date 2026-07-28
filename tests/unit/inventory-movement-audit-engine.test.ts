@@ -99,7 +99,7 @@ describe("Phase 8.4.3 movement history page", () => {
 
   it("shows the required columns and all requested filters", () => {
     for (const heading of [
-      "Date &amp; Time", "Inventory Item", "Movement Type", "Quantity", "Unit",
+      "Date &amp; Time", "Ingredient", "Movement Type", "Quantity", "Unit",
       "Order Number", "Menu Item", "Recipe", "Dining Session", "Kitchen Station",
       "Performed By", "Current Stock After Movement",
     ]) expect(page).toContain(`<th>${heading}</th>`);

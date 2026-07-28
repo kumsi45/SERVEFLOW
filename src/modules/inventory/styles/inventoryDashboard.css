@@ -235,6 +235,184 @@
   font: inherit;
 }
 
+/* Phase W: compact restaurant-inventory workspace */
+.ia-phase-w-hidden,
+.ia-dashboard-actions > button:nth-child(n + 7),
+.ia-setup-grid {
+  display: none !important;
+}
+
+.ia-dashboard-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.ia-dashboard-metrics button {
+  min-height: 82px;
+  padding: 14px;
+}
+
+.ia-dashboard-metrics small,
+.ia-dashboard-actions small {
+  display: none;
+}
+
+.ia-dashboard-actions {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.ia-dashboard-actions button {
+  min-height: 96px;
+}
+
+.ia-header {
+  min-height: 42px;
+  margin-bottom: 10px;
+}
+
+.ia-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.ia-form {
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .ia-dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-dashboard-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .ia-workspace { padding: 12px 12px 88px; }
+  .ia-header { display: none; }
+  .ia-dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ia-dashboard-metrics button { min-height: 76px; }
+  .ia-dashboard-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-dashboard-actions button { min-height: 76px; }
+  .ia-mobile-bottom-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .ia-table-wrap { overflow-x: clip; }
+}
+
+/* Phase W.2 information architecture and mobile interaction */
+.ia-sidebar-nav > .ia-sidebar-group:not(.ia-w2-group),
+.ia-sidebar-nav > :nth-child(8),
+.ia-sidebar-nav > :nth-child(9) {
+  display: none;
+}
+
+.ia-today-operations > div,
+.ia-needs-attention > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ia-today-operations span,
+.ia-needs-attention article {
+  display: grid;
+  gap: 5px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ia-today-operations strong,
+.ia-needs-attention strong { font-size: 22px; }
+.ia-needs-attention > div { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ia-needs-attention button { min-height: 44px; }
+
+.ia-w2-timeline { display: grid; }
+.ia-w2-timeline button { display: grid; grid-template-columns: 130px minmax(0, 1fr) 160px; gap: 12px; align-items: center; min-height: 48px; padding: 8px 12px; border: 0; border-bottom: 1px solid #e6e9ef; background: #fff; text-align: left; }
+.ia-activity-grid { display: none; }
+
+.ia-inline-select { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.ia-inline-select button { min-height: 40px; border: 1px solid #cfd6e2; border-radius: 8px; background: #fff; font-weight: 700; }
+.ia-advanced-options { border: 1px solid #dfe4ec; border-radius: 8px; padding: 10px; }
+.ia-advanced-options summary { cursor: pointer; font-weight: 800; }
+.ia-advanced-options label { margin-top: 10px; }
+
+.ia-action-sheet-backdrop,
+.ia-sheet-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; align-items: end; background: rgb(15 23 42 / 45%); }
+.ia-action-sheet,
+.ia-ingredient-sheet { width: min(100%, 680px); max-height: 88vh; overflow: auto; margin-inline: auto; padding: 16px; border-radius: 18px 18px 0 0; background: #fff; box-shadow: 0 -16px 50px rgb(15 23 42 / 18%); }
+.ia-action-sheet header,
+.ia-ingredient-sheet header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ia-action-sheet > button { width: 100%; min-height: 52px; margin-top: 8px; border: 1px solid #dfe4ec; border-radius: 10px; background: #fff; text-align: left; font-weight: 800; }
+.ia-ingredient-sheet dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ia-ingredient-sheet dl div { padding: 10px; border-radius: 8px; background: #f4f6f9; }
+.ia-ingredient-sheet dt { color: #667085; font-size: 12px; }
+.ia-ingredient-sheet dd { margin: 4px 0 0; font-weight: 800; }
+.ia-ingredient-sheet section p { display: flex; justify-content: space-between; gap: 8px; }
+.ia-sheet-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-top: 12px; background: #fff; }
+.ia-sheet-actions button { min-height: 48px; }
+.ia-report-total { display: block; margin: 12px 0; font-size: 30px; }
+
+@media (max-width: 700px) {
+  .ia-today-operations > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-needs-attention > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-w2-timeline button { grid-template-columns: 72px minmax(0, 1fr); }
+  .ia-w2-timeline button span { grid-column: 2; }
+  .ia-inline-select { grid-template-columns: 1fr; }
+}
+
+/* Phase W.3.1 final operational mobile workflow */
+.ia-dashboard-polish { display: flex; flex-direction: column; }
+.ia-dashboard-primary-actions { order: 1; }
+.ia-today-operations { order: 2; }
+.ia-dashboard-polish > [aria-labelledby="recent-operational-activity-title"] { order: 3; }
+.ia-dashboard-polish > .ia-dashboard-metrics,
+.ia-dashboard-polish > .ia-needs-attention,
+.ia-dashboard-polish > .ia-stock-attention,
+.ia-dashboard-polish > .ia-setup-grid { display: none !important; }
+
+.ia-today-operations button {
+  display: grid;
+  gap: 5px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+}
+
+.ia-collapsible-filters {
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #fff;
+}
+.ia-collapsible-filters > summary {
+  min-height: 44px;
+  padding: 11px 12px;
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+.ia-collapsible-filters > summary::-webkit-details-marker { display: none; }
+.ia-collapsible-filters > summary span { float: right; transition: transform 150ms ease; }
+.ia-collapsible-filters[open] > summary span { transform: rotate(180deg); }
+.ia-collapsible-filters .ia-filters,
+.ia-collapsible-filters .iad-filters { border: 0; border-top: 1px solid #e5e9f0; border-radius: 0; }
+.ia-filter-empty p { margin: 0 0 10px; }
+.ia-filter-empty div { display: flex; justify-content: center; gap: 8px; }
+.ia-filter-empty button { min-height: 44px; }
+
+@media (max-width: 520px) {
+  .ia-mobile-bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ia-dashboard-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-dashboard-actions button { min-height: 64px; padding: 8px; }
+  .ia-today-operations > div { gap: 6px; }
+  .ia-today-operations button { min-height: 66px; padding: 8px; }
+  .ia-table td { padding-block: 4px; }
+  .ia-table tr { padding-block: 6px; }
+  .ia-row-actions { gap: 4px; }
+  .ia-row-actions button { min-height: 36px; padding-inline: 8px; }
+}
+
 .ia-form textarea {
   min-height: 86px;
   padding-top: 10px;

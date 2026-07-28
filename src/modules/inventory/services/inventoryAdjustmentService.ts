@@ -97,13 +97,13 @@ export function validateInventoryAdjustment(
     errors.push("Select a valid reason for the adjustment direction.");
   }
   if (form.notes.trim().length > 1000) errors.push("Notes cannot exceed 1,000 characters.");
-  if (!form.lines.length) errors.push("Add at least one inventory item.");
+  if (!form.lines.length) errors.push("Add at least one ingredient.");
   const itemIds = new Set<string>();
   for (const [index, line] of form.lines.entries()) {
     const label = `Line ${index + 1}`;
     const item = items.find((candidate) => candidate.id === line.inventoryItemId);
-    if (!item || item.status !== "active") errors.push(`${label}: select an active inventory item.`);
-    if (itemIds.has(line.inventoryItemId)) errors.push(`${label}: inventory items cannot be duplicated.`);
+    if (!item || item.status !== "active") errors.push(`${label}: select an active ingredient.`);
+    if (itemIds.has(line.inventoryItemId)) errors.push(`${label}: ingredients cannot be duplicated.`);
     if (line.inventoryItemId) itemIds.add(line.inventoryItemId);
     const quantity = Number(line.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) {

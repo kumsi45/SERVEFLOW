@@ -69,7 +69,7 @@ function requireItemAndStorage(
 ) {
   if (!itemId) errors.push("Inventory item is required.");
   if (!storageLocationId) errors.push("Storage location is required.");
-  if (itemId && !hasActiveItem(context, restaurantId, itemId)) errors.push("Selected inventory item is invalid.");
+  if (itemId && !hasActiveItem(context, restaurantId, itemId)) errors.push("Selected ingredient is invalid.");
   if (storageLocationId && !hasActiveStorage(context, restaurantId, storageLocationId)) {
     errors.push("Selected storage location is invalid.");
   }

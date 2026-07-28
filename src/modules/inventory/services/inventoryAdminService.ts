@@ -173,10 +173,8 @@ export function getFilteredItems(data: InventoryAdminData, filters: InventoryFil
 
   return [...rows].sort((left, right) => {
     if (filters.sort === "alphabetical") return left.name.localeCompare(right.name);
-    if (filters.sort === "category") return (categoryNames.get(left.categoryId) ?? "").localeCompare(categoryNames.get(right.categoryId) ?? "");
-    if (filters.sort === "supplier") return (supplierNames.get(left.preferredSupplierId ?? "") ?? "").localeCompare(supplierNames.get(right.preferredSupplierId ?? "") ?? "");
-    if (filters.sort === "storage") return (storageNames.get(left.storageLocationId) ?? "").localeCompare(storageNames.get(right.storageLocationId) ?? "");
-    if (filters.sort === "status") return left.status.localeCompare(right.status) || left.name.localeCompare(right.name);
+    if (filters.sort === "oldest") return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+    if (filters.sort === "updated") return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
   });
 }

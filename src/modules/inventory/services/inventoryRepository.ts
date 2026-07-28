@@ -114,19 +114,21 @@ function mapItem(row: Row): InventoryItem {
   };
 }
 
-async function loadStaffNames(restaurantId: string, staffIds: string[]) {
+async function loadStaffAudit(restaurantId: string, staffIds: string[]) {
   const uniqueIds = [...new Set(staffIds.filter(Boolean))];
-  if (uniqueIds.length === 0) return {};
+  if (uniqueIds.length === 0) return { names: {}, roles: {} };
   const { data, error } = await supabase
     .from("restaurant_staff")
     .select("id,display_name,email,role")
     .eq("restaurant_id", restaurantId)
     .in("id", uniqueIds);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Row[]).reduce<Record<string, string>>((map, row) => {
-    map[text(row.id)] = nullableText(row.display_name) ?? nullableText(row.email) ?? text(row.role);
+  return ((data ?? []) as Row[]).reduce<{ names: Record<string, string>; roles: Record<string, string> }>((map, row) => {
+    const id = text(row.id);
+    map.names[id] = nullableText(row.display_name) ?? nullableText(row.email) ?? "Staff member";
+    map.roles[id] = text(row.role).replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
     return map;
-  }, {});
+  }, { names: {}, roles: {} });
 }
 
 export async function loadInventoryAdminData(restaurantId: string): Promise<InventoryAdminData> {
@@ -166,7 +168,7 @@ export async function loadInventoryAdminData(restaurantId: string): Promise<Inve
   }
 
   const mappedItems = ((items.data ?? []) as Row[]).map(mapItem);
-  const staffNames = await loadStaffNames(
+  const staffAudit = await loadStaffAudit(
     restaurantId,
     mappedItems.flatMap((item) => [item.createdByStaffId ?? "", item.updatedByStaffId ?? ""]),
   );
@@ -177,7 +179,8 @@ export async function loadInventoryAdminData(restaurantId: string): Promise<Inve
     suppliers: ((suppliers.data ?? []) as Row[]).map(mapSupplier),
     storageLocations: ((storageLocations.data ?? []) as Row[]).map(mapStorageLocation),
     units: ((units.data ?? []) as Row[]).map(mapUnit),
-    staffNames,
+    staffNames: staffAudit.names,
+    staffRoles: staffAudit.roles,
   };
 }
 

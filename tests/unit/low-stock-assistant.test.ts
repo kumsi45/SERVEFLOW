@@ -193,7 +193,7 @@ describe("Phase 8.5.5 purchase draft shortcut", () => {
   it("is routed as a dedicated responsive inventory page", () => {
     expect(router).toContain('"low-stock-assistant"');
     expect(dashboard).toContain('<LowStockAssistantPage restaurantId={restaurantId}');
-    expect(dashboard).toContain('{ key: "low-stock-assistant", label: "Low Stock Assistant" }');
+    expect(dashboard).toContain('{ key: "low-stock-assistant", label: "Low Stock" }');
     expect(page).toContain("Out of Stock");
     expect(page).toContain("Critical Stock");
     expect(page).toContain("Low Stock");

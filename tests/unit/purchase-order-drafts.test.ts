@@ -129,7 +129,7 @@ describe("Phase 8.5.1 purchase order draft UI", () => {
   it("supports create, edit, delete, search, supplier and status filters", () => {
     for (const text of [
       "Create Draft", "Edit Draft", "Delete Draft", "Search", "Supplier", "Status",
-      "Expected Delivery Date", "Purchase Unit", "Unit Price", "Notes", "Add Item",
+      "Expected Delivery Date", "Purchase Unit", "Unit Price", "Notes", "Add Ingredient",
     ]) expect(page).toContain(text);
     expect(page).toContain("setSearch");
     expect(page).toContain("setSupplierFilter");

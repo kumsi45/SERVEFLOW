@@ -14,6 +14,10 @@ export type InventorySection =
   | "movement-history"
   | "purchase-orders"
   | "purchase-history"
+  | "inventory-value"
+  | "consumption"
+  | "waste-report"
+  | "inventory-settings"
   | "low-stock-assistant"
   | "categories"
   | "suppliers"
@@ -38,12 +42,12 @@ export type InventoryQuantityEffect = "in" | "out";
 export type InventoryStockStatus = "out_of_stock" | "low_stock" | "in_stock" | "over_stock";
 
 export type InventorySortKey =
-  | "recent"
+  | "newest"
+  | "oldest"
   | "alphabetical"
-  | "category"
-  | "supplier"
-  | "storage"
-  | "status";
+  | "stock_high"
+  | "stock_low"
+  | "updated";
 
 export type InventoryMasterRecord = {
   id: string;
@@ -102,6 +106,7 @@ export type InventoryAdminData = {
   storageLocations: InventoryStorageLocation[];
   units: InventoryUnit[];
   staffNames: Record<string, string>;
+  staffRoles: Record<string, string>;
 };
 
 export type InventoryCurrentStockRow = {

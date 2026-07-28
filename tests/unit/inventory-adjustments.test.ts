@@ -147,7 +147,7 @@ describe("Phase 8.5.3 adjustment validation and UI", () => {
     for (const marker of [
       "Create Adjustment", "Increase", "Decrease", "Reason", "Notes",
       "Review Adjustment", "Confirm Adjustment", "Adjustment history",
-      "Search", "Date From", "Date To", "Status", "Inventory Item", "Adjustment Type",
+      "Search", "Date From", "Date To", "Status", "Ingredient", "Adjustment Type",
     ]) expect(page).toContain(marker);
     expect(page).toContain("canCreate");
     expect(page).toContain('staffRole');
