@@ -14,7 +14,7 @@ describe("Ready-to-Serve Product Architecture", () => {
       "alter table public.menu_items add column if not exists recipe_id uuid",
     );
     expect(sql).not.toMatch(/recipe_id uuid not null/i);
-    expect(owner).toContain("recipe_id: formRecipeId || null");
+    expect(owner).toContain("recipe_id: resolvedRecipeId || null");
   });
 
   it("adds an optional direct inventory path without forcing it", () => {
@@ -22,15 +22,14 @@ describe("Ready-to-Serve Product Architecture", () => {
     expect(sql).toContain("menu_items_direct_inventory_item_same_restaurant");
     expect(sql).toContain("references public.inventory_items(restaurant_id, id)");
     expect(sql).toContain("menu_items_one_deduction_source");
-    expect(owner).toContain("direct_inventory_item_id: formDirectInventoryItemId || null");
+    expect(owner).toContain("direct_inventory_item_id: directInventoryItemId || null");
   });
 
-  it("shows a warning badge instead of blocking saves or publishing", () => {
-    for (const source of [owner, manager]) {
-      expect(source).toContain("No Recipe Assigned");
-      expect(source).not.toContain("Recipe Required");
-    }
-    expect(owner).toContain("od-recipe-warning");
+  it("shows explicit tracking choices while preserving the legacy manager warning", () => {
+    expect(owner).toContain("Ready-to-Sell Item");
+    expect(owner).toContain("No Tracking");
+    expect(owner).toContain("od-tracking-badge");
+    expect(manager).toContain("No Recipe Assigned");
     expect(manager).toContain("mrl-warning");
   });
 

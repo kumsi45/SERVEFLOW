@@ -1,161 +1,197 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canManageRecipes, type RecipeRole } from "../../../core/permissions/recipeAccess";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
+import { loadInventoryAdminData, saveItem } from "../../inventory/services/inventoryAdminService";
+import type { InventoryAdminData, InventoryItemDraft } from "../../inventory/types";
+import { fetchMenuRecipeLinks, linkMenuItemRecipe, type MenuRecipeLink } from "../../menu-recipes/services/menuRecipeService";
 import {
-  archiveRecipe, createRecipe, createRecipeCategory, duplicateRecipe, fetchActiveIngredientUnits, fetchRecipeCost,
-  fetchRecipeCategories, fetchRecipeIngredients, fetchRecipes, removeRecipeIngredient,
-  restoreRecipe, saveRecipeIngredient, searchActiveInventoryItems, softDeleteRecipe, updateRecipe,
+  createRecipe, fetchActiveIngredientUnits, fetchRecipeIngredients, fetchRecipes,
+  removeRecipeIngredient, saveRecipeIngredient, searchActiveInventoryItems, softDeleteRecipe, updateRecipe,
 } from "../services/recipeService";
-import type {
-  IngredientInventoryItem, IngredientUnit, Recipe, RecipeCategory, RecipeCost, RecipeDraft, RecipeFilters,
-  RecipeIngredient, RecipeIngredientDraft,
-} from "../types";
+import type { IngredientInventoryItem, IngredientUnit, Recipe, RecipeDraft, RecipeFilters, RecipeIngredient, RecipeIngredientDraft } from "../types";
 import "../styles/recipeManagement.css";
-import { fetchRecipeMenuUsage, type RecipeMenuUsage } from "../../menu-recipes/services/menuRecipeService";
 
-const emptyDraft: RecipeDraft = { name: "", description: "", categoryId: "", preparationTimeMinutes: "0", yieldQuantity: "1", yieldUnit: "servings", status: "draft" };
-const initialFilters: RecipeFilters = { search: "", categoryId: "", status: "all", preparation: "all", sort: "newest", page: 1, pageSize: 12 };
-const emptyIngredient = (): RecipeIngredientDraft => ({ inventoryItemId: "", quantityRequired: "", unitId: "", optionalNotes: "", sortOrder: 1000 });
+type WizardStep = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+const hiddenV1Defaults = { description: "", categoryId: "", yieldQuantity: "1", yieldUnit: "serving" };
+const newRecipeDraft = (name = ""): RecipeDraft => ({ ...hiddenV1Defaults, name, preparationTimeMinutes: "", status: "active" });
+const filters: RecipeFilters = { search: "", categoryId: "", status: "all", preparation: "all", sort: "newest", page: 1, pageSize: 100 };
+const blankIngredient = (): RecipeIngredientDraft => ({ inventoryItemId: "", quantityRequired: "", unitId: "", optionalNotes: "", sortOrder: 1000 });
+const inventoryDraft = (data: InventoryAdminData): InventoryItemDraft => ({
+  name: "", categoryId: data.categories.find((row) => row.status === "active")?.id ?? "",
+  unitId: data.units.find((row) => row.status === "active")?.id ?? "",
+  storageLocationId: data.storageLocations.find((row) => row.status === "active")?.id ?? "",
+  preferredSupplierId: "", sku: "", barcode: "", minimumStock: "0", maximumStock: "",
+  purchasePrice: "0", description: "",
+});
 
 export function RecipeManagementPage({ restaurantId, role }: { restaurantId: string; role: RecipeRole }) {
   const editable = canManageRecipes(role);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [categories, setCategories] = useState<RecipeCategory[]>([]);
-  const [filters, setFilters] = useState(initialFilters);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [draft, setDraft] = useState<RecipeDraft>(emptyDraft);
-  const [editing, setEditing] = useState<Recipe | null>(null);
-  const [viewing, setViewing] = useState<Recipe | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuRecipeLink[]>([]);
   const [inventoryItems, setInventoryItems] = useState<IngredientInventoryItem[]>([]);
   const [units, setUnits] = useState<IngredientUnit[]>([]);
-  const [ingredientDraft, setIngredientDraft] = useState<RecipeIngredientDraft | null>(null);
-  const [ingredientSearch, setIngredientSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewing, setViewing] = useState<Recipe | null>(null);
+  const [detailIngredients, setDetailIngredients] = useState<RecipeIngredient[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [recipeCost, setRecipeCost] = useState<RecipeCost | null>(null);
-  const [menuUsage, setMenuUsage] = useState<RecipeMenuUsage>({ count: 0, items: [] });
-  const [recipeMenuUsage, setRecipeMenuUsage] = useState<Record<string, RecipeMenuUsage>>({});
+
+  const [step, setStep] = useState<WizardStep>(0);
+  const [editing, setEditing] = useState<Recipe | null>(null);
+  const [selectedMenu, setSelectedMenu] = useState<MenuRecipeLink | null>(null);
+  const [draft, setDraft] = useState<RecipeDraft>(newRecipeDraft());
+  const [menuSearch, setMenuSearch] = useState("");
+  const [ingredientSearch, setIngredientSearch] = useState("");
+  const [ingredientDraft, setIngredientDraft] = useState<RecipeIngredientDraft | null>(null);
+  const [pendingIngredients, setPendingIngredients] = useState<RecipeIngredientDraft[]>([]);
+  const [originalIngredientIds, setOriginalIngredientIds] = useState<string[]>([]);
+  const [adminData, setAdminData] = useState<InventoryAdminData | null>(null);
+  const [newInventoryItem, setNewInventoryItem] = useState<InventoryItemDraft | null>(null);
+  const handledEditTarget = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [page, categoryRows] = await Promise.all([fetchRecipes(restaurantId, filters), fetchRecipeCategories(restaurantId)]);
-      setRecipes(page.items); setTotal(page.total); setCategories(categoryRows);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Recipes could not be loaded."); }
+      const [page, menu, inventory, unitRows] = await Promise.all([
+        fetchRecipes(restaurantId, filters), fetchMenuRecipeLinks(restaurantId),
+        searchActiveInventoryItems(restaurantId, ""), fetchActiveIngredientUnits(restaurantId),
+      ]);
+      setRecipes(page.items); setMenuItems(menu); setInventoryItems(inventory); setUnits(unitRows);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Menu recipes could not be loaded."); }
     finally { setLoading(false); }
-  }, [restaurantId, filters]);
-  useEffect(() => { void refresh(); }, [refresh]);
-  useTenantRealtime({ channelName: "recipe-management", restaurantId, tables: ["recipes"], refresh });
-  useEffect(() => {
-    let active = true;
-    if (recipes.length === 0) {
-      setRecipeMenuUsage({});
-      return;
-    }
-    void Promise.all(
-      recipes.map(async (recipe) => [recipe.id, await fetchRecipeMenuUsage(restaurantId, recipe.id)] as const),
-    ).then((rows) => {
-      if (!active) return;
-      setRecipeMenuUsage(Object.fromEntries(rows));
-    }).catch((cause) => {
-      if (active) setError(cause instanceof Error ? cause.message : "Recipe menu links could not be loaded.");
-    });
-    return () => { active = false; };
-  }, [recipes, restaurantId]);
-
-  const loadDetail = useCallback(async (recipeId: string) => {
-    setDetailLoading(true);
-    try {
-      const [rows, unitRows, cost, usage] = await Promise.all([fetchRecipeIngredients(restaurantId, recipeId), fetchActiveIngredientUnits(restaurantId), fetchRecipeCost(restaurantId, recipeId), fetchRecipeMenuUsage(restaurantId, recipeId)]);
-      setIngredients(rows); setUnits(unitRows); setRecipeCost(cost); setMenuUsage(usage);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Ingredients could not be loaded."); }
-    finally { setDetailLoading(false); }
   }, [restaurantId]);
-  const refreshRecipeCosts = useCallback(async () => {
-    if (viewing) await loadDetail(viewing.id);
-  }, [loadDetail, viewing]);
-  useTenantRealtime({ channelName: "recipe-costs", restaurantId, tables: ["inventory_items", "recipe_ingredients"], refresh: refreshRecipeCosts });
+  useEffect(() => { void refresh(); }, [refresh]);
+  useTenantRealtime({ channelName: "menu-recipe-management", restaurantId, tables: ["recipes", "menu_items"], refresh });
+  useTenantRealtime({ channelName: "recipe-costs", restaurantId, tables: ["inventory_items", "recipe_ingredients"], refresh });
+
   useEffect(() => {
-    if (!viewing || !editable) return;
+    if (step !== 3) return;
     const timer = window.setTimeout(() => {
-      void searchActiveInventoryItems(restaurantId, ingredientSearch).then(setInventoryItems).catch((cause) => setError(cause instanceof Error ? cause.message : "Inventory items could not be loaded."));
+      void searchActiveInventoryItems(restaurantId, ingredientSearch).then(setInventoryItems)
+        .catch((cause) => setError(cause instanceof Error ? cause.message : "Ingredients could not be loaded."));
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [editable, ingredientSearch, restaurantId, viewing]);
+  }, [ingredientSearch, restaurantId, step]);
 
-  const pages = Math.max(1, Math.ceil(total / filters.pageSize));
-  const categoryName = useMemo(() => new Map(categories.map((row) => [row.id, row.name])), [categories]);
-  const ingredientCosts = useMemo(() => new Map((recipeCost?.ingredients ?? []).map((row) => [row.id, row])), [recipeCost]);
+  const recipeById = useMemo(() => new Map(recipes.map((recipe) => [recipe.id, recipe])), [recipes]);
+  const menuByRecipe = useMemo(() => new Map(menuItems.filter((item) => item.recipe_id).map((item) => [item.recipe_id!, item])), [menuItems]);
+  const missingMenu = useMemo(() => menuItems.filter((item) => !item.recipe_id && !item.direct_inventory_item_id), [menuItems]);
+  const visibleRecipes = useMemo(() => menuItems.filter((item) => item.recipe_id && recipeById.has(item.recipe_id)).filter((item) => {
+    const recipe = recipeById.get(item.recipe_id!);
+    return `${item.name} ${item.category_name ?? ""}`.toLowerCase().includes(search.trim().toLowerCase()) && (statusFilter === "all" || recipe?.status === statusFilter);
+  }), [menuItems, recipeById, search, statusFilter]);
+  const menuChoices = useMemo(() => missingMenu.filter((item) => `${item.name} ${item.category_name ?? ""}`.toLowerCase().includes(menuSearch.trim().toLowerCase())), [menuSearch, missingMenu]);
+  const inventoryById = useMemo(() => new Map(inventoryItems.map((item) => [item.id, item])), [inventoryItems]);
+  const unitById = useMemo(() => new Map(units.map((unit) => [unit.id, unit.name])), [units]);
   const money = (value: number) => new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-  const menuUsageLabel = (usage: RecipeMenuUsage | undefined) => {
-    if (!usage || usage.count === 0) return "Not linked";
-    return `Linked to ${usage.count} menu item${usage.count === 1 ? "" : "s"}`;
-  };
-  function patchFilter(change: Partial<RecipeFilters>) { setFilters((value) => ({ ...value, ...change, page: change.page ?? 1 })); }
-  function openCreate() { setEditing(null); setDraft(emptyDraft); setShowEditor(true); }
-  function openEdit(recipe: Recipe) { setEditing(recipe); setDraft({ name: recipe.name, description: recipe.description ?? "", categoryId: recipe.category_id ?? "", preparationTimeMinutes: String(recipe.preparation_time_minutes), yieldQuantity: String(recipe.yield_quantity), yieldUnit: recipe.yield_unit, status: recipe.status }); setShowEditor(true); }
-  function openDetail(recipe: Recipe) { setViewing(recipe); setIngredientDraft(null); setIngredientSearch(""); void loadDetail(recipe.id); }
-  async function run(message: string, operation: () => Promise<unknown>) { setBusy(true); setError(null); try { await operation(); setNotice(message); setShowEditor(false); await refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Recipe action failed."); } finally { setBusy(false); } }
-  async function save() { if (!draft.name.trim() || !draft.yieldUnit.trim() || Number(draft.yieldQuantity) <= 0) { setError("Name, yield quantity, and yield unit are required."); return; } await run(editing ? "Recipe updated." : "Recipe created.", () => editing ? updateRecipe(restaurantId, editing.id, draft) : createRecipe(restaurantId, draft)); }
-  async function addCategory() { const name = window.prompt("Category name"); if (name?.trim()) await run("Category created.", () => createRecipeCategory(restaurantId, name.trim())); }
-  function editIngredient(row: RecipeIngredient) { setIngredientSearch(row.inventory_item_name); setIngredientDraft({ id: row.id, inventoryItemId: row.inventory_item_id, quantityRequired: String(row.quantity_required), unitId: row.unit_id, optionalNotes: row.optional_notes ?? "", sortOrder: row.sort_order }); }
-  async function saveIngredient() {
-    if (!viewing || !ingredientDraft) return;
-    if (!ingredientDraft.inventoryItemId || !ingredientDraft.unitId || Number(ingredientDraft.quantityRequired) <= 0) { setError("Inventory item, quantity greater than zero, and unit are required."); return; }
-    setBusy(true); setError(null);
-    try { await saveRecipeIngredient(restaurantId, viewing.id, ingredientDraft); setNotice(ingredientDraft.id ? "Ingredient updated." : "Ingredient added."); setIngredientDraft(null); setIngredientSearch(""); await loadDetail(viewing.id); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Ingredient could not be saved."); }
+
+  useEffect(() => {
+    if (handledEditTarget.current || recipes.length === 0) return;
+    const targetId = new URLSearchParams(window.location.search).get("edit");
+    if (!targetId) return;
+    const target = recipes.find((recipe) => recipe.id === targetId && menuByRecipe.has(recipe.id));
+    if (!target) return;
+    handledEditTarget.current = true;
+    window.history.replaceState({}, "", window.location.pathname);
+    void startEdit(target);
+  }, [menuByRecipe, recipes]);
+
+  function resetWizard() {
+    setStep(0); setEditing(null); setSelectedMenu(null); setDraft(newRecipeDraft());
+    setPendingIngredients([]); setOriginalIngredientIds([]); setIngredientDraft(null);
+    setMenuSearch(""); setIngredientSearch(""); setNewInventoryItem(null);
+  }
+  function startCreate() { resetWizard(); setStep(1); }
+  function chooseMenu(item: MenuRecipeLink) { setSelectedMenu(item); setDraft(newRecipeDraft(item.name)); setStep(2); }
+  async function startEdit(recipe: Recipe) {
+    const menu = menuByRecipe.get(recipe.id) ?? null;
+    setEditing(recipe); setSelectedMenu(menu);
+    setDraft({ ...hiddenV1Defaults, name: recipe.name, preparationTimeMinutes: String(recipe.preparation_time_minutes), status: recipe.status === "archived" ? "draft" : recipe.status });
+    setBusy(true);
+    try {
+      const rows = await fetchRecipeIngredients(restaurantId, recipe.id);
+      setPendingIngredients(rows.map((row) => ({ id: row.id, inventoryItemId: row.inventory_item_id, quantityRequired: String(row.quantity_required), unitId: row.unit_id, optionalNotes: "", sortOrder: row.sort_order })));
+      setOriginalIngredientIds(rows.map((row) => row.id)); setStep(2);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Recipe could not be opened."); }
     finally { setBusy(false); }
   }
-  async function removeIngredient(row: RecipeIngredient) {
-    if (!viewing || !window.confirm(`Remove ${row.inventory_item_name}?`)) return;
+  function addPendingIngredient() {
+    if (!ingredientDraft?.inventoryItemId || !ingredientDraft.unitId || Number(ingredientDraft.quantityRequired) <= 0) return setError("Select an ingredient, quantity, and unit.");
+    if (pendingIngredients.some((row) => row.inventoryItemId === ingredientDraft.inventoryItemId && row.id !== ingredientDraft.id)) return setError("This ingredient is already in the recipe.");
+    setPendingIngredients((rows) => ingredientDraft.id ? rows.map((row) => row.id === ingredientDraft.id ? ingredientDraft : row) : [...rows, { ...ingredientDraft, sortOrder: (rows.length + 1) * 100 }]);
+    setIngredientDraft(null); setIngredientSearch(""); setError(null);
+  }
+  async function saveRecipe() {
+    if (!draft.name.trim()) return setError("Recipe name is required.");
+    if (Number(draft.preparationTimeMinutes) < 0 || draft.preparationTimeMinutes === "") return setError("Preparation time is required.");
     setBusy(true); setError(null);
-    try { await removeRecipeIngredient(restaurantId, viewing.id, row.id); setNotice("Ingredient removed."); await loadDetail(viewing.id); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Ingredient could not be removed."); }
+    try {
+      let recipe: Recipe;
+      if (editing) {
+        recipe = await updateRecipe(restaurantId, editing.id, draft);
+      } else {
+        const creationDraft = draft.status === "draft" ? { ...draft, status: "active" as const } : draft;
+        recipe = await createRecipe(restaurantId, creationDraft);
+        if (selectedMenu) await linkMenuItemRecipe(restaurantId, selectedMenu.id, recipe.id);
+        if (draft.status === "draft") recipe = await updateRecipe(restaurantId, recipe.id, draft);
+      }
+      for (const ingredientId of originalIngredientIds.filter((id) => !pendingIngredients.some((row) => row.id === id))) {
+        await removeRecipeIngredient(restaurantId, recipe.id, ingredientId);
+      }
+      for (const ingredient of pendingIngredients) await saveRecipeIngredient(restaurantId, recipe.id, ingredient);
+      resetWizard(); setNotice(editing ? "Recipe updated." : "Recipe created."); await refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Recipe could not be saved."); }
+    finally { setBusy(false); }
+  }
+  async function openDetail(recipe: Recipe) {
+    setViewing(recipe); setDetailLoading(true);
+    try { setDetailIngredients(await fetchRecipeIngredients(restaurantId, recipe.id)); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Recipe details could not be loaded."); }
+    finally { setDetailLoading(false); }
+  }
+  async function beginInlineIngredient() {
+    try { const data = await loadInventoryAdminData(restaurantId); setAdminData(data); setNewInventoryItem(inventoryDraft(data)); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Ingredient form could not be opened."); }
+  }
+  async function createInlineIngredient() {
+    if (!adminData || !newInventoryItem) return;
+    setBusy(true);
+    try {
+      await saveItem(restaurantId, newInventoryItem, adminData);
+      const results = await searchActiveInventoryItems(restaurantId, newInventoryItem.name);
+      const created = results.find((item) => item.name.toLowerCase() === newInventoryItem.name.trim().toLowerCase());
+      if (!created) throw new Error("Ingredient was created but could not be selected.");
+      setInventoryItems(results); setIngredientDraft({ ...blankIngredient(), inventoryItemId: created.id, unitId: created.unit_id });
+      setIngredientSearch(created.name); setNewInventoryItem(null); setNotice("Ingredient created and selected.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Ingredient could not be created."); }
     finally { setBusy(false); }
   }
 
-  return <main className="recipe-page">
-    <header className="recipe-header"><div><span>Phase 8.3.2</span><h1>Recipe Management</h1><p>Recipe information and raw inventory ingredients.</p></div><div><a href={`/${role === "inventory_officer" ? "inventory" : role}/dashboard`}>Back to dashboard</a>{editable && <button onClick={openCreate}>Create Recipe</button>}</div></header>
-    {!editable && <div className="recipe-readonly">Read-only access · Inventory Officers cannot change recipes or ingredients.</div>}
-    {(error || notice) && <div className={error ? "recipe-alert error" : "recipe-alert success"}>{error || notice}</div>}
-    <section className="recipe-toolbar">
-      <input aria-label="Search recipes" placeholder="Search name, code, category, status" value={filters.search} onChange={(event) => patchFilter({ search: event.target.value })} />
-      <select aria-label="Category filter" value={filters.categoryId} onChange={(event) => patchFilter({ categoryId: event.target.value })}><option value="">All categories</option>{categories.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
-      <select aria-label="Status filter" value={filters.status} onChange={(event) => patchFilter({ status: event.target.value })}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select>
-      <select aria-label="Preparation time filter" value={filters.preparation} onChange={(event) => patchFilter({ preparation: event.target.value })}><option value="all">Any prep time</option><option value="quick">Up to 15 min</option><option value="medium">16–45 min</option><option value="long">Over 45 min</option></select>
-      <select aria-label="Sort recipes" value={filters.sort} onChange={(event) => patchFilter({ sort: event.target.value as RecipeFilters["sort"] })}><option value="newest">Newest</option><option value="oldest">Oldest</option></select>
-      {editable && <button className="secondary" onClick={() => void addCategory()}>New Category</button>}
-    </section>
-    <div className="recipe-summary"><strong>{total}</strong> recipes <span>· Page {filters.page} of {pages}</span></div>
-    {loading ? <div className="recipe-empty">Loading recipes…</div> : recipes.length === 0 ? <div className="recipe-empty">No recipes match these filters.</div> : <section className="recipe-grid">{recipes.map((recipe) => <article className="recipe-card" key={recipe.id}>
-      <header><div><code>{recipe.recipe_code}</code><h2>{recipe.name}</h2></div><span className={`status ${recipe.status}`}>{recipe.status}</span></header>
-      <p>{recipe.description || "No description"}</p><dl><div><dt>Category</dt><dd>{recipe.category_name || "Uncategorized"}</dd></div><div><dt>Preparation</dt><dd>{recipe.preparation_time_minutes} min</dd></div><div><dt>Yield</dt><dd>{recipe.yield_quantity} {recipe.yield_unit}</dd></div><div><dt>Menu Link Status</dt><dd>{menuUsageLabel(recipeMenuUsage[recipe.id])}</dd></div></dl>
-      <footer><button className="secondary" onClick={() => openDetail(recipe)}>View</button>{editable && <><button onClick={() => openEdit(recipe)}>Edit</button><button className="secondary" onClick={() => void run("Recipe and ingredients duplicated.", () => duplicateRecipe(restaurantId, recipe.id))}>Duplicate</button>{recipe.status === "archived" ? <button onClick={() => void run("Recipe restored as draft.", () => restoreRecipe(restaurantId, recipe.id))}>Restore</button> : <button className="secondary" onClick={() => void run("Recipe archived.", () => archiveRecipe(restaurantId, recipe.id))}>Archive</button>}<button className="danger" onClick={() => window.confirm("Soft delete this recipe?") && void run("Recipe deleted.", () => softDeleteRecipe(restaurantId, recipe.id))}>Delete</button></>}</footer>
-    </article>)}</section>}
-    <nav className="recipe-pagination"><button disabled={filters.page <= 1} onClick={() => patchFilter({ page: filters.page - 1 })}>Previous</button><span>{filters.page} / {pages}</span><button disabled={filters.page >= pages} onClick={() => patchFilter({ page: filters.page + 1 })}>Next</button></nav>
-    {showEditor && editable && <div className="recipe-modal" role="dialog" aria-modal="true"><form onSubmit={(event) => { event.preventDefault(); void save(); }}><header><h2>{editing ? "Edit Recipe" : "Create Recipe"}</h2><button type="button" className="secondary" onClick={() => setShowEditor(false)}>Close</button></header><label>Name<input required maxLength={160} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label>Description<textarea maxLength={2000} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label>Category<select value={draft.categoryId} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value })}><option value="">Uncategorized</option>{categories.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><div className="recipe-form-row"><label>Preparation minutes<input type="number" min="0" max="10080" value={draft.preparationTimeMinutes} onChange={(event) => setDraft({ ...draft, preparationTimeMinutes: event.target.value })} /></label><label>Yield quantity<input required type="number" min="0.001" step="0.001" value={draft.yieldQuantity} onChange={(event) => setDraft({ ...draft, yieldQuantity: event.target.value })} /></label></div><div className="recipe-form-row"><label>Yield unit<input required maxLength={40} value={draft.yieldUnit} onChange={(event) => setDraft({ ...draft, yieldUnit: event.target.value })} /></label><label>Status<select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as RecipeDraft["status"] })}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></label></div>{editing && <section className="recipe-advanced-info"><h3>Advanced Information</h3><dl><div><dt>Created</dt><dd>{new Date(editing.created_at).toLocaleString()}</dd></div><div><dt>Updated</dt><dd>{new Date(editing.updated_at).toLocaleString()}</dd></div><div><dt>Created By</dt><dd>{editing.created_by || "Staff"}</dd></div></dl></section>}<button disabled={busy} type="submit">{busy ? "Saving…" : "Save Recipe"}</button></form></div>}
-    {viewing && <div className="recipe-modal" role="dialog" aria-modal="true"><article className="recipe-detail ingredient-detail"><header><div><code>{viewing.recipe_code}</code><h2>{viewing.name}</h2></div><button className="secondary" onClick={() => setViewing(null)}>Close</button></header>
-      <section><h3>Recipe Information</h3><p>{viewing.description || "No description"}</p><dl><div><dt>Category</dt><dd>{categoryName.get(viewing.category_id ?? "") || "Uncategorized"}</dd></div><div><dt>Status</dt><dd>{viewing.status}</dd></div></dl></section>
-      <section className="recipe-advanced-info"><h3>Advanced Information</h3><dl><div><dt>Created</dt><dd>{new Date(viewing.created_at).toLocaleString()}</dd></div><div><dt>Updated</dt><dd>{new Date(viewing.updated_at).toLocaleString()}</dd></div><div><dt>Created By</dt><dd>{viewing.created_by || "Staff"}</dd></div></dl></section>
-      <section><h3>Preparation</h3><dl><div><dt>Preparation time</dt><dd>{viewing.preparation_time_minutes} minutes</dd></div><div><dt>Yield</dt><dd>{viewing.yield_quantity} {viewing.yield_unit}</dd></div></dl></section>
-      <section className="ingredient-section"><header><div><h3>Ingredients</h3><p>Raw inventory required for one serving.</p></div>{editable && !ingredientDraft && <button onClick={() => setIngredientDraft(emptyIngredient())}>Add Ingredient</button>}</header>
-        {detailLoading ? <div className="recipe-empty">Loading ingredients…</div> : ingredients.length === 0 ? <div className="recipe-empty">No ingredients added.</div> : <div className="ingredient-list costed">{ingredients.map((row) => { const cost = ingredientCosts.get(row.id); return <article key={row.id}><div><strong>{row.inventory_item_name}</strong>{row.optional_notes && <small>{row.optional_notes}</small>}</div><span>{row.quantity_required} {row.unit_name}</span><span className="ingredient-unit-cost">{cost?.unit_cost == null ? "Cost unavailable" : `${money(cost.unit_cost)} ETB / ${row.unit_name}`}</span><strong className="ingredient-line-cost">{cost?.ingredient_cost == null ? "—" : `${money(cost.ingredient_cost)} ETB`}</strong>{editable && <div><button className="secondary" onClick={() => editIngredient(row)}>Edit</button><button className="danger" onClick={() => void removeIngredient(row)}>Remove</button></div>}</article>; })}</div>}
-        {editable && ingredientDraft && <form className="ingredient-form" onSubmit={(event) => { event.preventDefault(); void saveIngredient(); }}>
-          <label>Search Inventory Item<input autoFocus placeholder="Search active inventory items" value={ingredientSearch} onChange={(event) => setIngredientSearch(event.target.value)} /></label>
-          <label>Inventory Item<select required value={ingredientDraft.inventoryItemId} onChange={(event) => { const item = inventoryItems.find((row) => row.id === event.target.value); setIngredientDraft({ ...ingredientDraft, inventoryItemId: event.target.value, unitId: item?.unit_id ?? ingredientDraft.unitId }); }}><option value="">Choose inventory item</option>{inventoryItems.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-          <div className="recipe-form-row"><label>Quantity<input required type="number" min="0.001" step="0.001" value={ingredientDraft.quantityRequired} onChange={(event) => setIngredientDraft({ ...ingredientDraft, quantityRequired: event.target.value })} /></label><label>Unit<select required value={ingredientDraft.unitId} onChange={(event) => setIngredientDraft({ ...ingredientDraft, unitId: event.target.value })}><option value="">Choose unit</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}{unit.description ? ` (${unit.description})` : ""}</option>)}</select></label></div>
-          <label>Notes (optional)<textarea maxLength={500} value={ingredientDraft.optionalNotes} onChange={(event) => setIngredientDraft({ ...ingredientDraft, optionalNotes: event.target.value })} /></label>
-          <footer><button disabled={busy} type="submit">{busy ? "Saving…" : "Save Ingredient"}</button><button type="button" className="secondary" onClick={() => setIngredientDraft(null)}>Cancel</button></footer>
-        </form>}
-      </section>
-      <section className="recipe-cost-summary"><span>Recipe Cost</span><strong>{recipeCost?.complete ? `${money(recipeCost.total_cost)} ${recipeCost.currency}` : "Cost unavailable"}</strong><p>Calculated automatically from current inventory purchase prices.</p></section>
-      <section className="recipe-used-by"><h3>Used By</h3><strong>{menuUsage.count} Menu Item{menuUsage.count === 1 ? "" : "s"}</strong>{menuUsage.items.length === 0 ? <p>Not linked to a menu item.</p> : <div>{menuUsage.items.map((item) => role === "inventory_officer" ? <span key={item.id}>{item.name}</span> : <a key={item.id} href={`/${role}/menu?item=${item.id}`}>{item.name}</a>)}</div>}</section>
-    </article></div>}
+  return <main className="recipe-page recipe-v1">
+    <header className="recipe-header"><div><span>Inventory • Menu Recipes</span><h1>Menu Recipes</h1><p>Edit recipes automatically created for recipe-tracked menu items.</p></div><div><a href={`/${role === "inventory_officer" ? "inventory" : role}/dashboard`}>Dashboard</a></div></header>
+    {!editable && <div className="recipe-readonly">Read-only access • Recipe changes are limited to owners and managers.</div>}
+    {(error || notice) && <div role="status" className={error ? "recipe-alert error" : "recipe-alert success"}>{error || notice}<button aria-label="Dismiss message" onClick={() => { setError(null); setNotice(null); }}>×</button></div>}
+
+    <section className="recipe-kpis v1-kpis"><div><span>Recipe-Tracked Menu Items</span><strong>{visibleRecipes.length}</strong></div><div><span>Active Recipes</span><strong>{recipes.filter((recipe) => recipe.status === "active" && menuByRecipe.has(recipe.id)).length}</strong></div></section>
+    <section className="recipe-toolbar"><input aria-label="Search recipes" placeholder="Search recipes" value={search} onChange={(event) => setSearch(event.target.value)} /><button className="secondary" onClick={() => setShowFilters((value) => !value)}>{showFilters ? "Hide Filters" : "Filters"}</button>{showFilters && <div className="recipe-filter-panel v1-filter"><select aria-label="Recipe status filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option></select></div>}</section>
+    {loading ? <div className="recipe-empty">Loading recipes…</div> : visibleRecipes.length === 0 ? <div className="recipe-empty"><strong>No Recipe-Tracked Menu Items</strong><p>Choose Recipe as the inventory tracking type when creating a menu item.</p></div> : <section className="recipe-grid">{visibleRecipes.map((menu) => { const recipe = recipeById.get(menu.recipe_id!)!; return <article className="recipe-card" key={menu.id} onClick={() => void openDetail(recipe)}>{menu.image_url ? <img src={menu.image_url} alt="" loading="lazy" /> : <div className="recipe-image-placeholder">{menu.name.slice(0, 1)}</div>}<div className="recipe-card-body"><header><div><small>{menu.category_name ?? "Uncategorized"}</small><h2>{recipe.name}</h2></div><span className={`status ${recipe.status}`}>{recipe.status}</span></header><p className="recipe-menu-price">{money(menu.price)} ETB</p><footer><button onClick={(event) => { event.stopPropagation(); void openDetail(recipe); }}>View</button>{editable && <button className="secondary" onClick={(event) => { event.stopPropagation(); void startEdit(recipe); }}>Edit</button>}</footer></div></article>; })}</section>}
+
+    {step > 0 && editable && <div className="recipe-modal" role="dialog" aria-modal="true"><section className="recipe-builder v1-builder"><header><div><small>{editing ? "Edit Recipe" : `Create Recipe • Step ${step} of 6`}</small><h2>{step === 1 ? "Select Menu Item" : step === 2 ? "Recipe Name" : step === 3 ? "Ingredients" : step === 4 ? "Preparation Time" : step === 5 ? "Status" : "Save Recipe"}</h2></div><button className="secondary" onClick={resetWizard}>Cancel</button></header><div className="wizard-progress">{[1,2,3,4,5,6].map((number) => <span key={number} className={step >= number ? "active" : ""} />)}</div>
+      {step === 1 && <><input autoFocus aria-label="Search menu items" placeholder="Search menu items" value={menuSearch} onChange={(event) => setMenuSearch(event.target.value)} /><div className="menu-picker-list v1-menu-list">{menuChoices.map((item) => <button key={item.id} onClick={() => chooseMenu(item)}>{item.image_url ? <img src={item.image_url} alt="" loading="lazy" /> : <span>{item.name.slice(0, 1)}</span>}<div><strong>{item.name}</strong><small>{item.category_name ?? "Uncategorized"} • {money(item.price)} ETB</small></div><b>Choose →</b></button>)}{menuChoices.length === 0 && <div className="recipe-empty">No available menu items match.</div>}</div></>}
+      {step === 2 && <div className="wizard-screen"><div className="selected-menu compact">{selectedMenu?.image_url ? <img src={selectedMenu.image_url} alt="" /> : <span>{selectedMenu?.name.slice(0,1) ?? draft.name.slice(0,1)}</span>}<div><small>{selectedMenu?.category_name}</small><strong>{selectedMenu?.name ?? draft.name}</strong></div></div><label>Recipe Name<input autoFocus required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><button className="wizard-next" disabled={!draft.name.trim()} onClick={() => setStep(3)}>Continue</button></div>}
+      {step === 3 && <div className="wizard-screen ingredients-step"><div className="pending-ingredients">{pendingIngredients.map((row, index) => <article key={row.id ?? `${row.inventoryItemId}-${index}`}><div><strong>{inventoryById.get(row.inventoryItemId)?.name ?? "Inventory ingredient"}</strong><small>{row.quantityRequired} {unitById.get(row.unitId) ?? "unit"}</small></div><button className="secondary" onClick={() => setIngredientDraft(row)}>Edit</button><button className="danger" onClick={() => setPendingIngredients((rows) => rows.filter((candidate) => candidate !== row))}>Remove</button></article>)}{pendingIngredients.length === 0 && <div className="recipe-empty compact-empty">No ingredients added yet.</div>}</div>{ingredientDraft ? <div className="ingredient-form"><label>Search Ingredient<input autoFocus value={ingredientSearch} onChange={(event) => setIngredientSearch(event.target.value)} placeholder="Search inventory ingredients" /></label><div className="ingredient-picker-list">{inventoryItems.map((item) => <button type="button" className={ingredientDraft.inventoryItemId === item.id ? "selected" : ""} key={item.id} onClick={() => setIngredientDraft({ ...ingredientDraft, inventoryItemId: item.id, unitId: item.unit_id })}><strong>{item.name}</strong><small>{item.current_quantity} in stock</small></button>)}</div><button type="button" className="create-inline" onClick={() => void beginInlineIngredient()}>+ Create Ingredient</button><div className="recipe-form-row"><label>Quantity<input required type="number" min="0.001" step="0.001" value={ingredientDraft.quantityRequired} onChange={(event) => setIngredientDraft({ ...ingredientDraft, quantityRequired: event.target.value })} /></label><label>Unit<select required value={ingredientDraft.unitId} onChange={(event) => setIngredientDraft({ ...ingredientDraft, unitId: event.target.value })}><option value="">Choose unit</option>{units.map((unit) => <option value={unit.id} key={unit.id}>{unit.name}</option>)}</select></label></div><footer><button type="button" onClick={addPendingIngredient}>Add Ingredient</button><button type="button" className="secondary" onClick={() => setIngredientDraft(null)}>Cancel</button></footer></div> : <button className="add-ingredient-button" onClick={() => setIngredientDraft(blankIngredient())}>+ Add Ingredient</button>}<footer className="wizard-nav"><button className="secondary" onClick={() => setStep(2)}>Back</button><button className="wizard-next" onClick={() => setStep(4)}>Continue</button></footer></div>}
+      {step === 4 && <div className="wizard-screen single-field"><label>Preparation Time<div className="minute-field"><input autoFocus type="number" min="0" required placeholder="20" value={draft.preparationTimeMinutes} onChange={(event) => setDraft({ ...draft, preparationTimeMinutes: event.target.value })} /><span>Minutes</span></div></label><footer className="wizard-nav"><button className="secondary" onClick={() => setStep(3)}>Back</button><button className="wizard-next" disabled={draft.preparationTimeMinutes === "" || Number(draft.preparationTimeMinutes) < 0} onClick={() => setStep(5)}>Continue</button></footer></div>}
+      {step === 5 && <div className="wizard-screen"><div className="status-choice"><button className={draft.status === "draft" ? "selected" : ""} onClick={() => setDraft({ ...draft, status: "draft" })}><strong>Draft</strong><small>Finish it later</small></button><button className={draft.status === "active" ? "selected" : ""} onClick={() => setDraft({ ...draft, status: "active" })}><strong>Active</strong><small>Ready to use</small></button></div><footer className="wizard-nav"><button className="secondary" onClick={() => setStep(4)}>Back</button><button className="wizard-next" onClick={() => setStep(6)}>Continue</button></footer></div>}
+      {step === 6 && <div className="wizard-screen save-screen"><div className="save-review"><strong>{draft.name}</strong><span>{pendingIngredients.length} ingredient{pendingIngredients.length === 1 ? "" : "s"}</span><span>{draft.preparationTimeMinutes} minutes</span><span className={`status ${draft.status}`}>{draft.status}</span></div><button className="save-recipe-button" disabled={busy} onClick={() => void saveRecipe()}>{busy ? "Saving…" : "Save Recipe"}</button><button className="secondary" onClick={resetWizard}>Cancel</button></div>}
+    </section></div>}
+
+    {viewing && <div className="recipe-modal" role="dialog" aria-modal="true"><article className="recipe-detail v1-detail"><header><div><small>{menuByRecipe.get(viewing.id)?.category_name ?? "Menu Recipe"}</small><h2>{viewing.name}</h2></div><button className="secondary" onClick={() => setViewing(null)}>Close</button></header><section><dl><div><dt>Preparation Time</dt><dd>{viewing.preparation_time_minutes} minutes</dd></div><div><dt>Status</dt><dd><span className={`status ${viewing.status}`}>{viewing.status}</span></dd></div></dl></section><section className="ingredient-section"><header><h3>Ingredients</h3></header>{detailLoading ? <div className="recipe-empty">Loading ingredients…</div> : <div className="simple-ingredient-list">{detailIngredients.map((row) => <div key={row.id}><strong>{row.inventory_item_name}</strong><span>{row.quantity_required} {row.unit_name}</span></div>)}{detailIngredients.length === 0 && <div className="recipe-empty compact-empty">No ingredients added.</div>}</div>}</section>{editable && <footer className="detail-actions"><button onClick={() => { setViewing(null); void startEdit(viewing); }}>Edit Recipe</button><button className="danger" onClick={() => window.confirm("Delete this recipe? The menu item will remain.") && void (async () => { setBusy(true); try { await softDeleteRecipe(restaurantId, viewing.id); setViewing(null); setNotice("Recipe deleted. Menu item preserved."); await refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Recipe could not be deleted."); } finally { setBusy(false); } })()}>Delete Recipe</button></footer>}</article></div>}
+
+    {newInventoryItem && adminData && <div className="nested-modal"><form onSubmit={(event) => { event.preventDefault(); void createInlineIngredient(); }}><header><h3>Create Ingredient</h3><button type="button" className="secondary" onClick={() => setNewInventoryItem(null)}>Close</button></header><label>Name<input autoFocus required value={newInventoryItem.name} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, name: event.target.value })} /></label><label>Category<select required value={newInventoryItem.categoryId} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, categoryId: event.target.value })}>{adminData.categories.filter((row) => row.status === "active").map((row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label><label>Unit<select required value={newInventoryItem.unitId} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, unitId: event.target.value })}>{adminData.units.filter((row) => row.status === "active").map((row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label><label>Storage<select required value={newInventoryItem.storageLocationId} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, storageLocationId: event.target.value })}>{adminData.storageLocations.filter((row) => row.status === "active").map((row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label><div className="recipe-form-row"><label>Minimum Stock<input type="number" min="0" value={newInventoryItem.minimumStock} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, minimumStock: event.target.value })} /></label><label>Purchase Price<input type="number" min="0" step="0.01" value={newInventoryItem.purchasePrice} onChange={(event) => setNewInventoryItem({ ...newInventoryItem, purchasePrice: event.target.value })} /></label></div><button disabled={busy}>Create & Select</button></form></div>}
   </main>;
 }

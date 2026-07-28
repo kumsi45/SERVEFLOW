@@ -36,14 +36,15 @@ describe("Phase 8.3.4 Menu to Recipe Linking", () => {
   it("centralizes search, link mutation, and reverse usage lookup", () => {
     for (const name of ["list_active_menu_recipes", "link_menu_item_recipe", "get_recipe_used_by"]) expect(sql).toContain(name);
     for (const name of ["searchActiveMenuRecipes", "linkMenuItemRecipe", "fetchRecipeMenuUsage"]) expect(service).toContain(name);
-    expect(recipe).toContain("Used By");
-    expect(recipe).toContain("menuUsage.count");
+    expect(recipe).toContain("fetchMenuRecipeLinks");
+    expect(recipe).toContain("linkMenuItemRecipe");
+    expect(recipe).toContain("linkMenuItemRecipe(restaurantId, selectedMenu.id, recipe.id)");
   });
 
-  it("warns but does not block menu items without recipes", () => {
-    expect(owner).toContain("No Recipe Assigned");
-    expect(owner).not.toContain("Recipe Required");
-    expect(owner).toContain("recipe_id: formRecipeId || null");
+  it("supports explicit no-tracking menu items without a recipe", () => {
+    expect(owner).toContain("No Tracking");
+    expect(owner).toContain("recipe_id: resolvedRecipeId || null");
+    expect(owner).toContain("direct_inventory_item_id: directInventoryItemId || null");
     expect(sql).not.toMatch(/recipe_id uuid not null/i);
   });
 

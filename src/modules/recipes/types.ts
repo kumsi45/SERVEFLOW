@@ -20,7 +20,10 @@ export type RecipeIngredient = {
   inventory_item_name: string; quantity_required: number; unit_id: string; unit_name: string;
   optional_notes: string | null; sort_order: number; created_at: string; updated_at: string;
 };
-export type IngredientInventoryItem = { id: string; name: string; unit_id: string };
+export type IngredientInventoryItem = {
+  id: string; name: string; unit_id: string; current_quantity: number;
+  minimum_stock: number; stock_status: "in_stock" | "low_stock" | "out_of_stock" | "over_stock";
+};
 export type IngredientUnit = { id: string; name: string; description: string | null };
 export type RecipeIngredientDraft = {
   id?: string; inventoryItemId: string; quantityRequired: string; unitId: string;

@@ -2000,3 +2000,4 @@
     transform: none;
   }
 }
+.ia-menu-usage{display:grid;gap:10px}.ia-menu-usage>div{display:flex!important;flex-wrap:wrap;align-items:center;gap:7px}.ia-menu-usage>div>strong{width:100%;color:#475569;font-size:12px;text-transform:uppercase}.ia-menu-usage>div>span{padding:6px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:800}.ia-menu-usage>div+div>span{background:#ecfdf5;color:#047857}

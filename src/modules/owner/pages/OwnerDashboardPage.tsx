@@ -30,6 +30,7 @@ import {
   type DirectInventoryOption,
   type MenuRecipeOption,
 } from "../../menu-recipes/services/menuRecipeService";
+import { createRecipe, softDeleteRecipe } from "../../recipes/services/recipeService";
 import {
   createStaff,
   deleteStaff,
@@ -172,6 +173,20 @@ type OdMenuItem = {
   direct_inventory_item_id: string | null;
   direct_inventory_item_name: string | null;
 };
+
+type InventoryTrackingType = "recipe" | "ready_to_sell" | "no_tracking";
+
+function inventoryTrackingType(item: Pick<OdMenuItem, "recipe_id" | "direct_inventory_item_id">): InventoryTrackingType {
+  if (item.recipe_id) return "recipe";
+  if (item.direct_inventory_item_id) return "ready_to_sell";
+  return "no_tracking";
+}
+
+function inventoryTrackingLabel(type: InventoryTrackingType) {
+  if (type === "recipe") return "Recipe";
+  if (type === "ready_to_sell") return "Ready-to-Sell";
+  return "No Tracking";
+}
 
 type OdCategory = {
   id: string;
@@ -4853,6 +4868,7 @@ function MenuPage({
   const [formSodiumMg, setFormSodiumMg] = useState("");
   const [formRecipeId, setFormRecipeId] = useState("");
   const [formDirectInventoryItemId, setFormDirectInventoryItemId] = useState("");
+  const [formTrackingType, setFormTrackingType] = useState<InventoryTrackingType>("recipe");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [directInventorySearch, setDirectInventorySearch] = useState("");
   const [recipeOptions, setRecipeOptions] = useState<MenuRecipeOption[]>([]);
@@ -4863,19 +4879,19 @@ function MenuPage({
   const [isWorking, setIsWorking] = useState(false);
 
   useEffect(() => {
-    if (!modal) return;
+    if (!modal || formTrackingType !== "recipe") return;
     const timer = window.setTimeout(() => {
       void searchActiveMenuRecipes(restaurantId, recipeSearch).then(setRecipeOptions).catch((cause) => setMenuError(cause instanceof Error ? cause.message : "Recipes could not be loaded."));
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [modal, recipeSearch, restaurantId]);
+  }, [formTrackingType, modal, recipeSearch, restaurantId]);
   useEffect(() => {
-    if (!modal) return;
+    if (!modal || formTrackingType !== "ready_to_sell") return;
     const timer = window.setTimeout(() => {
       void searchActiveDirectInventoryItems(restaurantId, directInventorySearch).then(setDirectInventoryOptions).catch((cause) => setMenuError(cause instanceof Error ? cause.message : "Inventory items could not be loaded."));
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [directInventorySearch, modal, restaurantId]);
+  }, [directInventorySearch, formTrackingType, modal, restaurantId]);
   const activeStations = useMemo(
     () =>
       [...stations]
@@ -4981,6 +4997,7 @@ function MenuPage({
     setFormSodiumMg("");
     setFormRecipeId("");
     setFormDirectInventoryItemId("");
+    setFormTrackingType("recipe");
     setRecipeSearch("");
     setDirectInventorySearch("");
     setModal({ mode: "create" });
@@ -5014,6 +5031,7 @@ function MenuPage({
     setFormSodiumMg(formatOptionalNutritionInput(item.sodium_mg));
     setFormRecipeId(item.recipe_id ?? "");
     setFormDirectInventoryItemId(item.direct_inventory_item_id ?? "");
+    setFormTrackingType(inventoryTrackingType(item));
     setRecipeSearch(item.recipe_name ?? "");
     setDirectInventorySearch(item.direct_inventory_item_name ?? "");
     setModal({ mode: "edit", item });
@@ -5211,6 +5229,22 @@ function MenuPage({
       const fiberG = parseOptionalNutritionNumber("Fiber", formFiberG);
       const sugarG = parseOptionalNutritionNumber("Sugar", formSugarG);
       const sodiumMg = parseOptionalNutritionNumber("Sodium", formSodiumMg);
+      if (formTrackingType === "ready_to_sell" && !formDirectInventoryItemId) {
+        throw new Error("Choose the inventory ingredient sold by this menu item.");
+      }
+      const recipeId = formTrackingType === "recipe" ? formRecipeId : "";
+      const directInventoryItemId = formTrackingType === "ready_to_sell" ? formDirectInventoryItemId : "";
+      let automaticallyCreatedRecipeId: string | null = null;
+      let resolvedRecipeId = recipeId;
+      if (formTrackingType === "recipe" && !resolvedRecipeId) {
+        const createdRecipe = await createRecipe(restaurantId, {
+          name, description: "", categoryId: "",
+          preparationTimeMinutes: formPreparationTime || "0",
+          yieldQuantity: "1", yieldUnit: "serving", status: "active",
+        });
+        resolvedRecipeId = createdRecipe.id;
+        automaticallyCreatedRecipeId = createdRecipe.id;
+      }
       const payload = {
         restaurant_id: restaurantId,
         name,
@@ -5229,26 +5263,34 @@ function MenuPage({
         fiber_g: fiberG,
         sugar_g: sugarG,
         sodium_mg: sodiumMg,
-        recipe_id: formRecipeId || null,
-        direct_inventory_item_id: formDirectInventoryItemId || null,
+        recipe_id: resolvedRecipeId || null,
+        direct_inventory_item_id: directInventoryItemId || null,
       };
 
-      if (modal.mode === "create") {
-        const { error } = await supabase.from("menu_items").insert(payload);
-        if (error) throw new Error(error.message);
-        setNotice("Menu item created.");
-      } else {
-        const { error } = await supabase
-          .from("menu_items")
-          .update(payload)
-          .eq("id", modal.item.id)
-          .eq("restaurant_id", restaurantId);
-        if (error) throw new Error(error.message);
-        setNotice("Menu item updated.");
+      try {
+        if (modal.mode === "create") {
+          const { error } = await supabase.from("menu_items").insert(payload);
+          if (error) throw new Error(error.message);
+          setNotice(automaticallyCreatedRecipeId ? "Menu item and recipe created automatically." : "Menu item created.");
+        } else {
+          const { error } = await supabase
+            .from("menu_items")
+            .update(payload)
+            .eq("id", modal.item.id)
+            .eq("restaurant_id", restaurantId);
+          if (error) throw new Error(error.message);
+          setNotice(automaticallyCreatedRecipeId ? "Menu item updated and recipe created automatically." : "Menu item updated.");
+        }
+      } catch (cause) {
+        if (automaticallyCreatedRecipeId) await softDeleteRecipe(restaurantId, automaticallyCreatedRecipeId).catch(() => undefined);
+        throw cause;
       }
 
       setModal(null);
       await onMenuChanged();
+      if (automaticallyCreatedRecipeId) {
+        window.location.assign(`/owner/recipes?edit=${encodeURIComponent(automaticallyCreatedRecipeId)}`);
+      }
     } catch (actionError) {
       setMenuError(
         actionError instanceof Error
@@ -5463,7 +5505,7 @@ function MenuPage({
                 <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
-                <th>Inventory Link</th>
+                <th>Inventory Tracking</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -5530,24 +5572,11 @@ function MenuPage({
                       </span>
                     </td>
                     <td>
-                      {item.recipe_id ? (
-                        <div>
-                          <strong>{item.recipe_name ?? "Linked Recipe"}</strong>
-                          <div>
-                            <span className="od-status-badge paid">Recipe Linked</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="od-recipe-warning">No Recipe Assigned</span>
-                          {item.direct_inventory_item_id && (
-                            <div className="od-muted-line">
-                              Direct inventory:{" "}
-                              {item.direct_inventory_item_name ?? "Inventory item"}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div className="od-tracking-cell">
+                        <span className={`od-tracking-badge ${inventoryTrackingType(item)}`}>{inventoryTrackingLabel(inventoryTrackingType(item))}</span>
+                        {item.recipe_id && <small>{item.recipe_name ?? "Linked recipe"}</small>}
+                        {item.direct_inventory_item_id && <small>{item.direct_inventory_item_name ?? "Inventory ingredient"}</small>}
+                      </div>
                     </td>
                     <td>
                       <div className="od-row-actions">
@@ -5772,64 +5801,16 @@ function MenuPage({
                   placeholder="Optional"
                 />
               </label>
-              <fieldset className="od-recipe-link-fieldset">
-                <legend>Inventory Link</legend>
-                <label>
-                  Search Recipe
-                  <input
-                    value={recipeSearch}
-                    onChange={(event) => setRecipeSearch(event.target.value)}
-                    disabled={isWorking}
-                    placeholder="Search active recipes"
-                  />
-                </label>
-                <label>
-                  Select Recipe
-                  <select
-                    value={formRecipeId}
-                    onChange={(event) => {
-                      setFormRecipeId(event.target.value);
-                      if (event.target.value) setFormDirectInventoryItemId("");
-                    }}
-                    disabled={isWorking}
-                  >
-                    <option value="">No Recipe Assigned</option>
-                    {recipeOptions.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        {recipe.name} ({recipe.recipe_code})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Search Direct Inventory
-                  <input
-                    value={directInventorySearch}
-                    onChange={(event) => setDirectInventorySearch(event.target.value)}
-                    disabled={isWorking}
-                    placeholder="Search ready-to-serve inventory"
-                  />
-                </label>
-                <label>
-                  Direct Inventory Item
-                  <select
-                    value={formDirectInventoryItemId}
-                    onChange={(event) => {
-                      setFormDirectInventoryItemId(event.target.value);
-                      if (event.target.value) setFormRecipeId("");
-                    }}
-                    disabled={isWorking}
-                  >
-                    <option value="">No Direct Inventory Item</option>
-                    {directInventoryOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                        {item.sku ? ` (${item.sku})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {!formRecipeId && <span className="od-recipe-warning">No Recipe Assigned</span>}
+              <fieldset className="od-recipe-link-fieldset od-tracking-fieldset">
+                <legend>How should this menu item deduct stock?</legend>
+                <div className="od-tracking-options">
+                  <button type="button" className={formTrackingType === "recipe" ? "selected" : ""} onClick={() => { setFormTrackingType("recipe"); setFormDirectInventoryItemId(""); }}><strong>Recipe</strong><small>Prepared from ingredients</small><em>Most common</em></button>
+                  <button type="button" className={formTrackingType === "ready_to_sell" ? "selected" : ""} onClick={() => { setFormTrackingType("ready_to_sell"); setFormRecipeId(""); }}><strong>Ready-to-Sell Item</strong><small>Sold exactly as purchased</small></button>
+                  <button type="button" className={formTrackingType === "no_tracking" ? "selected" : ""} onClick={() => { setFormTrackingType("no_tracking"); setFormRecipeId(""); setFormDirectInventoryItemId(""); }}><strong>No Tracking</strong><small>No inventory deduction</small></button>
+                </div>
+                {formTrackingType === "recipe" && <div className="od-tracking-detail"><p>ServeFlow will create and link a recipe automatically. You can also reuse an existing active recipe.</p><label>Search existing recipes<input value={recipeSearch} onChange={(event) => setRecipeSearch(event.target.value)} disabled={isWorking} placeholder="Optional" /></label><label>Existing Recipe<select value={formRecipeId} onChange={(event) => setFormRecipeId(event.target.value)} disabled={isWorking}><option value="">Create recipe automatically</option>{recipeOptions.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}</select></label></div>}
+                {formTrackingType === "ready_to_sell" && <div className="od-tracking-detail"><p>One sale deducts one quantity from the selected inventory ingredient.</p><label>Search Inventory Ingredient<input value={directInventorySearch} onChange={(event) => setDirectInventorySearch(event.target.value)} disabled={isWorking} placeholder="Search inventory" /></label><label>Inventory Ingredient<select required value={formDirectInventoryItemId} onChange={(event) => setFormDirectInventoryItemId(event.target.value)} disabled={isWorking}><option value="">Choose inventory ingredient</option>{directInventoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}{item.sku ? ` (${item.sku})` : ""}</option>)}</select></label></div>}
+                {formTrackingType === "no_tracking" && <p className="od-tracking-confirmation">No recipe or inventory ingredient is required.</p>}
               </fieldset>
               <label>
                 Kitchen Station

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { supabase } from "../../../core/database";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
 import { PurchaseHistoryPage } from "../../purchasing/pages/PurchaseHistoryPage";
@@ -77,6 +78,8 @@ type Props = {
   staffRole: "owner" | "manager" | "inventory_officer";
   initialSection?: string;
 };
+
+type IngredientMenuUsage = { usedIn: string[]; linkedTo: string[] };
 
 const EMPTY_DATA: InventoryAdminData = {
   items: [],
@@ -415,6 +418,7 @@ export function InventoryDashboardPage({
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistoryRecord[]>([]);
   const [dashboardAdjustments, setDashboardAdjustments] = useState<InventoryAdjustment[]>([]);
   const [recipeCount, setRecipeCount] = useState(0);
+  const [ingredientMenuUsage, setIngredientMenuUsage] = useState<Record<string, IngredientMenuUsage>>({});
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
@@ -491,6 +495,42 @@ export function InventoryDashboardPage({
   useEffect(() => {
     void loadDashboardInsights();
   }, [loadDashboardInsights]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadIngredientMenuUsage() {
+      const [menuResult, ingredientResult] = await Promise.all([
+        supabase.from("menu_items").select("name,recipe_id,direct_inventory_item_id").eq("restaurant_id", restaurantId).is("archived_at", null),
+        supabase.from("recipe_ingredients").select("inventory_item_id,recipe_id").eq("restaurant_id", restaurantId),
+      ]);
+      if (menuResult.error) throw new Error(menuResult.error.message);
+      if (ingredientResult.error) throw new Error(ingredientResult.error.message);
+      const menuByRecipe = new Map<string, string[]>();
+      const usage: Record<string, IngredientMenuUsage> = {};
+      for (const row of menuResult.data ?? []) {
+        if (row.recipe_id) menuByRecipe.set(String(row.recipe_id), [...(menuByRecipe.get(String(row.recipe_id)) ?? []), String(row.name)]);
+        if (row.direct_inventory_item_id) {
+          const itemId = String(row.direct_inventory_item_id);
+          usage[itemId] = usage[itemId] ?? { usedIn: [], linkedTo: [] };
+          usage[itemId].linkedTo.push(String(row.name));
+        }
+      }
+      for (const row of ingredientResult.data ?? []) {
+        const itemId = String(row.inventory_item_id);
+        usage[itemId] = usage[itemId] ?? { usedIn: [], linkedTo: [] };
+        usage[itemId].usedIn.push(...(menuByRecipe.get(String(row.recipe_id)) ?? []));
+      }
+      for (const value of Object.values(usage)) {
+        value.usedIn = [...new Set(value.usedIn)].sort();
+        value.linkedTo = [...new Set(value.linkedTo)].sort();
+      }
+      if (active) setIngredientMenuUsage(usage);
+    }
+    void loadIngredientMenuUsage().catch((cause) => {
+      if (active) setError(cause instanceof Error ? cause.message : "Menu usage could not be loaded.");
+    });
+    return () => { active = false; };
+  }, [restaurantId]);
 
   const reconcileRealtime = useCallback(async () => {
     const [next, nextStock, nextLedger, nextMovementHistory] = await Promise.all([
@@ -1528,6 +1568,7 @@ export function InventoryDashboardPage({
         return <div className="ia-sheet-backdrop" role="presentation" onClick={() => setDetailIngredientId(null)}><section className="ia-ingredient-sheet" role="dialog" aria-modal="true" aria-label="Ingredient Details" onClick={(event) => event.stopPropagation()}>
           <header><div><span>Ingredient Details</span><h2>{ingredient.name}</h2></div><button type="button" onClick={() => setDetailIngredientId(null)}>Close</button></header>
           <dl><div><dt>Current Stock</dt><dd>{quantityLabel(stock?.quantity ?? 0, stock?.unitName ?? unitNames.get(ingredient.unitId) ?? "unit")}</dd></div><div><dt>Unit</dt><dd>{unitNames.get(ingredient.unitId) ?? "—"}</dd></div><div><dt>Supplier</dt><dd>{ingredient.preferredSupplierId ? supplierNames.get(ingredient.preferredSupplierId) ?? "—" : "—"}</dd></div><div><dt>Storage</dt><dd>{storageNames.get(ingredient.storageLocationId) ?? "—"}</dd></div><div><dt>Purchase Price</dt><dd>{moneyLabel(ingredient.purchasePrice)}</dd></div><div><dt>Average Cost</dt><dd>—</dd></div><div><dt>Minimum Stock</dt><dd>{ingredient.minimumStock}</dd></div><div><dt>Maximum Stock</dt><dd>{ingredient.maximumStock ?? "—"}</dd></div></dl>
+          <section className="ia-menu-usage"><h3>Menu Usage</h3>{ingredientMenuUsage[ingredient.id]?.usedIn.length ? <div><strong>Used In</strong>{ingredientMenuUsage[ingredient.id].usedIn.map((name) => <span key={`recipe-${name}`}>{name}</span>)}</div> : null}{ingredientMenuUsage[ingredient.id]?.linkedTo.length ? <div><strong>Linked To</strong>{ingredientMenuUsage[ingredient.id].linkedTo.map((name) => <span key={`direct-${name}`}>{name}</span>)}</div> : null}{!ingredientMenuUsage[ingredient.id]?.usedIn.length && !ingredientMenuUsage[ingredient.id]?.linkedTo.length && <p>Not used by a tracked menu item.</p>}</section>
           <section><h3>Recent Movements</h3>{movements.map((entry) => <p key={entry.id}><strong>{movementLabel(entry.movementType)}</strong><span>{dateLabel(entry.movementDate)}</span></p>)}{!movements.length && <p>No recent movements.</p>}</section>
           <section><h3>Recent Waste</h3>{movements.filter((entry) => entry.movementType === "waste" || entry.movementType === "spoilage").map((entry) => <p key={entry.id}><strong>{movementLabel(entry.movementType)}</strong><span>{dateLabel(entry.movementDate)}</span></p>)}{!movements.some((entry) => entry.movementType === "waste" || entry.movementType === "spoilage") && <p>No recent waste.</p>}</section>
           <section><h3>Recent Adjustments</h3>{movements.filter((entry) => entry.movementType === "adjustment_increase" || entry.movementType === "adjustment_decrease" || entry.movementType === "manual_correction").map((entry) => <p key={entry.id}><strong>{movementLabel(entry.movementType)}</strong><span>{dateLabel(entry.movementDate)}</span></p>)}{!movements.some((entry) => entry.movementType === "adjustment_increase" || entry.movementType === "adjustment_decrease" || entry.movementType === "manual_correction") && <p>No recent adjustments.</p>}</section>

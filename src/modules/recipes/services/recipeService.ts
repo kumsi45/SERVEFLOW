@@ -1,5 +1,6 @@
 import { supabase } from "../../../core/database";
 import type { IngredientInventoryItem, IngredientUnit, Recipe, RecipeCategory, RecipeCost, RecipeDraft, RecipeFilters, RecipeIngredient, RecipeIngredientDraft, RecipePage } from "../types";
+import { loadInventoryCurrentStock } from "../../inventory/services/inventoryStockRepository";
 
 export async function fetchRecipeCategories(restaurantId: string): Promise<RecipeCategory[]> {
   const { data, error } = await supabase.from("recipe_categories")
@@ -71,7 +72,20 @@ export async function searchActiveInventoryItems(restaurantId: string, search: s
   if (search.trim()) query = query.ilike("name", `%${search.trim().replace(/%/g, "\\%").replace(/_/g, "\\_")}%`);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []) as IngredientInventoryItem[];
+  const stock = await loadInventoryCurrentStock(restaurantId);
+  const totals = new Map<string, { quantity: number; minimum: number; status: IngredientInventoryItem["stock_status"] }>();
+  for (const row of stock) {
+    const current = totals.get(row.inventoryItemId) ?? { quantity: 0, minimum: row.minimumStock, status: "in_stock" as const };
+    current.quantity += row.currentQuantity;
+    current.minimum = row.minimumStock;
+    totals.set(row.inventoryItemId, current);
+  }
+  return (data ?? []).map((row) => {
+    const current = totals.get(String(row.id));
+    const quantity = current?.quantity ?? 0;
+    const minimum = current?.minimum ?? 0;
+    return { ...row, current_quantity: quantity, minimum_stock: minimum, stock_status: quantity <= 0 ? "out_of_stock" : quantity <= minimum ? "low_stock" : "in_stock" } as IngredientInventoryItem;
+  });
 }
 
 export async function fetchActiveIngredientUnits(restaurantId: string): Promise<IngredientUnit[]> {

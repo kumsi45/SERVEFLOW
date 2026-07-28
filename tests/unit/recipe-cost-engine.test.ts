@@ -39,11 +39,10 @@ describe("Phase 8.3.3 Recipe Cost Engine", () => {
     expect(canManageRecipes("inventory_officer")).toBe(false);
   });
 
-  it("displays unit and ingredient costs to two decimal places without manual recalculation", () => {
+  it("keeps the cost engine available while hiding advanced cost UI in V1", () => {
     expect(page).toContain("minimumFractionDigits: 2, maximumFractionDigits: 2");
-    expect(page).toContain("ETB /");
-    expect(page).toContain("Calculated automatically from current inventory purchase prices.");
-    expect(page).not.toMatch(/Recalculate|Save Recipe Cost|Selling Price|Profit/);
+    expect(service).toContain("fetchRecipeCost");
+    expect(page).not.toMatch(/Food Cost|Profit Margin|Save Recipe Cost|fetchRecipeCost/);
   });
 
   it("does not touch downstream operational domains", () => {

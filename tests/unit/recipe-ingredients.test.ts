@@ -34,7 +34,7 @@ describe("Phase 8.3.2 Recipe Ingredient Management", () => {
     expect(canManageRecipes("inventory_officer")).toBe(false);
     expect(sql).toContain("public.recipe_can_read(restaurant_id)");
     expect(sql).toContain("public.recipe_can_manage(restaurant_id)");
-    expect(page).toContain("editable && !ingredientDraft");
+    expect(page).toContain("canManageRecipes(role)");
   });
 
   it("supports add, edit, remove, search, and duplicate including ingredients", () => {
@@ -42,14 +42,14 @@ describe("Phase 8.3.2 Recipe Ingredient Management", () => {
     expect(service).toContain('rpc("duplicate_recipe_with_ingredients"');
     expect(sql).toContain("insert into public.recipe_ingredients");
     expect(sql).toContain("duplicated_id");
-    expect(page).toContain("Search Inventory Item");
-    expect(page).toContain("Save Ingredient");
+    expect(page).toContain("Search Ingredient");
+    expect(page).toContain("Add Ingredient");
   });
 
-  it("keeps ingredient definitions disconnected from stock and downstream behavior", () => {
+  it("keeps ingredient mutations disconnected from stock and downstream behavior", () => {
     expect(sql).not.toMatch(/inventory_movements|stock_deduction|order_items|menu_items/i);
     expect(service).not.toMatch(/inventory_movements|stock_deduction|order_items|menu_items/i);
-    expect(page).toContain("Recipe Cost");
+    expect(page).toContain("Ingredients");
     expect(page).not.toMatch(/calculateCost|deductInventory|recordStockMovement/);
   });
 
