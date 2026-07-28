@@ -6,6 +6,7 @@ const preview = readFileSync("src/modules/setup-wizard/components/AiMenuFinalPre
 const service = readFileSync("src/modules/setup-wizard/services/menuPublishService.ts", "utf8");
 const migration = readFileSync("supabase/migrations/193_phase9_8_6_ai_menu_publish_engine.sql", "utf8");
 const restoreMigration = readFileSync("supabase/migrations/194_phase9_8_6_publish_draft_restore.sql", "utf8");
+const publishStabilityMigration = readFileSync("supabase/migrations/195_production_publish_variable_conflict_fix.sql", "utf8");
 const edge = readFileSync("supabase/functions/menu-publish/index.ts", "utf8");
 
 describe("Phase 9.8.6 AI menu publish engine", () => {
@@ -59,5 +60,14 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(studio).toContain("Publish History");
     expect(studio).toContain("Restore Previous Draft");
     expect(studio).toContain("onPublish={() => void publishReviewedMenu()}");
+  });
+
+  it("keeps publish variables distinct from SQL column names", () => {
+    for (const source of [migration, publishStabilityMigration]) {
+      expect(source).toContain("target_category_id uuid");
+      expect(source).toContain("target_menu_item_id uuid");
+      expect(source).toContain("target_image_url text");
+      expect(source).not.toMatch(/^\s*(category_id|menu_item_id|image_url)\s+(uuid|text);/m);
+    }
   });
 });

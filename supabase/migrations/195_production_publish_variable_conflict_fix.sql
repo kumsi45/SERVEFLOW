@@ -1,62 +1,5 @@
--- Phase 9.8.6: atomic publication of owner-approved Review Studio state.
-
-alter table public.ai_menu_import_drafts
-  add column if not exists publish_status text not null default 'draft',
-  add column if not exists published_at timestamptz,
-  add column if not exists published_version integer not null default 0;
-
-alter table public.ai_menu_import_drafts
-  drop constraint if exists ai_menu_import_drafts_publish_status_check;
-alter table public.ai_menu_import_drafts
-  add constraint ai_menu_import_drafts_publish_status_check
-  check (publish_status in ('draft', 'publishing', 'published'));
-
-create table if not exists public.ai_menu_publish_versions (
-  id uuid primary key default gen_random_uuid(),
-  restaurant_id uuid not null references public.restaurants(id) on delete cascade,
-  draft_id uuid not null references public.ai_menu_import_drafts(id) on delete restrict,
-  review_revision integer not null check (review_revision >= 0),
-  published_version integer not null check (published_version > 0),
-  review_snapshot jsonb not null check (jsonb_typeof(review_snapshot) = 'object'),
-  categories_published integer not null default 0,
-  items_published integer not null default 0,
-  images_published integer not null default 0,
-  languages_published integer not null default 0,
-  skipped_items integer not null default 0,
-  warnings jsonb not null default '[]'::jsonb,
-  published_by uuid references auth.users(id) on delete set null,
-  published_role text not null,
-  published_at timestamptz not null default now(),
-  unique (draft_id, published_version),
-  unique (draft_id, review_revision)
-);
-
-create table if not exists public.ai_menu_publish_category_links (
-  draft_id uuid not null references public.ai_menu_import_drafts(id) on delete cascade,
-  draft_category_id text not null,
-  category_id uuid not null references public.categories(id) on delete restrict,
-  primary key (draft_id, draft_category_id)
-);
-
-create table if not exists public.ai_menu_publish_item_links (
-  draft_id uuid not null references public.ai_menu_import_drafts(id) on delete cascade,
-  draft_item_id text not null,
-  menu_item_id uuid not null references public.menu_items(id) on delete restrict,
-  primary key (draft_id, draft_item_id)
-);
-
-alter table public.ai_menu_publish_versions enable row level security;
-alter table public.ai_menu_publish_category_links enable row level security;
-alter table public.ai_menu_publish_item_links enable row level security;
-
-create policy ai_menu_publish_versions_owner_select on public.ai_menu_publish_versions
-for select to authenticated using (
-  public.has_staff_role(restaurant_id, array['owner']::public.restaurant_staff_role[])
-);
-
-revoke all on public.ai_menu_publish_versions, public.ai_menu_publish_category_links,
-  public.ai_menu_publish_item_links from public, anon, authenticated;
-grant select on public.ai_menu_publish_versions to authenticated;
+-- Phase 9.10: fix ambiguous PL/pgSQL publish variables without changing the RPC contract.
+-- This is the corrected Phase 9.8.6 function definition; local variables no longer shadow columns.
 
 create or replace function public.publish_ai_menu_draft(
   target_restaurant_id uuid,
@@ -226,13 +169,3 @@ exception when others then
 end;
 $$;
 
-create or replace function public.get_ai_menu_publish_history(target_restaurant_id uuid, target_draft_id uuid)
-returns setof public.ai_menu_publish_versions language sql stable security definer set search_path = public as $$
-  select version.* from public.ai_menu_publish_versions version
-  where version.restaurant_id = target_restaurant_id and version.draft_id = target_draft_id
-    and public.has_staff_role(target_restaurant_id, array['owner']::public.restaurant_staff_role[])
-  order by version.published_version desc;
-$$;
-
-revoke all on function public.publish_ai_menu_draft(uuid,uuid,integer,jsonb), public.get_ai_menu_publish_history(uuid,uuid) from public, anon;
-grant execute on function public.publish_ai_menu_draft(uuid,uuid,integer,jsonb), public.get_ai_menu_publish_history(uuid,uuid) to authenticated, service_role;
