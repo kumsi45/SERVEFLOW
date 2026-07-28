@@ -137,7 +137,7 @@ export function PurchaseHistoryPage({ restaurantId }: Props) {
           {purchases.map((purchase) => (
             <article className="ph-table" key={purchase.id}>
               <strong data-label="Purchase Number">{purchase.purchaseNumber}</strong>
-              <span data-label="Supplier">{purchase.supplierName}</span>
+              <span data-label="Supplier">{purchase.supplierName || "No supplier"}</span>
               <span data-label="Created By">{purchase.createdByName}</span>
               <span data-label="Created Date">{dateTimeLabel(purchase.createdAt)}</span>
               <span data-label="Received Date">{dateTimeLabel(purchase.receivedAt)}</span>

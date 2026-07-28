@@ -61,3 +61,12 @@
   .po-draft-lines strong { text-align: left; }
   .po-editor-footer > div, .po-draft-card footer > div { margin-right: 0; }
 }
+.po-receipt-editor {
+  scroll-margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .po-receipt-editor {
+    scroll-margin-top: 76px;
+  }
+}

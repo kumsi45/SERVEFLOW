@@ -20,7 +20,7 @@ describe("Phase W.4.1 simplified recipe creation V1", () => {
     expect(page).toContain("searchActiveInventoryItems");
     expect(page).toContain("for (const ingredient of pendingIngredients) await saveRecipeIngredient");
     expect(page).toContain("+ Create Ingredient");
-    expect(page).toContain("Create & Select");
+    expect(page).toContain("Create & Add");
   });
 
   it("defaults to active and preserves hidden backend-ready fields", () => {

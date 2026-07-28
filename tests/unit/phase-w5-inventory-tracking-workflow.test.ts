@@ -11,7 +11,7 @@ const inventory = read("src/modules/inventory/pages/InventoryDashboardPage.tsx")
 describe("Phase W.5 menu recipe inventory workflow simplification", () => {
   it("derives one tracking decision from existing menu links", () => {
     expect(owner).toContain('type InventoryTrackingType = "recipe" | "ready_to_sell" | "no_tracking"');
-    expect(owner).toContain("How should this menu item deduct stock?");
+    expect(owner).toContain("How should inventory be tracked for this menu item?");
     for (const label of ["Recipe", "Ready-to-Sell Item", "No Tracking"]) expect(owner).toContain(label);
     expect(owner).toContain("inventoryTrackingType(item)");
   });

@@ -5505,7 +5505,7 @@ function MenuPage({
                 <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
-                <th>Inventory Tracking</th>
+                <th>Stock Tracking</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -5802,14 +5802,15 @@ function MenuPage({
                 />
               </label>
               <fieldset className="od-recipe-link-fieldset od-tracking-fieldset">
-                <legend>How should this menu item deduct stock?</legend>
+                <legend>Stock Tracking</legend>
+                <p className="od-tracking-question">How should inventory be tracked for this menu item?</p>
                 <div className="od-tracking-options">
                   <button type="button" className={formTrackingType === "recipe" ? "selected" : ""} onClick={() => { setFormTrackingType("recipe"); setFormDirectInventoryItemId(""); }}><strong>Recipe</strong><small>Prepared from ingredients</small><em>Most common</em></button>
                   <button type="button" className={formTrackingType === "ready_to_sell" ? "selected" : ""} onClick={() => { setFormTrackingType("ready_to_sell"); setFormRecipeId(""); }}><strong>Ready-to-Sell Item</strong><small>Sold exactly as purchased</small></button>
                   <button type="button" className={formTrackingType === "no_tracking" ? "selected" : ""} onClick={() => { setFormTrackingType("no_tracking"); setFormRecipeId(""); setFormDirectInventoryItemId(""); }}><strong>No Tracking</strong><small>No inventory deduction</small></button>
                 </div>
                 {formTrackingType === "recipe" && <div className="od-tracking-detail"><p>ServeFlow will create and link a recipe automatically. You can also reuse an existing active recipe.</p><label>Search existing recipes<input value={recipeSearch} onChange={(event) => setRecipeSearch(event.target.value)} disabled={isWorking} placeholder="Optional" /></label><label>Existing Recipe<select value={formRecipeId} onChange={(event) => setFormRecipeId(event.target.value)} disabled={isWorking}><option value="">Create recipe automatically</option>{recipeOptions.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}</select></label></div>}
-                {formTrackingType === "ready_to_sell" && <div className="od-tracking-detail"><p>One sale deducts one quantity from the selected inventory ingredient.</p><label>Search Inventory Ingredient<input value={directInventorySearch} onChange={(event) => setDirectInventorySearch(event.target.value)} disabled={isWorking} placeholder="Search inventory" /></label><label>Inventory Ingredient<select required value={formDirectInventoryItemId} onChange={(event) => setFormDirectInventoryItemId(event.target.value)} disabled={isWorking}><option value="">Choose inventory ingredient</option>{directInventoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}{item.sku ? ` (${item.sku})` : ""}</option>)}</select></label></div>}
+                {formTrackingType === "ready_to_sell" && <div className="od-tracking-detail"><p>Link the packaged menu item to its matching inventory ingredient.</p><label>Search Inventory Ingredient<input value={directInventorySearch} onChange={(event) => setDirectInventorySearch(event.target.value)} disabled={isWorking} placeholder="Search inventory" /></label><label>Inventory Ingredient<select required value={formDirectInventoryItemId} onChange={(event) => setFormDirectInventoryItemId(event.target.value)} disabled={isWorking}><option value="">Choose inventory ingredient</option>{directInventoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}{item.sku ? ` (${item.sku})` : ""}</option>)}</select></label></div>}
                 {formTrackingType === "no_tracking" && <p className="od-tracking-confirmation">No recipe or inventory ingredient is required.</p>}
               </fieldset>
               <label>

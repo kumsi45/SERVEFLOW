@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InventoryItem, InventorySupplier, InventoryUnit } from "../../inventory/types";
 import {
   deletePurchaseOrderDraft,
@@ -92,6 +92,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const receiptEditorRef = useRef<HTMLElement | null>(null);
   const activeSuppliers = suppliers.filter((supplier) => supplier.status === "active");
   const filterSuppliers = suppliers.filter((supplier) => supplier.status !== "deleted");
   const activeItems = items.filter((item) => item.status === "active");
@@ -110,6 +111,18 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
   }, [restaurantId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!receipt) return;
+    const frame = window.requestAnimationFrame(() => {
+      const editor = receiptEditorRef.current;
+      if (!editor) return;
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      editor.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      editor.querySelector<HTMLInputElement>('input[type="number"]')?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [receipt?.purchaseOrderId]);
 
   const filteredDrafts = useMemo(() => drafts.filter((draft) => {
     if (supplierFilter && draft.supplierId !== supplierFilter) return false;
@@ -212,7 +225,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
         <section className="po-editor" aria-label={form.id ? "Edit purchase order draft" : "Create purchase order draft"}>
           <div className="po-editor-heading"><h3>{form.id ? `Edit Draft ${form.id.slice(0, 8).toUpperCase()}` : "New Purchase Order Draft"}</h3><span>Draft</span></div>
           <div className="po-header-fields">
-            <label>Supplier<select required value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}><option value="">Select supplier</option>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
+            <label>Supplier <span>(Optional)</span><select value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}><option value="">No supplier</option>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
             <label>Expected Delivery Date<input required type="date" value={form.expectedDeliveryDate} onChange={(event) => setForm({ ...form, expectedDeliveryDate: event.target.value })} /></label>
             <label className="wide">Notes<textarea maxLength={2000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional supplier or delivery notes" /></label>
           </div>
@@ -237,7 +250,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
       )}
 
       {receipt && (
-        <section className="po-editor po-receipt-editor" aria-label="Receive purchase order">
+        <section ref={receiptEditorRef} className="po-editor po-receipt-editor" aria-label="Receive purchase order">
           <div className="po-editor-heading"><h3>Receive PO {receipt.purchaseOrderId.slice(0, 8).toUpperCase()}</h3><span>Stock In</span></div>
           <p className="po-receipt-help">Enter only the quantities physically received. Prices and unit conversions are preserved in the immutable receipt.</p>
           <div className="po-receipt-lines">
@@ -268,7 +281,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
         <section className="po-draft-list" aria-label="Purchase orders">
           {filteredDrafts.map((draft) => (
             <article className="po-draft-card" key={draft.id}>
-              <header><div><span>PO {draft.id.slice(0, 8).toUpperCase()}</span><h3>{draft.supplierName}</h3></div><span className={`po-status ${draft.status}`}>{statusLabel(draft.status)}</span></header>
+              <header><div><span>PO {draft.id.slice(0, 8).toUpperCase()}</span><h3>{draft.supplierName || "No supplier"}</h3></div><span className={`po-status ${draft.status}`}>{statusLabel(draft.status)}</span></header>
               <dl><div><dt>Expected Delivery</dt><dd>{dateLabel(draft.expectedDeliveryDate)}</dd></div><div><dt>Items</dt><dd>{draft.lineCount}</dd></div><div><dt>Updated</dt><dd>{dateTimeLabel(draft.updatedAt)}</dd></div><div><dt>Updated By</dt><dd>{draft.updatedByName}</dd></div></dl>
               <div className="po-draft-lines">{draft.lines.map((line) => <div key={line.id}><span>{line.inventoryItemName}</span><span>Ordered {line.quantity} · Received {line.receivedQuantity} · Remaining {line.remainingQuantity} {line.purchaseUnitName}</span><strong>{money(line.lineTotal)}</strong></div>)}</div>
               {draft.notes && <p>{draft.notes}</p>}

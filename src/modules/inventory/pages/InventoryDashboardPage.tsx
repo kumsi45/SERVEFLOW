@@ -104,11 +104,14 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "movement-history", label: "Movement History" },
   { key: "purchase-orders", label: "Purchase Orders" },
   { key: "purchase-history", label: "Purchase History" },
+  { key: "inventory-reports", label: "Inventory Reports" },
   { key: "low-stock-assistant", label: "Low Stock" },
   { key: "inventory-value", label: "Inventory Value" },
   { key: "consumption", label: "Consumption" },
   { key: "waste-report", label: "Waste Report" },
   { key: "inventory-settings", label: "Inventory Settings" },
+  { key: "export", label: "Export" },
+  { key: "help", label: "Help" },
   { key: "items", label: "Ingredients" },
   { key: "categories", label: "Ingredient Categories" },
   { key: "suppliers", label: "Suppliers" },
@@ -143,6 +146,7 @@ const PURCHASING_NAV: Array<{ key: InventorySection; label: string }> = [
 ];
 
 const REPORTS_NAV: Array<{ key: InventorySection; label: string }> = [
+  { key: "inventory-reports", label: "All Reports" },
   { key: "inventory-value", label: "Inventory Value" },
   { key: "low-stock-assistant", label: "Low Stock" },
   { key: "consumption", label: "Consumption" },
@@ -159,13 +163,13 @@ const NAV_GROUPS: Array<{ key: InventoryNavGroup; label: string; items: Array<{ 
 const STOCK_MANAGEMENT_NAV = OPERATIONS_NAV;
 const INVENTORY_RECORDS_NAV = MASTER_DATA_NAV;
 
-const MOBILE_MENU_NAV: Array<{ key: string; label: string; section?: InventorySection; utility?: InventoryUtilityView; action?: "export" | "help"; group?: InventoryNavGroup }> = [
-  { key: "reports", label: "Inventory Reports", section: "inventory-value", group: "reports" },
+const MOBILE_MENU_NAV: Array<{ key: string; label: string; section: InventorySection; group?: InventoryNavGroup }> = [
+  { key: "reports", label: "Inventory Reports", section: "inventory-reports", group: "reports" },
   { key: "suppliers", label: "Suppliers", section: "suppliers", group: "master" },
   { key: "setup", label: "Inventory Setup", section: "items", group: "master" },
-  { key: "settings", label: "Settings", utility: "settings" },
-  { key: "export", label: "Export", action: "export" },
-  { key: "help", label: "Help", action: "help" },
+  { key: "settings", label: "Settings", section: "inventory-settings" },
+  { key: "export", label: "Export", section: "export" },
+  { key: "help", label: "Help", section: "help" },
 ];
 
 const MOBILE_PRIMARY_NAV: Array<{ key: string; label: string; icon: string; section?: InventorySection; group?: InventoryNavGroup }> = [
@@ -668,7 +672,7 @@ export function InventoryDashboardPage({
   const lowStockRows = useMemo(() => currentStock.filter((row) => (
     row.stockStatus === "low_stock" || row.stockStatus === "out_of_stock"
   )), [currentStock]);
-  const recentLedger = useMemo(() => ledger.slice(0, 8), [ledger]);
+  const recentLedger = useMemo(() => ledger.slice(0, 10), [ledger]);
   const todayOperations = useMemo(() => {
     const today = new Date().toDateString();
     const todays = ledger.filter((entry) => new Date(entry.movementDate).toDateString() === today);
@@ -803,11 +807,6 @@ export function InventoryDashboardPage({
     setMobileMenuOpen(false);
   }
 
-  function runMobileMenuAction(action: "export" | "help") {
-    setMobileMenuOpen(false);
-    setMessage(action === "export" ? "Open a report to export the currently displayed inventory data." : "Inventory help is available from your ServeFlow administrator.");
-  }
-
   function toggleNavGroup(group: InventoryNavGroup) {
     setExpandedNavGroup((current) => current === group ? null : group);
   }
@@ -846,7 +845,7 @@ export function InventoryDashboardPage({
     );
   }
 
-  const dashboard = (
+  const legacyDashboard = false && (
     <div className="ia-stack ia-dashboard-polish">
       <section className="ia-dashboard-hero ia-phase-w-hidden" aria-hidden="true">
         <div><span>Inventory Operations</span><h2>Stock health at a glance</h2><p>Live balances, purchasing work, and recent operational activity for {restaurantName}.</p></div>
@@ -883,7 +882,7 @@ export function InventoryDashboardPage({
           <button type="button" onClick={() => navigate("movement-history")}><span aria-hidden="true">MV</span><strong>Movement History</strong><small>Audit consumption movements</small></button>
           <button type="button" onClick={() => navigate("purchase-history")}><span aria-hidden="true">PH</span><strong>Purchase History</strong><small>Review purchasing activity</small></button>
           <button type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">LS</span><strong>Low Stock Assistant</strong><small>See suggested quantities</small></button>
-          <button type="button" onClick={openRecipes}><span aria-hidden="true">RE</span><strong>Recipes</strong><small>Open recipe management</small></button>
+          {staffRole !== "inventory_officer" && <button type="button" onClick={openRecipes}><span aria-hidden="true">RE</span><strong>Recipes</strong><small>Open recipe management</small></button>}
           <button type="button" onClick={() => navigate("suppliers")}><span aria-hidden="true">SU</span><strong>Suppliers</strong><small>Manage supplier records</small></button>
         </div>
       </section>
@@ -895,10 +894,10 @@ export function InventoryDashboardPage({
         <article><strong>{dashboardKpis.pendingPurchaseOrders}</strong><span>Pending Receipts</span><button type="button" onClick={() => navigate("purchase-orders")}>Open</button></article>
       </div></section>
 
-      {(activeSuppliers.length === 0 || (!insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0)) && (
+      {(activeSuppliers.length === 0 || (staffRole !== "inventory_officer" && !insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0)) && (
         <section className="ia-setup-grid" aria-label="Inventory setup guidance">
           {activeSuppliers.length === 0 && <DashboardEmptyState icon="SU" title="No Suppliers" message="Add an active supplier before preparing purchase orders." actionLabel="Add Supplier" onAction={() => { navigate("suppliers"); setSupplierForm(supplierDraft()); }} />}
-          {!insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0 && <DashboardEmptyState icon="RE" title="No Recipes" message="Create recipes to connect menu consumption with inventory ingredients." actionLabel="Open Recipes" onAction={openRecipes} />}
+          {staffRole !== "inventory_officer" && !insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0 && <DashboardEmptyState icon="RE" title="No Recipes" message="Owners create recipes for recipe-tracked menu items." actionLabel="Open Recipes" onAction={openRecipes} />}
         </section>
       )}
 
@@ -924,6 +923,77 @@ export function InventoryDashboardPage({
           <DashboardActivityPanel title="Recent Consumption" subtitle="Order-linked consumption" items={recentConsumption} empty={{ icon: "CO", title: "No Consumption", message: "Order consumption movements will appear here.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
           <DashboardActivityPanel title="Recent Waste" subtitle="Waste and spoilage" items={recentWaste} empty={{ icon: "WA", title: "No Waste", message: "Waste and spoilage adjustments will appear here.", actionLabel: "View Adjustments" }} onOpen={() => navigate("adjustments")} />
           <DashboardActivityPanel title="Recent Movements" subtitle="Latest stock ledger entries" items={recentMovements} empty={{ icon: "MV", title: "No Movements", message: "Inventory movements will appear after the first stock operation.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
+        </div>
+      </section>
+    </div>
+  );
+
+  void legacyDashboard;
+
+  const dashboard = (
+    <div className="ia-stack ia-dashboard-final">
+      {insightsError && <div className="ia-dashboard-notice" role="status">{insightsError}</div>}
+
+      <section className="ia-final-section ia-final-operations" aria-labelledby="today-operations-title">
+        <div className="ia-final-section-title"><h2 id="today-operations-title">Today's Operations</h2></div>
+        <div className="ia-final-operation-grid">
+          <button className="urgent" type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">!</span><small>Out of Stock</small><strong>{dashboardKpis.outOfStockItems}</strong><em>Tap to view</em></button>
+          <button className="attention" type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">!</span><small>Low Stock</small><strong>{dashboardKpis.lowStockItems}</strong><em>Tap to view</em></button>
+          <button className="warning" type="button" onClick={() => navigate("current-stock")} aria-label="Expiring Soon, data unavailable, tap to view current stock"><span aria-hidden="true">!</span><small>Expiring Soon</small><strong>—</strong><em>Tap to view</em></button>
+          <button className="info" type="button" onClick={() => navigate("purchase-orders")}><span aria-hidden="true">PO</span><small>Pending Purchases</small><strong>{dashboardKpis.pendingPurchaseOrders}</strong><em>Tap to view</em></button>
+          <button className="attention" type="button" onClick={() => navigate("waste")}><span aria-hidden="true">!</span><small>Waste Recorded</small><strong>{todayOperations.waste}</strong><em>Tap to view</em></button>
+          <button className="info" type="button" onClick={() => navigate("transfers")} aria-label="Pending Transfers, data unavailable, tap to view transfers"><span aria-hidden="true">TR</span><small>Pending Transfers</small><strong>—</strong><em>Tap to view</em></button>
+        </div>
+      </section>
+
+      <section className="ia-final-section" aria-labelledby="inventory-quick-actions-title-v2">
+        <div className="ia-final-section-title"><h2 id="inventory-quick-actions-title-v2">Quick Actions</h2></div>
+        <div className="ia-final-action-grid">
+          <button type="button" onClick={() => navigate("stock-in")}><span aria-hidden="true">+</span><strong>Receive Stock</strong></button>
+          <button type="button" onClick={() => navigate("adjustments")}><span aria-hidden="true">±</span><strong>Stock Adjustment</strong></button>
+          <button type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }}><span aria-hidden="true">+</span><strong>Create Ingredient</strong></button>
+          <button type="button" onClick={() => navigate("purchase-orders")}><span aria-hidden="true">PO</span><strong>Purchase Order</strong></button>
+          <button type="button" onClick={() => navigate("transfers")}><span aria-hidden="true">TR</span><strong>Transfer Stock</strong></button>
+          <button type="button" onClick={() => navigate("waste")}><span aria-hidden="true">−</span><strong>Waste Entry</strong></button>
+        </div>
+      </section>
+
+      <section className="ia-final-section" aria-labelledby="inventory-overview-title">
+        <div className="ia-final-section-title"><h2 id="inventory-overview-title">Inventory Overview</h2></div>
+        <div className="ia-final-overview-grid" aria-label="Inventory dashboard KPIs">
+          <button type="button" onClick={() => navigate("inventory-value")}><small>Current Inventory Value</small><strong>{moneyLabel(dashboardKpis.totalInventoryValue)}</strong></button>
+          <button type="button" onClick={() => navigate("items")}><small>Total Ingredients</small><strong>{dashboardKpis.totalInventoryItems}</strong></button>
+          <button type="button" onClick={() => navigate("suppliers")}><small>Suppliers</small><strong>{dashboardKpis.activeSuppliers}</strong></button>
+          <button type="button" onClick={() => navigate("storage-locations")}><small>Storage Locations</small><strong>{activeLocations.length}</strong></button>
+          <button type="button" onClick={() => navigate("categories")}><small>Active Categories</small><strong>{activeCategories.length}</strong></button>
+        </div>
+        {dashboardKpis.totalInventoryItems === 0 && <button className="ia-final-empty-action" type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }}>Create your first Ingredient</button>}
+      </section>
+
+      <section className="ia-final-section" aria-labelledby="recent-activity-title">
+        <div className="ia-final-section-title"><h2 id="recent-activity-title">Recent Activity</h2><span>Latest 10</span></div>
+        <div className="ia-final-activity-list">
+          {recentLedger.map((entry) => (
+            <button type="button" key={entry.id} onClick={() => navigate("ledger")} aria-label={`Open ${movementLabel(entry.movementType)} for ${entry.itemName}`}>
+              <span className={entry.quantityEffect === "in" ? "in" : "out"} aria-hidden="true">{entry.quantityEffect === "in" ? "+" : "−"}</span>
+              <span className="ingredient"><strong>{entry.itemName}</strong><small>{movementLabel(entry.movementType)}</small></span>
+              <strong className="quantity">{entry.quantityEffect === "in" ? "+" : "−"}{quantityLabel(entry.quantity, entry.unitName)}</strong>
+              <time dateTime={entry.movementDate}>{new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(entry.movementDate))}</time>
+              <span className="staff"><strong>{entry.staffName ?? "System"}</strong><small>{entry.createdByStaffId ? (data.staffRoles[entry.createdByStaffId] ?? "Staff").replace(/_/g, " ") : "System"}</small></span>
+            </button>
+          ))}
+          {recentLedger.length === 0 && <p className="ia-final-empty">No recent inventory activity.</p>}
+        </div>
+      </section>
+
+      <section className="ia-final-section" aria-labelledby="report-shortcuts-title">
+        <div className="ia-final-section-title"><h2 id="report-shortcuts-title">Report Shortcuts</h2></div>
+        <div className="ia-final-report-grid">
+          <button type="button" onClick={() => navigate("inventory-value")}>Inventory Value</button>
+          <button type="button" onClick={() => navigate("consumption")}>Consumption</button>
+          <button type="button" onClick={() => navigate("waste-report")}>Waste</button>
+          <button type="button" onClick={() => navigate("purchase-history")}>Purchases</button>
+          <button type="button" onClick={() => navigate("movement-history")}>Movement History</button>
         </div>
       </section>
     </div>
@@ -1308,9 +1378,19 @@ export function InventoryDashboardPage({
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
     : section === "purchase-orders" ? <PurchaseOrderDraftsPage restaurantId={restaurantId} suppliers={data.suppliers} items={data.items} units={data.units} />
     : section === "purchase-history" ? <PurchaseHistoryPage restaurantId={restaurantId} />
+    : section === "inventory-reports" ? (
+      <section className="ia-navigation-placeholder" aria-labelledby="inventory-reports-page-title">
+        <span>Reports</span><h2 id="inventory-reports-page-title">Inventory Reports</h2><p>Open an inventory report below.</p>
+        <div className="ia-actions"><button type="button" onClick={() => navigate("inventory-value")}>Inventory Value</button><button type="button" onClick={() => navigate("consumption")}>Consumption</button><button type="button" onClick={() => navigate("waste-report")}>Waste</button><button type="button" onClick={() => navigate("purchase-history")}>Purchases</button><button type="button" onClick={() => navigate("movement-history")}>Movement History</button></div>
+      </section>
+    )
     : section === "inventory-value" ? inventoryValueView
     : section === "consumption" ? reportView("Consumption", ledger.filter((entry) => entry.movementType === "stock_out"))
     : section === "waste-report" ? reportView("Waste Report", ledger.filter((entry) => entry.movementType === "waste" || entry.movementType === "spoilage"))
+    : section === "inventory-settings" && staffRole === "owner" ? <InventoryIntegrityCheckPanel restaurantId={restaurantId} />
+    : section === "inventory-settings" ? <section className="ia-navigation-placeholder"><span>Settings</span><h2>Inventory Settings</h2><p>Inventory integrity tools are owner-only.</p><button type="button" onClick={() => navigate("items")}>Open Inventory Records</button></section>
+    : section === "export" ? <section className="ia-navigation-placeholder"><span>Export</span><h2>Export Inventory Data</h2><p>Open the report you want to review and export.</p><button type="button" onClick={() => navigate("inventory-reports")}>Open Inventory Reports</button></section>
+    : section === "help" ? <section className="ia-navigation-placeholder"><span>Help</span><h2>Inventory Help</h2><p>Choose an inventory workspace to continue.</p><div className="ia-actions"><button type="button" onClick={() => navigate("current-stock")}>Current Stock</button><button type="button" onClick={() => navigate("stock-in")}>Receive Stock</button><button type="button" onClick={() => navigate("items")}>Ingredients</button></div></section>
     : section === "low-stock-assistant" ? <LowStockAssistantPage restaurantId={restaurantId} staffRole={staffRole} currentStock={currentStock} items={data.items} categories={data.categories} suppliers={data.suppliers} storageLocations={data.storageLocations} units={data.units} onOpenPurchaseOrders={() => navigate("purchase-orders")} />
     : section === "items" ? items
     : section === "categories" ? masterList(
@@ -1425,9 +1505,7 @@ export function InventoryDashboardPage({
             </div>
             <nav>
               {MOBILE_MENU_NAV.map((item) => {
-                const active = item.utility
-                  ? utilityView === item.utility
-                  : item.group
+                const active = item.group
                     ? navGroupActive(item.group)
                     : !utilityView && section === item.section;
                 return (
@@ -1436,7 +1514,7 @@ export function InventoryDashboardPage({
                     type="button"
                     key={item.key}
                     aria-current={active ? "page" : undefined}
-                    onClick={() => item.action ? runMobileMenuAction(item.action) : item.utility ? navigateUtility(item.utility) : item.section && navigate(item.section)}
+                    onClick={() => navigate(item.section)}
                   >
                     {item.label}
                   </button>

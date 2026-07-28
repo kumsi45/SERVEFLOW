@@ -122,7 +122,7 @@ export function validatePurchaseOrderDraft(
   units: InventoryUnit[],
 ) {
   const errors: string[] = [];
-  if (!suppliers.some((supplier) => supplier.id === form.supplierId && supplier.status === "active")) {
+  if (form.supplierId && !suppliers.some((supplier) => supplier.id === form.supplierId && supplier.status === "active")) {
     errors.push("Select an active supplier.");
   }
   if (!form.expectedDeliveryDate) errors.push("Expected delivery date is required.");
@@ -170,7 +170,7 @@ export async function savePurchaseOrderDraft(
     payload: {
       id: form.id ?? null,
       status: "draft",
-      supplier_id: form.supplierId,
+      supplier_id: form.supplierId || null,
       expected_delivery_date: form.expectedDeliveryDate,
       notes: form.notes.trim() || null,
       lines: form.lines.map((line, sortOrder) => ({
