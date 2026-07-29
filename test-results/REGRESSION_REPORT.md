@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-27T19:30:47.481Z
+Generated: 2026-07-29T09:01:26.195Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 469 | 0 | 42 |
+| 548 | 0 | 42 |
 
 ## Regressions
 
@@ -78,6 +78,19 @@ No failing regressions.
 - SKIP - guarded Supabase multi-tenant regression tenant sessions cannot poison each other's analytics
 - SKIP - guarded Supabase multi-tenant regression supports payment policy fixture pay_before_kitchen
 - SKIP - guarded Supabase multi-tenant regression supports payment policy fixture kitchen_before_payment
+- PASS - Phase 9.11 AI Menu Import architecture uses one provider-neutral AI Menu Import entrypoint
+- PASS - Phase 9.11 AI Menu Import architecture normalizes AI, starter, and manual sources into the same private draft table
+- PASS - Phase 9.11 AI Menu Import architecture keeps the AI JSON contract narrow and validates safe fields
+- PASS - Phase 9.11 AI Menu Import architecture keeps failures private, retryable, and starter-capable
+- PASS - Phase 9.11 AI Menu Import architecture does not change the existing publishing engine
+- PASS - Phase 9.8.6 AI menu publish engine reuses the production theme and food renderers for preview
+- PASS - Phase 9.8.6 AI menu publish engine publishes only through the owner-authenticated Edge Function
+- PASS - Phase 9.8.6 AI menu publish engine copies only approved durable images to production storage
+- PASS - Phase 9.8.6 AI menu publish engine locks and validates the exact Review Studio revision transactionally
+- PASS - Phase 9.8.6 AI menu publish engine publishes categories, menu items, localizations and mappings without duplicate inserts
+- PASS - Phase 9.8.6 AI menu publish engine records versioned history, progress, success and retry-safe failures
+- PASS - Phase 9.8.6 AI menu publish engine finishes onboarding through the existing setup RPC after confirmed publish
+- PASS - Phase 9.8.6 AI menu publish engine keeps publish variables distinct from SQL column names
 - PASS - Phase 9.8.3 AI Menu Review Studio creates a complete editable draft without creating operational records
 - PASS - Phase 9.8.3 AI Menu Review Studio summarizes confidence, missing fields, categories, duplicates, and progress
 - PASS - Phase 9.8.3 AI Menu Review Studio supports debounced search semantics and every requested filter
@@ -89,13 +102,14 @@ No failing regressions.
 - PASS - Phase 9.8.3 AI Menu Review Studio routes image generation through a pluggable provider registry
 - PASS - Phase 9.8.3 AI Menu Review Studio stores AI image drafts in versioned deterministic storage paths
 - PASS - Phase 9.8.3 AI Menu Review Studio authoritatively generates only from approved canonical Review Studio data
-- PASS - Phase 9.8.3 AI Menu Review Studio keeps Review Studio image data draft-only with no publishing
-- PASS - Phase 9.8.2 AI menu structured extraction normalizes confidence and flags duplicates without merging them
-- PASS - Phase 9.8.2 AI menu structured extraction groups owner preview by category and highlights review issues
-- PASS - Phase 9.8.2 AI menu structured extraction keeps extraction drafts isolated and owner-readable only
-- PASS - Phase 9.8.2 AI menu structured extraction uses a swappable provider and strict structured output
-- PASS - Phase 9.8.2 AI menu structured extraction shows confidence, missing data, duplicates, and unrecognized text
-- PASS - Phase 9.8.1 AI Menu Builder upload foundation uses the requested eight-step wizard flow and removes Staff Setup
+- PASS - Phase 9.8.3 AI Menu Review Studio keeps Phase 9.8.5 image generation draft-only
+- PASS - Phase 9.11 AI Menu Import normalizes confidence and flags duplicates without merging them
+- PASS - Phase 9.11 AI Menu Import groups owner preview by category and highlights review issues
+- PASS - Phase 9.11 AI Menu Import repairs invalid prices, unknown currencies, and overlong descriptions safely
+- PASS - Phase 9.11 AI Menu Import keeps extraction drafts isolated and owner-readable only
+- PASS - Phase 9.11 AI Menu Import uses a swappable provider and strict structured output
+- PASS - Phase 9.11 AI Menu Import shows confidence, missing data, and duplicates
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation uses the five-step menu-first onboarding flow
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.pdf
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.png
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation accepts menu.jpg
@@ -106,7 +120,7 @@ No failing regressions.
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation provides a configurable, storage-capped maximum file size
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation supports multiple browse/drop uploads, progress, preview, replace, and delete
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation stores private owner-scoped import drafts only
-- PASS - Phase 9.8.1 AI Menu Builder upload foundation implements no extraction, generation, or publishing integration
+- PASS - Phase 9.8.1 AI Menu Builder upload foundation keeps upload storage isolated while handing off to the existing review and publish flow
 - PASS - Phase 9.8.1 AI Menu Builder upload foundation keeps the upload surface responsive and accessible
 - PASS - historical analytics windows uses restaurant midnight converted to UTC
 - PASS - historical analytics windows makes custom end dates inclusive through an exclusive next midnight
@@ -131,6 +145,8 @@ No failing regressions.
 - PASS - cashier invoice creator identity repairs and safely projects historical cashier identity
 - PASS - cashier order payment timing keeps cashier and QR orders on the payment-first path
 - PASS - cashier order payment timing keeps deferred policy scoped to waiter orders
+- PASS - customer preview pre-publish certification certifies a complete customer menu
+- PASS - customer preview pre-publish certification blocks invalid prices but treats missing presentation content as fixable warnings
 - PASS - canonical tenant billing Restaurant A keeps menu price as base subtotal
 - PASS - canonical tenant billing Restaurant B keeps menu price as base subtotal
 - PASS - canonical tenant billing Restaurant C keeps menu price as base subtotal
@@ -185,6 +201,9 @@ No failing regressions.
 - PASS - Phase 8.2.8 inventory default master data architecture keeps repair as a manual owner or manager operation
 - PASS - Phase 8.2.8 inventory default master data architecture returns from initialize_inventory before seeding initialized restaurants
 - PASS - Phase 8.2.8 inventory default master data architecture uses one canonical seed function for initialize and repair
+- PASS - inventory hamburger routing maps every hamburger entry to a real inventory section
+- PASS - inventory hamburger routing allows every inventory report URL through the application router
+- PASS - inventory hamburger routing renders URL-backed reports, settings, export, and help pages
 - PASS - Inventory initialization flag foundation adds persistent restaurant-scoped initialization fields with a false default
 - PASS - Inventory initialization flag foundation requires completion state and timestamp to change together
 - PASS - Inventory initialization flag foundation does not implement the initialization engine or touch domain tables
@@ -226,10 +245,10 @@ No failing regressions.
 - PASS - Phase 8.4.4 targeted UI reducers uses targeted loaders during events and full reconciliation only after interruption
 - PASS - Phase 8.2.6 Inventory navigation architecture places the inert global theme placeholder immediately before the one hamburger control
 - PASS - Phase 8.2.6 Inventory navigation architecture keeps only the requested workflow links in the hamburger and excludes theme
-- PASS - Phase 8.2.6 Inventory navigation architecture uses exactly four large primary mobile actions without More, Settings, or Theme
+- PASS - Phase 8.2.6 Inventory navigation architecture uses exactly four large primary mobile actions without More, Reports, Settings, Profile, or Theme
 - PASS - Phase 8.2.6 Inventory navigation architecture uses phone navigation below 601px and keeps the grouped sidebar on tablet
 - PASS - Phase 8.2.6 Inventory navigation architecture groups desktop and tablet navigation into accessible, mutually exclusive accordions
-- PASS - Phase 8.2.6 Inventory navigation architecture keeps suppliers direct, Reports as a placeholder, and Settings owner-scoped
+- PASS - Phase 8.2.6 Inventory navigation architecture places suppliers in Master Data, provides report views, and keeps Settings owner-scoped
 - PASS - Phase 8.2.6 Inventory navigation architecture adds responsive labels to all wide Inventory table cells
 - PASS - Phase 8.4.5 existing safety invariants retains order-item locking, stable inventory lock ordering, and full-plan validation
 - PASS - Phase 8.4.5 existing safety invariants retains database idempotency and duplicate movement guards
@@ -331,7 +350,7 @@ No failing regressions.
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows only active, non-deleted same-tenant recipes
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows owner and manager linking while preserving read-only roles
 - PASS - Phase 8.3.4 Menu to Recipe Linking centralizes search, link mutation, and reverse usage lookup
-- PASS - Phase 8.3.4 Menu to Recipe Linking warns but does not block menu items without recipes
+- PASS - Phase 8.3.4 Menu to Recipe Linking supports explicit no-tracking menu items without a recipe
 - PASS - Phase 8.3.4 Menu to Recipe Linking does not implement downstream operational behavior
 - PASS - Phase 9.8.4 multilingual menu foundation supports exactly English, Afaan Oromoo, and Amharic
 - PASS - Phase 9.8.4 multilingual menu foundation preserves source text and populates only its detected language
@@ -339,8 +358,12 @@ No failing regressions.
 - PASS - Phase 9.8.4 multilingual menu foundation makes extraction language-aware without translation instructions
 - PASS - Phase 9.8.4 multilingual menu foundation provides language tabs and owner-edit protection in Review Studio
 - PASS - Phase 9.8.4 multilingual menu foundation resolves multilingual presentation without duplicating canonical items
-- PASS - Phase 9.8.4 multilingual menu foundation prepares one QR/theme language boundary without building a selector
+- PASS - Phase 9.8.4 multilingual menu foundation provides one persisted QR/theme language boundary
 - PASS - Phase 9.8.4 multilingual menu foundation creates normalized localization tables with future empty-only safeguards
+- PASS - optional purchase order supplier accepts a valid purchase draft without a supplier
+- PASS - optional purchase order supplier keeps validation when a supplier is selected
+- PASS - optional purchase order supplier marks the field optional and sends null when omitted
+- PASS - optional purchase order supplier makes the database and read paths supplier-optional
 - PASS - central workflow architecture provides one documented database resolver
 - PASS - central workflow architecture makes legacy timing and kitchen gates delegate to the resolver
 - PASS - central workflow architecture exposes a dining-session read model for realtime and future modules
@@ -354,7 +377,49 @@ No failing regressions.
 - PASS - OrderWorkflowEngine is deterministic and tenant input is mandatory
 - PASS - OrderWorkflowEngine keeps additional batches governed by their dining session facts
 - PASS - OrderWorkflowEngine makes a closed session terminal
+- PASS - Phase 9.12.3 owner-first menu editor uses the approved onboarding title and simple summary
+- PASS - Phase 9.12.3 owner-first menu editor shows only owner-facing search and filters
+- PASS - Phase 9.12.3 owner-first menu editor limits item editing to name, description, category, ETB price and photo
+- PASS - Phase 9.12.3 owner-first menu editor relies on autosave and provides only Remove on each card
+- PASS - Phase 9.12.3 owner-first menu editor keeps only update price, move category and remove bulk actions
+- PASS - Phase 9.12.3 owner-first menu editor uses a collapsed one-category accordion and quick price editor
+- PASS - Phase 9.12.3 owner-first menu editor confirms removal and keeps the Smart Menu Library unchanged
+- PASS - Phase 9.12.3 owner-first menu editor keeps the action bar sticky and gates Continue only on active prices
+- PASS - Phase 9.12.3 owner-first menu editor is touch-friendly and responsive
+- PASS - Phase 9.12.3.2 owner editing workflow provides a complete add item dialog with inline category creation
+- PASS - Phase 9.12.3.2 owner editing workflow creates a complete draft item with placeholder image and autosave state
+- PASS - Phase 9.12.3.2 owner editing workflow uses a responsive floating selection toolbar and completed bulk dialogs
+- PASS - Phase 9.12.3.2 owner editing workflow traps dialog focus and supports Escape
+- PASS - owner menu item defaults creates a safe short description for Chicken Burger
+- PASS - owner menu item defaults creates a safe short description for Special Tibs
+- PASS - owner menu item defaults creates a safe short description for Macchiato
+- PASS - owner menu item defaults creates a safe short description for Chef Special
+- PASS - owner menu item defaults uses the ServeFlow placeholder image
 - PASS - Owner staff-management JWT handling refreshes the Owner session and explicitly sends the current access token
+- PASS - Phase 9.12.3.3 persistent Review Studio session round-trips restaurant-scoped Review Studio state
+- PASS - Phase 9.12.3.3 persistent Review Studio session persists the wizard step and supports the Review Studio deep link
+- PASS - Phase 9.12.3.3 persistent Review Studio session restores draft content and editing UI state from local fallback
+- PASS - Phase 9.12.3.3 persistent Review Studio session preserves lifecycle events and retries sync online
+- PASS - Phase 9.12.3.3 persistent Review Studio session stores photo blobs durably and uploads through the existing bucket
+- PASS - Phase W.3.2 inventory dashboard redesign renders the five required sections in operational order
+- PASS - Phase W.3.2 inventory dashboard redesign shows the six required attention cards without adding calculations
+- PASS - Phase W.3.2 inventory dashboard redesign limits quick actions to the six daily inventory workflows
+- PASS - Phase W.3.2 inventory dashboard redesign keeps inventory value below operations and quick actions
+- PASS - Phase W.3.2 inventory dashboard redesign renders at most ten compact activity records with staff attribution
+- PASS - Phase W.3.2 inventory dashboard redesign provides mobile grids, large targets, focus states, and reduced motion
+- PASS - Phase W.4.1 simplified recipe creation V1 uses the exact six-step menu-first workflow
+- PASS - Phase W.4.1 simplified recipe creation V1 stages inventory ingredients before the final save
+- PASS - Phase W.4.1 simplified recipe creation V1 defaults to active and preserves hidden backend-ready fields
+- PASS - Phase W.4.1 simplified recipe creation V1 removes advanced V1 UI and remains mobile-first
+- PASS - Phase W.5 menu recipe inventory workflow simplification derives one tracking decision from existing menu links
+- PASS - Phase W.5 menu recipe inventory workflow simplification enforces valid mutually exclusive combinations
+- PASS - Phase W.5 menu recipe inventory workflow simplification automatically creates a recipe when recipe tracking is selected
+- PASS - Phase W.5 menu recipe inventory workflow simplification keeps recipe and inventory workspaces contextual
+- PASS - Phase W.6 simplified V1 recipe and inventory workflow shows ingredient membership without recipe measurements
+- PASS - Phase W.6 simplified V1 recipe and inventory workflow preserves measured backend fields invisibly for future versions
+- PASS - Phase W.6 simplified V1 recipe and inventory workflow keeps inventory officers focused on operations
+- PASS - Phase W.6 simplified V1 recipe and inventory workflow uses stock tracking language and keeps recipe items contextual
+- PASS - Phase W.6 simplified V1 recipe and inventory workflow lets owners choose a menu item from the recipe dashboard
 - PASS - Phase 8.5.4 purchase history database uses existing purchase tables through a read-only tenant function
 - PASS - Phase 8.5.4 purchase history database returns complete summary and detail fields
 - PASS - Phase 8.5.4 purchase history database enforces tenant isolation and permits active restaurant staff read-only access
@@ -387,22 +452,25 @@ No failing regressions.
 - PASS - Phase 8.5.2 receiving validation and UI rejects empty, excessive, negative, and over-precision quantities
 - PASS - Phase 8.5.2 receiving validation and UI maps database receipt progress and statuses
 - PASS - Phase 8.5.2 receiving validation and UI exposes partial and full receiving without unrelated purchasing features
+- PASS - purchase receipt automatic navigation scrolls the newly opened receipt editor into view
+- PASS - purchase receipt automatic navigation moves keyboard focus to the first received quantity field
+- PASS - purchase receipt automatic navigation honors reduced motion and leaves room for the mobile header
 - PASS - Ready-to-Serve Product Architecture keeps recipes optional for menu items
 - PASS - Ready-to-Serve Product Architecture adds an optional direct inventory path without forcing it
-- PASS - Ready-to-Serve Product Architecture shows a warning badge instead of blocking saves or publishing
+- PASS - Ready-to-Serve Product Architecture shows explicit tracking choices while preserving the legacy manager warning
 - PASS - Ready-to-Serve Product Architecture centralizes active direct inventory lookup for menu management
 - PASS - Ready-to-Serve Product Architecture does not implement automatic inventory deduction yet
 - PASS - Phase 8.3.3 Recipe Cost Engine derives precise recipe cost as the sum of current ingredient costs
 - PASS - Phase 8.3.3 Recipe Cost Engine converts mass, volume, and count units centrally
 - PASS - Phase 8.3.3 Recipe Cost Engine always reads the latest item price and retains archived historical ingredients
 - PASS - Phase 8.3.3 Recipe Cost Engine isolates every calculation by restaurant and preserves read-only officer access
-- PASS - Phase 8.3.3 Recipe Cost Engine displays unit and ingredient costs to two decimal places without manual recalculation
+- PASS - Phase 8.3.3 Recipe Cost Engine keeps the cost engine available while hiding advanced cost UI in V1
 - PASS - Phase 8.3.3 Recipe Cost Engine does not touch downstream operational domains
 - PASS - Phase 8.3.2 Recipe Ingredient Management defines a tenant-scoped ingredient model with composite integrity
 - PASS - Phase 8.3.2 Recipe Ingredient Management validates positive quantities, active raw items, active units, and duplicates
 - PASS - Phase 8.3.2 Recipe Ingredient Management allows Owner and Manager writes while Inventory Officer remains read-only
 - PASS - Phase 8.3.2 Recipe Ingredient Management supports add, edit, remove, search, and duplicate including ingredients
-- PASS - Phase 8.3.2 Recipe Ingredient Management keeps ingredient definitions disconnected from stock and downstream behavior
+- PASS - Phase 8.3.2 Recipe Ingredient Management keeps ingredient mutations disconnected from stock and downstream behavior
 - PASS - Phase 8.3.2 Recipe Ingredient Management documents responsive layouts
 - PASS - Phase 8.3.1 Recipe Management defines independent recipe and category records with all required fields
 - PASS - Phase 8.3.1 Recipe Management supports create, edit, duplicate, archive, restore, soft delete, and view
@@ -411,6 +479,17 @@ No failing regressions.
 - PASS - Phase 8.3.1 Recipe Management enforces full access for owners/managers and read-only inventory officers
 - PASS - Phase 8.3.1 Recipe Management isolates every query and mutation by restaurant
 - PASS - Phase 8.3.1 Recipe Management exposes only authorized role routes and has responsive layouts
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation offers the six approved restaurant types
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation keeps the six global restaurant-type libraries
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation creates one canonical registry containing all 21 master categories
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation maps restaurant types to master categories without duplicating categories
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation retired the provisional item layer before the approved v1 library
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation creates the approved normalized master item and template mapping tables
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation contains every approved item name without operational data
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation loads approved items into the same private Review Draft with empty prices
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation routes the V1 onboarding through Smart Menu and Review Studio
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation disables AI import while preserving its provider architecture
+- PASS - Phase 9.12 ServeFlow Smart Menu foundation creates the same private review draft without touching production menu tables
 - PASS - production source contracts keeps all application realtime channels inside RestaurantEventService
 - PASS - production source contracts keeps kitchen independent from payment and invoices
 - PASS - production source contracts keeps Phase 7A.3 kitchen RPCs canonical and exact-batch

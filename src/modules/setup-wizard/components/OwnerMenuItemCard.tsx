@@ -7,6 +7,7 @@ type Props = {
   categories: MenuReviewCategory[];
   selected: boolean;
   canEdit: boolean;
+  highlighted?: boolean;
   onSelect: (selected: boolean) => void;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
@@ -22,6 +23,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
   categories,
   selected,
   canEdit,
+  highlighted = false,
   onSelect,
   onNameChange,
   onDescriptionChange,
@@ -45,7 +47,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
   }
 
   return (
-    <article className={`owner-menu-card${priceMissing ? " price-missing" : ""}`}>
+    <article id={`owner-item-${item.id}`} className={`owner-menu-card${priceMissing ? " price-missing" : ""}${highlighted ? " newly-created" : ""}`}>
       <label className="owner-menu-select">
         <input
           type="checkbox"

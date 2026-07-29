@@ -48,6 +48,10 @@ function resolveRoute(pathname: string) {
     return { name: "reset-password" as const };
   }
 
+  if (/^\/setup\/review\/?$/.test(pathname)) {
+    return { name: "role-namespace" as const, namespace: "owner" as RoleNamespace, section: "dashboard" };
+  }
+
   const recipeMatch = pathname.match(/^\/(owner|manager|inventory)\/recipes\/?$/);
   if (recipeMatch) {
     return { name: "role-namespace" as const, namespace: recipeMatch[1] as RoleNamespace, section: "recipes" };

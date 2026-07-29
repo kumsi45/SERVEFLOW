@@ -4,6 +4,7 @@ import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
 import { SmartMenuLibraryStep, type SmartMenuRestaurantType } from "../components/SmartMenuLibraryStep";
 import { persistMenuPreviewTheme } from "../services/menuPublishService";
+import { clearReviewStudioSession } from "../services/reviewStudioSessionService";
 import "./restaurantSetupWizard.css";
 
 type SetupWizardProps = {
@@ -88,6 +89,7 @@ export function RestaurantSetupWizardPage({
   onFinished,
 }: SetupWizardProps) {
   const [step, setStep] = useState(0);
+  const [sessionRestored, setSessionRestored] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [assetUploading, setAssetUploading] = useState<BrandingAssetType | null>(null);
@@ -184,7 +186,11 @@ export function RestaurantSetupWizardPage({
         }));
 
         const draft = readJsonRecord(window.localStorage.getItem(getDraftStorageKey(restaurantId)));
+        const deepLinkedReview = window.location.pathname === "/setup/review";
         if (draft) {
+          const savedStep = typeof draft.step === "number" ? Math.max(0, Math.min(STEPS.length - 1, Math.floor(draft.step))) : 0;
+          setStep(deepLinkedReview ? 2 : savedStep);
+          if (deepLinkedReview || savedStep > 0) setSessionRestored(true);
           if (draft.restaurantInfo && typeof draft.restaurantInfo === "object") {
             setRestaurantInfo((previous) => ({ ...previous, ...draft.restaurantInfo as Partial<typeof previous> }));
           }
@@ -194,6 +200,10 @@ export function RestaurantSetupWizardPage({
           if (draft.hours && typeof draft.hours === "object") {
             setHours((previous) => ({ ...previous, ...draft.hours as Partial<typeof previous> }));
           }
+        }
+        if (!draft && deepLinkedReview) {
+          setStep(2);
+          setSessionRestored(true);
         }
       } catch (loadError) {
         if (active) setError(loadError instanceof Error ? loadError.message : "Could not load setup.");
@@ -208,11 +218,24 @@ export function RestaurantSetupWizardPage({
   useEffect(() => {
     if (loading) return;
     window.localStorage.setItem(getDraftStorageKey(restaurantId), JSON.stringify({
+      step,
       restaurantInfo,
       branding,
       hours,
     }));
-  }, [branding, hours, loading, restaurantId, restaurantInfo]);
+  }, [branding, hours, loading, restaurantId, restaurantInfo, step]);
+
+  useEffect(() => {
+    if (loading) return;
+    const path = step === 2 ? "/setup/review" : "/owner/dashboard";
+    if (window.location.pathname !== path) window.history.replaceState({}, "", path);
+  }, [loading, step]);
+
+  useEffect(() => {
+    if (!sessionRestored) return;
+    const timer = window.setTimeout(() => setSessionRestored(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [sessionRestored]);
 
   function toggleClosedDay(day: string) {
     setHours((previous) => ({
@@ -351,6 +374,8 @@ export function RestaurantSetupWizardPage({
       });
       if (setupError) throw new Error(setupError.message);
       window.localStorage.removeItem(getDraftStorageKey(restaurantId));
+      clearReviewStudioSession(restaurantId);
+      window.history.replaceState({}, "", "/owner/dashboard");
       onFinished();
     } catch (completeError) {
       setError(completeError instanceof Error ? completeError.message : "Could not finish setup.");
@@ -382,6 +407,7 @@ export function RestaurantSetupWizardPage({
         </div>
 
         {error ? <div className="setup-error" role="alert">{error}</div> : null}
+        {sessionRestored ? <div className="setup-session-restored" role="status" aria-live="polite"><strong>Welcome back.</strong><span>We've restored your unfinished menu.</span></div> : null}
 
         <div className="setup-body">
           {step === 0 ? (

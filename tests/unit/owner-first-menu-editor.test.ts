@@ -51,7 +51,7 @@ describe("Phase 9.12.3 owner-first menu editor", () => {
     expect(ownerBranch).toContain("Move Category");
     expect(ownerBranch).toContain("Remove Selected");
     expect(ownerBranch).toContain("+ Add Menu Item");
-    expect(ownerBranch).not.toMatch(/Bulk Restore|Bulk Move|Bulk Approve|Generate Missing|Create Category/);
+    expect(ownerBranch).not.toMatch(/Bulk Restore|Bulk Move|Bulk Approve|Generate Missing/);
   });
 
   it("uses a collapsed one-category accordion and quick price editor", () => {
@@ -83,5 +83,41 @@ describe("Phase 9.12.3 owner-first menu editor", () => {
     expect(css).toContain("@media (max-width: 700px)");
     expect(css).toContain("@media (max-width: 360px)");
     expect(css).toContain(".owner-menu-editor :is(input, select, textarea, button):focus-visible");
+  });
+});
+
+describe("Phase 9.12.3.2 owner editing workflow", () => {
+  it("provides a complete add item dialog with inline category creation", () => {
+    for (const label of ["Add New Menu Item", "Category *", "+ Create New Category", "Category Name *", "Display Order", "Food Name *", "Price", "Description", "Image", "Create Item"]) {
+      expect(ownerBranch).toContain(label);
+    }
+    expect(studio).toContain("createOwnerCategory");
+    expect(studio).toContain("setAddItemCategoryId(id)");
+  });
+
+  it("creates a complete draft item with placeholder image and autosave state", () => {
+    expect(studio).toContain("createSafeMenuDescription(name)");
+    expect(studio).toContain("SERVEFLOW_MENU_PLACEHOLDER_IMAGE");
+    expect(studio).toContain("changeActive((current)");
+    expect(studio).toContain("scrollIntoView");
+    expect(studio).toContain("setHighlightedItemId(id)");
+    expect(card).toContain("newly-created");
+  });
+
+  it("uses a responsive floating selection toolbar and completed bulk dialogs", () => {
+    expect(ownerBranch).toContain('className="owner-selection-toolbar"');
+    expect(ownerBranch).toContain("Move Selected Items");
+    expect(ownerBranch).toContain("Choose destination category");
+    expect(ownerBranch).toContain("Remove selected menu items?");
+    expect(ownerBranch).toContain("Items are removed only from this restaurant draft.");
+    expect(css).toContain(".owner-selection-toolbar { position: fixed");
+    expect(css).toContain("border-radius: 18px 18px 0 0");
+  });
+
+  it("traps dialog focus and supports Escape", () => {
+    expect(studio).toContain("trapDialogFocus");
+    expect(studio).toContain('event.key === "Escape"');
+    expect(studio).toContain('event.key !== "Tab"');
+    expect(ownerBranch).toContain('aria-modal="true"');
   });
 });

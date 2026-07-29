@@ -7,9 +7,11 @@ import {
   useState,
   type Dispatch,
   type SetStateAction,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import QRCode from "qrcode";
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
+import { supabase } from "../../../core/database";
 import {
   MENU_LANGUAGE_OPTIONS,
   isMenuLanguage,
@@ -54,6 +56,9 @@ import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { VirtualizedReviewItems } from "./VirtualizedReviewItems";
 import { AiMenuFinalPreview } from "./AiMenuFinalPreview";
 import { OwnerMenuItemCard } from "./OwnerMenuItemCard";
+import { createSafeMenuDescription, SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../services/ownerMenuItemDefaults";
+import { readReviewStudioSession, writeReviewStudioSession } from "../services/reviewStudioSessionService";
+import { clearAddItemWorkspacePhoto, listQueuedReviewPhotos, queueReviewPhoto, readAddItemWorkspacePhoto, removeQueuedReviewPhoto, saveAddItemWorkspacePhoto, type QueuedReviewPhoto } from "../services/reviewPhotoUploadQueue";
 import { loadMenuPreviewRestaurant, loadMenuPublishHistory, persistMenuPreviewTheme, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
 
 type AiMenuReviewStudioProps = {
@@ -133,6 +138,20 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const [quickPriceCategoryId, setQuickPriceCategoryId] = useState("");
   const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
   const [pendingBulkRemoval, setPendingBulkRemoval] = useState(false);
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [addItemCategoryId, setAddItemCategoryId] = useState("");
+  const [addItemName, setAddItemName] = useState("");
+  const [addItemPrice, setAddItemPrice] = useState("");
+  const [addItemDescription, setAddItemDescription] = useState("");
+  const [addItemImage, setAddItemImage] = useState<File | null>(null);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [inlineCategoryName, setInlineCategoryName] = useState("");
+  const [inlineCategoryOrder, setInlineCategoryOrder] = useState("");
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveDestinationId, setMoveDestinationId] = useState("");
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [offline, setOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
+  const [sessionRecovered, setSessionRecovered] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryLanguage, setNewCategoryLanguage] =
     useState<MenuLanguage>("en");
@@ -153,6 +172,10 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const savingIdsRef = useRef(new Set<string>());
   const timersRef = useRef(new Map<string, number>());
   const persistRef = useRef<(extractionId: string) => Promise<void>>(async () => undefined);
+  const restoredSessionRef = useRef(false);
+  const skipSelectionResetRef = useRef(false);
+  const sessionSnapshotRef = useRef<() => void>(() => undefined);
+  const photoQueueSyncRef = useRef<() => Promise<void>>(async () => undefined);
 
   const queueSave = useCallback((extractionId: string) => {
     const existing = timersRef.current.get(extractionId);
@@ -195,11 +218,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         ...current,
         [extractionId]: "error",
       }));
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "The AI import draft could not be autosaved.",
-      );
+      if (!navigator.onLine) setOffline(true);
+      else setError(saveError instanceof Error ? saveError.message : "The menu draft could not be autosaved.");
     } finally {
       savingIdsRef.current.delete(extractionId);
     }
@@ -208,6 +228,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const cached = readReviewStudioSession(restaurantId);
     try {
       const [drafts, loadedExtractions, loadedAccess] = await Promise.all([
         listMenuImportDrafts(restaurantId),
@@ -228,18 +249,52 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         revisions[extraction.id] = extraction.reviewRevision;
         statuses[extraction.id] = "saved";
       }
-      reviewStatesRef.current = states;
-      revisionsRef.current = revisions;
+      const recoverCachedEdits = Boolean(cached?.unsynced && Object.keys(cached.reviewStates).length);
+      const restoredStates = recoverCachedEdits ? cached!.reviewStates : states;
+      const restoredRevisions = recoverCachedEdits ? cached!.revisions : revisions;
+      reviewStatesRef.current = restoredStates;
+      revisionsRef.current = restoredRevisions;
       versionsRef.current = Object.fromEntries(
-        Object.keys(states).map((id) => [id, 0]),
+        Object.keys(restoredStates).map((id) => [id, 0]),
       );
       setSourceDrafts(visibleSourceDrafts);
       setExtractions(visibleExtractions);
       setAccess(loadedAccess);
-      setReviewStates(states);
-      setSaveStatuses(statuses);
+      setReviewStates(restoredStates);
+      setSaveStatuses(recoverCachedEdits
+        ? Object.fromEntries(Object.keys(restoredStates).map((id) => [id, "dirty" as SaveStatus]))
+        : statuses);
       const standalone = visibleExtractions.filter((entry) => !entry.sourceDraftId);
+      const restoredSourceId = cached?.selectedSourceId ?? null;
+      if (cached && !restoredSessionRef.current) {
+        restoredSessionRef.current = true;
+        skipSelectionResetRef.current = true;
+        setExpandedOwnerCategoryId(cached.expandedCategoryId);
+        setSearchInput(cached.searchInput);
+        setSearch(cached.searchInput);
+        setFilter(cached.filter);
+        setSelectedItems(new Set(cached.selectedItemIds));
+        setQuickPriceMode(cached.quickPriceMode);
+        setQuickPriceCategoryId(cached.quickPriceCategoryId);
+        if (cached.addItemWorkspace) {
+          setAddItemOpen(cached.addItemWorkspace.open);
+          setAddItemCategoryId(cached.addItemWorkspace.categoryId);
+          setAddItemName(cached.addItemWorkspace.foodName);
+          setAddItemPrice(cached.addItemWorkspace.price);
+          setAddItemDescription(cached.addItemWorkspace.description);
+          setShowNewCategory(cached.addItemWorkspace.showNewCategory);
+          setInlineCategoryName(cached.addItemWorkspace.categoryName);
+          setInlineCategoryOrder(cached.addItemWorkspace.categoryOrder);
+          if (cached.addItemWorkspace.imageName) void readAddItemWorkspacePhoto(restaurantId).then((file) => { if (file) setAddItemImage(file); });
+        }
+        setSessionRecovered(true);
+        window.setTimeout(() => window.scrollTo({ top: cached.scrollY, behavior: "auto" }), 80);
+      }
       setSelectedSourceId((current) =>
+        restoredSourceId && (
+          visibleSourceDrafts.some((draft) => draft.id === restoredSourceId)
+          || standalone.some((entry) => `draft:${entry.id}` === restoredSourceId)
+        ) ? restoredSourceId :
         current && (
           visibleSourceDrafts.some((draft) => draft.id === current)
           || standalone.some((entry) => `draft:${entry.id}` === current)
@@ -247,16 +302,49 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           ? current
           : visibleSourceDrafts[0]?.id ?? (standalone[0] ? `draft:${standalone[0].id}` : null)
       );
+      if (recoverCachedEdits) window.setTimeout(() => {
+        for (const extractionId of Object.keys(restoredStates)) queueSave(extractionId);
+      }, 0);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "The AI Review Studio could not be loaded.",
-      );
+      if (cached) {
+        reviewStatesRef.current = cached.reviewStates;
+        revisionsRef.current = cached.revisions;
+        versionsRef.current = Object.fromEntries(Object.keys(cached.reviewStates).map((id) => [id, 0]));
+        setSourceDrafts(cached.sourceDrafts);
+        setExtractions(cached.extractions);
+        setAccess(cached.access);
+        setReviewStates(cached.reviewStates);
+        setSaveStatuses(Object.fromEntries(Object.keys(cached.reviewStates).map((id) => [id, "dirty" as SaveStatus])));
+        skipSelectionResetRef.current = true;
+        setSelectedSourceId(cached.selectedSourceId);
+        setExpandedOwnerCategoryId(cached.expandedCategoryId);
+        setSearchInput(cached.searchInput);
+        setSearch(cached.searchInput);
+        setFilter(cached.filter);
+        setSelectedItems(new Set(cached.selectedItemIds));
+        setQuickPriceMode(cached.quickPriceMode);
+        setQuickPriceCategoryId(cached.quickPriceCategoryId);
+        if (cached.addItemWorkspace) {
+          setAddItemOpen(cached.addItemWorkspace.open);
+          setAddItemCategoryId(cached.addItemWorkspace.categoryId);
+          setAddItemName(cached.addItemWorkspace.foodName);
+          setAddItemPrice(cached.addItemWorkspace.price);
+          setAddItemDescription(cached.addItemWorkspace.description);
+          setShowNewCategory(cached.addItemWorkspace.showNewCategory);
+          setInlineCategoryName(cached.addItemWorkspace.categoryName);
+          setInlineCategoryOrder(cached.addItemWorkspace.categoryOrder);
+          if (cached.addItemWorkspace.imageName) void readAddItemWorkspacePhoto(restaurantId).then((file) => { if (file) setAddItemImage(file); });
+        }
+        setOffline(true);
+        setSessionRecovered(true);
+        window.setTimeout(() => window.scrollTo({ top: cached.scrollY, behavior: "auto" }), 80);
+      } else {
+        setError(loadError instanceof Error ? loadError.message : "The menu editor could not be loaded.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [restaurantId, smartLibraryOnly]);
+  }, [queueSave, restaurantId, smartLibraryOnly]);
 
   useEffect(() => {
     void load();
@@ -284,10 +372,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   );
 
   useEffect(() => {
-    setSelectedItems(new Set());
-    setSearchInput("");
-    setSearch("");
-    setFilter("all");
+    if (skipSelectionResetRef.current) { skipSelectionResetRef.current = false; return; }
+    setSelectedItems(new Set()); setSearchInput(""); setSearch(""); setFilter("all");
   }, [selectedSourceId]);
 
   const extractionBySource = useMemo(
@@ -452,6 +538,91 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     });
   }, [categoryNameById, filter, searchInput, state]);
 
+  sessionSnapshotRef.current = () => {
+    if (!Object.keys(reviewStatesRef.current).length) return;
+    writeReviewStudioSession(restaurantId, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      access: access ?? "owner",
+      sourceDrafts,
+      extractions,
+      reviewStates: reviewStatesRef.current,
+      revisions: revisionsRef.current,
+      selectedSourceId,
+      expandedCategoryId: expandedOwnerCategoryId,
+      searchInput,
+      filter,
+      selectedItemIds: [...selectedItems],
+      quickPriceMode,
+      quickPriceCategoryId,
+      scrollY: window.scrollY,
+      unsynced: offline || Object.values(saveStatuses).some((status) => status !== "saved"),
+      pendingPhotoNames: addItemImage ? [addItemImage.name] : [],
+      addItemWorkspace: {
+        open: addItemOpen,
+        categoryId: addItemCategoryId,
+        foodName: addItemName,
+        price: addItemPrice,
+        description: addItemDescription,
+        showNewCategory,
+        categoryName: inlineCategoryName,
+        categoryOrder: inlineCategoryOrder,
+        imageName: addItemImage?.name ?? null,
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (loading) return;
+    const timer = window.setTimeout(() => sessionSnapshotRef.current(), 100);
+    return () => window.clearTimeout(timer);
+  }, [addItemCategoryId, addItemDescription, addItemImage, addItemName, addItemOpen, addItemPrice, expandedOwnerCategoryId, extractions, filter, inlineCategoryName, inlineCategoryOrder, loading, offline, quickPriceCategoryId, quickPriceMode, restaurantId, reviewStates, saveStatuses, searchInput, selectedItems, selectedSourceId, showNewCategory, sourceDrafts]);
+
+  useEffect(() => {
+    let scrollTimer = 0;
+    const preserve = () => sessionSnapshotRef.current();
+    const preserveScroll = () => {
+      window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(preserve, 120);
+    };
+    const reconnect = () => {
+      setOffline(false);
+      for (const [extractionId, status] of Object.entries(saveStatuses)) {
+        if (status !== "saved") queueSave(extractionId);
+      }
+      void photoQueueSyncRef.current();
+    };
+    const disconnect = () => { setOffline(true); preserve(); };
+    const visible = () => { if (document.visibilityState === "hidden") preserve(); else if (navigator.onLine) reconnect(); };
+    window.addEventListener("beforeunload", preserve);
+    window.addEventListener("pagehide", preserve);
+    window.addEventListener("focus", reconnect);
+    window.addEventListener("online", reconnect);
+    window.addEventListener("offline", disconnect);
+    window.addEventListener("scroll", preserveScroll, { passive: true });
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.removeEventListener("beforeunload", preserve);
+      window.removeEventListener("pagehide", preserve);
+      window.removeEventListener("focus", reconnect);
+      window.removeEventListener("online", reconnect);
+      window.removeEventListener("offline", disconnect);
+      window.removeEventListener("scroll", preserveScroll);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [queueSave, saveStatuses]);
+
+  useEffect(() => {
+    if (!sessionRecovered) return;
+    const timer = window.setTimeout(() => setSessionRecovered(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [sessionRecovered]);
+
+  useEffect(() => {
+    if (!loading && !offline) void photoQueueSyncRef.current();
+  }, [loading, offline, restaurantId]);
+
   function updateItem(
     itemId: string,
     update: (item: MenuReviewItem) => MenuReviewItem,
@@ -530,6 +701,105 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         ),
       ],
     }));
+  }
+
+  function closeAddItemDialog() {
+    setAddItemOpen(false);
+    setAddItemName("");
+    setAddItemPrice("");
+    setAddItemDescription("");
+    setAddItemImage(null);
+    setShowNewCategory(false);
+    setInlineCategoryName("");
+    setInlineCategoryOrder("");
+    void clearAddItemWorkspacePhoto(restaurantId);
+  }
+
+  function changeAddItemImage(file: File | null) {
+    setAddItemImage(file);
+    if (file) void saveAddItemWorkspacePhoto(restaurantId, file).catch(() => setError("The selected image could not be preserved on this device."));
+    else void clearAddItemWorkspacePhoto(restaurantId);
+  }
+
+  function openAddItemDialog() {
+    setAddItemCategoryId(expandedOwnerCategoryId ?? state?.categories[0]?.id ?? "");
+    setAddItemOpen(true);
+  }
+
+  function createOwnerCategory() {
+    const name = inlineCategoryName.trim();
+    if (!name) return;
+    const id = createBrowserUuid();
+    const localization = createMenuReviewLocalization({ value: name, confidence: 1 });
+    const requestedOrder = inlineCategoryOrder === "" ? null : Number(inlineCategoryOrder);
+    changeActive((current) => {
+      const categories = [...current.categories, {
+        id,
+        name,
+        confidence: 1,
+        localization,
+        order: Number.isFinite(requestedOrder) && requestedOrder !== null
+          ? Math.max(0, requestedOrder - 1)
+          : current.categories.length,
+      }].sort((first, second) => first.order - second.order)
+        .map((category, order) => ({ ...category, order }));
+      return { ...current, categories };
+    });
+    setAddItemCategoryId(id);
+    setInlineCategoryName("");
+    setInlineCategoryOrder("");
+    setShowNewCategory(false);
+  }
+
+  function createOwnerItem() {
+    const name = addItemName.trim();
+    if (!name || !addItemCategoryId) return;
+    const id = createBrowserUuid();
+    const description = (addItemDescription.trim() || createSafeMenuDescription(name)).slice(0, 160);
+    const price = addItemPrice === "" ? null : Number(addItemPrice);
+    if (price !== null && (!Number.isFinite(price) || price < 0)) return;
+    const placeholder = createImageVersion(1, "owner", SERVEFLOW_MENU_PLACEHOLDER_IMAGE, SERVEFLOW_MENU_PLACEHOLDER_IMAGE, "ServeFlow placeholder image.");
+    changeActive((current) => {
+      const item = freshItem(addItemCategoryId, Math.max(-1, ...current.items.map((entry) => entry.order)) + 1);
+      item.id = id;
+      item.name = { value: name, confidence: 1 };
+      item.nameLocalization = createMenuReviewLocalization(item.name);
+      item.description = { value: description, confidence: 1 };
+      item.descriptionLocalization = createMenuReviewLocalization(item.description);
+      item.price = { value: price, confidence: 1 };
+      item.currency = { value: price === null ? null : "ETB", confidence: 1 };
+      item.imageDraft = { ...item.imageDraft, status: "Owner Upload", selectedVersionId: placeholder.id, versions: [placeholder], generationProgress: 1 };
+      return { ...current, items: [...current.items, item] };
+    });
+    if (addItemImage) window.setTimeout(() => uploadOwnImage(id, addItemImage), 0);
+    setExpandedOwnerCategoryId(addItemCategoryId);
+    setSearchInput("");
+    setSearch("");
+    setFilter("all");
+    setHighlightedItemId(id);
+    closeAddItemDialog();
+    window.setTimeout(() => document.getElementById(`owner-item-${id}`)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }), 50);
+    window.setTimeout(() => setHighlightedItemId((current) => current === id ? null : current), 2200);
+  }
+
+  function moveSelectedItems() {
+    if (!moveDestinationId || selectedItems.size === 0) return;
+    changeActive((current) => ({ ...current, items: current.items.map((item) => selectedItems.has(item.id) ? { ...item, categoryId: moveDestinationId, categoryConfidence: 1, approved: false } : item) }));
+    setExpandedOwnerCategoryId(moveDestinationId);
+    setSelectedItems(new Set());
+    setMoveDialogOpen(false);
+    setMoveDestinationId("");
+  }
+
+  function trapDialogFocus(event: ReactKeyboardEvent<HTMLElement>, close: () => void) {
+    if (event.key === "Escape") { event.preventDefault(); close(); return; }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   }
 
   function duplicateItem(itemId: string) {
@@ -769,6 +1039,38 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     updateItem(itemId, update);
   }
 
+  async function uploadQueuedPhoto(entry: QueuedReviewPhoto) {
+    if (!navigator.onLine || !reviewStatesRef.current[entry.extractionId]) return;
+    const extension = entry.fileName.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase() || "jpg";
+    const path = `${restaurantId}/review-drafts/${entry.extractionId}/${entry.itemId}/${entry.id}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, entry.file, {
+      cacheControl: "31536000", upsert: false, contentType: entry.contentType,
+    });
+    if (uploadError && !uploadError.message.toLocaleLowerCase().includes("already exists")) throw new Error(uploadError.message);
+    const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
+    changeState(entry.extractionId, (current) => ({
+      ...current,
+      items: current.items.map((item) => {
+        if (item.id !== entry.itemId) return item;
+        const version = createImageVersion(Math.max(0, ...item.imageDraft.versions.map((candidate) => candidate.version)) + 1, "owner", data.publicUrl, data.publicUrl, "Owner uploaded image.");
+        return { ...item, imageDraft: { ...item.imageDraft, status: "Owner Upload", selectedVersionId: version.id, versions: [...item.imageDraft.versions.filter((candidate) => !candidate.imageUrl?.startsWith("blob:")), version], generationProgress: 1, errorMessage: null } };
+      }),
+    }));
+    await removeQueuedReviewPhoto(entry.id);
+  }
+
+  async function syncQueuedPhotos() {
+    if (!navigator.onLine || access !== "owner") return;
+    try {
+      const entries = await listQueuedReviewPhotos(restaurantId);
+      for (const entry of entries) await uploadQueuedPhoto(entry);
+    } catch {
+      // The durable IndexedDB queue is retried on focus, visibility, and online events.
+    }
+  }
+
+  photoQueueSyncRef.current = syncQueuedPhotos;
+
   function uploadOwnImage(itemId: string, file: File | null) {
     if (!file || !file.type.startsWith("image/")) return;
     const objectUrl = URL.createObjectURL(file);
@@ -792,6 +1094,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         },
       };
     });
+    if (activeExtraction) {
+      void queueReviewPhoto(restaurantId, activeExtraction.id, itemId, file)
+        .then((entry) => navigator.onLine ? uploadQueuedPhoto(entry) : undefined)
+        .catch(() => setError("The photo is displayed locally but could not be queued for upload."));
+    }
   }
 
   function convertUnrecognized(entryId: string) {
@@ -990,6 +1297,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     const quickItems = state.items.filter((item) => !item.deleted && item.categoryId === quickCategoryId && (!selectedItems.size || selectedItems.has(item.id)));
     return (
       <div className="owner-menu-editor">
+        {sessionRecovered ? <div className="owner-session-restored" role="status" aria-live="polite"><strong>Welcome back.</strong><span>We've restored your unfinished menu.</span></div> : null}
         <header className="owner-menu-topbar">
           {onBack ? <button className="setup-secondary" type="button" onClick={onBack} aria-label="Go back">← Back</button> : null}
           <strong>{restaurantName}</strong>
@@ -997,7 +1305,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             <span className="setup-visually-hidden">Search menu items by name or category</span>
             <input type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search menu..." />
           </label>
-          <span className="owner-save-status" aria-live="polite">{saveStatus === "saving" || saveStatus === "dirty" ? "Saving..." : saveStatus === "error" ? "Not saved" : "✓ Saved"}</span>
+          <span className="owner-save-status" aria-live="polite">{offline ? "Saved on this device" : saveStatus === "saving" || saveStatus === "dirty" ? "Saving..." : saveStatus === "error" ? "Sync pending" : "✓ Saved"}</span>
           <button type="button" onClick={() => void prepareOwnerMenu(openPreview)}>Preview Menu</button>
           <button className="setup-primary" type="button" disabled={!allActiveHavePrices} onClick={() => void prepareOwnerMenu(async () => onContinue?.())}>Continue</button>
         </header>
@@ -1016,19 +1324,8 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             {ownerFilters.map((entry) => <button type="button" className={filter === entry.id ? "active" : ""} aria-pressed={filter === entry.id} onClick={() => setFilter(entry.id)} key={entry.id}>{entry.label}</button>)}
           </div>
           <button type="button" onClick={() => setQuickPriceMode((current) => !current)}>Quick Price Mode</button>
-          {canEdit ? <button className="owner-add-menu-item" type="button" onClick={() => createItem(state.categories[0]?.id ?? null)}>+ Add Menu Item</button> : null}
+          {canEdit ? <button className="owner-add-menu-item" type="button" onClick={openAddItemDialog}>+ Add Menu Item</button> : null}
         </section>
-
-        {canEdit ? <section className="owner-menu-bulk" aria-label="Bulk actions">
-          <strong>{selectedItems.size} selected</strong>
-          <button type="button" onClick={() => setQuickPriceMode(true)} disabled={!selectedItems.size}>Update Prices</button>
-          <select value={bulkCategoryId} onChange={(event) => setBulkCategoryId(event.target.value)} aria-label="Category for selected items">
-            <option value="">Choose category</option>
-            {state.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
-          </select>
-          <button type="button" onClick={() => applyBulk("move")} disabled={!selectedItems.size || !bulkCategoryId}>Move Category</button>
-          <button className="danger" type="button" onClick={() => setPendingBulkRemoval(true)} disabled={!selectedItems.size}>Remove Selected</button>
-        </section> : null}
 
         {quickPriceMode ? <section className="owner-quick-price" aria-labelledby="quick-price-title">
           <header><div><h3 id="quick-price-title">Quick Price Mode</h3><p>Enter prices quickly. Changes save automatically.</p></div><button type="button" onClick={() => setQuickPriceMode(false)}>Done</button></header>
@@ -1051,7 +1348,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
               </button>
               {expanded ? <div className="owner-menu-card-list" id={`owner-category-${category.id}`}>
                 {categoryItems.map((item) => <OwnerMenuItemCard
-                  item={item} categories={state.categories} selected={selectedItems.has(item.id)} canEdit={canEdit}
+                  item={item} categories={state.categories} selected={selectedItems.has(item.id)} canEdit={canEdit} highlighted={highlightedItemId === item.id}
                   onSelect={(selected) => setSelectedItems((current) => { const next = new Set(current); if (selected) next.add(item.id); else next.delete(item.id); return next; })}
                   onNameChange={(value) => updateText(item.id, "name", value)}
                   onDescriptionChange={(value) => updateText(item.id, "description", value.slice(0, 160))}
@@ -1067,7 +1364,31 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           })}
         </section>
 
-        {pendingRemovalId || pendingBulkRemoval ? <div className="owner-remove-dialog-backdrop" role="presentation"><section className="owner-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-menu-item-title" onKeyDown={(event) => { if (event.key === "Escape") { setPendingRemovalId(null); setPendingBulkRemoval(false); } }}><h3 id="remove-menu-item-title">{pendingBulkRemoval ? "Remove Selected Items?" : "Remove Menu Item?"}</h3><p>This removes {pendingBulkRemoval ? "the selected items" : "the item"} from your restaurant menu.<br />The Smart Menu Library remains unchanged.</p><div><button type="button" autoFocus onClick={() => { setPendingRemovalId(null); setPendingBulkRemoval(false); }}>Cancel</button><button className="danger" type="button" onClick={pendingBulkRemoval ? confirmBulkRemoval : confirmItemRemoval}>Remove</button></div></section></div> : null}
+        {selectedItems.size > 0 ? <section className="owner-selection-toolbar" aria-label="Selected menu item actions">
+          <strong>{selectedItems.size} Selected</strong>
+          <button type="button" onClick={() => setQuickPriceMode(true)}>Update Prices</button>
+          <button type="button" onClick={() => { setMoveDestinationId(""); setMoveDialogOpen(true); }}>Move Category</button>
+          <button className="danger" type="button" onClick={() => setPendingBulkRemoval(true)}>Remove Selected</button>
+          <button type="button" aria-label="Close selection toolbar" onClick={() => setSelectedItems(new Set())}>Close</button>
+        </section> : null}
+
+        {addItemOpen ? <div className="owner-remove-dialog-backdrop" role="presentation"><section className="owner-add-item-dialog" role="dialog" aria-modal="true" aria-labelledby="add-menu-item-title" onKeyDown={(event) => trapDialogFocus(event, closeAddItemDialog)}>
+          <header><div><span>Add to your digital menu</span><h3 id="add-menu-item-title">Add New Menu Item</h3></div><button type="button" aria-label="Close Add New Menu Item" onClick={closeAddItemDialog}>×</button></header>
+          <div className="owner-add-item-fields">
+            <label><span>Category *</span><select autoFocus required value={addItemCategoryId} onChange={(event) => setAddItemCategoryId(event.target.value)}><option value="">Choose category</option>{orderedCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
+            <button className="owner-inline-category-toggle" type="button" aria-expanded={showNewCategory} onClick={() => setShowNewCategory((current) => !current)}>+ Create New Category</button>
+            {showNewCategory ? <section className="owner-inline-category" aria-label="Create new category"><label><span>Category Name *</span><input value={inlineCategoryName} maxLength={80} onChange={(event) => setInlineCategoryName(event.target.value)} /></label><label><span>Display Order <small>(optional)</small></span><input type="number" min="1" inputMode="numeric" value={inlineCategoryOrder} onChange={(event) => setInlineCategoryOrder(event.target.value)} /></label><button type="button" disabled={!inlineCategoryName.trim()} onClick={createOwnerCategory}>Create</button></section> : null}
+            <label><span>Food Name *</span><input required maxLength={160} value={addItemName} onChange={(event) => setAddItemName(event.target.value)} onBlur={() => { if (!addItemDescription.trim() && addItemName.trim()) setAddItemDescription(createSafeMenuDescription(addItemName)); }} placeholder="Chicken Burger" /></label>
+            <label><span>Price <small>(optional)</small></span><div className="owner-dialog-price"><strong>ETB</strong><input type="number" min="0" step="0.01" inputMode="decimal" value={addItemPrice} onChange={(event) => setAddItemPrice(event.target.value)} placeholder="180" /></div></label>
+            <label className="owner-dialog-description"><span>Description</span><textarea rows={3} maxLength={160} value={addItemDescription} onChange={(event) => setAddItemDescription(event.target.value)} placeholder="A short description will be added automatically." /><small>This appears under the menu item. {addItemDescription.length}/160</small></label>
+            <label><span>Image <small>(optional)</small></span><input type="file" accept="image/*" onChange={(event) => changeAddItemImage(event.target.files?.[0] ?? null)} /><small>{addItemImage?.name ?? "ServeFlow placeholder image will be used."}</small></label>
+          </div>
+          <footer><button type="button" onClick={closeAddItemDialog}>Cancel</button><button className="setup-primary" type="button" disabled={!addItemName.trim() || !addItemCategoryId} onClick={createOwnerItem}>Create Item</button></footer>
+        </section></div> : null}
+
+        {moveDialogOpen ? <div className="owner-remove-dialog-backdrop" role="presentation"><section className="owner-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="move-selected-title" onKeyDown={(event) => trapDialogFocus(event, () => setMoveDialogOpen(false))}><h3 id="move-selected-title">Move Selected Items</h3><label className="owner-move-category-field"><span>Destination category</span><select autoFocus value={moveDestinationId} onChange={(event) => setMoveDestinationId(event.target.value)}><option value="">Choose destination category</option>{orderedCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label><div><button type="button" onClick={() => setMoveDialogOpen(false)}>Cancel</button><button className="setup-primary" type="button" disabled={!moveDestinationId} onClick={moveSelectedItems}>Move</button></div></section></div> : null}
+
+        {pendingRemovalId || pendingBulkRemoval ? <div className="owner-remove-dialog-backdrop" role="presentation"><section className="owner-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-menu-item-title" onKeyDown={(event) => trapDialogFocus(event, () => { setPendingRemovalId(null); setPendingBulkRemoval(false); })}><h3 id="remove-menu-item-title">{pendingBulkRemoval ? "Remove selected menu items?" : "Remove Menu Item?"}</h3><p>{pendingBulkRemoval ? <>Items are removed only from this restaurant draft.<br />Smart Menu Library remains unchanged.</> : <>This removes the item from your restaurant menu.<br />The Smart Menu Library remains unchanged.</>}</p><div><button type="button" autoFocus onClick={() => { setPendingRemovalId(null); setPendingBulkRemoval(false); }}>Cancel</button><button className="danger" type="button" onClick={pendingBulkRemoval ? confirmBulkRemoval : confirmItemRemoval}>Remove</button></div></section></div> : null}
       </div>
     );
   }
