@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-29T09:01:26.195Z
+Generated: 2026-07-29T10:19:10.905Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 548 | 0 | 42 |
+| 555 | 0 | 42 |
 
 ## Regressions
 
@@ -401,6 +401,7 @@ No failing regressions.
 - PASS - Phase 9.12.3.3 persistent Review Studio session restores draft content and editing UI state from local fallback
 - PASS - Phase 9.12.3.3 persistent Review Studio session preserves lifecycle events and retries sync online
 - PASS - Phase 9.12.3.3 persistent Review Studio session stores photo blobs durably and uploads through the existing bucket
+- PASS - Phase 9.12.3.3 persistent Review Studio session restores the complete Add Item workspace with its selected image
 - PASS - Phase W.3.2 inventory dashboard redesign renders the five required sections in operational order
 - PASS - Phase W.3.2 inventory dashboard redesign shows the six required attention cards without adding calculations
 - PASS - Phase W.3.2 inventory dashboard redesign limits quick actions to the six daily inventory workflows
@@ -479,6 +480,12 @@ No failing regressions.
 - PASS - Phase 8.3.1 Recipe Management enforces full access for owners/managers and read-only inventory officers
 - PASS - Phase 8.3.1 Recipe Management isolates every query and mutation by restaurant
 - PASS - Phase 8.3.1 Recipe Management exposes only authorized role routes and has responsive layouts
+- PASS - Phase 9.13.1 global Smart Image Library foundation creates one public CDN-ready bucket without client write access
+- PASS - Phase 9.13.1 global Smart Image Library foundation models the complete lifecycle, immutable versions, and owner sources
+- PASS - Phase 9.13.1 global Smart Image Library foundation builds deterministic restaurant/category/item version paths
+- PASS - Phase 9.13.1 global Smart Image Library foundation resolves custom, master, placeholder, and Restore Default deterministically
+- PASS - Phase 9.13.1 global Smart Image Library foundation provides lazy, responsive, low-priority image rendering
+- PASS - Phase 9.13.1 global Smart Image Library foundation does not contain image generation or provider API calls
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation offers the six approved restaurant types
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation keeps the six global restaurant-type libraries
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation creates one canonical registry containing all 21 master categories
