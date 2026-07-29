@@ -32,7 +32,7 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
     const flow = [
       "Restaurant Basics",
       "Choose Restaurant Type",
-      "Review Digital Menu",
+      "Edit Your Digital Menu",
       "Restaurant Branding",
       "Customer Preview",
     ];

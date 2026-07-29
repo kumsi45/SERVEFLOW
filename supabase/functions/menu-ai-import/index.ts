@@ -167,48 +167,58 @@ async function loadStarterTemplate(
 }
 
 function smartLibraryResult(library: Record<string, unknown>): RawAiMenuResult {
-  const categories = Array.isArray(library.serveflow_smart_menu_categories)
-    ? library.serveflow_smart_menu_categories as Array<Record<string, unknown>>
+  const mappings = Array.isArray(library.serveflow_smart_menu_library_categories)
+    ? library.serveflow_smart_menu_library_categories as Array<Record<string, unknown>>
     : [];
-  const ordered = [...categories].sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0));
+  const ordered = [...mappings].sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0));
+  const itemMappings = Array.isArray(library.serveflow_smart_menu_library_items)
+    ? library.serveflow_smart_menu_library_items as Array<Record<string, unknown>>
+    : [];
   return {
     restaurantName: confidence(null, 0),
     restaurantNameLanguage: language(null),
-    categories: ordered.map((category) => {
+    categories: ordered.map((mapping) => {
+      const category = mapping.category && typeof mapping.category === "object"
+        ? mapping.category as Record<string, unknown>
+        : {};
       const name = cleanText(category.name, 120);
       return { name: confidence(name || null, name ? 1 : 0), detectedLanguage: language(name || null) };
     }).filter((category) => category.name.value),
-    items: ordered.flatMap((category) => {
-      const categoryName = cleanText(category.name, 120);
-      const items = Array.isArray(category.serveflow_smart_menu_items)
-        ? category.serveflow_smart_menu_items as Array<Record<string, unknown>>
-        : [];
-      return [...items]
-        .sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0))
-        .map((item) => {
-          const name = cleanText(item.name, 160);
-          const description = cleanText(item.default_description, 160);
-          return {
-            category: confidence(categoryName || null, categoryName ? 1 : 0),
-            categoryLanguage: language(categoryName || null),
-            name: confidence(name || null, name ? 1 : 0),
-            nameLanguage: language(name || null),
-            description: confidence(description || null, description ? 1 : 0),
-            descriptionLanguage: language(description || null),
-            price: confidence(null, 0),
-            currency: confidence(null, 0),
-          };
-        }).filter((item) => item.name.value);
-    }),
+    items: [...itemMappings]
+      .sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0))
+      .map((mapping) => {
+        const item = mapping.item && typeof mapping.item === "object"
+          ? mapping.item as Record<string, unknown>
+          : {};
+        const category = item.category && typeof item.category === "object"
+          ? item.category as Record<string, unknown>
+          : {};
+        const categoryName = cleanText(category.name, 120);
+        const name = cleanText(item.name, 160);
+        const description = cleanText(item.default_description, 160);
+        return {
+          category: confidence(categoryName || null, categoryName ? 1 : 0),
+          categoryLanguage: language(categoryName || null),
+          name: confidence(name || null, name ? 1 : 0),
+          nameLanguage: language(name || null),
+          description: confidence(description || null, description ? 1 : 0),
+          descriptionLanguage: language(description || null),
+          price: confidence(null, 0),
+          currency: confidence(null, 0),
+        };
+      })
+      .filter((item) => item.name.value && item.category.value),
   };
 }
 
 async function loadSmartLibrary(service: ServiceClient, restaurantType: string) {
   const { data, error } = await service
     .from("serveflow_smart_menu_libraries")
-    .select("id,restaurant_type,name,serveflow_smart_menu_categories(id,name,display_order,serveflow_smart_menu_items(id,name,default_description,default_image_reference,display_order))")
+    .select("id,restaurant_type,name,serveflow_smart_menu_library_categories(display_order,active,category:serveflow_master_menu_categories(id,name,slug,icon,display_order,active)),serveflow_smart_menu_library_items(display_order,active,item:serveflow_master_menu_items(id,name,default_description,default_image_reference,keywords,display_order,active,category:serveflow_master_menu_categories(id,name,slug)))")
     .eq("restaurant_type", restaurantType)
     .eq("active", true)
+    .eq("serveflow_smart_menu_library_categories.active", true)
+    .eq("serveflow_smart_menu_library_items.active", true)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No ServeFlow Smart Menu is available for this restaurant type.");
@@ -287,10 +297,11 @@ Deno.serve(async (request) => {
         const { data: existing, error: existingError } = await service
           .from("ai_menu_import_drafts")
           .select("*")
-          .eq("restaurant_id", restaurantId)
-          .eq("source_kind", "smart_library")
-          .eq("source_reference", restaurantType)
-          .eq("publish_status", "draft")
+           .eq("restaurant_id", restaurantId)
+           .eq("source_kind", "smart_library")
+           .eq("source_reference", restaurantType)
+           .eq("model", "smart-menu-library-v1")
+           .eq("publish_status", "draft")
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -323,7 +334,7 @@ Deno.serve(async (request) => {
         source_reference: sourceReference,
         requested_by: userData.user.id,
         provider: "serveflow",
-        model: mode === "library" ? "smart-menu-library-v1" : mode === "starter" ? "starter-template" : "manual",
+         model: mode === "library" ? "smart-menu-library-v1" : mode === "starter" ? "starter-template" : "manual",
         source_updated_at: new Date().toISOString(),
       }, raw);
       return jsonResponse(200, { importDraft: draft });

@@ -120,10 +120,35 @@ try {
   if (process.argv.includes("--smart-library")) {
     const { data: libraries, error: libraryError } = await owner
       .from("serveflow_smart_menu_libraries")
-      .select("restaurant_type")
+      .select("restaurant_type,serveflow_smart_menu_library_categories(category_id),serveflow_smart_menu_library_items(item_id)")
       .eq("active", true);
     if (libraryError || libraries?.length !== 6) {
       throw new Error(libraryError?.message ?? "The six Smart Menu libraries are not available.");
+    }
+    const expectedMappings = { Restaurant: 18, Hotel: 16, Cafe: 8, "Fast Food": 8, "Bar & Lounge": 6, Bakery: 6 };
+    const expectedItems = { Restaurant: 69, Hotel: 38, Cafe: 32, "Fast Food": 25, "Bar & Lounge": 27, Bakery: 28 };
+    for (const library of libraries) {
+      if (library.serveflow_smart_menu_library_categories?.length !== expectedMappings[library.restaurant_type]) {
+        throw new Error(`Category mapping is incomplete for ${library.restaurant_type}.`);
+      }
+      if (library.serveflow_smart_menu_library_items?.length !== expectedItems[library.restaurant_type]) {
+        throw new Error(`Approved item mapping is incomplete for ${library.restaurant_type}.`);
+      }
+    }
+    const { data: masterCategories, error: masterCategoryError } = await owner
+      .from("serveflow_master_menu_categories")
+      .select("id,serveflow_master_menu_items(id)")
+      .eq("active", true);
+    const masterCategoryCount = masterCategories?.length ?? 0;
+    if (masterCategoryError || masterCategoryCount !== 21 || masterCategories?.some((category) => !category.serveflow_master_menu_items?.length)) {
+      throw new Error(masterCategoryError?.message ?? "The 21 master categories are not available.");
+    }
+    const { count: masterItemCount, error: masterItemError } = await owner
+      .from("serveflow_master_menu_items")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true);
+    if (masterItemError || !masterItemCount) {
+      throw new Error(masterItemError?.message ?? "The approved master menu items are not available.");
     }
     const productionTables = ["categories", "menu_items"];
     const before = {};
@@ -134,12 +159,16 @@ try {
     }
     const libraryPayload = await invoke(owner, "menu-ai-import", { mode: "library", restaurantId: restaurant.id, restaurantType: "Cafe" });
     const libraryDraft = libraryPayload.importDraft;
+    const categories = libraryDraft?.structured_result?.categories ?? [];
     const items = libraryDraft?.structured_result?.items ?? [];
-    if (libraryDraft?.status !== "completed" || libraryDraft?.source_kind !== "smart_library" || !items.length) {
+    if (libraryDraft?.status !== "completed" || libraryDraft?.source_kind !== "smart_library" || !categories.length || items.length !== 32) {
       throw new Error("Smart Menu Library did not create a completed Review Studio draft.");
     }
-    if (items.some((item) => item.price?.value !== null || item.currency?.value !== null)) {
-      throw new Error("Smart Menu Library populated a price or currency.");
+    if (new Set(items.map((item) => item.name?.value?.trim().toLowerCase())).size !== items.length) {
+      throw new Error("Smart Menu Library created duplicate menu items.");
+    }
+    if (items.some((item) => !item.description?.value || item.price?.value !== null || item.currency?.value !== null)) {
+      throw new Error("Smart Menu Library returned an incomplete item or populated a price.");
     }
     const repeated = await invoke(owner, "menu-ai-import", { mode: "library", restaurantId: restaurant.id, restaurantType: "Cafe" });
     if (repeated.importDraft?.id !== libraryDraft.id) throw new Error("Smart Menu Library created a duplicate draft.");
@@ -150,7 +179,7 @@ try {
       if (error) throw error;
       if ((count ?? 0) !== before[table]) throw new Error(`Smart Menu Library wrote to production ${table}.`);
     }
-    pass("ServeFlow Smart Menu", `${libraries.length} libraries available; Cafe created ${items.length} empty-price items in private draft ${String(libraryDraft.id).slice(0, 8)}`);
+    pass("ServeFlow Smart Menu", `${masterItemCount} canonical items and ${masterCategoryCount} categories mapped across ${libraries.length} libraries; Cafe loaded ${items.length} approved items in private draft ${String(libraryDraft.id).slice(0, 8)}`);
     process.stdout.write(`CANARY_RESULT ${JSON.stringify({ status: "PASS", mode: "smart-library", slug, restaurantId: restaurant.id, steps: results })}\n`);
     await cleanupCanary(slug);
     process.exit(0);

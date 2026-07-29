@@ -13,14 +13,13 @@ const OPTIONS: Array<{
   type: SmartMenuRestaurantType;
   label: string;
   description: string;
-  symbol: string;
 }> = [
-  { type: "Restaurant", label: "Restaurant", description: "Balanced all-day dining", symbol: "RT" },
-  { type: "Hotel", label: "Hotel", description: "Breakfast and international dining", symbol: "HT" },
-  { type: "Cafe", label: "Cafe", description: "Coffee, breakfast and light meals", symbol: "CF" },
-  { type: "Fast Food", label: "Fast Food", description: "Burgers, chicken, pizza and snacks", symbol: "FF" },
-  { type: "Bar & Lounge", label: "Bar & Lounge", description: "Shareable food and beverages", symbol: "BL" },
-  { type: "Bakery", label: "Bakery", description: "Fresh bakery, desserts and hot drinks", symbol: "BK" },
+  { type: "Restaurant", label: "Restaurant", description: "Balanced all-day dining" },
+  { type: "Hotel", label: "Hotel", description: "Breakfast and international dining" },
+  { type: "Cafe", label: "Cafe", description: "Coffee, breakfast and light meals" },
+  { type: "Fast Food", label: "Fast Food", description: "Burgers, chicken, pizza and snacks" },
+  { type: "Bar & Lounge", label: "Bar & Lounge", description: "Shareable food and beverages" },
+  { type: "Bakery", label: "Bakery", description: "Fresh bakery, desserts and hot drinks" },
 ];
 
 type Props = {
@@ -40,6 +39,7 @@ export const SmartMenuLibraryStep = memo(function SmartMenuLibraryStep({
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedOption = OPTIONS.find((option) => option.type === selectedType) ?? OPTIONS[0];
 
   async function loadLibrary() {
     try {
@@ -62,26 +62,23 @@ export const SmartMenuLibraryStep = memo(function SmartMenuLibraryStep({
         <span className="smart-menu-library-mark" aria-hidden="true">SF</span>
         <div>
           <h2>Choose your restaurant type</h2>
-          <p>ServeFlow will prepare a professional digital menu that you can customize before publishing.</p>
+          <p>ServeFlow will prepare a professionally curated menu draft for your restaurant type.</p>
         </div>
       </div>
 
-      <div className="smart-menu-type-grid" role="radiogroup" aria-label="Restaurant type">
-        {OPTIONS.map((option) => (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={selectedType === option.type}
-            className={selectedType === option.type ? "selected" : ""}
-            onClick={() => onTypeChange(option.type)}
-            key={option.type}
-          >
-            <span aria-hidden="true">{option.symbol}</span>
-            <strong>{option.label}</strong>
-            <small>{option.description}</small>
-          </button>
-        ))}
-      </div>
+      <label className="smart-menu-type-field" htmlFor="smart-menu-restaurant-type">
+        <span>Restaurant type</span>
+        <select
+          id="smart-menu-restaurant-type"
+          value={selectedType}
+          onChange={(event) => onTypeChange(event.target.value as SmartMenuRestaurantType)}
+        >
+          {OPTIONS.map((option) => (
+            <option value={option.type} key={option.type}>{option.label}</option>
+          ))}
+        </select>
+        <small>{selectedOption.description}</small>
+      </label>
 
       <section className="smart-menu-library-summary" aria-live="polite">
         <div>

@@ -429,6 +429,7 @@ export function matchesMenuReviewFilter(
   filter: MenuReviewFilter,
   warnings: MenuReviewWarning[],
 ) {
+  if (filter === "hidden") return !item.deleted && Boolean(item.hidden);
   if (filter === "deleted") return item.deleted;
   if (item.deleted) return false;
   if (filter === "all") return true;

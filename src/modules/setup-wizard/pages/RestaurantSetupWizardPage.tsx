@@ -49,8 +49,8 @@ const STEPS = [
     subtitle: "Start with a professionally curated ServeFlow Smart Menu.",
   },
   {
-    title: "Review Digital Menu",
-    subtitle: "Customize menu items, add prices, and approve what customers will see.",
+    title: "Edit Your Digital Menu",
+    subtitle: "Review your menu before publishing. Change prices, photos, descriptions and categories anytime.",
   },
   {
     title: "Restaurant Branding",
@@ -398,7 +398,7 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 2 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} smartLibraryOnly />
+            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} smartLibraryOnly />
           ) : null}
 
           {step === 3 ? (
@@ -443,7 +443,7 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 4 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
+            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
           ) : null}
         </div>
 

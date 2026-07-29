@@ -114,6 +114,7 @@ export type MenuReviewFilter =
   | "needs-review"
   | "low-confidence"
   | "missing-price"
+  | "hidden"
   | "duplicates"
   | "deleted";
 

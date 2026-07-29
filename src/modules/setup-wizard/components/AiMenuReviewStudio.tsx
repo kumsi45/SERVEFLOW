@@ -53,10 +53,12 @@ import type { MenuExtractionDraft } from "../services/menuExtractionTypes";
 import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { VirtualizedReviewItems } from "./VirtualizedReviewItems";
 import { AiMenuFinalPreview } from "./AiMenuFinalPreview";
+import { OwnerMenuItemCard } from "./OwnerMenuItemCard";
 import { loadMenuPreviewRestaurant, loadMenuPublishHistory, persistMenuPreviewTheme, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
 
 type AiMenuReviewStudioProps = {
   restaurantId: string;
+  restaurantName?: string;
   onBusyChange: (busy: boolean) => void;
   onFinishSetup?: () => Promise<void>;
   mode?: "review" | "preview";
@@ -104,6 +106,7 @@ function freshItem(categoryId: string | null, order: number): MenuReviewItem {
 
 export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   restaurantId,
+  restaurantName = "Your Restaurant",
   onBusyChange,
   onFinishSetup,
   mode = "review",
@@ -125,6 +128,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const [filter, setFilter] = useState<MenuReviewFilter>("all");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [expandedOwnerCategoryId, setExpandedOwnerCategoryId] = useState<string | null>(null);
+  const [quickPriceMode, setQuickPriceMode] = useState(false);
+  const [quickPriceCategoryId, setQuickPriceCategoryId] = useState("");
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
+  const [pendingBulkRemoval, setPendingBulkRemoval] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryLanguage, setNewCategoryLanguage] =
     useState<MenuLanguage>("en");
@@ -429,6 +437,20 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       })
       .sort((first, second) => first.order - second.order);
   }, [categoryNameById, filter, search, state, warningsById]);
+  const ownerVisibleItems = useMemo(() => {
+    if (!state) return [];
+    const query = searchInput.trim().toLocaleLowerCase();
+    return state.items.filter((item) => {
+      if (item.deleted) return false;
+      if (filter === "missing-price" && item.price.value !== null) return false;
+      if (filter === "hidden" && !item.hidden) return false;
+      if (filter === "all" && item.hidden) return false;
+      if (!query) return true;
+      const name = resolveMenuReviewText(item.name, item.nameLocalization).toLocaleLowerCase();
+      const category = item.categoryId ? categoryNameById.get(item.categoryId)?.toLocaleLowerCase() ?? "" : "";
+      return name.includes(query) || category.includes(query);
+    });
+  }, [categoryNameById, filter, searchInput, state]);
 
   function updateItem(
     itemId: string,
@@ -483,6 +505,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     updateItem(itemId, (item) => ({
       ...item,
       price: { value: parsed, confidence: 1 },
+      currency: { value: parsed === null ? null : "ETB", confidence: 1 },
       approved: false,
     }));
   }
@@ -811,6 +834,32 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     }
   }
 
+  async function prepareOwnerMenu(next: () => void | Promise<void>) {
+    if (!activeExtraction || !state || !canEdit) return;
+    changeActive((current) => ({
+      ...current,
+      items: current.items.map((item) => item.deleted ? item : { ...item, approved: true }),
+    }));
+    await persistRef.current(activeExtraction.id);
+    await next();
+  }
+
+  function confirmItemRemoval() {
+    if (!pendingRemovalId) return;
+    updateItem(pendingRemovalId, (item) => ({ ...item, deleted: true, approved: false }));
+    setSelectedItems((current) => {
+      const next = new Set(current);
+      next.delete(pendingRemovalId);
+      return next;
+    });
+    setPendingRemovalId(null);
+  }
+
+  function confirmBulkRemoval() {
+    applyBulk("delete");
+    setPendingBulkRemoval(false);
+  }
+
   useEffect(() => {
     if (mode !== "preview" || previewOpen || !activeExtraction || !state || !canEdit) return;
     void openPreview();
@@ -914,7 +963,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   }
 
   if (loading) {
-    return <p className="setup-import-empty">Loading AI Review Studio...</p>;
+    return <p className="setup-import-empty">Loading menu editor...</p>;
   }
 
   if (previewOpen && previewRestaurant && state) {
@@ -923,6 +972,111 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       {publishStage && !publishResult ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><span>Publishing menu</span><strong>{publishStage === "Failed" ? "Publish failed" : "Publishing approved menu securely..."}</strong><div><span className={publishing ? "running" : "complete"} /></div><small>The publish engine is copying approved images and committing the menu atomically. This screen will update when the server confirms completion.</small></section> : null}
       {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your Restaurant Is Live</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>QR Ordering</dt><dd><strong>READY</strong></dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live Menu</a><button type="button" onClick={() => void downloadPublishedQr()}>Download QR</button><button type="button" onClick={() => void printPublishedQr()}>Print QR</button><button type="button" onClick={() => void sharePublishedMenu()}>Share Menu</button>{onFinishSetup ? <button type="button" disabled={finishingSetup} onClick={() => void finishPublishedSetup()}>{finishingSetup ? "Opening Dashboard..." : "Go To Dashboard"}</button> : <a href="/owner">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={onBack ?? (() => setPreviewOpen(false))} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
       {publishHistory.length ? <section className="menu-publish-history"><h3>Publish History</h3>{publishHistory.map((entry) => <article key={entry.id}><strong>Version {entry.publishedVersion}</strong><span>{new Date(entry.publishedAt).toLocaleString()}</span><small>{entry.itemsPublished} items · {entry.imagesPublished} images · revision {entry.reviewRevision}</small><button type="button" disabled={publishing} onClick={() => void restorePublishedDraft(entry.id)}>Restore Previous Draft</button></article>)}</section> : null}
+    </div>;
+  }
+
+  if (smartLibraryOnly && mode === "review" && state && summary && activeExtraction) {
+    const ownerFilters: Array<{ id: MenuReviewFilter; label: string }> = [
+      { id: "all", label: "All" },
+      { id: "missing-price", label: "Missing Price" },
+      { id: "hidden", label: "Hidden" },
+    ];
+    const activeItems = state.items.filter((item) => !item.deleted && !item.hidden);
+    const readyItems = activeItems.filter((item) => item.price.value !== null);
+    const needsPrices = activeItems.length - readyItems.length;
+    const allActiveHavePrices = activeItems.length > 0 && needsPrices === 0;
+    const orderedCategories = [...state.categories].sort((first, second) => first.order - second.order);
+    const quickCategoryId = quickPriceCategoryId || expandedOwnerCategoryId || orderedCategories[0]?.id || "";
+    const quickItems = state.items.filter((item) => !item.deleted && item.categoryId === quickCategoryId && (!selectedItems.size || selectedItems.has(item.id)));
+    return (
+      <div className="owner-menu-editor">
+        <header className="owner-menu-topbar">
+          {onBack ? <button className="setup-secondary" type="button" onClick={onBack} aria-label="Go back">← Back</button> : null}
+          <strong>{restaurantName}</strong>
+          <label className="owner-menu-search">
+            <span className="setup-visually-hidden">Search menu items by name or category</span>
+            <input type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search menu..." />
+          </label>
+          <span className="owner-save-status" aria-live="polite">{saveStatus === "saving" || saveStatus === "dirty" ? "Saving..." : saveStatus === "error" ? "Not saved" : "✓ Saved"}</span>
+          <button type="button" onClick={() => void prepareOwnerMenu(openPreview)}>Preview Menu</button>
+          <button className="setup-primary" type="button" disabled={!allActiveHavePrices} onClick={() => void prepareOwnerMenu(async () => onContinue?.())}>Continue</button>
+        </header>
+
+        {error ? <div className="setup-warning" role="alert">{error}</div> : null}
+
+        <section className="owner-menu-summary" aria-label="Menu progress">
+          <div className="items"><span>Menu Items</span><strong>{activeItems.length}</strong></div>
+          <div className="categories"><span>Categories</span><strong>{summary.totalCategories}</strong></div>
+          <div className="prices"><span>Need Prices</span><strong>{needsPrices}</strong></div>
+          <div className="ready"><span>Ready</span><strong>{readyItems.length}</strong></div>
+        </section>
+
+        <section className="owner-menu-toolbar" aria-label="Menu filters and actions">
+          <div className="owner-menu-filters">
+            {ownerFilters.map((entry) => <button type="button" className={filter === entry.id ? "active" : ""} aria-pressed={filter === entry.id} onClick={() => setFilter(entry.id)} key={entry.id}>{entry.label}</button>)}
+          </div>
+          <button type="button" onClick={() => setQuickPriceMode((current) => !current)}>Quick Price Mode</button>
+          {canEdit ? <button className="owner-add-menu-item" type="button" onClick={() => createItem(state.categories[0]?.id ?? null)}>+ Add Menu Item</button> : null}
+        </section>
+
+        {canEdit ? <section className="owner-menu-bulk" aria-label="Bulk actions">
+          <strong>{selectedItems.size} selected</strong>
+          <button type="button" onClick={() => setQuickPriceMode(true)} disabled={!selectedItems.size}>Update Prices</button>
+          <select value={bulkCategoryId} onChange={(event) => setBulkCategoryId(event.target.value)} aria-label="Category for selected items">
+            <option value="">Choose category</option>
+            {state.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
+          </select>
+          <button type="button" onClick={() => applyBulk("move")} disabled={!selectedItems.size || !bulkCategoryId}>Move Category</button>
+          <button className="danger" type="button" onClick={() => setPendingBulkRemoval(true)} disabled={!selectedItems.size}>Remove Selected</button>
+        </section> : null}
+
+        {quickPriceMode ? <section className="owner-quick-price" aria-labelledby="quick-price-title">
+          <header><div><h3 id="quick-price-title">Quick Price Mode</h3><p>Enter prices quickly. Changes save automatically.</p></div><button type="button" onClick={() => setQuickPriceMode(false)}>Done</button></header>
+          <select value={quickCategoryId} onChange={(event) => setQuickPriceCategoryId(event.target.value)} aria-label="Category to price">
+            {orderedCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
+          </select>
+          <div role="grid" aria-label="Quick price editor">
+            {quickItems.map((item) => <label role="row" key={item.id}><span>{resolveMenuReviewText(item.name, item.nameLocalization)}</span><strong>ETB</strong><input type="number" inputMode="decimal" min="0" step="0.01" value={item.price.value ?? ""} onChange={(event) => updatePrice(item.id, event.target.value)} aria-label={`${resolveMenuReviewText(item.name, item.nameLocalization)} price`} /></label>)}
+          </div>
+        </section> : null}
+
+        <section className="owner-menu-accordion" aria-label="Menu categories">
+          {orderedCategories.map((category) => {
+            const categoryItems = ownerVisibleItems.filter((item) => item.categoryId === category.id);
+            if (searchInput.trim() && categoryItems.length === 0) return null;
+            const expanded = expandedOwnerCategoryId === category.id;
+            return <section className="owner-menu-category" key={category.id}>
+              <button type="button" className="owner-category-toggle" aria-expanded={expanded} aria-controls={`owner-category-${category.id}`} onClick={() => setExpandedOwnerCategoryId(expanded ? null : category.id)}>
+                <span aria-hidden="true">{expanded ? "▼" : "▶"}</span><strong>{category.name}</strong><small>{categoryItems.length}</small>
+              </button>
+              {expanded ? <div className="owner-menu-card-list" id={`owner-category-${category.id}`}>
+                {categoryItems.map((item) => <OwnerMenuItemCard
+                  item={item} categories={state.categories} selected={selectedItems.has(item.id)} canEdit={canEdit}
+                  onSelect={(selected) => setSelectedItems((current) => { const next = new Set(current); if (selected) next.add(item.id); else next.delete(item.id); return next; })}
+                  onNameChange={(value) => updateText(item.id, "name", value)}
+                  onDescriptionChange={(value) => updateText(item.id, "description", value.slice(0, 160))}
+                  onPriceChange={(value) => updatePrice(item.id, value)}
+                  onCategoryChange={(categoryId) => updateCategory(item.id, categoryId || null)}
+                  onPhotoChange={(file) => uploadOwnImage(item.id, file)}
+                  onPhotoRemove={() => changeImageDraft(item.id, (current) => ({ ...current, imageDraft: { ...current.imageDraft, selectedVersionId: null, status: "Pending" } }))}
+                  onRemove={() => setPendingRemovalId(item.id)} key={item.id}
+                />)}
+                {categoryItems.length === 0 ? <p className="owner-menu-empty">No menu items match your search.</p> : null}
+              </div> : null}
+            </section>;
+          })}
+        </section>
+
+        {pendingRemovalId || pendingBulkRemoval ? <div className="owner-remove-dialog-backdrop" role="presentation"><section className="owner-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-menu-item-title" onKeyDown={(event) => { if (event.key === "Escape") { setPendingRemovalId(null); setPendingBulkRemoval(false); } }}><h3 id="remove-menu-item-title">{pendingBulkRemoval ? "Remove Selected Items?" : "Remove Menu Item?"}</h3><p>This removes {pendingBulkRemoval ? "the selected items" : "the item"} from your restaurant menu.<br />The Smart Menu Library remains unchanged.</p><div><button type="button" autoFocus onClick={() => { setPendingRemovalId(null); setPendingBulkRemoval(false); }}>Cancel</button><button className="danger" type="button" onClick={pendingBulkRemoval ? confirmBulkRemoval : confirmItemRemoval}>Remove</button></div></section></div> : null}
+      </div>
+    );
+  }
+
+  if (smartLibraryOnly && mode === "review") {
+    return <div className="owner-menu-editor">
+      {error ? <div className="setup-warning" role="alert">{error}</div> : null}
+      <p className="owner-menu-empty">Your menu is not ready yet. Go back and load a restaurant menu first.</p>
+      {onBack ? <div className="onboarding-studio-navigation"><button className="setup-secondary" type="button" onClick={onBack}>Back</button></div> : null}
     </div>;
   }
 
