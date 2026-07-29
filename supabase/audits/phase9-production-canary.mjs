@@ -117,6 +117,45 @@ try {
   }
   if (!restaurant) throw new Error("Owner signup did not create the restaurant membership.");
 
+  if (process.argv.includes("--smart-library")) {
+    const { data: libraries, error: libraryError } = await owner
+      .from("serveflow_smart_menu_libraries")
+      .select("restaurant_type")
+      .eq("active", true);
+    if (libraryError || libraries?.length !== 6) {
+      throw new Error(libraryError?.message ?? "The six Smart Menu libraries are not available.");
+    }
+    const productionTables = ["categories", "menu_items"];
+    const before = {};
+    for (const table of productionTables) {
+      const { count, error } = await service.from(table).select("id", { count: "exact", head: true }).eq("restaurant_id", restaurant.id);
+      if (error) throw error;
+      before[table] = count ?? 0;
+    }
+    const libraryPayload = await invoke(owner, "menu-ai-import", { mode: "library", restaurantId: restaurant.id, restaurantType: "Cafe" });
+    const libraryDraft = libraryPayload.importDraft;
+    const items = libraryDraft?.structured_result?.items ?? [];
+    if (libraryDraft?.status !== "completed" || libraryDraft?.source_kind !== "smart_library" || !items.length) {
+      throw new Error("Smart Menu Library did not create a completed Review Studio draft.");
+    }
+    if (items.some((item) => item.price?.value !== null || item.currency?.value !== null)) {
+      throw new Error("Smart Menu Library populated a price or currency.");
+    }
+    const repeated = await invoke(owner, "menu-ai-import", { mode: "library", restaurantId: restaurant.id, restaurantType: "Cafe" });
+    if (repeated.importDraft?.id !== libraryDraft.id) throw new Error("Smart Menu Library created a duplicate draft.");
+    const { data: visibleDraft, error: visibleError } = await owner.from("ai_menu_import_drafts").select("id,source_kind,status,structured_result").eq("id", libraryDraft.id).single();
+    if (visibleError || visibleDraft?.id !== libraryDraft.id) throw new Error(visibleError?.message ?? "Review Studio could not load the Smart Menu draft.");
+    for (const table of productionTables) {
+      const { count, error } = await service.from(table).select("id", { count: "exact", head: true }).eq("restaurant_id", restaurant.id);
+      if (error) throw error;
+      if ((count ?? 0) !== before[table]) throw new Error(`Smart Menu Library wrote to production ${table}.`);
+    }
+    pass("ServeFlow Smart Menu", `${libraries.length} libraries available; Cafe created ${items.length} empty-price items in private draft ${String(libraryDraft.id).slice(0, 8)}`);
+    process.stdout.write(`CANARY_RESULT ${JSON.stringify({ status: "PASS", mode: "smart-library", slug, restaurantId: restaurant.id, steps: results })}\n`);
+    await cleanupCanary(slug);
+    process.exit(0);
+  }
+
   if (process.argv.includes("--starter-draft")) {
     const starterPayload = await invoke(owner, "menu-ai-import", { mode: "starter", restaurantId: restaurant.id, restaurantType: "Cafe" });
     const starterDraft = starterPayload.importDraft;

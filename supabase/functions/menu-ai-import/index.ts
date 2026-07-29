@@ -5,7 +5,7 @@ import {
 } from "./contracts.ts";
 import { getAiMenuProvider } from "./providers/registry.ts";
 
-type ImportMode = "ai" | "starter" | "manual";
+type ImportMode = "ai" | "library" | "starter" | "manual";
 type AiMenuImportRequest = {
   mode?: unknown;
   draftId?: unknown;
@@ -60,7 +60,7 @@ function cleanText(value: unknown, maximum = 160) {
 }
 
 function importMode(value: unknown): ImportMode {
-  return value === "starter" || value === "manual" ? value : "ai";
+  return value === "library" || value === "starter" || value === "manual" ? value : "ai";
 }
 
 function diagnostic(event: string, details: Record<string, unknown> = {}) {
@@ -166,6 +166,55 @@ async function loadStarterTemplate(
   return data as Record<string, unknown>;
 }
 
+function smartLibraryResult(library: Record<string, unknown>): RawAiMenuResult {
+  const categories = Array.isArray(library.serveflow_smart_menu_categories)
+    ? library.serveflow_smart_menu_categories as Array<Record<string, unknown>>
+    : [];
+  const ordered = [...categories].sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0));
+  return {
+    restaurantName: confidence(null, 0),
+    restaurantNameLanguage: language(null),
+    categories: ordered.map((category) => {
+      const name = cleanText(category.name, 120);
+      return { name: confidence(name || null, name ? 1 : 0), detectedLanguage: language(name || null) };
+    }).filter((category) => category.name.value),
+    items: ordered.flatMap((category) => {
+      const categoryName = cleanText(category.name, 120);
+      const items = Array.isArray(category.serveflow_smart_menu_items)
+        ? category.serveflow_smart_menu_items as Array<Record<string, unknown>>
+        : [];
+      return [...items]
+        .sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0))
+        .map((item) => {
+          const name = cleanText(item.name, 160);
+          const description = cleanText(item.default_description, 160);
+          return {
+            category: confidence(categoryName || null, categoryName ? 1 : 0),
+            categoryLanguage: language(categoryName || null),
+            name: confidence(name || null, name ? 1 : 0),
+            nameLanguage: language(name || null),
+            description: confidence(description || null, description ? 1 : 0),
+            descriptionLanguage: language(description || null),
+            price: confidence(null, 0),
+            currency: confidence(null, 0),
+          };
+        }).filter((item) => item.name.value);
+    }),
+  };
+}
+
+async function loadSmartLibrary(service: ServiceClient, restaurantType: string) {
+  const { data, error } = await service
+    .from("serveflow_smart_menu_libraries")
+    .select("id,restaurant_type,name,serveflow_smart_menu_categories(id,name,display_order,serveflow_smart_menu_items(id,name,default_description,default_image_reference,display_order))")
+    .eq("restaurant_type", restaurantType)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("No ServeFlow Smart Menu is available for this restaurant type.");
+  return data as Record<string, unknown>;
+}
+
 async function createCompletedDraft(
   service: ServiceClient,
   values: Record<string, unknown>,
@@ -224,28 +273,57 @@ Deno.serve(async (request) => {
     const payload = await request.json() as AiMenuImportRequest;
     const mode = importMode(payload.mode);
 
-    if (mode === "starter" || mode === "manual") {
+    if (mode === "library" || mode === "starter" || mode === "manual") {
       const restaurantId = requireUuid(payload.restaurantId, "restaurant ID");
       await requireOwner(service, restaurantId, userData.user.id);
-      const sourceReference = mode === "starter"
-        ? cleanText(payload.templateKey, 120)
-        : `manual-${crypto.randomUUID()}`;
+      const restaurantType = cleanText(payload.restaurantType, 80);
+      const sourceReference = mode === "library"
+        ? restaurantType
+        : mode === "starter"
+          ? cleanText(payload.templateKey, 120)
+          : `manual-${crypto.randomUUID()}`;
       diagnostic("import_requested", { mode, restaurantId });
-      const raw = mode === "starter"
-        ? starterTemplateResult(await loadStarterTemplate(
+      if (mode === "library") {
+        const { data: existing, error: existingError } = await service
+          .from("ai_menu_import_drafts")
+          .select("*")
+          .eq("restaurant_id", restaurantId)
+          .eq("source_kind", "smart_library")
+          .eq("source_reference", restaurantType)
+          .eq("publish_status", "draft")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existingError) throw new Error(existingError.message);
+        if (existing) {
+          diagnostic("review_draft_reused", { reviewDraftId: existing.id, sourceKind: "smart_library" });
+          return jsonResponse(200, { importDraft: existing });
+        }
+        const { error: cleanupError } = await service
+          .from("ai_menu_import_drafts")
+          .delete()
+          .eq("restaurant_id", restaurantId)
+          .eq("source_kind", "smart_library")
+          .eq("publish_status", "draft");
+        if (cleanupError) throw new Error(cleanupError.message);
+      }
+      const raw = mode === "library"
+        ? smartLibraryResult(await loadSmartLibrary(service, restaurantType))
+        : mode === "starter"
+          ? starterTemplateResult(await loadStarterTemplate(
             service,
             cleanText(payload.templateKey, 120),
-            cleanText(payload.restaurantType, 80),
+            restaurantType,
           ))
-        : payload.menu as RawAiMenuResult;
+          : payload.menu as RawAiMenuResult;
       const draft = await createCompletedDraft(service, {
         restaurant_id: restaurantId,
         source_draft_id: null,
-        source_kind: mode,
+        source_kind: mode === "library" ? "smart_library" : mode,
         source_reference: sourceReference,
         requested_by: userData.user.id,
         provider: "serveflow",
-        model: mode === "starter" ? "starter-template" : "manual",
+        model: mode === "library" ? "smart-menu-library-v1" : mode === "starter" ? "starter-template" : "manual",
         source_updated_at: new Date().toISOString(),
       }, raw);
       return jsonResponse(200, { importDraft: draft });

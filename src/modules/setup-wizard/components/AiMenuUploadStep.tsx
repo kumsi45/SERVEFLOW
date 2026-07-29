@@ -20,6 +20,7 @@ import {
   validateMenuImportFile,
 } from "../services/menuImportFileValidation";
 import { createStarterMenuReviewDraft } from "../services/menuExtractionService";
+import { ENABLE_AI_MENU_IMPORT } from "../services/setupFeatureFlags";
 
 type AiMenuUploadStepProps = {
   restaurantId: string;
@@ -196,6 +197,8 @@ export const AiMenuUploadStep = memo(function AiMenuUploadStep({
       setBusyDraftId(null);
     }
   }
+
+  if (!ENABLE_AI_MENU_IMPORT) return null;
 
   return (
     <div className="setup-import-builder setup-import-hero">

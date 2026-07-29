@@ -31,8 +31,8 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
   it("uses the five-step menu-first onboarding flow", () => {
     const flow = [
       "Restaurant Basics",
-      "Bring Your Menu To Life",
-      "AI Menu Review Studio",
+      "Choose Restaurant Type",
+      "Review Digital Menu",
       "Restaurant Branding",
       "Customer Preview",
     ];
@@ -47,6 +47,8 @@ describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
     expect(wizard).toContain("Step {step + 1} of {STEPS.length}");
     expect(wizard).toContain("starter_template_keys: []");
     expect(wizard).toContain("staff_invitations_payload: []");
+    expect(wizard).toContain("SmartMenuLibraryStep");
+    expect(wizard).not.toContain("AiMenuUploadStep");
   });
 
   it.each([

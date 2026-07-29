@@ -62,6 +62,7 @@ type AiMenuReviewStudioProps = {
   mode?: "review" | "preview";
   onBack?: () => void;
   onContinue?: () => void;
+  smartLibraryOnly?: boolean;
 };
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
@@ -108,6 +109,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   mode = "review",
   onBack,
   onContinue,
+  smartLibraryOnly = false,
 }: AiMenuReviewStudioProps) {
   const [sourceDrafts, setSourceDrafts] = useState<MenuImportDraft[]>([]);
   const [extractions, setExtractions] = useState<MenuExtractionDraft[]>([]);
@@ -204,10 +206,14 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         listMenuExtractionDrafts(restaurantId),
         getMenuReviewAccess(restaurantId),
       ]);
+      const visibleExtractions = smartLibraryOnly
+        ? loadedExtractions.filter((entry) => entry.sourceKind === "smart_library")
+        : loadedExtractions;
+      const visibleSourceDrafts = smartLibraryOnly ? [] : drafts;
       const states: Record<string, MenuReviewState> = {};
       const revisions: Record<string, number> = {};
       const statuses: Record<string, SaveStatus> = {};
-      for (const extraction of loadedExtractions) {
+      for (const extraction of visibleExtractions) {
         if (extraction.status !== "completed" || !extraction.result) continue;
         states[extraction.id] =
           extraction.reviewState ?? createMenuReviewState(extraction.result);
@@ -219,19 +225,19 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       versionsRef.current = Object.fromEntries(
         Object.keys(states).map((id) => [id, 0]),
       );
-      setSourceDrafts(drafts);
-      setExtractions(loadedExtractions);
+      setSourceDrafts(visibleSourceDrafts);
+      setExtractions(visibleExtractions);
       setAccess(loadedAccess);
       setReviewStates(states);
       setSaveStatuses(statuses);
-      const standalone = loadedExtractions.filter((entry) => !entry.sourceDraftId);
+      const standalone = visibleExtractions.filter((entry) => !entry.sourceDraftId);
       setSelectedSourceId((current) =>
         current && (
-          drafts.some((draft) => draft.id === current)
+          visibleSourceDrafts.some((draft) => draft.id === current)
           || standalone.some((entry) => `draft:${entry.id}` === current)
         )
           ? current
-          : drafts[0]?.id ?? (standalone[0] ? `draft:${standalone[0].id}` : null)
+          : visibleSourceDrafts[0]?.id ?? (standalone[0] ? `draft:${standalone[0].id}` : null)
       );
     } catch (loadError) {
       setError(
@@ -242,7 +248,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, smartLibraryOnly]);
 
   useEffect(() => {
     void load();
@@ -924,10 +930,10 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     <div className="ai-review-studio">
       <header className="review-studio-heading">
         <div>
-          <p className="setup-import-kicker">AI Import Draft only</p>
-          <h2>AI Menu Review Studio</h2>
+          <p className="setup-import-kicker">{smartLibraryOnly ? "ServeFlow Smart Menu" : "Private menu draft"}</p>
+          <h2>{smartLibraryOnly ? "Review Digital Menu" : "Menu Review Studio"}</h2>
           <p>
-            Verify, edit, organize, and approve the digital menu created by AI.
+            Verify, edit, organize, and approve your digital menu before publishing.
           </p>
         </div>
         <div className="review-access-status">
@@ -993,7 +999,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             onClick={() => setSelectedSourceId(`draft:${entry.id}`)}
             key={entry.id}
           >
-            <strong>{entry.sourceKind === "starter" ? "Smart Starter Menu" : "Manual Menu"}</strong>
+            <strong>{entry.sourceKind === "smart_library" ? "ServeFlow Smart Menu" : entry.sourceKind === "starter" ? "Smart Starter Menu" : "Manual Menu"}</strong>
             <span>{entry.status === "completed" ? "Review draft" : entry.status}</span>
           </button>
         ))}
@@ -1001,7 +1007,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
 
       {sourceDrafts.length === 0 && extractions.length === 0 ? (
         <p className="setup-import-empty">
-          No menu draft is available. Return to AI Menu Import first.
+          No menu draft is available. Return to the ServeFlow Smart Menu Library first.
         </p>
       ) : selectedSource && (
         !activeExtraction || activeExtraction.status !== "completed" || !state

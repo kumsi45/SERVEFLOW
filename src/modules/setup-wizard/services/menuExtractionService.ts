@@ -14,7 +14,7 @@ type MenuExtractionRow = {
   id: string;
   restaurant_id: string;
   source_draft_id: string | null;
-  source_kind: "upload" | "starter" | "manual";
+  source_kind: "upload" | "starter" | "manual" | "smart_library";
   source_reference: string | null;
   source_updated_at: string;
   provider: string;
@@ -107,6 +107,20 @@ export async function createStarterMenuReviewDraft(
   if (error) throw new Error(await readFunctionError(error));
   if (!data || typeof data !== "object" || !("importDraft" in data)) {
     throw new Error("Smart Starter Menu returned an invalid response.");
+  }
+  return mapExtraction((data as { importDraft: MenuExtractionRow }).importDraft);
+}
+
+export async function createSmartMenuLibraryDraft(
+  restaurantId: string,
+  restaurantType: string,
+) {
+  const { data, error } = await supabase.functions.invoke("menu-ai-import", {
+    body: { mode: "library", restaurantId, restaurantType },
+  });
+  if (error) throw new Error(await readFunctionError(error));
+  if (!data || typeof data !== "object" || !("importDraft" in data)) {
+    throw new Error("ServeFlow Smart Menu Library returned an invalid response.");
   }
   return mapExtraction((data as { importDraft: MenuExtractionRow }).importDraft);
 }

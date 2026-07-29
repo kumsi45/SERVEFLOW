@@ -1,21 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../core/database";
 import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
-import { AiMenuUploadStep } from "../components/AiMenuUploadStep";
 import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
+import { SmartMenuLibraryStep, type SmartMenuRestaurantType } from "../components/SmartMenuLibraryStep";
 import { persistMenuPreviewTheme } from "../services/menuPublishService";
 import "./restaurantSetupWizard.css";
-
-type RestaurantType =
-  | "Restaurant"
-  | "Cafe"
-  | "Fast Food"
-  | "Bar"
-  | "Hotel"
-  | "Coffee Shop"
-  | "Pizza"
-  | "Bakery"
-  | "Lounge";
 
 type SetupWizardProps = {
   restaurantId: string;
@@ -25,16 +14,8 @@ type SetupWizardProps = {
 
 type BrandingAssetType = "logo" | "cover";
 
-const RESTAURANT_TYPES: RestaurantType[] = [
-  "Restaurant",
-  "Cafe",
-  "Fast Food",
-  "Bar",
-  "Hotel",
-  "Coffee Shop",
-  "Pizza",
-  "Bakery",
-  "Lounge",
+const RESTAURANT_TYPES: SmartMenuRestaurantType[] = [
+  "Restaurant", "Hotel", "Cafe", "Fast Food", "Bar & Lounge", "Bakery",
 ];
 
 const WEEK_DAYS = [
@@ -64,12 +45,12 @@ const STEPS = [
     subtitle: "Tell us the essentials. You can refine everything later.",
   },
   {
-    title: "Bring Your Menu To Life",
-    subtitle: "Upload your paper menu and ServeFlow will build your digital menu in minutes.",
+    title: "Choose Restaurant Type",
+    subtitle: "Start with a professionally curated ServeFlow Smart Menu.",
   },
   {
-    title: "AI Menu Review Studio",
-    subtitle: "Review every item, make quick edits, and approve your menu.",
+    title: "Review Digital Menu",
+    subtitle: "Customize menu items, add prices, and approve what customers will see.",
   },
   {
     title: "Restaurant Branding",
@@ -115,7 +96,7 @@ export function RestaurantSetupWizardPage({
   const [tableCount, setTableCount] = useState(20);
   const [restaurantInfo, setRestaurantInfo] = useState({
     restaurantName,
-    restaurantType: "Restaurant" as RestaurantType,
+    restaurantType: "Restaurant" as SmartMenuRestaurantType,
     phone: "",
     address: "",
     description: "",
@@ -171,8 +152,8 @@ export function RestaurantSetupWizardPage({
 
         setRestaurantInfo({
           restaurantName: typeof data?.name === "string" ? data.name : restaurantName,
-          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as RestaurantType)
-            ? profile.restaurant_type as RestaurantType
+          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as SmartMenuRestaurantType)
+            ? profile.restaurant_type as SmartMenuRestaurantType
             : "Restaurant",
           phone: typeof profile.phone === "string" ? profile.phone : "",
           address: typeof profile.address === "string" ? profile.address : "",
@@ -406,7 +387,6 @@ export function RestaurantSetupWizardPage({
           {step === 0 ? (
             <div className="setup-grid setup-basics-form">
               <label>Restaurant Name<input autoFocus required autoComplete="organization" value={restaurantInfo.restaurantName} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantName: event.target.value })} /></label>
-              <label>Restaurant Type<select value={restaurantInfo.restaurantType} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantType: event.target.value as RestaurantType })}>{RESTAURANT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
               <label>Phone<input required inputMode="tel" autoComplete="tel" value={restaurantInfo.phone} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, phone: event.target.value })} /></label>
               <label>Address<input required autoComplete="street-address" value={restaurantInfo.address} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, address: event.target.value })} /></label>
               <label className="wide">Short Description<textarea maxLength={240} value={restaurantInfo.description} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, description: event.target.value })} /><small>{restaurantInfo.description.length}/240</small></label>
@@ -414,11 +394,11 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 1 ? (
-            <AiMenuUploadStep restaurantId={restaurantId} restaurantType={restaurantInfo.restaurantType} onDraftCountChange={() => undefined} onBusyChange={handleImportBusyChange} onStarterCreated={() => void next()} showStarterMenuOption />
+            <SmartMenuLibraryStep restaurantId={restaurantId} selectedType={restaurantInfo.restaurantType} onTypeChange={(restaurantType) => setRestaurantInfo({ ...restaurantInfo, restaurantType })} onBusyChange={handleImportBusyChange} onLoaded={() => void next()} />
           ) : null}
 
           {step === 2 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} />
+            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} smartLibraryOnly />
           ) : null}
 
           {step === 3 ? (
@@ -463,11 +443,15 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 4 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} />
+            <AiMenuReviewStudio restaurantId={restaurantId} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
           ) : null}
         </div>
 
-        {step !== 2 && step !== 4 ? (
+        {step === 1 ? (
+          <footer className="setup-actions">
+            <button className="setup-secondary" type="button" onClick={back} disabled={importBusy}>Back</button>
+          </footer>
+        ) : step !== 2 && step !== 4 ? (
           <footer className="setup-actions">
             <button className="setup-secondary" type="button" onClick={back} disabled={step === 0 || submitting || assetUploading !== null || importBusy}>Back</button>
             <button className="setup-primary" type="button" onClick={() => void next()} disabled={submitting || assetUploading !== null || importBusy}>{submitting ? "Saving..." : importBusy ? "Please wait..." : "Continue"}</button>
