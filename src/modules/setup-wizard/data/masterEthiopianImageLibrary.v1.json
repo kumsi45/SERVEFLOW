@@ -1,0 +1,229 @@
+{
+  "library": "ServeFlow Master Ethiopian Food Image Library",
+  "version": "1.0",
+  "category": "Traditional Ethiopian Dishes",
+  "generated_at": "2026-07-29T14:45:45.723961+00:00",
+  "approval_status": "PENDING_REVIEW",
+  "images": [
+    {
+      "item_name": "Kitfo",
+      "slug": "kitfo",
+      "specification_id": "5577cdfe-2b1e-5b60-8c47-e249615cc024",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-2048w.webp",
+      "filename": "kitfo-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 588278,
+      "checksum_sha256": "d9c95125dbb3080257612abdfb49931d03c457c5381db76ce6ead3a8e8c0e762",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Tibs",
+      "slug": "tibs",
+      "specification_id": "f1be1b3a-5cef-5e34-aa83-f792ddc756de",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-2048w.webp",
+      "filename": "tibs-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 925156,
+      "checksum_sha256": "e1f4853d82db62ed89de46f55eb620ab6a7e5d8b295454f79c4d4a2d4fc6654b",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Shekla Tibs",
+      "slug": "shekla-tibs",
+      "specification_id": "34b7d6b9-e70b-523d-9960-548d7486e791",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-2048w.webp",
+      "filename": "shekla-tibs-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 732580,
+      "checksum_sha256": "79546b57cbf07dadd6944217ed0cabf70e1b82dc9a4ea436f3e80e458057a6d7",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Doro Wot",
+      "slug": "doro-wot",
+      "specification_id": "7584552b-f4ab-5d4c-9adb-96c0a86de4b3",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-2048w.webp",
+      "filename": "doro-wot-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 1047584,
+      "checksum_sha256": "9accb0054599383eb1d404c451adb411e4608506765736b5c8ab23dbaf0548ba",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Key Wot",
+      "slug": "key-wot",
+      "specification_id": "b3a6d38d-76d3-55ed-86a0-e7d5b7ac6bd0",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-2048w.webp",
+      "filename": "key-wot-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 947502,
+      "checksum_sha256": "1937de635fceeb489a11453aa7a3d726dc3d0d0cb040f789757f927b579cc35c",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Gored Gored",
+      "slug": "gored-gored",
+      "specification_id": "0704df1f-c441-5d8f-b2ef-e1e8114d8d04",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-2048w.webp",
+      "filename": "gored-gored-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 984724,
+      "checksum_sha256": "cf16bdb4fb9230d1310c4125dc1407b6d01bf850f822d988d643de19754bd30e",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Shiro",
+      "slug": "shiro",
+      "specification_id": "e031f8fd-64f9-5530-b37b-146948680c13",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-2048w.webp",
+      "filename": "shiro-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 652132,
+      "checksum_sha256": "5397d489f20fb94d874e239076795183988f208ef52f131c0a5c39f1dd6199a1",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Misir Wot",
+      "slug": "misir-wot",
+      "specification_id": "6155f27a-f0db-58da-816d-1feca1b2e1c2",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-2048w.webp",
+      "filename": "misir-wot-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 764504,
+      "checksum_sha256": "df10a00047beb03dce9b171a20dae49f98101700d300af7858bd5f011c78a3fd",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Beyaynetu",
+      "slug": "beyaynetu",
+      "specification_id": "e3f12a81-7312-5e1c-978a-024ede058b52",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-2048w.webp",
+      "filename": "beyaynetu-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 1123322,
+      "checksum_sha256": "f36fcb29ea72cd1fcb59155ddea9e22f9796cf960ae56bee66ae9bcc1ea3bed7",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Tegabino",
+      "slug": "tegabino",
+      "specification_id": "3700878a-9f93-5376-af30-cc0e5951ba9d",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-2048w.webp",
+      "filename": "tegabino-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 784310,
+      "checksum_sha256": "5d29b349b009eeb5c7aeb77c59102007cb0c4d035d0751406c33fb698c455f3c",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    }
+  ]
+}
