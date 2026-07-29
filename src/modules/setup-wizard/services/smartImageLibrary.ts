@@ -1,6 +1,6 @@
 export const SMART_MENU_IMAGE_BUCKET = "smart-menu-images";
 export const SMART_MENU_IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
-export const SMART_MENU_RESPONSIVE_WIDTHS = [320, 640, 960, 1280] as const;
+export const SMART_MENU_RESPONSIVE_WIDTHS = [320, 512, 768, 1024, 1280] as const;
 export const SMART_MENU_PLACEHOLDER_PATH = "_placeholders/default/v1/menu-item-640w.webp";
 
 export type SmartImageStatus = "PLACEHOLDER" | "GENERATING" | "PENDING_REVIEW" | "APPROVED" | "ARCHIVED";

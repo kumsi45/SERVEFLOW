@@ -28,7 +28,7 @@ describe("Phase 9.13.1 global Smart Image Library foundation", () => {
     const base = buildSmartImageBasePath("bar-lounge", "Bar Snacks", "Chicken Wings");
     expect(base).toBe("bar-lounge/bar-snacks/chicken-wings");
     expect(buildSmartImageVersionPath(base, "Chicken Wings", 3, 640)).toBe("bar-lounge/bar-snacks/chicken-wings/v003/chicken-wings-v003-640w.webp");
-    expect(buildResponsiveImageSet("https://cdn.example", base, "Chicken Wings", 3).split(", ")).toHaveLength(4);
+    expect(buildResponsiveImageSet("https://cdn.example", base, "Chicken Wings", 3).split(", ")).toHaveLength(5);
     expect(SMART_MENU_IMAGE_CACHE_CONTROL).toContain("immutable");
   });
 

@@ -1,0 +1,185 @@
+{
+  "library": "ServeFlow Master Breakfast Image Library",
+  "version": "1.0",
+  "category": "Breakfast",
+  "generated_at": "2026-07-29T12:34:52.356727+00:00",
+  "approval_status": "PENDING_REVIEW",
+  "images": [
+    {
+      "item_name": "Chechebsa",
+      "slug": "chechebsa",
+      "specification_id": "8a3b8183-4af9-5427-9443-9b192dfec95d",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-2048w.webp",
+      "filename": "chechebsa-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 722148,
+      "checksum_sha256": "684b999264b271762d1a6642287cce94a787a21fef9e784becfc7104b196bfc6",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Firfir",
+      "slug": "firfir",
+      "specification_id": "42a63118-86c6-57bd-870f-4b28e9fafa70",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-2048w.webp",
+      "filename": "firfir-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 690390,
+      "checksum_sha256": "c457ea4332839add7659d4cb6f7fc3d7effa798747cdec5094ccd731bab0c9e4",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Ful",
+      "slug": "ful",
+      "specification_id": "b69b6080-e47e-58cd-81da-40741bec93d9",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/ful/v001/ful-v001-2048w.webp",
+      "filename": "ful-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 497558,
+      "checksum_sha256": "20753bbd3c7d415ae9e00496bf406e29c614ef1b7080e7b6c51a75876ddb504e",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Fetira",
+      "slug": "fetira",
+      "specification_id": "b1a42dd8-f0d7-5708-931a-c9442ff5be5b",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-2048w.webp",
+      "filename": "fetira-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 605046,
+      "checksum_sha256": "d321922c45871fdf83fb93c07563d920bb5a179c3e392829b07a05c4d3540b8a",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Omelette",
+      "slug": "omelette",
+      "specification_id": "28ddfdba-184e-56e0-8c5f-c696714ef9c1",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-2048w.webp",
+      "filename": "omelette-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 370460,
+      "checksum_sha256": "2e94bb27911f2a37c0ca25a1e8419f0b004682299ef56eacb5b0ecd37381b0b7",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Scrambled Eggs",
+      "slug": "scrambled-eggs",
+      "specification_id": "8010196c-3459-560c-97e4-88bf9b391f4e",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-2048w.webp",
+      "filename": "scrambled-eggs-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 362518,
+      "checksum_sha256": "cc569c58dcffd9966f2568506328b50edacee3aff2ce9b16b5c8c7218fb3f692",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Kinche",
+      "slug": "kinche",
+      "specification_id": "6d6faca9-c77b-51f7-b047-87de0ed65848",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-2048w.webp",
+      "filename": "kinche-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 683746,
+      "checksum_sha256": "b6ce15fd85d407466706e6859ebd2a03d46c76ca4da9966e1d4ee3a6104b92ce",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    },
+    {
+      "item_name": "Dulet",
+      "slug": "dulet",
+      "specification_id": "a51f2d79-1639-5379-96bf-a49942037572",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-2048w.webp",
+      "filename": "dulet-v001-2048w.webp",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "byte_size": 655150,
+      "checksum_sha256": "8f8a62e407c8029df2539bb9225aa1afb5b779a30f9b917dd0d6549bf8ca4d63",
+      "version": 1,
+      "status": "PENDING_REVIEW",
+      "lifecycle": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "provider_key": "openai-built-in-imagegen",
+      "active": true
+    }
+  ]
+}

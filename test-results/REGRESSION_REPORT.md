@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-29T10:19:10.905Z
+Generated: 2026-07-29T12:53:58.864Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 555 | 0 | 42 |
+| 575 | 0 | 42 |
 
 ## Regressions
 
@@ -153,6 +153,15 @@ No failing regressions.
 - PASS - canonical tenant billing owns every financial amount in the backend
 - PASS - canonical tenant billing isolates dashboard and reconciliation by exact shift id
 - PASS - canonical tenant billing contains no inclusive reverse-tax formula
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style freezes one global provider-independent identity
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style enforces the approved background, plate, light, color, and composition rules
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style permits only the three approved camera angles
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style aligns the master and responsive output architecture
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style contains every prohibited visual element in the reusable negative contract
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style defines bounded category exceptions without weakening global rules
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style composes every dish with the same immutable style identity
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style provides all required operational checklists
+- PASS - Phase 9.13.2.5 ServeFlow global food photography style contains no generation, upload, migration, storage, or provider call
 - PASS - Phase 8.5.3 inventory adjustment database creates immutable tenant-scoped adjustment and item records
 - PASS - Phase 8.5.3 inventory adjustment database supports every required increase and decrease reason
 - PASS - Phase 8.5.3 inventory adjustment database reuses the existing movement ledger with the required audit classifications
@@ -346,6 +355,17 @@ No failing regressions.
 - PASS - Phase 8.5.5 purchase draft shortcut builds only selected non-healthy suggestions and never selects a supplier automatically
 - PASS - Phase 8.5.5 purchase draft shortcut reuses the existing purchase draft engine and contains no stock or movement write path
 - PASS - Phase 8.5.5 purchase draft shortcut is routed as a dedicated responsive inventory page
+- PASS - Phase 9.13.3 Master Breakfast Image Library contains exactly the eight approved breakfast dishes
+- PASS - Phase 9.13.3 Master Breakfast Image Library uses deterministic immutable WebP filenames and pending-review lifecycle
+- PASS - Phase 9.13.3 Master Breakfast Image Library matches every asset to its Breakfast master dish specification
+- PASS - Phase 9.13.3 Master Breakfast Image Library ships eight distinct files whose bytes match their metadata
+- PASS - Phase 9.13.2 Master Dish Specification Library contains exactly one specification for every approved unique item
+- PASS - Phase 9.13.2 Master Dish Specification Library keeps the exact approved item names and canonical first category
+- PASS - Phase 9.13.2 Master Dish Specification Library aggregates every business type without duplicating specifications
+- PASS - Phase 9.13.2 Master Dish Specification Library contains every required field with valid deterministic values
+- PASS - Phase 9.13.2 Master Dish Specification Library enforces the approved professional visual and negative standards
+- PASS - Phase 9.13.2 Master Dish Specification Library provides deterministic lookup for future provider adapters
+- PASS - Phase 9.13.2 Master Dish Specification Library contains no image provider or storage execution code
 - PASS - Phase 8.3.4 Menu to Recipe Linking adds one optional same-restaurant recipe relationship to menu items
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows only active, non-deleted same-tenant recipes
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows owner and manager linking while preserving read-only roles
