@@ -23,6 +23,9 @@ import type {
   MenuReviewLocalization,
   MenuReviewImageDraft,
 } from "./menuReviewTypes";
+import type { ExtractedMenuItem } from "./menuExtractionTypes";
+import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "./ownerMenuItemDefaults";
 
 function normalizedName(value: string | null) {
   return value
@@ -94,6 +97,110 @@ export function createPendingImageDraft(): MenuReviewImageDraft {
     lastPrompt: null,
     generationProgress: 0,
     errorMessage: null,
+    defaultImageReference: null,
+    masterImageId: null,
+    masterImageStatus: null,
+    masterImageBaseStoragePath: null,
+    masterImageMetadata: null,
+  };
+}
+
+export function createSmartMenuImageDraft(
+  item: Pick<ExtractedMenuItem, "defaultImageReference" | "smartImage">,
+): MenuReviewImageDraft {
+  const smartImage = item.smartImage;
+  if (!smartImage) return createPendingImageDraft();
+  const current = smartImage.versions.find(
+    (version) => version.version === smartImage.currentVersion,
+  ) ?? smartImage.versions[smartImage.versions.length - 1] ?? null;
+  const master = {
+    id: current?.id,
+    source: "MASTER" as const,
+    status: smartImage.status,
+    url: current?.publicUrl ?? null,
+    thumbnailUrl: current?.thumbnailUrl ?? current?.publicUrl ?? null,
+    version: current?.version ?? smartImage.currentVersion,
+  };
+  const override = smartImage.override
+    ? {
+      id: smartImage.override.id,
+      source: smartImage.override.source,
+      status: smartImage.override.status,
+      url: smartImage.override.imageUrl,
+      thumbnailUrl: smartImage.override.thumbnailUrl,
+      version: smartImage.override.version,
+    }
+    : null;
+  const selected = resolveMenuItemImage({
+    itemId: item.defaultImageReference ?? smartImage.id,
+    master,
+    custom: override,
+    placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE,
+  }, "owner-review");
+  const versions = smartImage.versions.map<MenuReviewImageDraft["versions"][number]>(
+    (version) => ({
+      id: version.id,
+      version: version.version,
+      status: version.status,
+      source: "master",
+      imageUrl: version.publicUrl,
+      thumbnailUrl: version.thumbnailUrl,
+      prompt: "Existing ServeFlow Smart Menu master image.",
+      createdAt: version.createdAt,
+      errorMessage: null,
+      crop: null,
+      storagePath: version.storagePath,
+      mimeType: version.mimeType,
+      width: version.width,
+      height: version.height,
+      byteSize: version.byteSize,
+      checksumSha256: version.checksumSha256,
+      providerKey: version.providerKey,
+      providerAssetId: version.providerAssetId,
+      providerMetadata: version.providerMetadata,
+      reviewedAt: version.reviewedAt,
+    }),
+  );
+  if (selected.source === "CUSTOM" && selected.url && selected.id) {
+    versions.push({
+      id: selected.id,
+      version: selected.version,
+      status: "Owner Upload",
+      source: "owner",
+      imageUrl: selected.url,
+      thumbnailUrl: selected.thumbnailUrl ?? selected.url,
+      prompt: "Owner uploaded image.",
+      createdAt: new Date().toISOString(),
+      errorMessage: null,
+      crop: null,
+    });
+  }
+  const selectedVersionId = selected.source === "PLACEHOLDER"
+    ? null
+    : selected.id ?? null;
+  return {
+    status: selected.source === "CUSTOM"
+      ? "Owner Upload"
+      : smartImage.status === "GENERATING" ||
+          smartImage.status === "PENDING_REVIEW" ||
+          smartImage.status === "APPROVED"
+        ? smartImage.status
+        : "Pending",
+    selectedVersionId,
+    versions,
+    lastPrompt: null,
+    generationProgress: selectedVersionId ? 1 : 0,
+    errorMessage: null,
+    defaultImageReference: item.defaultImageReference ?? null,
+    masterImageId: smartImage.id,
+    masterImageStatus: smartImage.status,
+    masterImageBaseStoragePath: smartImage.baseStoragePath,
+    masterImageMetadata: {
+      restaurantType: smartImage.restaurantType,
+      category: smartImage.category,
+      menuItem: smartImage.menuItem,
+      providerMetadata: smartImage.providerMetadata,
+    },
   };
 }
 
@@ -204,7 +311,7 @@ export function createMenuReviewState(
     hidden: false,
     rejected: false,
     trackingType: "no_tracking",
-    imageDraft: createPendingImageDraft(),
+    imageDraft: createSmartMenuImageDraft(item),
     order: index,
   }));
 
@@ -307,6 +414,11 @@ function normalizeImageDraft(value: MenuReviewImageDraft): MenuReviewImageDraft 
     lastPrompt: value.lastPrompt ?? null,
     generationProgress: Number(value.generationProgress ?? 0),
     errorMessage: value.errorMessage ?? null,
+    defaultImageReference: value.defaultImageReference ?? null,
+    masterImageId: value.masterImageId ?? null,
+    masterImageStatus: value.masterImageStatus ?? null,
+    masterImageBaseStoragePath: value.masterImageBaseStoragePath ?? null,
+    masterImageMetadata: value.masterImageMetadata ?? null,
   };
 }
 

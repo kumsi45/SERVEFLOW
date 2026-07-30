@@ -1,4 +1,5 @@
 import type { MenuItem } from "../types";
+import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import { formatMenuPrice } from "./menuPresentation";
 
 type FeaturedDishesProps = {
@@ -26,7 +27,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
       </div>
       <div className="featured-dish-track">
         {featuredItems.map((item) => {
-          const imageUrl = item.effective_image_url || item.image_url;
+          const imageUrl = resolveMenuItemImage(publishedMenuImageInput(item)).url;
 
           return (
           <article className="featured-dish-card" key={item.id}>

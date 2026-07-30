@@ -5,6 +5,7 @@ import {
   buildAbsolutePublicUrl,
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
 import { analyticsWindow } from "../../../core/analytics/historicalAnalytics";
 import {
@@ -5533,9 +5534,9 @@ function MenuPage({
                   <tr key={item.id}>
                     <td>
                       <div className="od-menu-item-cell">
-                        {item.image_url ? (
+                        {resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "owner-review").url ? (
                           <img
-                            src={item.image_url}
+                            src={resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "owner-review").url ?? ""}
                             alt=""
                             className="od-menu-thumb"
                           />

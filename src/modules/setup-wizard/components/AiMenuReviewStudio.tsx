@@ -920,7 +920,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     if (!activeExtraction || !state || !canEdit) return;
     const target = state.items.find((item) => item.id === itemId);
     if (!target || !target.approved || target.deleted || target.hidden || target.rejected) return;
-    if (target.imageDraft.status === "Generating") return;
+    if (target.imageDraft.status === "Generating" || target.imageDraft.status === "GENERATING") return;
     const promptVersion = Math.max(
       0,
       ...target.imageDraft.versions.map((entry) => entry.version),
@@ -1025,7 +1025,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     if (!state || !canEdit) return;
     const itemIds = state.items
       .filter((item) => item.approved && !item.deleted && !item.hidden && !item.rejected)
-      .filter((item) => !item.imageDraft.selectedVersionId && item.imageDraft.status !== "Generating")
+      .filter((item) => !item.imageDraft.selectedVersionId && item.imageDraft.status !== "Generating" && item.imageDraft.status !== "GENERATING")
       .map((item) => item.id);
     for (const itemId of itemIds) {
       await generateImageDraft(itemId);

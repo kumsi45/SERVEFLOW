@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { publishedMenuImageInput, resolveMenuItemImage } from "../../../../../core/presentation/menuItemImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -11,7 +12,8 @@ type Props = {
 };
 
 export const PremiumLuxuryCard = memo(function PremiumLuxuryCard({ item, priority = false, onAddToCart, onOpenInfo }: Props) {
-  const imageUrl = item.effective_image_url || item.image_url;
+  const image = resolveMenuItemImage(publishedMenuImageInput(item));
+  const imageUrl = image.url;
   const initial = item.name.trim().slice(0, 1).toUpperCase() || "SF";
 
   return (
@@ -26,6 +28,8 @@ export const PremiumLuxuryCard = memo(function PremiumLuxuryCard({ item, priorit
           fallback={initial}
           fallbackClassName="premium-luxury-image-fallback"
           fallbackLabel={`${item.name} image unavailable`}
+          itemId={item.id}
+          resolvedSource={image.source}
         />
         <span className="premium-luxury-card-price">{formatMenuPrice(Number(item.price))}</span>
       </button>

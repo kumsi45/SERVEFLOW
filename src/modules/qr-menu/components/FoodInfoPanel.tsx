@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { ResilientImage } from "../../../core/presentation/ResilientImage";
+import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
 import { formatMenuPrice } from "./menuPresentation";
@@ -98,7 +99,8 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
   }
 
   const extendedItem = item as ExtendedMenuItem;
-  const imageUrl = item.effective_image_url || item.image_url;
+  const image = resolveMenuItemImage(publishedMenuImageInput(item));
+  const imageUrl = image.url;
   const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
   const hasServingDetails = Boolean(extendedItem.serving_size || extendedItem.origin_country);
 

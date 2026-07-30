@@ -205,13 +205,21 @@ function smartLibraryResult(library: Record<string, unknown>): RawAiMenuResult {
           descriptionLanguage: language(description || null),
           price: confidence(null, 0),
           currency: confidence(null, 0),
+          defaultImageReference: cleanText(item.default_image_reference, 500) || null,
+          smartImage: item.smart_image && typeof item.smart_image === "object"
+            ? item.smart_image as RawAiMenuResult["items"][number]["smartImage"]
+            : null,
         };
       })
       .filter((item) => item.name.value && item.category.value),
   };
 }
 
-async function loadSmartLibrary(service: ServiceClient, restaurantType: string) {
+async function loadSmartLibrary(
+  service: ServiceClient,
+  restaurantType: string,
+  restaurantId: string,
+) {
   const { data, error } = await service
     .from("serveflow_smart_menu_libraries")
     .select("id,restaurant_type,name,serveflow_smart_menu_library_categories(display_order,active,category:serveflow_master_menu_categories(id,name,slug,icon,display_order,active)),serveflow_smart_menu_library_items(display_order,active,item:serveflow_master_menu_items(id,name,default_description,default_image_reference,keywords,display_order,active,category:serveflow_master_menu_categories(id,name,slug)))")
@@ -222,7 +230,103 @@ async function loadSmartLibrary(service: ServiceClient, restaurantType: string) 
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No ServeFlow Smart Menu is available for this restaurant type.");
-  return data as Record<string, unknown>;
+  const library = data as Record<string, unknown>;
+  const mappings = Array.isArray(library.serveflow_smart_menu_library_items)
+    ? library.serveflow_smart_menu_library_items as Array<Record<string, unknown>>
+    : [];
+  const itemIds = mappings.map((mapping) => {
+    const item = mapping.item && typeof mapping.item === "object"
+      ? mapping.item as Record<string, unknown>
+      : {};
+    return typeof item.id === "string" ? item.id : null;
+  }).filter((id): id is string => Boolean(id));
+  if (!itemIds.length) return library;
+
+  const { data: masters, error: masterError } = await service
+    .from("serveflow_smart_menu_images")
+    .select("id,item_id,status,current_version,base_storage_path,placeholder_storage_path,provider_key,provider_metadata")
+    .eq("library_id", library.id)
+    .in("item_id", itemIds);
+  if (masterError) throw new Error(masterError.message);
+  const masterIds = (masters ?? []).map((master) => master.id);
+  const { data: versions, error: versionError } = masterIds.length
+    ? await service
+      .from("serveflow_smart_menu_image_versions")
+      .select("id,smart_image_id,version,status,storage_path,mime_type,width,height,byte_size,checksum_sha256,provider_key,provider_asset_id,provider_metadata,created_at,reviewed_at")
+      .in("smart_image_id", masterIds)
+      .order("version", { ascending: true })
+    : { data: [], error: null };
+  if (versionError) throw new Error(versionError.message);
+  const { data: overrides, error: overrideError } = await service
+    .from("restaurant_smart_menu_image_overrides")
+    .select("id,item_id,source,status,custom_image_url,custom_thumbnail_url,custom_version")
+    .eq("restaurant_id", restaurantId)
+    .eq("library_id", library.id)
+    .in("item_id", itemIds);
+  if (overrideError) throw new Error(overrideError.message);
+
+  const masterByItem = new Map((masters ?? []).map((master) => [master.item_id, master]));
+  const overrideByItem = new Map((overrides ?? []).map((override) => [override.item_id, override]));
+  for (const mapping of mappings) {
+    const item = mapping.item && typeof mapping.item === "object"
+      ? mapping.item as Record<string, unknown>
+      : null;
+    if (!item || typeof item.id !== "string") continue;
+    const master = masterByItem.get(item.id);
+    if (!master) continue;
+    const category = item.category && typeof item.category === "object"
+      ? item.category as Record<string, unknown>
+      : {};
+    const masterVersions = (versions ?? [])
+      .filter((version) => version.smart_image_id === master.id)
+      .map((version) => ({
+        id: version.id,
+        version: version.version,
+        status: version.status,
+        storagePath: version.storage_path,
+        publicUrl: service.storage.from("smart-menu-images").getPublicUrl(version.storage_path).data.publicUrl,
+        thumbnailUrl: service.storage.from("smart-menu-images").getPublicUrl(version.storage_path).data.publicUrl,
+        mimeType: version.mime_type,
+        width: version.width,
+        height: version.height,
+        byteSize: version.byte_size,
+        checksumSha256: version.checksum_sha256,
+        providerKey: version.provider_key,
+        providerAssetId: version.provider_asset_id,
+        providerMetadata: version.provider_metadata ?? {},
+        createdAt: version.created_at,
+        reviewedAt: version.reviewed_at,
+      }));
+    const override = overrideByItem.get(item.id);
+    item.smart_image = {
+      id: master.id,
+      status: master.status,
+      currentVersion: master.current_version,
+      baseStoragePath: master.base_storage_path,
+      placeholderStoragePath: master.placeholder_storage_path,
+      providerKey: master.provider_key,
+      providerMetadata: master.provider_metadata ?? {},
+      restaurantType: String(library.restaurant_type ?? restaurantType),
+      category: {
+        id: String(category.id ?? ""),
+        name: String(category.name ?? ""),
+        slug: String(category.slug ?? ""),
+      },
+      menuItem: { id: item.id, name: String(item.name ?? "") },
+      versions: masterVersions,
+      override: override
+        ? {
+          id: override.id,
+          source: override.source,
+          status: override.status,
+          imageUrl: override.custom_image_url,
+          thumbnailUrl: override.custom_thumbnail_url,
+          version: override.custom_version,
+        }
+        : null,
+    };
+  }
+  return library;
 }
 
 async function createCompletedDraft(
@@ -306,7 +410,15 @@ Deno.serve(async (request) => {
           .limit(1)
           .maybeSingle();
         if (existingError) throw new Error(existingError.message);
-        if (existing) {
+        const existingItems = existing?.structured_result &&
+            typeof existing.structured_result === "object" &&
+            Array.isArray((existing.structured_result as Record<string, unknown>).items)
+          ? (existing.structured_result as Record<string, unknown>).items as Array<Record<string, unknown>>
+          : [];
+        const hasSmartImageContract = existingItems.length > 0 && existingItems.every(
+          (item) => item.smartImage && typeof item.smartImage === "object",
+        );
+        if (existing && hasSmartImageContract) {
           diagnostic("review_draft_reused", { reviewDraftId: existing.id, sourceKind: "smart_library" });
           return jsonResponse(200, { importDraft: existing });
         }
@@ -319,7 +431,7 @@ Deno.serve(async (request) => {
         if (cleanupError) throw new Error(cleanupError.message);
       }
       const raw = mode === "library"
-        ? smartLibraryResult(await loadSmartLibrary(service, restaurantType))
+        ? smartLibraryResult(await loadSmartLibrary(service, restaurantType, restaurantId))
         : mode === "starter"
           ? starterTemplateResult(await loadStarterTemplate(
             service,

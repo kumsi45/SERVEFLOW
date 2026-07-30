@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-29T12:53:58.864Z
+Generated: 2026-07-30T07:28:41.802Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 575 | 0 | 42 |
+| 592 | 0 | 42 |
 
 ## Regressions
 
@@ -359,6 +359,10 @@ No failing regressions.
 - PASS - Phase 9.13.3 Master Breakfast Image Library uses deterministic immutable WebP filenames and pending-review lifecycle
 - PASS - Phase 9.13.3 Master Breakfast Image Library matches every asset to its Breakfast master dish specification
 - PASS - Phase 9.13.3 Master Breakfast Image Library ships eight distinct files whose bytes match their metadata
+- PASS - Phase 9.12.2.6 Master Description Library contains exactly 180 one-to-one descriptions
+- PASS - Phase 9.12.2.6 Master Description Library keeps every description unique and within 160 characters
+- PASS - Phase 9.12.2.6 Master Description Library contains no placeholders, lorem ipsum, or banned marketing words
+- PASS - Phase 9.12.2.6 Master Description Library updates only default_description and validates exact hosted names
 - PASS - Phase 9.13.2 Master Dish Specification Library contains exactly one specification for every approved unique item
 - PASS - Phase 9.13.2 Master Dish Specification Library keeps the exact approved item names and canonical first category
 - PASS - Phase 9.13.2 Master Dish Specification Library aggregates every business type without duplicating specifications
@@ -366,6 +370,9 @@ No failing regressions.
 - PASS - Phase 9.13.2 Master Dish Specification Library enforces the approved professional visual and negative standards
 - PASS - Phase 9.13.2 Master Dish Specification Library provides deterministic lookup for future provider adapters
 - PASS - Phase 9.13.2 Master Dish Specification Library contains no image provider or storage execution code
+- PASS - Phase 9.13.4 Master Ethiopian Food Library contains only the ten approved unique dishes
+- PASS - Phase 9.13.4 Master Ethiopian Food Library uses the canonical specifications and pending-review metadata
+- PASS - Phase 9.13.4 Master Ethiopian Food Library matches every WebP file to its recorded size and checksum
 - PASS - Phase 8.3.4 Menu to Recipe Linking adds one optional same-restaurant recipe relationship to menu items
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows only active, non-deleted same-tenant recipes
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows owner and manager linking while preserving read-only roles
@@ -416,6 +423,11 @@ No failing regressions.
 - PASS - owner menu item defaults creates a safe short description for Chef Special
 - PASS - owner menu item defaults uses the ServeFlow placeholder image
 - PASS - Owner staff-management JWT handling refreshes the Owner session and explicitly sends the current access token
+- PASS - Phase 9.13.3.2 permanent master image rendering guarantee is metadata-driven for arbitrary current and future categories
+- PASS - Phase 9.13.3.2 permanent master image rendering guarantee enforces CUSTOM then MASTER then PLACEHOLDER centrally
+- PASS - Phase 9.13.3.2 permanent master image rendering guarantee keeps pending masters owner-only and reports an unresolvable generated master
+- PASS - Phase 9.13.3.2 permanent master image rendering guarantee requires every current menu renderer to call the canonical resolver
+- PASS - Phase 9.13.3.2 permanent master image rendering guarantee keeps the resolver implementation unique
 - PASS - Phase 9.12.3.3 persistent Review Studio session round-trips restaurant-scoped Review Studio state
 - PASS - Phase 9.12.3.3 persistent Review Studio session persists the wizard step and supports the Review Studio deep link
 - PASS - Phase 9.12.3.3 persistent Review Studio session restores draft content and editing UI state from local fallback
@@ -517,6 +529,11 @@ No failing regressions.
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation routes the V1 onboarding through Smart Menu and Review Studio
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation disables AI import while preserving its provider architecture
 - PASS - Phase 9.12 ServeFlow Smart Menu foundation creates the same private review draft without touching production menu tables
+- PASS - Phase 9.13.3.1 Smart Menu image pipeline preserves Smart Image identity and immutable version metadata during normalization
+- PASS - Phase 9.13.3.1 Smart Menu image pipeline initializes Review Studio from a pending master instead of a placeholder
+- PASS - Phase 9.13.3.1 Smart Menu image pipeline uses CUSTOM then MASTER then PLACEHOLDER and keeps customers approved-only
+- PASS - Phase 9.13.3.1 Smart Menu image pipeline creates Review Studio state with the existing master selected
+- PASS - Phase 9.13.3.1 Smart Menu image pipeline loads versions, overrides, and public URLs without upload or generation calls
 - PASS - production source contracts keeps all application realtime channels inside RestaurantEventService
 - PASS - production source contracts keeps kitchen independent from payment and invoices
 - PASS - production source contracts keeps Phase 7A.3 kitchen RPCs canonical and exact-batch

@@ -37,6 +37,56 @@ export type ExtractedMenuItem = {
   sourceText: ConfidenceField<string>;
   duplicate: boolean;
   duplicateOf: string[];
+  defaultImageReference?: string | null;
+  smartImage?: ExtractedSmartImage | null;
+};
+
+export type ExtractedSmartImageStatus =
+  | "PLACEHOLDER"
+  | "GENERATING"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "ARCHIVED";
+
+export type ExtractedSmartImageVersion = {
+  id: string;
+  version: number;
+  status: ExtractedSmartImageStatus;
+  storagePath: string;
+  publicUrl: string;
+  thumbnailUrl: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  byteSize: number | null;
+  checksumSha256: string | null;
+  providerKey: string | null;
+  providerAssetId: string | null;
+  providerMetadata: Record<string, unknown>;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export type ExtractedSmartImage = {
+  id: string;
+  status: ExtractedSmartImageStatus;
+  currentVersion: number;
+  baseStoragePath: string;
+  placeholderStoragePath: string;
+  providerKey: string | null;
+  providerMetadata: Record<string, unknown>;
+  restaurantType: string;
+  category: { id: string; name: string; slug: string };
+  menuItem: { id: string; name: string };
+  versions: ExtractedSmartImageVersion[];
+  override: {
+    id: string;
+    source: "MASTER" | "CUSTOM" | "PLACEHOLDER";
+    status: ExtractedSmartImageStatus;
+    imageUrl: string | null;
+    thumbnailUrl: string | null;
+    version: number;
+  } | null;
 };
 
 export type UnrecognizedSection = {

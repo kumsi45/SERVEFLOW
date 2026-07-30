@@ -134,6 +134,11 @@ function imageDraft(value: unknown) {
     "Approved",
     "Rejected",
     "Owner Upload",
+    "GENERATING",
+    "PENDING_REVIEW",
+    "APPROVED",
+    "PLACEHOLDER",
+    "ARCHIVED",
   ]);
   if (
     typeof draft.status !== "string" ||
@@ -152,7 +157,7 @@ function imageDraft(value: unknown) {
       throw new Error("Duplicate image version IDs are not allowed.");
     }
     versionIds.add(versionId);
-    if (version.source !== "ai" && version.source !== "owner") {
+    if (version.source !== "ai" && version.source !== "owner" && version.source !== "master") {
       throw new Error("Image version source is invalid.");
     }
     return {
@@ -166,6 +171,18 @@ function imageDraft(value: unknown) {
       createdAt: text(version.createdAt, "Image creation date", 80),
       errorMessage: text(version.errorMessage, "Image error", 1000, true),
       crop: version.crop === null ? null : record(version.crop, "Image crop"),
+      storagePath: text(version.storagePath ?? null, "Image storage path", 1000, true),
+      mimeType: text(version.mimeType ?? null, "Image MIME type", 100, true),
+      width: version.width === null || version.width === undefined ? null : order(version.width, "Image width"),
+      height: version.height === null || version.height === undefined ? null : order(version.height, "Image height"),
+      byteSize: version.byteSize === null || version.byteSize === undefined ? null : order(version.byteSize, "Image byte size"),
+      checksumSha256: text(version.checksumSha256 ?? null, "Image checksum", 128, true),
+      providerKey: text(version.providerKey ?? null, "Image provider", 160, true),
+      providerAssetId: text(version.providerAssetId ?? null, "Image provider asset", 500, true),
+      providerMetadata: version.providerMetadata === undefined
+        ? {}
+        : record(version.providerMetadata, "Image provider metadata"),
+      reviewedAt: text(version.reviewedAt ?? null, "Image review date", 80, true),
     };
   });
   const selectedVersionId = draft.selectedVersionId === null
@@ -181,6 +198,15 @@ function imageDraft(value: unknown) {
     lastPrompt: text(draft.lastPrompt, "Last image prompt", 8000, true),
     generationProgress: confidence(draft.generationProgress),
     errorMessage: text(draft.errorMessage, "Image draft error", 1000, true),
+    defaultImageReference: text(draft.defaultImageReference ?? null, "Default image reference", 500, true),
+    masterImageId: draft.masterImageId === null || draft.masterImageId === undefined
+      ? null
+      : id(draft.masterImageId, "Master image ID"),
+    masterImageStatus: text(draft.masterImageStatus ?? null, "Master image status", 40, true),
+    masterImageBaseStoragePath: text(draft.masterImageBaseStoragePath ?? null, "Master image base path", 1000, true),
+    masterImageMetadata: draft.masterImageMetadata === null || draft.masterImageMetadata === undefined
+      ? null
+      : record(draft.masterImageMetadata, "Master image metadata"),
   };
 }
 

@@ -1,4 +1,5 @@
 import { memo, useState, type ChangeEvent } from "react";
+import { resolveMenuItemImage, type MenuImageCandidate } from "../../../core/presentation/menuItemImage";
 import {
   MENU_LANGUAGE_OPTIONS,
   isMenuLanguage,
@@ -14,6 +15,7 @@ import type {
   MenuReviewImageVersion,
   MenuInventoryTrackingType,
 } from "../services/menuReviewTypes";
+import { SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../services/ownerMenuItemDefaults";
 
 type AiMenuReviewItemCardProps = {
   item: MenuReviewItem;
@@ -260,8 +262,28 @@ function ImageDraftPanel({
   const selected = imageDraft.versions.find(
     (version) => version.id === imageDraft.selectedVersionId,
   ) ?? imageDraft.versions[imageDraft.versions.length - 1] ?? null;
+  const candidate = selected ? {
+    id: selected.id,
+    source: selected.source === "owner" ? "CUSTOM" : "MASTER",
+    status: selected.source === "owner" ? "APPROVED" : (imageDraft.masterImageStatus ?? "PENDING_REVIEW"),
+    url: selected.imageUrl,
+    thumbnailUrl: selected.thumbnailUrl,
+    version: selected.version,
+    storagePath: selected.storagePath,
+    width: selected.width,
+    height: selected.height,
+    mimeType: selected.mimeType,
+    checksumSha256: selected.checksumSha256,
+    metadata: selected.providerMetadata,
+  } satisfies MenuImageCandidate : null;
+  const resolvedImage = resolveMenuItemImage({
+    itemId: item.id,
+    custom: candidate?.source === "CUSTOM" ? candidate : null,
+    master: candidate?.source === "MASTER" ? candidate : null,
+    placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE,
+  }, "owner-review");
   const eligible = item.approved && !item.deleted && !item.hidden && !item.rejected;
-  const busy = imageDraft.status === "Generating";
+  const busy = imageDraft.status === "Generating" || imageDraft.status === "GENERATING";
 
   function selectVersion(versionId: string) {
     const version = imageDraft.versions.find((entry) => entry.id === versionId);
@@ -325,9 +347,9 @@ function ImageDraftPanel({
 
   return (
     <section className="review-item-image" aria-label="AI image draft">
-      {selected?.thumbnailUrl ? (
+      {resolvedImage.url ? (
         <img
-          src={selected.thumbnailUrl}
+          src={resolvedImage.thumbnailUrl ?? resolvedImage.url}
           alt=""
           loading="lazy"
           decoding="async"

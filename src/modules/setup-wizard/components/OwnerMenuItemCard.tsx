@@ -1,5 +1,8 @@
 import { memo, type ChangeEvent } from "react";
+import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import { resolveMenuReviewText } from "../services/menuReviewState";
+import { SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../services/ownerMenuItemDefaults";
+import { menuReviewImageCandidates } from "../services/menuReviewImageCandidates";
 import type { MenuReviewCategory, MenuReviewItem } from "../services/menuReviewTypes";
 
 type Props = {
@@ -35,10 +38,14 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
 }: Props) {
   const name = resolveMenuReviewText(item.name, item.nameLocalization);
   const description = resolveMenuReviewText(item.description, item.descriptionLocalization);
-  const selectedPhoto = item.imageDraft.versions.find(
-    (version) => version.id === item.imageDraft.selectedVersionId,
-  );
-  const photoUrl = selectedPhoto?.imageUrl ?? selectedPhoto?.thumbnailUrl ?? null;
+  const candidates = menuReviewImageCandidates(item.imageDraft);
+  const resolvedImage = resolveMenuItemImage({
+    itemId: item.id,
+    custom: candidates.custom,
+    master: candidates.master,
+    placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE,
+  }, "owner-review");
+  const photoUrl = resolvedImage.url;
   const priceMissing = item.price.value === null;
 
   function changePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -60,6 +67,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
 
       <div className="owner-menu-photo">
         {photoUrl ? <img src={photoUrl} alt="" /> : <span aria-hidden="true">{name.trim().slice(0, 1) || "M"}</span>}
+        <small className="owner-image-lifecycle">{item.imageDraft.status}</small>
         <label className="owner-photo-camera" title="Change photo">
             <span aria-hidden="true">📷</span>
             <span className="setup-visually-hidden">Change Photo</span>

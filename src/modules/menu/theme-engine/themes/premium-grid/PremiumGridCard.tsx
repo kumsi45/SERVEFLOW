@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { publishedMenuImageInput, resolveMenuItemImage } from "../../../../../core/presentation/menuItemImage";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -25,7 +26,8 @@ export const PremiumGridCard = memo(function PremiumGridCard({
   onAddToCart,
   onOpenInfo,
 }: PremiumGridCardProps) {
-  const imageUrl = item.effective_image_url || item.image_url;
+  const image = resolveMenuItemImage(publishedMenuImageInput(item));
+  const imageUrl = image.url;
   const initial = item.name.trim().slice(0, 1).toUpperCase() || "SF";
   const ratingValue = (
     item as MenuItem & {

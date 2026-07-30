@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildResponsiveImageSet, buildSmartImageBasePath, buildSmartImageVersionPath, resolveSmartImage, restoreDefaultImage, SMART_MENU_IMAGE_CACHE_CONTROL } from "../../src/modules/setup-wizard/services/smartImageLibrary";
+import { buildResponsiveImageSet, buildSmartImageBasePath, buildSmartImageVersionPath, SMART_MENU_IMAGE_CACHE_CONTROL } from "../../src/modules/setup-wizard/services/smartImageLibrary";
+import { resolveMenuItemImage } from "../../src/core/presentation/menuItemImage";
 
 const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/200_phase9_13_1_global_smart_image_library.sql"), "utf8");
 const imageComponent = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/components/SmartMenuImage.tsx"), "utf8");
@@ -35,9 +36,9 @@ describe("Phase 9.13.1 global Smart Image Library foundation", () => {
   it("resolves custom, master, placeholder, and Restore Default deterministically", () => {
     const master = { source: "MASTER", status: "APPROVED", url: "master.webp", version: 2 } as const;
     const custom = { source: "CUSTOM", status: "APPROVED", url: "custom.webp", version: 1 } as const;
-    expect(resolveSmartImage(master, custom, "placeholder.webp").url).toBe("custom.webp");
-    expect(restoreDefaultImage(master, "placeholder.webp").url).toBe("master.webp");
-    expect(resolveSmartImage(null, null, "placeholder.webp").source).toBe("PLACEHOLDER");
+    expect(resolveMenuItemImage({ itemId: "item", master, custom, placeholderUrl: "placeholder.webp" }).url).toBe("custom.webp");
+    expect(resolveMenuItemImage({ itemId: "item", master, placeholderUrl: "placeholder.webp" }).url).toBe("master.webp");
+    expect(resolveMenuItemImage({ itemId: "item", placeholderUrl: "placeholder.webp" }).source).toBe("PLACEHOLDER");
     expect(overrideService).toContain("setCustomSmartImageOverride");
     expect(overrideService).toContain("restoreDefaultSmartImage");
     expect(overrideService).toContain('source: "MASTER"');

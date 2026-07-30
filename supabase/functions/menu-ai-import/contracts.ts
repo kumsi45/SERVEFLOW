@@ -26,6 +26,56 @@ export type RawMenuItem = {
   descriptionLanguage: LanguageDetection;
   price: ConfidenceField<number>;
   currency: ConfidenceField<string>;
+  defaultImageReference?: string | null;
+  smartImage?: SmartMenuImagePayload | null;
+};
+
+export type SmartMenuImageStatus =
+  | "PLACEHOLDER"
+  | "GENERATING"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "ARCHIVED";
+
+export type SmartMenuImageVersionPayload = {
+  id: string;
+  version: number;
+  status: SmartMenuImageStatus;
+  storagePath: string;
+  publicUrl: string;
+  thumbnailUrl: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  byteSize: number | null;
+  checksumSha256: string | null;
+  providerKey: string | null;
+  providerAssetId: string | null;
+  providerMetadata: Record<string, unknown>;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export type SmartMenuImagePayload = {
+  id: string;
+  status: SmartMenuImageStatus;
+  currentVersion: number;
+  baseStoragePath: string;
+  placeholderStoragePath: string;
+  providerKey: string | null;
+  providerMetadata: Record<string, unknown>;
+  restaurantType: string;
+  category: { id: string; name: string; slug: string };
+  menuItem: { id: string; name: string };
+  versions: SmartMenuImageVersionPayload[];
+  override: {
+    id: string;
+    source: "MASTER" | "CUSTOM" | "PLACEHOLDER";
+    status: SmartMenuImageStatus;
+    imageUrl: string | null;
+    thumbnailUrl: string | null;
+    version: number;
+  } | null;
 };
 
 export type RawAiMenuResult = {
@@ -50,6 +100,13 @@ export type NormalizedMenuItem = RawMenuItem & {
   duplicate: boolean;
   duplicateOf: string[];
 };
+
+function smartImageValue(value: unknown): SmartMenuImagePayload | null {
+  if (!value || typeof value !== "object") return null;
+  const image = value as SmartMenuImagePayload;
+  if (!image.id || !Array.isArray(image.versions)) return null;
+  return image;
+}
 
 export type NormalizedAiMenuResult = {
   schemaVersion: 1;
@@ -245,6 +302,8 @@ export function normalizeAiMenuResult(
       descriptionLanguage: languageFieldValue(item.descriptionLanguage),
       price: numberFieldValue(item.price),
       currency: currencyFieldValue(item.currency),
+      defaultImageReference: stringValue(item.defaultImageReference),
+      smartImage: smartImageValue(item.smartImage),
       variants: { value: [], confidence: 1 },
       comboMeal: { value: null, confidence: 0 },
       drink: { value: null, confidence: 0 },

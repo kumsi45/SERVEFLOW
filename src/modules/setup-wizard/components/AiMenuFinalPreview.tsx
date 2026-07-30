@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { MENU_LANGUAGE_OPTIONS, type MenuLanguage } from "../../../core/menu/menuLanguage";
+import { resolveMenuItemImage, type MenuImageCandidate } from "../../../core/presentation/menuItemImage";
 import { ThemeProvider } from "../../menu/theme-engine/ThemeProvider";
 import { ThemeRenderer } from "../../menu/theme-engine/ThemeRenderer";
 import { MENU_THEMES, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
@@ -13,6 +14,7 @@ import type { MenuCategory, MenuItem, Restaurant } from "../../qr-menu/types";
 import { certifyMenuPreview } from "../services/menuPreviewCertification";
 import type { MenuReviewState } from "../services/menuReviewTypes";
 import type { MenuPreviewRestaurant } from "../services/menuPublishService";
+import { SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../services/ownerMenuItemDefaults";
 
 type Props = { restaurant: MenuPreviewRestaurant; state: MenuReviewState; draftVersion: number; lastUpdated: string; onReturn: () => void; onPublish: (theme: MenuTheme) => void; publishing: boolean };
 type Device = "desktop" | "tablet" | "mobile";
@@ -33,8 +35,23 @@ export function AiMenuFinalPreview({ restaurant: sourceRestaurant, state, draftV
   const restaurant: Restaurant = { ...sourceRestaurant, menu_theme: theme };
   const categories = useMemo<MenuCategory[]>(() => state.categories.map((category) => ({ id: category.id, restaurant_id: sourceRestaurant.id, name: category.name, display_order: category.order, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: category.localization.values[code].value, description: null }])) })), [sourceRestaurant.id, state.categories]);
   const items = useMemo<MenuItem[]>(() => certification.items.filter((item) => item.categoryId).map((item) => {
-    const selected = item.imageDraft.versions.find((version) => version.id === item.imageDraft.selectedVersionId && (version.status === "Approved" || version.status === "Owner Upload"));
-    return { id: item.id, restaurant_id: sourceRestaurant.id, category_id: item.categoryId!, name: item.name.value ?? "Untitled item", description: item.description.value, price: item.price.value ?? 0, image_url: selected?.imageUrl ?? null, effective_image_url: selected?.imageUrl ?? null, available: true, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: item.nameLocalization.values[code].value, description: item.descriptionLocalization.values[code].value }])) };
+    const selected = item.imageDraft.versions.find((version) => version.id === item.imageDraft.selectedVersionId) ?? null;
+    const candidate = selected ? {
+      id: selected.id,
+      source: selected.source === "owner" ? "CUSTOM" : "MASTER",
+      status: selected.source === "owner" ? "APPROVED" : (item.imageDraft.masterImageStatus ?? "PENDING_REVIEW"),
+      url: selected.imageUrl,
+      thumbnailUrl: selected.thumbnailUrl,
+      version: selected.version,
+      storagePath: selected.storagePath,
+      width: selected.width,
+      height: selected.height,
+      mimeType: selected.mimeType,
+      checksumSha256: selected.checksumSha256,
+      metadata: selected.providerMetadata,
+    } satisfies MenuImageCandidate : null;
+    const image = resolveMenuItemImage({ itemId: item.id, custom: candidate?.source === "CUSTOM" ? candidate : null, master: candidate?.source === "MASTER" ? candidate : null, placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE });
+    return { id: item.id, restaurant_id: sourceRestaurant.id, category_id: item.categoryId!, name: item.name.value ?? "Untitled item", description: item.description.value, price: item.price.value ?? 0, image_url: image.source === "PLACEHOLDER" ? null : image.url, effective_image_url: image.url, custom_image: candidate?.source === "CUSTOM" ? candidate : null, master_image: candidate?.source === "MASTER" ? candidate : null, available: true, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: item.nameLocalization.values[code].value, description: item.descriptionLocalization.values[code].value }])) };
   }), [certification.items, sourceRestaurant.id]);
   const localized = useMemo(() => localizeMenuPresentation(categories, items, language), [categories, items, language]);
   const groups = useMemo(() => groupMenuItemsByCategory(localized.categories, localized.items.filter((item) => activeCategoryId === "all" || item.category_id === activeCategoryId).filter((item) => !search.trim() || `${item.name} ${item.description ?? ""}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))), [activeCategoryId, localized, search]);

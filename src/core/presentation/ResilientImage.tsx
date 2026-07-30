@@ -14,6 +14,8 @@ type ResilientImageProps = Omit<
   fallback: ReactNode;
   fallbackClassName: string;
   fallbackLabel?: string;
+  itemId?: string;
+  resolvedSource?: "CUSTOM" | "MASTER" | "PLACEHOLDER";
 };
 
 export const ResilientImage = memo(function ResilientImage({
@@ -21,6 +23,8 @@ export const ResilientImage = memo(function ResilientImage({
   fallback,
   fallbackClassName,
   fallbackLabel,
+  itemId,
+  resolvedSource,
   className,
   onLoad,
   ...imageProps
@@ -56,7 +60,10 @@ export const ResilientImage = memo(function ResilientImage({
         setLoaded(true);
         onLoad?.(event);
       }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (resolvedSource === "MASTER") console.error("Missing image resolution", { itemId });
+        setFailed(true);
+      }}
     />
   );
 });

@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { formatCurrency } from "../../../core/format/currency";
+import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import {
   canonicalOperationalStatus,
   canonicalKitchenProgress,
@@ -952,14 +953,15 @@ function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
 
 function CashierMenuItemImage({ item }: { item: CashierMenuItem }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const showImage = Boolean(item.image_url) && !imageFailed;
+  const image = resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" });
+  const showImage = Boolean(image.url) && !imageFailed;
 
   return (
     <span className="cd-menu-item-image-wrap">
       {showImage ? (
         <img
           className="cd-menu-item-image"
-          src={item.image_url ?? ""}
+          src={image.url ?? ""}
           alt={item.name}
           loading="lazy"
           onError={() => setImageFailed(true)}

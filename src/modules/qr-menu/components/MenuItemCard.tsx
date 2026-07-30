@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
 import type { MenuItem } from "../types";
 import { formatMenuPrice } from "./menuPresentation";
 
@@ -14,7 +15,8 @@ export const MenuItemCard = memo(function MenuItemCard({
   onAddToCart,
   onOpenFoodInfo,
 }: MenuItemCardProps) {
-  const imageUrl = item.effective_image_url || item.image_url;
+  const image = resolveMenuItemImage(publishedMenuImageInput(item));
+  const imageUrl = image.url;
 
   return (
     <article

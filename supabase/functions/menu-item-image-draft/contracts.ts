@@ -4,7 +4,12 @@ export type ImageDraftStatus =
   | "Ready"
   | "Approved"
   | "Rejected"
-  | "Owner Upload";
+  | "Owner Upload"
+  | "GENERATING"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "PLACEHOLDER"
+  | "ARCHIVED";
 
 export type ConfidenceField<T> = {
   value: T | null;
@@ -21,7 +26,7 @@ export type ImageDraftVersion = {
   id: string;
   version: number;
   status: ImageDraftStatus;
-  source: "ai" | "owner";
+  source: "ai" | "owner" | "master";
   imageUrl: string | null;
   thumbnailUrl: string | null;
   prompt: string;

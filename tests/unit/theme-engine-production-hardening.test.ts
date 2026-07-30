@@ -360,7 +360,8 @@ describe("Phase 9.7 responsive and accessibility certification", () => {
     expect(modalFocus).toContain('event.key !== "Tab"');
     expect(modalFocus).toContain("previousFocus?.focus()");
     expect(studio).toContain("aria-describedby");
-    expect(resilientImage).toContain("onError={() => setFailed(true)}");
+    expect(resilientImage).toContain("Missing image resolution");
+    expect(resilientImage).toContain("setFailed(true)");
     expect(resilientImage).toContain("setFailed(false)");
     for (const theme of MENU_THEMES) {
       expect(themeFiles[theme].card).toContain("ResilientImage");

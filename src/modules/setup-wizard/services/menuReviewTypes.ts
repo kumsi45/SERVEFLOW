@@ -56,9 +56,14 @@ export type MenuReviewImageStatus =
   | "Ready"
   | "Approved"
   | "Rejected"
-  | "Owner Upload";
+  | "Owner Upload"
+  | "GENERATING"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "PLACEHOLDER"
+  | "ARCHIVED";
 
-export type MenuReviewImageVersionSource = "ai" | "owner";
+export type MenuReviewImageVersionSource = "ai" | "owner" | "master";
 
 export type MenuReviewImageVersion = {
   id: string;
@@ -75,6 +80,16 @@ export type MenuReviewImageVersion = {
     y: number;
     scale: number;
   } | null;
+  storagePath?: string | null;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
+  byteSize?: number | null;
+  checksumSha256?: string | null;
+  providerKey?: string | null;
+  providerAssetId?: string | null;
+  providerMetadata?: Record<string, unknown>;
+  reviewedAt?: string | null;
 };
 
 export type MenuReviewImageDraft = {
@@ -84,6 +99,16 @@ export type MenuReviewImageDraft = {
   lastPrompt: string | null;
   generationProgress: number;
   errorMessage: string | null;
+  defaultImageReference?: string | null;
+  masterImageId?: string | null;
+  masterImageStatus?: import("./menuExtractionTypes").ExtractedSmartImageStatus | null;
+  masterImageBaseStoragePath?: string | null;
+  masterImageMetadata?: {
+    restaurantType: string;
+    category: { id: string; name: string; slug: string };
+    menuItem: { id: string; name: string };
+    providerMetadata: Record<string, unknown>;
+  } | null;
 };
 
 export type MenuReviewUnrecognizedStatus =

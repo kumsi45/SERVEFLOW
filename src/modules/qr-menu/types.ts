@@ -1,5 +1,6 @@
 import type { MenuTheme } from "../menu/theme-engine/ThemeTypes";
 import type { MenuLocalizationMap } from "../../core/menu/menuLanguage";
+import type { MenuImageCandidate } from "../../core/presentation/menuItemImage";
 
 export type Restaurant = {
   id: string;
@@ -48,6 +49,8 @@ export type MenuItem = {
   image_url?: string | null;
   category_image_url?: string | null;
   effective_image_url?: string | null;
+  custom_image?: MenuImageCandidate | null;
+  master_image?: MenuImageCandidate | null;
   available: boolean;
   localizations?: MenuLocalizationMap | null;
 };
