@@ -158,7 +158,7 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
 
   it("provides one persisted QR/theme language boundary", () => {
     expect(qrPage).toContain("MENU_LANGUAGE_OPTIONS.map");
-    expect(qrPage).toContain("setMenuLanguage(option.code)");
+    expect(qrPage).toContain("setMenuLanguage(event.target.value as MenuLanguage)");
     expect(qrPage).toContain("language={menuLanguage}");
     expect(qrPage).not.toMatch(/Google Translate/i);
     expect(themeTypes).toContain("language?: MenuLanguage");

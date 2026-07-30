@@ -3377,35 +3377,24 @@ h1 {
 
 .qr-language-selector {
   position: fixed;
-  top: max(72px, calc(env(safe-area-inset-top) + 62px));
-  right: max(10px, env(safe-area-inset-right));
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
   z-index: 40;
-  display: flex;
-  gap: 3px;
-  padding: 4px;
-  border: 1px solid rgba(38, 33, 30, .12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 4px 14px rgba(38, 33, 30, .12);
-  backdrop-filter: blur(8px);
 }
 
-.qr-language-selector button {
-  min-width: 40px;
-  min-height: 40px;
-  border: 0;
-  border-radius: 8px;
-  color: #5d554f;
-  background: transparent;
+.qr-language-selector select {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 32px 0 14px;
+  border: 1px solid rgba(38, 33, 30, .16);
+  border-radius: 12px;
+  color: #fff;
+  background-color: #1e5b4c;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   cursor: pointer;
-}
-
-.qr-language-selector button.active {
-  color: #fff;
-  background: #1e5b4c;
+  box-shadow: 0 4px 14px rgba(38, 33, 30, .14);
 }
 
 .qr-offline-state {

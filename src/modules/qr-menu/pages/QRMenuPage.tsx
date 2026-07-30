@@ -708,21 +708,21 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         language={menuLanguage}
       >
         <main className="qr-menu-page modern-food-page">
-      <nav className="qr-language-selector" aria-label="Menu language">
-        {MENU_LANGUAGE_OPTIONS.map((option) => (
-          <button
-            key={option.code}
-            type="button"
-            className={menuLanguage === option.code ? "active" : undefined}
-            aria-pressed={menuLanguage === option.code}
-            aria-label={`Show menu in ${option.label}`}
-            title={option.nativeLabel}
-            onClick={() => setMenuLanguage(option.code)}
-          >
-            {option.code.toUpperCase()}
-          </button>
-        ))}
-      </nav>
+      <label className="qr-language-selector">
+        <span className="sr-only">Menu language</span>
+        <select
+          value={menuLanguage}
+          aria-label="Menu language"
+          title="Menu language"
+          onChange={(event) => setMenuLanguage(event.target.value as MenuLanguage)}
+        >
+          {MENU_LANGUAGE_OPTIONS.map((option) => (
+            <option key={option.code} value={option.code} title={option.nativeLabel}>
+              {option.code.toUpperCase()}
+            </option>
+          ))}
+        </select>
+      </label>
       {usingCachedMenu ? (
         <div role="status" className="qr-offline-state">
           <span>Showing the last saved menu. Prices and availability may have changed.</span>
