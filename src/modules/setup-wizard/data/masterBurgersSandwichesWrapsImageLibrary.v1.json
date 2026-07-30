@@ -1,0 +1,974 @@
+{
+  "library": "ServeFlow Phase 9.13.7 Burgers Sandwiches Wraps Master Images",
+  "version": "1.0",
+  "phase": "9.13.7",
+  "categories": [
+    "Burgers",
+    "Sandwiches",
+    "Wraps"
+  ],
+  "generated_at": "2026-07-30T20:14:23.153107+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "f21cdf8a-ea3d-51a3-8bc9-8cf488cf5782",
+      "dish_name": "Beef Burger",
+      "slug": "beef-burger",
+      "category": "Burgers",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/burgers/beef-burger",
+      "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-2048w.webp",
+      "checksum_sha256": "230498b3d758dae77c18ea45c8fb40057b499a4e3d987d43d6bb2b685d005708",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 637796,
+          "checksum_sha256": "230498b3d758dae77c18ea45c8fb40057b499a4e3d987d43d6bb2b685d005708"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 344808,
+          "checksum_sha256": "442a763dbc0d6e3697f018769063be562f13244d4d510c2496b396686fd4977c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 239812,
+          "checksum_sha256": "1dbec44cf735984cf92fe9a82ad0ed2eff60d898468a29c557d4a84e3a999729"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 142984,
+          "checksum_sha256": "3ebaf581c4d12511bf2a7883c59593b2893f15cef80170a9a02637fb330cf63a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 68898,
+          "checksum_sha256": "fef4f8941d219d9d755fd7003f58ea167979b19198e848191dbdb6aec2dec77e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/burgers/beef-burger/v001/beef-burger-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 30282,
+          "checksum_sha256": "514f5dd14853650721f6a9316f3312e3f0951b96c58a20be8091cf712752a85c"
+        }
+      ]
+    },
+    {
+      "dish_id": "3ce121b8-888f-57a8-93e4-0849dd99b777",
+      "dish_name": "Chicken Burger",
+      "slug": "chicken-burger",
+      "category": "Burgers",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/burgers/chicken-burger",
+      "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-2048w.webp",
+      "checksum_sha256": "2169665c26d411cdf8e0df3a9f35f4d584bdd8b40d0c2c0a8fb67e0da6e21547",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 617134,
+          "checksum_sha256": "2169665c26d411cdf8e0df3a9f35f4d584bdd8b40d0c2c0a8fb67e0da6e21547"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 331794,
+          "checksum_sha256": "cf24809328bf4e919ab391147a81ffab4d64b0861bc32ea2e99830aa020ee5d4"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 229584,
+          "checksum_sha256": "6ec035f8d672ee07da4fe460435c4478c06752308da450d77600e4344ee4b38d"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 135072,
+          "checksum_sha256": "1e6029fb3ef875bb7a3fcfe3eed0aca227d6a7773adf24429278602265dc53a3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62866,
+          "checksum_sha256": "d920549dc772d749bf34ff4787dfcba62b28b3a534ad53bffcfc4eb19de7ab75"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/burgers/chicken-burger/v001/chicken-burger-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/chicken-burger/v001/chicken-burger-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25864,
+          "checksum_sha256": "bc8d4658b8d3edc22b1c485ec80f70476652c6c8362e5d55c7edb338079fd6ac"
+        }
+      ]
+    },
+    {
+      "dish_id": "25b35558-6aa4-5f5c-ad48-cc678e44a00d",
+      "dish_name": "Cheese Burger",
+      "slug": "cheese-burger",
+      "category": "Burgers",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/burgers/cheese-burger",
+      "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-2048w.webp",
+      "checksum_sha256": "e8e07019d9d0490aba58acc8add41bc372cc437c71b98269324f9f4fafeff37b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 550006,
+          "checksum_sha256": "e8e07019d9d0490aba58acc8add41bc372cc437c71b98269324f9f4fafeff37b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 294750,
+          "checksum_sha256": "36951e918b105a4e0321a4fcf4bd159a68d5ffde01c0da6fa8f775ce46f8f3e7"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 213116,
+          "checksum_sha256": "2885026c8339179a9a8a081a9d6d81614d0a7e01a18ce4820187b03b2c5cba2d"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 127420,
+          "checksum_sha256": "9977a0f472f90e9782eb69847b7aad623e6625d600754005a8125f802949e078"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62230,
+          "checksum_sha256": "18abc4d8206d34f6b12f342c83ed677115453747483b61a16df83356f36d7004"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/burgers/cheese-burger/v001/cheese-burger-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/cheese-burger/v001/cheese-burger-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28288,
+          "checksum_sha256": "2da1722b50a9aedb9b7645c4ce8ec85dae75c3eeb4005c75680ab2ab77323315"
+        }
+      ]
+    },
+    {
+      "dish_id": "a0fe467d-7f35-556c-9976-7ba66e021a63",
+      "dish_name": "Double Burger",
+      "slug": "double-burger",
+      "category": "Burgers",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/burgers/double-burger",
+      "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-2048w.webp",
+      "checksum_sha256": "bac3eacb75a3e13c13f579c4291e167a11dcefb48361d48e57b2e06ec79b2757",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 705294,
+          "checksum_sha256": "bac3eacb75a3e13c13f579c4291e167a11dcefb48361d48e57b2e06ec79b2757"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 380994,
+          "checksum_sha256": "8fe36b800f09e8718a8f9b8f3504f7b4245221dcbf771811840a8c284e4770b0"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 272390,
+          "checksum_sha256": "87799bac55a105595e173b31e9858317f26e94f5b9b808905c97e9a6d92f4a57"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 167160,
+          "checksum_sha256": "783ee2cadbc75eae41b269581f70f1c7489d2a722154664340ea16e7e4da750c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 79040,
+          "checksum_sha256": "39c043cb99c41c4e0c7327383dac46df3a02f6a44a535ac73addc10a9f0a1961"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/burgers/double-burger/v001/double-burger-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/burgers/double-burger/v001/double-burger-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33398,
+          "checksum_sha256": "569da15d26d772cd235749ddb024baf810f43d4fa747b076228785a6a07411e2"
+        }
+      ]
+    },
+    {
+      "dish_id": "f5df0124-32c7-5852-9b87-82acb98b6751",
+      "dish_name": "Club Sandwich",
+      "slug": "club-sandwich",
+      "category": "Sandwiches",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/sandwiches/club-sandwich",
+      "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-2048w.webp",
+      "checksum_sha256": "522f761c5db3f274849c5871f5fda577acb14475df64860993b46dfeb871a85a",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 514652,
+          "checksum_sha256": "522f761c5db3f274849c5871f5fda577acb14475df64860993b46dfeb871a85a"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 270476,
+          "checksum_sha256": "e2b9a41d458004a2938f5d62570df21983d1a9009ee8aabac99d506ee4025b35"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 193792,
+          "checksum_sha256": "11336621e61a41f56653e2e029bf6688d9bd92a5ab04092ead19960c3e65b8f4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 119238,
+          "checksum_sha256": "1e4e90bf8426ad2f4c6de6e07053f4c3034769f3860451d925bbc2c1f82aece6"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 60260,
+          "checksum_sha256": "197af3295cb1d75dff3ae0f123cc3d9bd790a73d2e799a681ad8347e7d5c2966"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/club-sandwich/v001/club-sandwich-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27530,
+          "checksum_sha256": "16313f50c4396d0c3b5757c64733e38a5c2b7f687dfe34b5619a31be5778ecdb"
+        }
+      ]
+    },
+    {
+      "dish_id": "d639fa45-c92e-5630-87d1-5c41d1bc33ee",
+      "dish_name": "Chicken Sandwich",
+      "slug": "chicken-sandwich",
+      "category": "Sandwiches",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/sandwiches/chicken-sandwich",
+      "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-2048w.webp",
+      "checksum_sha256": "b05f1274f0deed0726a94c9f1f6be8db3c1ce399c389acd47f768b58f7cfcefa",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 688286,
+          "checksum_sha256": "b05f1274f0deed0726a94c9f1f6be8db3c1ce399c389acd47f768b58f7cfcefa"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 389754,
+          "checksum_sha256": "6a11ab08b20c17a283b03ae81b9af7b2f9a0cdf7adadf6707247e74b57091790"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 273536,
+          "checksum_sha256": "e562f64ff2c193fff2d93e0cab029175ec0b3fa17cd93e271b2ef2dee6eaf46b"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 163534,
+          "checksum_sha256": "e1f468e6024a02dec4a0ca80cf5851efa4120e2dfd5b688985a2e5fae062aabe"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 77284,
+          "checksum_sha256": "124dd116f2f90c46763497fe2f82872d03be3cb2aa7c7d8d84d33693f84caae0"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/chicken-sandwich/v001/chicken-sandwich-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32522,
+          "checksum_sha256": "b2e88c61807f1e82759fea26bd76e2b962ec2b1965bcd56181a405f7784812bd"
+        }
+      ]
+    },
+    {
+      "dish_id": "4bc159cd-c47e-5107-abb6-e64e6e457337",
+      "dish_name": "Tuna Sandwich",
+      "slug": "tuna-sandwich",
+      "category": "Sandwiches",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/sandwiches/tuna-sandwich",
+      "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-2048w.webp",
+      "checksum_sha256": "aacc21d7901508cc34d2146b496fa67a81dbe9fee90e6be5a1f02e0136eff7a6",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 551002,
+          "checksum_sha256": "aacc21d7901508cc34d2146b496fa67a81dbe9fee90e6be5a1f02e0136eff7a6"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 298980,
+          "checksum_sha256": "ec45e4506535c875120f12b87b8964ebe92aef8ddef32c622d045f5b600881c2"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 217474,
+          "checksum_sha256": "5ed007cd758f3d41831907a44bce6274e966df1e6d69ac40abaa37ff590f9be1"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 132858,
+          "checksum_sha256": "cab41f5eaadb6b9ffc8d412d669c0e1d68252e1adebbda2aaec641551eb95e55"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65172,
+          "checksum_sha256": "c9da2b6a7bc47e6d3b0b7a666b5090a3ec0e45b9cd7263f94222c34a939e1122"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/tuna-sandwich/v001/tuna-sandwich-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28574,
+          "checksum_sha256": "dacbda58893d403282a51d25577ea867fd6efcf629d3b9547c2f87d026372750"
+        }
+      ]
+    },
+    {
+      "dish_id": "76cb2a3f-07c3-5766-b734-44737e99b82f",
+      "dish_name": "Beef Sandwich",
+      "slug": "beef-sandwich",
+      "category": "Sandwiches",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/sandwiches/beef-sandwich",
+      "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-2048w.webp",
+      "checksum_sha256": "b0a39fab0418623dee6c5bf75d2a4f59e1ac9e2bd445fcf9e7d226cfef8330c5",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 607960,
+          "checksum_sha256": "b0a39fab0418623dee6c5bf75d2a4f59e1ac9e2bd445fcf9e7d226cfef8330c5"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 327760,
+          "checksum_sha256": "52a18bdfae22c1be0529f7ef9e8d72330bb7b2b0d7fe1721024ea353e8361a08"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 230438,
+          "checksum_sha256": "f3bd4c16814eb456ff6fc1b550805b368c322f923425b1252a22e9db118987e4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 141612,
+          "checksum_sha256": "6511ab2d95c7eedb9882a7d7419105cca2e66fa7a202d20cfb2d72f3250dbe0c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65430,
+          "checksum_sha256": "8c1da6f00df57da778cfc5374a0460021a1cdf0298ac95022d03fc73477c9ca4"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/beef-sandwich/v001/beef-sandwich-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27790,
+          "checksum_sha256": "b70340b43f7df4f419b21a2c55ee933f030ed2e223c9a04c28d98f5ffe3b7f59"
+        }
+      ]
+    },
+    {
+      "dish_id": "cf569e5e-cfd4-5e28-8bbe-e78f22c37e2b",
+      "dish_name": "Vegetable Sandwich",
+      "slug": "vegetable-sandwich",
+      "category": "Sandwiches",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/sandwiches/vegetable-sandwich",
+      "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-2048w.webp",
+      "checksum_sha256": "6fe57f51fedce499bb0e091fac8ec204fd62d2e0c50f396f3177e9e690a2b27d",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 559098,
+          "checksum_sha256": "6fe57f51fedce499bb0e091fac8ec204fd62d2e0c50f396f3177e9e690a2b27d"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 296666,
+          "checksum_sha256": "1d2282513601f1a32a34bfdc94bdcdad78e937e06516e42d267e3343f0441ff7"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 216748,
+          "checksum_sha256": "f0786df92777e42c4aaf0b0623bdd04507dc36d81ff7b14658405169a286f62c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 139382,
+          "checksum_sha256": "e0b755b649a4712b1065d52d2b7d87214e4f24463177f311a1e47684d8c7e866"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 69416,
+          "checksum_sha256": "4529ada8cdc587e4b22f1b966d950ddf53161d04fa4f908fb662a35515e836eb"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/sandwiches/vegetable-sandwich/v001/vegetable-sandwich-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32026,
+          "checksum_sha256": "4ada1c6f25a2859b540f6b54735017ae5a1c6f506785322c323dd2d608916235"
+        }
+      ]
+    },
+    {
+      "dish_id": "a797775e-d244-54a4-8099-59c3733c105e",
+      "dish_name": "Chicken Wrap",
+      "slug": "chicken-wrap",
+      "category": "Wraps",
+      "restaurant_type": "Fast Food",
+      "version": 1,
+      "base_storage_path": "fast-food/wraps/chicken-wrap",
+      "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-2048w.webp",
+      "checksum_sha256": "f92dc04a38bb26a8639d59b548291f6dbd22948750e0db8456ade8e022fa99c7",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 494288,
+          "checksum_sha256": "f92dc04a38bb26a8639d59b548291f6dbd22948750e0db8456ade8e022fa99c7"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 262922,
+          "checksum_sha256": "59f06de0ef12b0a8967dd7874a76ed46d3f13cf6670d4530631d833ac898eb43"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 187386,
+          "checksum_sha256": "bb74b990e728885dc8218c602ef315ed8f8364323f3d3af5b7872b2c21b94445"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 115994,
+          "checksum_sha256": "c99a5655458719a667cae64b32e9f87652703f4a455e4c0cd3936c67842a68b0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 60600,
+          "checksum_sha256": "5773c9b33ff1dcd66265d0269bcd1fb22afd078d024d81244a3d9da84800259b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/chicken-wrap/v001/chicken-wrap-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28244,
+          "checksum_sha256": "5658c098623d9b838df3f5a047a25ca8d60cc4ca7ed8d4bf4f0309c7ed5c825b"
+        }
+      ]
+    },
+    {
+      "dish_id": "ecb79760-1491-57ac-85a3-d7619b49fae7",
+      "dish_name": "Beef Wrap",
+      "slug": "beef-wrap",
+      "category": "Wraps",
+      "restaurant_type": "Fast Food",
+      "version": 1,
+      "base_storage_path": "fast-food/wraps/beef-wrap",
+      "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-2048w.webp",
+      "checksum_sha256": "4a812e5d49c1fc8a456d3741aca2b83fbd4d8cfa0d9c86360fcbbac6f301e8cf",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 528012,
+          "checksum_sha256": "4a812e5d49c1fc8a456d3741aca2b83fbd4d8cfa0d9c86360fcbbac6f301e8cf"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 284174,
+          "checksum_sha256": "6f4678dfd8f2e920e25366d8c2a48500c5516fc57c183cab2ef93d1106cf701f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 204182,
+          "checksum_sha256": "c57058d8ea599988a4cb058f323e3410a87a52c3a685f598b2caeb5c3a7e4cda"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 128578,
+          "checksum_sha256": "6b1760a8217913d5188033e8c585af17bb808254db49a8943ead1322794234d2"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62336,
+          "checksum_sha256": "557b101f11d0e6252d242e0b4e7eff3f9ae93d9c4356bed035115f2b9530a414"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/wraps/beef-wrap/v001/beef-wrap-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/beef-wrap/v001/beef-wrap-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26094,
+          "checksum_sha256": "a02fbea9f518f76dcfbec90c1aae6c38f3dc686c442be5a92eebfb1203ed3ef1"
+        }
+      ]
+    },
+    {
+      "dish_id": "409a25eb-d177-58cc-8115-de13e56eb874",
+      "dish_name": "Vegetable Wrap",
+      "slug": "vegetable-wrap",
+      "category": "Wraps",
+      "restaurant_type": "Fast Food",
+      "version": 1,
+      "base_storage_path": "fast-food/wraps/vegetable-wrap",
+      "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-2048w.webp",
+      "checksum_sha256": "523855488de704d792677932525668807f17a13a38e73be4055bac3d9d897c2d",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T20:14:23.153107+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 556118,
+          "checksum_sha256": "523855488de704d792677932525668807f17a13a38e73be4055bac3d9d897c2d"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 305918,
+          "checksum_sha256": "58ff864bbe92d1abfe8c95bfeb8c91ef2018fc7e8f665ba1e2a189c1d0f9711e"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 215766,
+          "checksum_sha256": "2db5655159abb5505bfd3eb40704dfdd08ff31fb3a9ce53b402bf57189478e83"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 134674,
+          "checksum_sha256": "c40067734a26636fb5b8f6cbb61b0f4329987e7ed35b9cd02695bc72fe57f507"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 66310,
+          "checksum_sha256": "9718184c461451ecf0006d2b26a0c96993702bf463e84098acc017f3bfd213a4"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/wraps/vegetable-wrap/v001/vegetable-wrap-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 30474,
+          "checksum_sha256": "4c47ba6eb612e51d3060ff826e8531383fd92415cdb861cccdcba8c7d3b54360"
+        }
+      ]
+    }
+  ]
+}
