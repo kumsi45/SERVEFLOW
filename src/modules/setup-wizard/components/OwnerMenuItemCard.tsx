@@ -47,6 +47,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
   }, "owner-review");
   const photoUrl = resolvedImage.url;
   const priceMissing = item.price.value === null;
+  const imageStatusLabel = item.imageDraft.status.replace(/_/g, " ");
 
   function changePhoto(event: ChangeEvent<HTMLInputElement>) {
     onPhotoChange(event.target.files?.[0] ?? null);
@@ -66,8 +67,8 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
       </label>
 
       <div className="owner-menu-photo">
-        {photoUrl ? <img src={photoUrl} alt="" /> : <span aria-hidden="true">{name.trim().slice(0, 1) || "M"}</span>}
-        <small className="owner-image-lifecycle">{item.imageDraft.status}</small>
+        {photoUrl ? <img src={photoUrl} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">{name.trim().slice(0, 1) || "M"}</span>}
+        <small className="owner-image-lifecycle" data-lifecycle={item.imageDraft.status}>{imageStatusLabel}</small>
         <label className="owner-photo-camera" title="Change photo">
             <span aria-hidden="true">📷</span>
             <span className="setup-visually-hidden">Change Photo</span>
@@ -88,14 +89,13 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
             {categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
           </select>
         </label>
-        <details className="owner-menu-description">
-          <summary>Description</summary>
+        <div className="owner-menu-description">
           <label>
-            <span className="setup-visually-hidden">Menu item description</span>
+            <span>Description</span>
             <textarea value={description} onChange={(event) => onDescriptionChange(event.target.value)} disabled={!canEdit} maxLength={160} rows={3} />
             <small>This appears under the menu item. {description.length}/160</small>
           </label>
-        </details>
+        </div>
       </div>
 
       <div className="owner-menu-price-field">

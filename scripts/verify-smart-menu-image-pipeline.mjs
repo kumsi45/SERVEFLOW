@@ -107,6 +107,29 @@ try {
     item.smartImage?.versions?.some((version) => version.publicUrl && version.storagePath)
   );
   if (!generatedItems.length) throw new Error("No generated Smart Menu images were found for verification.");
+  const visualName = generatedItems[0].name.value;
+  const visualCategory = generatedItems[0].smartImage.category.name || generatedItems[0].category.value;
+  let visualInput = page.locator(`.owner-menu-card input[value="${visualName}"]`).first();
+  if (await visualInput.count() === 0) {
+    await page.locator(".owner-category-toggle").filter({ hasText: visualCategory }).first().click();
+  }
+  const visualCard = visualInput.locator("xpath=ancestor::article");
+  await visualCard.locator(".owner-menu-photo img").evaluate(async (element) => {
+    if (element.complete && element.naturalWidth > 0) return;
+    await new Promise((resolve, reject) => {
+      element.addEventListener("load", resolve, { once: true });
+      element.addEventListener("error", reject, { once: true });
+    });
+  });
+  for (const viewport of [
+    { name: "desktop", width: 1440, height: 1000 },
+    { name: "tablet", width: 900, height: 1100 },
+    { name: "mobile", width: 390, height: 1000 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await visualCard.screenshot({ path: `test-results/artifacts/review-studio-${viewport.name}.png` });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const results = [];
   const openedCategories = new Set();
   for (const generated of generatedItems) {

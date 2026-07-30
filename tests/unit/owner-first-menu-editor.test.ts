@@ -78,9 +78,10 @@ describe("Phase 9.12.3 owner-first menu editor", () => {
 
   it("is touch-friendly and responsive", () => {
     expect(css).toContain(".owner-menu-photo > :is(img, span)");
-    expect(css).toContain("width: 120px; height: 120px");
+    expect(css).toContain("width: 160px; height: 160px");
+    expect(css).toContain("width: 180px; height: 180px");
     expect(css).toContain("min-height: 44px");
-    expect(css).toContain("@media (max-width: 700px)");
+    expect(css).toContain("@media (max-width: 767px)");
     expect(css).toContain("@media (max-width: 360px)");
     expect(css).toContain(".owner-menu-editor :is(input, select, textarea, button):focus-visible");
   });
