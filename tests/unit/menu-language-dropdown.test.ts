@@ -11,6 +11,7 @@ describe("public menu language dropdown", () => {
     expect(qrMenuSource).toContain('<select\n          value={menuLanguage}');
     expect(qrMenuSource).toContain('aria-label="Menu language"');
     expect(qrMenuSource).toContain("MENU_LANGUAGE_OPTIONS.map");
+    expect(qrMenuSource).not.toContain('<span className="sr-only">Menu language</span>');
     expect(qrMenuSource).not.toContain('aria-pressed={menuLanguage === option.code}');
   });
 

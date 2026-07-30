@@ -1,0 +1,733 @@
+{
+  "library": "ServeFlow Phase 9.13.5 Chicken and Fish Seafood Master Images",
+  "version": "1.0",
+  "phase": "9.13.5",
+  "categories": [
+    "Chicken",
+    "Fish & Seafood"
+  ],
+  "generated_at": "2026-07-30T15:15:03.978429+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "c417f427-3bb1-5a0c-aad6-e7b4a77c9e0f",
+      "dish_name": "Grilled Chicken",
+      "slug": "grilled-chicken",
+      "category": "Chicken",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/chicken/grilled-chicken",
+      "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-2048w.webp",
+      "checksum_sha256": "bd0bb60377a2caf95e3b732e40799cbaa4464e76a7ba9e7bd787a9dc2da66794",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 477756,
+          "checksum_sha256": "bd0bb60377a2caf95e3b732e40799cbaa4464e76a7ba9e7bd787a9dc2da66794"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 244664,
+          "checksum_sha256": "f33b1f8e93b8faadd355d4df1b4203a99a7661518c2222920e2c829dd317e6a4"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 171602,
+          "checksum_sha256": "a1ac84abda822362494d1f8d8612088cf6a034e4f253f00ca19d6448173db844"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104584,
+          "checksum_sha256": "59dc1cbdb3c6feca81ef980b63c46b33f5ab15a7ad4fc02ddf94743f19f976b0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52958,
+          "checksum_sha256": "f115b021bf192eb0e9d59064d601afa3697d0e571004b21c9d4a66260bd8f79b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/grilled-chicken/v001/grilled-chicken-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24022,
+          "checksum_sha256": "db561722dc7f2050eea61db162167d16d0656113f6191558f8f031299ec90a7a"
+        }
+      ]
+    },
+    {
+      "dish_id": "0976c3d2-ea64-5912-a5be-f722657b58d4",
+      "dish_name": "Chicken Breast",
+      "slug": "chicken-breast",
+      "category": "Chicken",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/chicken/chicken-breast",
+      "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-2048w.webp",
+      "checksum_sha256": "345ebe014bab04428543b4ad9bc4dee6466963a7fd963cc86073d94f6ecf33ef",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 389638,
+          "checksum_sha256": "345ebe014bab04428543b4ad9bc4dee6466963a7fd963cc86073d94f6ecf33ef"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 201498,
+          "checksum_sha256": "955b53081a4730de850939b533e9f05a8c9737341237d1bf93dc13e125c3165f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 140532,
+          "checksum_sha256": "cff4129a367c4aa288670272d9962ac91f469bef224e32af9a458455a278d29f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 86408,
+          "checksum_sha256": "850299f88d6b73d7b4497d2f80a2cae92832251971940e6710ac76d3e3913764"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43832,
+          "checksum_sha256": "458886aa776948d459aed570c4f174ca9f56b465ba9d51ee1f54ec2759f15724"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/chicken/chicken-breast/v001/chicken-breast-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-breast/v001/chicken-breast-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 17850,
+          "checksum_sha256": "4bcc35ff5907c3d9903369bee35566e82a7e3a4e98e74a7f265b02c44b29fa82"
+        }
+      ]
+    },
+    {
+      "dish_id": "02ba03fe-db78-52ad-b636-ef9e2309de4d",
+      "dish_name": "Chicken Cutlet",
+      "slug": "chicken-cutlet",
+      "category": "Chicken",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/chicken/chicken-cutlet",
+      "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-2048w.webp",
+      "checksum_sha256": "d84e2f01ebb0c4809c762ce7ddd05ab4179784c2fb1fbe53f5eb2a3c3929a525",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 479442,
+          "checksum_sha256": "d84e2f01ebb0c4809c762ce7ddd05ab4179784c2fb1fbe53f5eb2a3c3929a525"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 248790,
+          "checksum_sha256": "d4330c0037c72e849e0bb08ceec85624ee076038cabe5944294e3c444134356f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 174260,
+          "checksum_sha256": "2a6746d7e293a0ffa29c8eb138fa9df1b764811fa0a9fa349f813df787a4cde7"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 103442,
+          "checksum_sha256": "b5e4e998c60be79e6260981b73b55a09c57c857b6c4d8f39ec194d5ba5a7c807"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 46852,
+          "checksum_sha256": "e79766d8ba5d7e472aca4ac2df68f44125ad2c16d27b6877fe9e011d2cd49d74"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-cutlet/v001/chicken-cutlet-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20458,
+          "checksum_sha256": "4aabd0200a6ee63a6195131254b3cb35bb966e21ae576a3d297e3df1d9e5cd4e"
+        }
+      ]
+    },
+    {
+      "dish_id": "b735d241-8d59-5a6b-920b-beb2e6f794a1",
+      "dish_name": "Fried Chicken",
+      "slug": "fried-chicken",
+      "category": "Chicken",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/chicken/fried-chicken",
+      "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-2048w.webp",
+      "checksum_sha256": "f3b88229ec937bd0c67889a06f3d0f467f2d6df895d065733079d3609c9c961c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 605024,
+          "checksum_sha256": "f3b88229ec937bd0c67889a06f3d0f467f2d6df895d065733079d3609c9c961c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 330962,
+          "checksum_sha256": "1f3d324692ea2f8e8f1c23c252b04be6a07c5f81878fd1318ddfd5d35317b180"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 234352,
+          "checksum_sha256": "f5c55d3cc532af0598c8f763d9ab4d52bdbff318e51a1db0069b4ee9bc5a7691"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 141822,
+          "checksum_sha256": "b14453c199a310ca693565ee7196e75e22abfebcaa9881f6c23ba3c009da1bf5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65492,
+          "checksum_sha256": "1b0f927950daf555c034862bf78bd80dde1f02a27cbf5a6d12f5586f3879b97f"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/chicken/fried-chicken/v001/fried-chicken-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/fried-chicken/v001/fried-chicken-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27356,
+          "checksum_sha256": "3c582018811531c9b78e960aaeedb6987047dfef513ce6215864f268cd80a5b4"
+        }
+      ]
+    },
+    {
+      "dish_id": "e028a936-07b7-56c3-8c33-289ccce0199c",
+      "dish_name": "Chicken Wings",
+      "slug": "chicken-wings",
+      "category": "Chicken",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/chicken/chicken-wings",
+      "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-2048w.webp",
+      "checksum_sha256": "4edf9e926b64cf89b5ee551c2a6672dca665593e0eaf9d810bd318b14a74e2d2",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 432264,
+          "checksum_sha256": "4edf9e926b64cf89b5ee551c2a6672dca665593e0eaf9d810bd318b14a74e2d2"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 220926,
+          "checksum_sha256": "5edd1e900db90bbf89dc7129eaaf58b8fc141158a19106f9a88f4a35e45dddb9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 158720,
+          "checksum_sha256": "7389e07bd14c2f0ceb9bbdd08986cc8e9d62ffbd76db3cf9fc68549a2a2998e8"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 100716,
+          "checksum_sha256": "8a47b8ea4a724bd36d02c7b694178c13571cb41edd004b5fc1b7a8702eef5f82"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50506,
+          "checksum_sha256": "830b7bae2cfe8dc76788bc49737777713a106bf770f37b34d5c973ffbcd9ac37"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/chicken/chicken-wings/v001/chicken-wings-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/chicken/chicken-wings/v001/chicken-wings-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22812,
+          "checksum_sha256": "456db664220beaff798f8df8bd7b360afbc9d0e0db7c85435ff457a605972ace"
+        }
+      ]
+    },
+    {
+      "dish_id": "9cae9e54-6086-5cb9-8d3d-e80c1c6dda81",
+      "dish_name": "Asa Tibs",
+      "slug": "asa-tibs",
+      "category": "Fish & Seafood",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/fish-seafood/asa-tibs",
+      "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-2048w.webp",
+      "checksum_sha256": "d8f57b2c52609da304f5c2cd088371b02fa09e65625cbdaa73efd160fbbe2a2c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 539268,
+          "checksum_sha256": "d8f57b2c52609da304f5c2cd088371b02fa09e65625cbdaa73efd160fbbe2a2c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 291396,
+          "checksum_sha256": "6fd8d652847cde49a5976c220bf50162b5e4c1ac2c004b493c2c2a911a1adcf2"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 210296,
+          "checksum_sha256": "5c77d70fb0368f25eb5d5bbcba62c4c5dc9502c44d5eda07c48e6c47d400615b"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 131476,
+          "checksum_sha256": "b2eb5cef0a48eeb58282910072b29e0653dd6e7a76548749d2d4536cd9b13972"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 64066,
+          "checksum_sha256": "b5b86cca3391accaeebef093178038766856987697c2f45f7ab5a852451fcd1f"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/asa-tibs/v001/asa-tibs-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28398,
+          "checksum_sha256": "5d4cde3fcb26d81545897975f2c8aaec6ba4ed7edb5f6771694930a83bc1c34f"
+        }
+      ]
+    },
+    {
+      "dish_id": "e2bc3aee-dce6-582c-8957-293ad03ab098",
+      "dish_name": "Grilled Fish",
+      "slug": "grilled-fish",
+      "category": "Fish & Seafood",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/fish-seafood/grilled-fish",
+      "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-2048w.webp",
+      "checksum_sha256": "3b499eacd17a6d0a8a467b56d298c956820545667e0832a84c7065c6e5d6eadf",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 690176,
+          "checksum_sha256": "3b499eacd17a6d0a8a467b56d298c956820545667e0832a84c7065c6e5d6eadf"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 370044,
+          "checksum_sha256": "459ddee00151f079687267f05313b434d3f862a1b45da1c140074ab84cfc3280"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 251782,
+          "checksum_sha256": "0321dc46e4963e5176dad9b50e9f3fea9ed9efbc8ae4ed637cb4032358b99d4b"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 148332,
+          "checksum_sha256": "e9b49462ab7e0cf11f061bad259d8e42bcfbc47f5e3975e7a5797dd9b59c3228"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 67922,
+          "checksum_sha256": "722ccf27f62b96e5af469e1a724bc2c5132617a12e80a0970ef54f9717e6201c"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/grilled-fish/v001/grilled-fish-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27514,
+          "checksum_sha256": "16a0a44809f2ee053d07fd55446b779f7d095441a2ee75233cecce693e1cd8cf"
+        }
+      ]
+    },
+    {
+      "dish_id": "35fc9a34-2bee-5fd9-8dc6-5508edd29b9d",
+      "dish_name": "Fried Fish",
+      "slug": "fried-fish",
+      "category": "Fish & Seafood",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/fish-seafood/fried-fish",
+      "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-2048w.webp",
+      "checksum_sha256": "eafe53b823094bd6a1fb692f4a1417b5e376fb739baf87d54893517aaf6e9c9c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 430584,
+          "checksum_sha256": "eafe53b823094bd6a1fb692f4a1417b5e376fb739baf87d54893517aaf6e9c9c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 233570,
+          "checksum_sha256": "72e56e6bffd9ff2c9bda04b0eaa915bd1347488d17cac17494589a38fa42af2e"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 167332,
+          "checksum_sha256": "8ff111a991f52391a7be67b02221d5b0373e2a067333b20157a3f8254bb0332a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104252,
+          "checksum_sha256": "dd427d0de398c10cd5e8c1dd43a8494b4cb42233e8dc326a53fd3e29fffae43b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50160,
+          "checksum_sha256": "3aa9e861801fdd63ec314d0e17674f016111c8e4faae8ba06204f133f6a24e13"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fried-fish/v001/fried-fish-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22292,
+          "checksum_sha256": "3ac8a22fae523147e48d5b505cbda0816a15b71f7f38d7b8dbf8fd5c9803a88c"
+        }
+      ]
+    },
+    {
+      "dish_id": "b205a5b2-96ed-5abc-ac17-8febf343c127",
+      "dish_name": "Fish Cutlet",
+      "slug": "fish-cutlet",
+      "category": "Fish & Seafood",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/fish-seafood/fish-cutlet",
+      "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-2048w.webp",
+      "checksum_sha256": "aec18a2dc9645404ff7346f6fd632ef8a18ef17305a05082a4cdab2707a6039a",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T15:15:03.978429+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 613690,
+          "checksum_sha256": "aec18a2dc9645404ff7346f6fd632ef8a18ef17305a05082a4cdab2707a6039a"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 323168,
+          "checksum_sha256": "077b6ab6e1b04246ebc47d1e3689f06639aae324359024b160bdba79f99d9de5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 215674,
+          "checksum_sha256": "f931f3323c91818dbc0c563ae6c2677cd865793194c85a53d3de7b2e4301493f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 122424,
+          "checksum_sha256": "ab77f205e2b6e672c5a27dec01455c8625120a22c5746fd755a6c6d98c85c8e5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 51602,
+          "checksum_sha256": "623a9e061c6003a5a2bd6f543ebdee4bdc1fd7739b35514ab4a84d305c1129ed"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/fish-seafood/fish-cutlet/v001/fish-cutlet-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 19726,
+          "checksum_sha256": "aaba6145fe560ce90e70da5277e0d78fac85ff4fbe885f656d41ca5f082208ac"
+        }
+      ]
+    }
+  ]
+}

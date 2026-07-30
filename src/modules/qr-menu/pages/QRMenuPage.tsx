@@ -709,7 +709,6 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       >
         <main className="qr-menu-page modern-food-page">
       <label className="qr-language-selector">
-        <span className="sr-only">Menu language</span>
         <select
           value={menuLanguage}
           aria-label="Menu language"

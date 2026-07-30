@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-30T08:51:08.330Z
+Generated: 2026-07-30T15:20:39.723Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 610 | 0 | 42 |
+| 615 | 0 | 42 |
 
 ## Regressions
 
@@ -366,6 +366,9 @@ No failing regressions.
 - PASS - Phase 9.13.3 Master Breakfast Image Library uses deterministic immutable WebP filenames and pending-review lifecycle
 - PASS - Phase 9.13.3 Master Breakfast Image Library matches every asset to its Breakfast master dish specification
 - PASS - Phase 9.13.3 Master Breakfast Image Library ships eight distinct files whose bytes match their metadata
+- PASS - Phase 9.13.5 Chicken and Fish Seafood master images contains exactly every active dish in the two approved categories
+- PASS - Phase 9.13.5 Chicken and Fish Seafood master images keeps all generated images pending human review
+- PASS - Phase 9.13.5 Chicken and Fish Seafood master images provides immutable, valid, unique WebP responsive variants
 - PASS - Phase 9.12.2.6 Master Description Library contains exactly 180 one-to-one descriptions
 - PASS - Phase 9.12.2.6 Master Description Library keeps every description unique and within 160 characters
 - PASS - Phase 9.12.2.6 Master Description Library contains no placeholders, lorem ipsum, or banned marketing words
@@ -380,6 +383,8 @@ No failing regressions.
 - PASS - Phase 9.13.4 Master Ethiopian Food Library contains only the ten approved unique dishes
 - PASS - Phase 9.13.4 Master Ethiopian Food Library uses the canonical specifications and pending-review metadata
 - PASS - Phase 9.13.4 Master Ethiopian Food Library matches every WebP file to its recorded size and checksum
+- PASS - public menu language dropdown uses one accessible dropdown instead of a floating button group
+- PASS - public menu language dropdown anchors the dropdown to the safe top-right corner
 - PASS - Phase 8.3.4 Menu to Recipe Linking adds one optional same-restaurant recipe relationship to menu items
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows only active, non-deleted same-tenant recipes
 - PASS - Phase 8.3.4 Menu to Recipe Linking allows owner and manager linking while preserving read-only roles
