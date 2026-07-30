@@ -1,5 +1,6 @@
 import { memo, useMemo, type CSSProperties } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { VirtualizedCard } from "../../../../../core/presentation/VirtualizedCard";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -31,6 +32,7 @@ export const PremiumLuxuryView = memo(function PremiumLuxuryView({
   onOpenCart,
   onOpenOrders,
 }: ModernFoodViewProps) {
+  const virtualizeCards = groups.reduce((total, group) => total + group.items.length, 0) >= 120;
   const categoryImages = useMemo(
     () => new Map(categories.map((category) => [category.id, category.hero_image_url])),
     [categories],
@@ -99,7 +101,7 @@ export const PremiumLuxuryView = memo(function PremiumLuxuryView({
             <section className="premium-luxury-group" key={group.category.id} aria-labelledby={`luxury-category-${group.category.id}`}>
               <header><div><small>Chef's selection</small><h2 id={`luxury-category-${group.category.id}`}>{group.category.name}</h2></div><span>{group.items.length}</span></header>
               <div className="premium-luxury-grid">
-                {group.items.map((item, index) => <PremiumLuxuryCard key={item.id} item={item} priority={groupIndex === 0 && index < 2} onAddToCart={onAddToCart} onOpenInfo={onOpenInfo} />)}
+                {group.items.map((item, index) => <VirtualizedCard enabled={virtualizeCards} estimatedHeight={430} key={item.id}>{() => <PremiumLuxuryCard item={item} priority={groupIndex === 0 && index < 2} onAddToCart={onAddToCart} onOpenInfo={onOpenInfo} />}</VirtualizedCard>)}
               </div>
             </section>
           )) : (

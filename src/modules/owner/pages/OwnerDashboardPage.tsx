@@ -5,7 +5,9 @@ import {
   buildAbsolutePublicUrl,
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
-import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { ResilientImage } from "../../../core/presentation/ResilientImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { createSmartImagePublicUrl, resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
 import { analyticsWindow } from "../../../core/analytics/historicalAnalytics";
 import {
@@ -174,6 +176,11 @@ type OdMenuItem = {
   direct_inventory_item_id: string | null;
   direct_inventory_item_name: string | null;
 };
+
+function OwnerMenuThumbnail({ item }: { item: Pick<OdMenuItem, "id" | "name" | "image_url"> }) {
+  const image = resolveSmartImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "thumbnail", "owner-review");
+  return image.url ? <SmartImage resolution={image} alt="" className="od-menu-thumb" fallback="MN" fallbackClassName="od-menu-thumb empty" /> : <div className="od-menu-thumb empty">MN</div>;
+}
 
 type InventoryTrackingType = "recipe" | "ready_to_sell" | "no_tracking";
 
@@ -5092,8 +5099,7 @@ function MenuPage({
       throw new Error(error.message);
     }
 
-    const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
-    return data.publicUrl;
+    return createSmartImagePublicUrl("menu-photos", path);
   }
 
   async function handleUploadMenuFile(file: File | null) {
@@ -5534,15 +5540,7 @@ function MenuPage({
                   <tr key={item.id}>
                     <td>
                       <div className="od-menu-item-cell">
-                        {resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "owner-review").url ? (
-                          <img
-                            src={resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "owner-review").url ?? ""}
-                            alt=""
-                            className="od-menu-thumb"
-                          />
-                        ) : (
-                          <div className="od-menu-thumb empty">MN</div>
-                        )}
+                        <OwnerMenuThumbnail item={item} />
                         <div>
                           <strong>{item.name}</strong>
                           {item.description && (
@@ -5850,7 +5848,7 @@ function MenuPage({
                 />
               </label>
               {formImageUrl && !formImageFile && (
-                <img className="od-menu-preview" src={formImageUrl} alt="" />
+                <ResilientImage className="od-menu-preview" src={formImageUrl} alt="" fallback={null} fallbackClassName="od-menu-preview empty" usage="card" />
               )}
 
               <div className="od-modal-actions">
@@ -8927,9 +8925,9 @@ function SettingsPage({
         });
       if (uploadError) throw new Error(uploadError.message);
 
-      const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
-      if (assetType === "logo") updateField("logoUrl", data.publicUrl);
-      if (assetType === "cover") updateField("coverUrl", data.publicUrl);
+      const publicUrl = createSmartImagePublicUrl("menu-photos", path);
+      if (assetType === "logo") updateField("logoUrl", publicUrl);
+      if (assetType === "cover") updateField("coverUrl", publicUrl);
     } catch (uploadError) {
       setSettingsError(
         uploadError instanceof Error

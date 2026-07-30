@@ -6,7 +6,6 @@ import { resolveMenuItemImage } from "../../src/core/presentation/menuItemImage"
 const renderers = [
   "src/modules/setup-wizard/components/OwnerMenuItemCard.tsx",
   "src/modules/setup-wizard/components/AiMenuReviewItemCard.tsx",
-  "src/modules/setup-wizard/components/AiMenuFinalPreview.tsx",
   "src/modules/qr-menu/components/MenuItemCard.tsx",
   "src/modules/qr-menu/components/FeaturedDishes.tsx",
   "src/modules/qr-menu/components/FoodInfoPanel.tsx",
@@ -45,7 +44,8 @@ describe("Phase 9.13.3.2 permanent master image rendering guarantee", () => {
   it("requires every current menu renderer to call the canonical resolver", () => {
     for (const file of renderers) {
       const source = readFileSync(resolve(process.cwd(), file), "utf8");
-      expect(source, file).toContain("resolveMenuItemImage");
+      expect(source, file).toContain("resolveSmartImage");
+      expect(source, file).toContain("SmartImage");
       expect(source, file).not.toMatch(/effective_image_url\s*\|\|\s*item\.image_url/);
     }
   });

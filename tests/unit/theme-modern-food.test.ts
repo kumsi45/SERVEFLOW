@@ -98,12 +98,13 @@ describe("Phase 9.2 Modern Food rendering", () => {
   it("renders retina-friendly lazy images, accessible actions, and the two-tab navigation", () => {
     const html = renderModern();
     expect(html).toContain('decoding="async"');
-    expect(html).toContain('loading="lazy"');
+    expect(html).toContain('loading="eager"');
     expect(html).toContain("Add Prawn Ceviche to cart");
     expect(html).toContain("Open food information for Prawn Ceviche");
     expect(html).toContain(">Home<");
     expect(html).toContain(">Orders<");
     expect(modernCardSource).toContain("memo(function ModernFoodCard");
+    expect(modernCardSource).toContain("resolveSmartImage");
   });
 
   it("shows clean information placeholders without inventing missing values", () => {

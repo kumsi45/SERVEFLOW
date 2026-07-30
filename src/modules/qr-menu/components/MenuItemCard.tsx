@@ -1,5 +1,7 @@
 import { memo } from "react";
-import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { publishedMenuImageInput } from "../../../core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import type { MenuItem } from "../types";
 import { formatMenuPrice } from "./menuPresentation";
 
@@ -15,8 +17,7 @@ export const MenuItemCard = memo(function MenuItemCard({
   onAddToCart,
   onOpenFoodInfo,
 }: MenuItemCardProps) {
-  const image = resolveMenuItemImage(publishedMenuImageInput(item));
-  const imageUrl = image.url;
+  const image = resolveSmartImage(publishedMenuImageInput(item), "card");
 
   return (
     <article
@@ -31,8 +32,8 @@ export const MenuItemCard = memo(function MenuItemCard({
       }}
     >
       <div className="menu-item-image-wrap">
-        {imageUrl ? (
-          <img className="menu-item-image" src={imageUrl} alt={item.name} loading="lazy" decoding="async" />
+        {image.url ? (
+          <SmartImage resolution={image} className="menu-item-image" alt={item.name} fallback={null} fallbackClassName="menu-item-image placeholder" />
         ) : (
           <div className="menu-item-image placeholder" aria-hidden="true" />
         )}

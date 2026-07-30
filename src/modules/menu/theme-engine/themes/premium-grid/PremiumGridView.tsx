@@ -1,5 +1,6 @@
 import { memo, useMemo, type CSSProperties } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { VirtualizedCard } from "../../../../../core/presentation/VirtualizedCard";
 import type { MenuItem } from "../../../../qr-menu/types";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -151,13 +152,12 @@ export const PremiumGridView = memo(function PremiumGridView({
             aria-label="Available menu items"
           >
             {menuItems.map((item: MenuItem, index) => (
-              <PremiumGridCard
+              <VirtualizedCard enabled={menuItems.length >= 120} estimatedHeight={400} key={item.id}>{() => <PremiumGridCard
                 item={item}
                 priority={index < 2}
-                key={item.id}
                 onAddToCart={onAddToCart}
                 onOpenInfo={onOpenInfo}
-              />
+              />}</VirtualizedCard>
             ))}
           </section>
         ) : (

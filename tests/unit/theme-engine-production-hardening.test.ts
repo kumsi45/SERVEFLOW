@@ -79,6 +79,7 @@ const livePreview = read(
   "src/modules/menu/theme-engine/customization/ThemeLivePreview.tsx",
 );
 const resilientImage = read("src/core/presentation/ResilientImage.tsx");
+const smartImage = read("src/core/presentation/SmartImage.tsx");
 const modalFocus = read("src/core/accessibility/useModalFocus.ts");
 const managerRoute = read(
   "src/modules/staff-auth/pages/ProtectedManagerRoute.tsx",
@@ -360,12 +361,12 @@ describe("Phase 9.7 responsive and accessibility certification", () => {
     expect(modalFocus).toContain('event.key !== "Tab"');
     expect(modalFocus).toContain("previousFocus?.focus()");
     expect(studio).toContain("aria-describedby");
-    expect(resilientImage).toContain("Missing image resolution");
-    expect(resilientImage).toContain("setFailed(true)");
-    expect(resilientImage).toContain("setFailed(false)");
+    expect(resilientImage).toContain("resolveSmartImage");
+    expect(smartImage).toContain("reportSmartImageFailure");
+    expect(smartImage).toContain("attempt === 0");
     for (const theme of MENU_THEMES) {
-      expect(themeFiles[theme].card).toContain("ResilientImage");
-      expect(themeFiles[theme].card).toContain('decoding="async"');
+      expect(themeFiles[theme].card).toContain("SmartImage");
+      expect(themeFiles[theme].card).toContain("resolveSmartImage");
     }
   });
 
@@ -391,7 +392,7 @@ describe("Phase 9.7 performance and cleanup boundaries", () => {
     (theme) => {
       expect(themeFiles[theme].view).toContain("memo(function");
       expect(themeFiles[theme].card).toContain("memo(function");
-      expect(themeFiles[theme].card).toContain('"lazy"');
+      expect(themeFiles[theme].card).toContain("eager={priority}");
       expect(themeFiles[theme].card).toContain("fetchPriority");
     },
   );

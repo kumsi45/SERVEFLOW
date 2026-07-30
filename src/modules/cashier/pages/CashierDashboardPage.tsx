@@ -1,7 +1,8 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { formatCurrency } from "../../../core/format/currency";
-import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import {
   canonicalOperationalStatus,
   canonicalKitchenProgress,
@@ -966,20 +967,12 @@ function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
 }
 
 function CashierMenuItemImage({ item }: { item: CashierMenuItem }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const image = resolveMenuItemImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" });
-  const showImage = Boolean(image.url) && !imageFailed;
+  const image = resolveSmartImage({ itemId: item.id, master: item.image_url ? { source: "MASTER", status: "APPROVED", url: item.image_url, version: 1 } : null, placeholderUrl: "" }, "card");
 
   return (
     <span className="cd-menu-item-image-wrap">
-      {showImage ? (
-        <img
-          className="cd-menu-item-image"
-          src={image.url ?? ""}
-          alt={item.name}
-          loading="lazy"
-          onError={() => setImageFailed(true)}
-        />
+      {image.url ? (
+        <SmartImage resolution={image} className="cd-menu-item-image" alt={item.name} fallback={null} fallbackClassName="cd-menu-item-image placeholder" />
       ) : (
         <span className="cd-menu-item-image placeholder" aria-hidden="true" />
       )}

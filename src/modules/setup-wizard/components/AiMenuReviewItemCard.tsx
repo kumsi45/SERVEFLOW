@@ -1,5 +1,7 @@
 import { memo, useState, type ChangeEvent } from "react";
-import { resolveMenuItemImage, type MenuImageCandidate } from "../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { type MenuImageCandidate } from "../../../core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import {
   MENU_LANGUAGE_OPTIONS,
   isMenuLanguage,
@@ -276,12 +278,12 @@ function ImageDraftPanel({
     checksumSha256: selected.checksumSha256,
     metadata: selected.providerMetadata,
   } satisfies MenuImageCandidate : null;
-  const resolvedImage = resolveMenuItemImage({
+  const resolvedImage = resolveSmartImage({
     itemId: item.id,
     custom: candidate?.source === "CUSTOM" ? candidate : null,
     master: candidate?.source === "MASTER" ? candidate : null,
     placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE,
-  }, "owner-review");
+  }, "card", "owner-review");
   const eligible = item.approved && !item.deleted && !item.hidden && !item.rejected;
   const busy = imageDraft.status === "Generating" || imageDraft.status === "GENERATING";
 
@@ -348,12 +350,7 @@ function ImageDraftPanel({
   return (
     <section className="review-item-image" aria-label="AI image draft">
       {resolvedImage.url ? (
-        <img
-          src={resolvedImage.thumbnailUrl ?? resolvedImage.url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
+        <SmartImage resolution={resolvedImage} alt="" fallback="IMG" fallbackClassName="review-image-placeholder" />
       ) : (
         <div className="review-image-placeholder" role="status">
           <span aria-hidden="true">IMG</span>

@@ -1,5 +1,6 @@
 import { memo, useContext, useMemo, type CSSProperties } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { VirtualizedCard } from "../../../../../core/presentation/VirtualizedCard";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuCategory, MenuGroup, MenuItem, Restaurant } from "../../../../qr-menu/types";
 import { applyThemeBranding, useThemeCustomization } from "../../customization/themeCustomization";
@@ -78,6 +79,7 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
   const coverStyle = restaurant.cover_url
     ? ({ "--modern-cover": `url("${restaurant.cover_url}")` } as CSSProperties)
     : undefined;
+  const virtualizeCards = groups.reduce((total, group) => total + group.items.length, 0) >= 120;
 
   return (
     <div className="modern-food-theme" style={coverStyle}>
@@ -145,7 +147,7 @@ export const ModernFoodView = memo(function ModernFoodView(props: ModernFoodView
             </header>
             <div className="modern-food-grid">
               {group.items.map((item, index) => (
-                <ModernFoodCard item={item} priority={groupIndex === 0 && index < 2} key={item.id} onAddToCart={onAddToCart} onOpenInfo={onOpenInfo} />
+                <VirtualizedCard enabled={virtualizeCards} estimatedHeight={390} key={item.id}>{() => <ModernFoodCard item={item} priority={groupIndex === 0 && index < 2} onAddToCart={onAddToCart} onOpenInfo={onOpenInfo} />}</VirtualizedCard>
               ))}
             </div>
           </section>

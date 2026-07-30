@@ -12,6 +12,7 @@ import {
 import QRCode from "qrcode";
 import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import { supabase } from "../../../core/database";
+import { createSmartImagePublicUrl } from "../../../core/presentation/smartImageDelivery";
 import {
   MENU_LANGUAGE_OPTIONS,
   isMenuLanguage,
@@ -1047,12 +1048,12 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       cacheControl: "31536000", upsert: false, contentType: entry.contentType,
     });
     if (uploadError && !uploadError.message.toLocaleLowerCase().includes("already exists")) throw new Error(uploadError.message);
-    const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
+    const publicUrl = createSmartImagePublicUrl("menu-photos", path);
     changeState(entry.extractionId, (current) => ({
       ...current,
       items: current.items.map((item) => {
         if (item.id !== entry.itemId) return item;
-        const version = createImageVersion(Math.max(0, ...item.imageDraft.versions.map((candidate) => candidate.version)) + 1, "owner", data.publicUrl, data.publicUrl, "Owner uploaded image.");
+        const version = createImageVersion(Math.max(0, ...item.imageDraft.versions.map((candidate) => candidate.version)) + 1, "owner", publicUrl, publicUrl, "Owner uploaded image.");
         return { ...item, imageDraft: { ...item.imageDraft, status: "Owner Upload", selectedVersionId: version.id, versions: [...item.imageDraft.versions.filter((candidate) => !candidate.imageUrl?.startsWith("blob:")), version], generationProgress: 1, errorMessage: null } };
       }),
     }));

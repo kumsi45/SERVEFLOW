@@ -6,6 +6,7 @@ import { resolveMenuItemImage } from "../../src/core/presentation/menuItemImage"
 
 const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/200_phase9_13_1_global_smart_image_library.sql"), "utf8");
 const imageComponent = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/components/SmartMenuImage.tsx"), "utf8");
+const deliveryComponent = readFileSync(resolve(process.cwd(), "src/core/presentation/SmartImage.tsx"), "utf8");
 const overrideService = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/services/smartImageOverrideService.ts"), "utf8");
 
 describe("Phase 9.13.1 global Smart Image Library foundation", () => {
@@ -46,11 +47,12 @@ describe("Phase 9.13.1 global Smart Image Library foundation", () => {
   });
 
   it("provides lazy, responsive, low-priority image rendering", () => {
-    expect(imageComponent).toContain('loading="lazy"');
-    expect(imageComponent).toContain('decoding="async"');
-    expect(imageComponent).toContain('fetchPriority="low"');
-    expect(imageComponent).toContain("srcSet={srcSet}");
-    expect(imageComponent).toContain("sizes={srcSet ? sizes : undefined}");
+    expect(imageComponent).toContain("resolveSmartImage");
+    expect(imageComponent).toContain("<SmartImage");
+    expect(deliveryComponent).toContain('loading={eager ? "eager" : "lazy"}');
+    expect(deliveryComponent).toContain('decoding="async"');
+    expect(deliveryComponent).toContain("fetchPriority={fetchPriority}");
+    expect(deliveryComponent).toContain("IntersectionObserver");
   });
 
   it("does not contain image generation or provider API calls", () => {

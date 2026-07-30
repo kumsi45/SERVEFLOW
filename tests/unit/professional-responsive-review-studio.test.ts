@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/pages/restaurantSetupWizard.css"), "utf8");
 const card = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/components/OwnerMenuItemCard.tsx"), "utf8");
+const smartImage = readFileSync(resolve(process.cwd(), "src/core/presentation/SmartImage.tsx"), "utf8");
 
 describe("Phase 9.12.3.4 responsive Review Studio polish", () => {
   it("uses the spacious desktop three-column card contract", () => {
@@ -20,8 +21,10 @@ describe("Phase 9.12.3.4 responsive Review Studio polish", () => {
   });
 
   it("keeps image and accessibility performance behavior", () => {
-    expect(card).toContain('loading="lazy"');
-    expect(card).toContain('decoding="async"');
+    expect(card).toContain("<SmartImage");
+    expect(card).toContain("resolveSmartImage");
+    expect(smartImage).toContain('loading={eager ? "eager" : "lazy"}');
+    expect(smartImage).toContain('decoding="async"');
     expect(css).toContain("object-fit: cover");
     expect(css).toContain("min-height: 44px");
     expect(css).toContain(":focus-visible");

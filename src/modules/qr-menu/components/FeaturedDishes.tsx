@@ -1,5 +1,7 @@
 import type { MenuItem } from "../types";
-import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { publishedMenuImageInput } from "../../../core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { formatMenuPrice } from "./menuPresentation";
 
 type FeaturedDishesProps = {
@@ -27,7 +29,7 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
       </div>
       <div className="featured-dish-track">
         {featuredItems.map((item) => {
-          const imageUrl = resolveMenuItemImage(publishedMenuImageInput(item)).url;
+          const image = resolveSmartImage(publishedMenuImageInput(item), "card");
 
           return (
           <article className="featured-dish-card" key={item.id}>
@@ -38,8 +40,8 @@ export function FeaturedDishes({ items, onAddToCart, onOpenFoodInfo }: FeaturedD
               aria-label={`Open ${item.name}`}
             >
               <div className="featured-dish-media">
-                {imageUrl ? (
-                  <img src={imageUrl} alt={item.name} loading="lazy" />
+                {image.url ? (
+                  <SmartImage resolution={image} alt={item.name} fallback={null} fallbackClassName="featured-dish-placeholder" />
                 ) : (
                   <div className="featured-dish-placeholder" aria-hidden="true" />
                 )}

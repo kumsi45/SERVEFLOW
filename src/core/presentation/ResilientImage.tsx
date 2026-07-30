@@ -1,10 +1,7 @@
-import {
-  memo,
-  useEffect,
-  useState,
-  type ImgHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { memo, type ImgHTMLAttributes, type ReactNode } from "react";
+import { SmartImage } from "./SmartImage";
+import type { MenuImageCandidate } from "./menuItemImage";
+import { resolveSmartImage, type SmartImageUsage } from "./smartImageDelivery";
 
 type ResilientImageProps = Omit<
   ImgHTMLAttributes<HTMLImageElement>,
@@ -16,6 +13,7 @@ type ResilientImageProps = Omit<
   fallbackLabel?: string;
   itemId?: string;
   resolvedSource?: "CUSTOM" | "MASTER" | "PLACEHOLDER";
+  usage?: SmartImageUsage;
 };
 
 export const ResilientImage = memo(function ResilientImage({
@@ -25,45 +23,12 @@ export const ResilientImage = memo(function ResilientImage({
   fallbackLabel,
   itemId,
   resolvedSource,
+  usage = "card",
   className,
   onLoad,
   ...imageProps
 }: ResilientImageProps) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-    setLoaded(false);
-  }, [src]);
-
-  if (!src || failed) {
-    return (
-      <span
-        className={fallbackClassName}
-        role={fallbackLabel ? "img" : undefined}
-        aria-label={fallbackLabel}
-        aria-hidden={fallbackLabel ? undefined : true}
-      >
-        {fallback}
-      </span>
-    );
-  }
-
-  return (
-    <img
-      {...imageProps}
-      src={src}
-      className={["resilient-image", loaded ? "is-loaded" : "is-loading", className].filter(Boolean).join(" ")}
-      data-image-state={loaded ? "loaded" : "loading"}
-      onLoad={(event) => {
-        setLoaded(true);
-        onLoad?.(event);
-      }}
-      onError={() => {
-        if (resolvedSource === "MASTER") console.error("Missing image resolution", { itemId });
-        setFailed(true);
-      }}
-    />
-  );
+  const candidate: MenuImageCandidate | null = src ? { source: resolvedSource ?? "MASTER", status: "APPROVED", url: src, thumbnailUrl: src, version: 1 } : null;
+  const resolution = resolveSmartImage({ itemId: itemId ?? src ?? "image", master: candidate, placeholderUrl: "" }, usage, "owner-review");
+  return <SmartImage resolution={resolution} alt={imageProps.alt ?? ""} className={["resilient-image", className].filter(Boolean).join(" ")} fallback={fallback} fallbackClassName={fallbackClassName} fallbackLabel={fallbackLabel} eager={imageProps.loading === "eager"} fetchPriority={imageProps.fetchPriority} onLoad={onLoad} />;
 });

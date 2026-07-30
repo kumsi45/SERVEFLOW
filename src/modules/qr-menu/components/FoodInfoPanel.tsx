@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import { formatPreparationEstimate } from "../../../core/menu/preparationTime";
 import { ResilientImage } from "../../../core/presentation/ResilientImage";
-import { publishedMenuImageInput, resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { publishedMenuImageInput } from "../../../core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import type { MenuItem } from "../types";
 import { IngredientList } from "./IngredientList";
 import { formatMenuPrice } from "./menuPresentation";
@@ -99,8 +100,7 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
   }
 
   const extendedItem = item as ExtendedMenuItem;
-  const image = resolveMenuItemImage(publishedMenuImageInput(item));
-  const imageUrl = image.url;
+  const image = resolveSmartImage(publishedMenuImageInput(item), "detail");
   const preparationEstimate = formatPreparationEstimate(item.preparation_time_minutes);
   const hasServingDetails = Boolean(extendedItem.serving_size || extendedItem.origin_country);
 
@@ -129,12 +129,15 @@ export function FoodInfoPanel({ item, onClose, onAddToCart }: FoodInfoPanelProps
 
         <div className="food-info-media">
           <ResilientImage
-            src={imageUrl}
+            src={image.url}
+            usage="detail"
             alt={item.name}
             loading="eager"
             decoding="async"
             fallback={null}
             fallbackClassName="food-info-placeholder"
+            itemId={item.id}
+            resolvedSource={image.source}
           />
         </div>
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../core/database";
+import { createSmartImagePublicUrl } from "../../../core/presentation/smartImageDelivery";
 import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
 import { SmartMenuLibraryStep, type SmartMenuRestaurantType } from "../components/SmartMenuLibraryStep";
@@ -282,12 +283,12 @@ export function RestaurantSetupWizardPage({
         contentType: file.type,
       });
       if (uploadError) throw new Error(uploadError.message);
-      const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
+      const publicUrl = createSmartImagePublicUrl("menu-photos", path);
       setBranding((previous) => assetType === "logo"
-        ? { ...previous, logoUrl: data.publicUrl }
-        : { ...previous, coverUrl: data.publicUrl });
-      if (assetType === "logo") setLogoPreviewUrl(data.publicUrl);
-      else setCoverPreviewUrl(data.publicUrl);
+        ? { ...previous, logoUrl: publicUrl }
+        : { ...previous, coverUrl: publicUrl });
+      if (assetType === "logo") setLogoPreviewUrl(publicUrl);
+      else setCoverPreviewUrl(publicUrl);
     } catch (uploadError) {
       if (assetType === "logo") setLogoPreviewUrl(branding.logoUrl);
       else setCoverPreviewUrl(branding.coverUrl);

@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
+import { VirtualizedCard } from "../../../../../core/presentation/VirtualizedCard";
 import type { MenuItem } from "../../../../qr-menu/types";
 import { ModernBottomNavigation } from "../modern/ModernBottomNavigation";
 import type { ModernFoodViewProps } from "../modern/ModernFoodView";
@@ -113,13 +114,12 @@ export const CoffeeThemeView = memo(function CoffeeThemeView({
         {menuItems.length > 0 ? (
           <section className="coffee-theme-grid" aria-label="Available menu items">
             {menuItems.map((item: MenuItem, index) => (
-              <CoffeeThemeCard
+              <VirtualizedCard enabled={menuItems.length >= 120} estimatedHeight={390} key={item.id}>{() => <CoffeeThemeCard
                 item={item}
                 priority={index < 2}
-                key={item.id}
                 onAddToCart={onAddToCart}
                 onOpenInfo={onOpenInfo}
-              />
+              />}</VirtualizedCard>
             ))}
           </section>
         ) : (

@@ -1,6 +1,7 @@
 import { memo } from "react";
-import { ResilientImage } from "../../../../../core/presentation/ResilientImage";
-import { publishedMenuImageInput, resolveMenuItemImage } from "../../../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../../../core/presentation/SmartImage";
+import { publishedMenuImageInput } from "../../../../../core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../../../../core/presentation/smartImageDelivery";
 import { formatMenuPrice } from "../../../../qr-menu/components/menuPresentation";
 import type { MenuItem } from "../../../../qr-menu/types";
 
@@ -12,24 +13,20 @@ type Props = {
 };
 
 export const ModernFoodCard = memo(function ModernFoodCard({ item, priority = false, onAddToCart, onOpenInfo }: Props) {
-  const image = resolveMenuItemImage(publishedMenuImageInput(item));
-  const imageUrl = image.url;
+  const image = resolveSmartImage(publishedMenuImageInput(item), "card");
   const initial = item.name.trim().slice(0, 1).toUpperCase() || "SF";
 
   return (
     <article className={`modern-food-card${item.available ? "" : " unavailable"}`}>
       <button className="modern-food-card-media" type="button" onClick={() => onOpenInfo(item)} aria-label={`View information for ${item.name}`}>
-        <ResilientImage
-          src={imageUrl}
+        <SmartImage
+          resolution={image}
           alt={item.name}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
+          eager={priority}
           fetchPriority={priority ? "high" : "auto"}
           fallback={initial}
           fallbackClassName="modern-food-image-fallback"
           fallbackLabel={`${item.name} image unavailable`}
-          itemId={item.id}
-          resolvedSource={image.source}
         />
         <span className="modern-food-price">{formatMenuPrice(Number(item.price))}</span>
       </button>

@@ -1,5 +1,6 @@
 import { memo, type ChangeEvent } from "react";
-import { resolveMenuItemImage } from "../../../core/presentation/menuItemImage";
+import { SmartImage } from "../../../core/presentation/SmartImage";
+import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { resolveMenuReviewText } from "../services/menuReviewState";
 import { SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../services/ownerMenuItemDefaults";
 import { menuReviewImageCandidates } from "../services/menuReviewImageCandidates";
@@ -39,12 +40,12 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
   const name = resolveMenuReviewText(item.name, item.nameLocalization);
   const description = resolveMenuReviewText(item.description, item.descriptionLocalization);
   const candidates = menuReviewImageCandidates(item.imageDraft);
-  const resolvedImage = resolveMenuItemImage({
+  const resolvedImage = resolveSmartImage({
     itemId: item.id,
     custom: candidates.custom,
     master: candidates.master,
     placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE,
-  }, "owner-review");
+  }, "card", "owner-review");
   const photoUrl = resolvedImage.url;
   const priceMissing = item.price.value === null;
   const imageStatusLabel = item.imageDraft.status.replace(/_/g, " ");
@@ -67,7 +68,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
       </label>
 
       <div className="owner-menu-photo">
-        {photoUrl ? <img src={photoUrl} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">{name.trim().slice(0, 1) || "M"}</span>}
+        {photoUrl ? <SmartImage resolution={resolvedImage} alt="" fallback={name.trim().slice(0, 1) || "M"} fallbackClassName="owner-menu-photo-fallback" /> : <span aria-hidden="true">{name.trim().slice(0, 1) || "M"}</span>}
         <small className="owner-image-lifecycle" data-lifecycle={item.imageDraft.status}>{imageStatusLabel}</small>
         <label className="owner-photo-camera" title="Change photo">
             <span aria-hidden="true">📷</span>

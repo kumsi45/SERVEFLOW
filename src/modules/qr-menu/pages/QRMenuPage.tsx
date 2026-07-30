@@ -55,6 +55,8 @@ import type {
   SubmittedPublicQrOrder,
 } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
+import { publishedMenuImageInput } from "../../../core/presentation/menuItemImage";
+import { useSmartImagePrefetch } from "../../../core/presentation/useSmartImagePrefetch";
 
 type QRMenuPageProps = {
   restaurantSlug: string;
@@ -203,6 +205,12 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       restaurant?.id,
     ],
   );
+  const nearbyImageInputs = useMemo(() => {
+    const activeIndex = activeCategoryId === "all" ? 0 : Math.max(0, categories.findIndex(({ id }) => id === activeCategoryId));
+    const nearbyCategoryIds = new Set(categories.slice(activeIndex, activeIndex + 2).map(({ id }) => id));
+    return items.filter((item) => activeCategoryId === "all" || nearbyCategoryIds.has(item.category_id)).slice(0, 8).map(publishedMenuImageInput);
+  }, [activeCategoryId, categories, items]);
+  useSmartImagePrefetch(nearbyImageInputs, "card");
 
   useEffect(() => {
     const previousHtmlLanguage = document.documentElement.lang;
