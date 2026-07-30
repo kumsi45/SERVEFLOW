@@ -543,6 +543,26 @@
   border-color: #e5d8ca;
 }
 
+.theme-customization-surface[data-color-mode="light"] .modern-bottom-nav button {
+  color: #6b5c52;
+}
+
+.theme-customization-surface[data-color-mode="light"] .modern-bottom-nav button.active {
+  color: var(--theme-accent, #c2410c);
+}
+
+.theme-customization-surface[data-color-mode="light"] .modern-bottom-nav button.has-order:not(.active) {
+  color: #6b5c52;
+}
+
+.theme-customization-surface[data-color-mode="dark"] .modern-bottom-nav button {
+  color: #cfc3b8;
+}
+
+.theme-customization-surface[data-color-mode="dark"] .modern-bottom-nav button.active {
+  color: var(--theme-accent, #fb923c);
+}
+
 .theme-customization-surface[data-color-mode="light"]
   :is(
     .modern-food-card,
@@ -597,6 +617,14 @@
     color: #f8efe3;
     background-color: #302720;
     border-color: #57483b;
+  }
+
+  .theme-customization-surface[data-color-mode="auto"] .modern-bottom-nav button {
+    color: #cfc3b8;
+  }
+
+  .theme-customization-surface[data-color-mode="auto"] .modern-bottom-nav button.active {
+    color: var(--theme-accent, #fb923c);
   }
 }
 

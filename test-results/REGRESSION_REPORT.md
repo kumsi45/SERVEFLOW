@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-30T08:00:24.078Z
+Generated: 2026-07-30T08:38:21.531Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 596 | 0 | 42 |
+| 603 | 0 | 42 |
 
 ## Regressions
 
@@ -145,6 +145,13 @@ No failing regressions.
 - PASS - cashier invoice creator identity repairs and safely projects historical cashier identity
 - PASS - cashier order payment timing keeps cashier and QR orders on the payment-first path
 - PASS - cashier order payment timing keeps deferred policy scoped to waiter orders
+- PASS - cashier payment notification position presents payment confirmation as a top popup
+- PASS - cashier payment notification position preserves status semantics and the existing dismiss action
+- PASS - cashier payment notification position has mobile and reduced-motion handling
+- PASS - cashier receipt VAT uses frozen paid-invoice VAT in the preview
+- PASS - cashier receipt VAT requires the payment queue to expose immutable financial totals
+- PASS - cashier shift action contrast keeps Open Shift text visible in every state
+- PASS - cashier shift action contrast keeps Close Shift text visible in every state
 - PASS - customer preview pre-publish certification certifies a complete customer menu
 - PASS - customer preview pre-publish certification blocks invalid prices but treats missing presentation content as fixable warnings
 - PASS - canonical tenant billing Restaurant A keeps menu price as base subtotal

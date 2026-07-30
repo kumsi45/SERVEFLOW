@@ -158,6 +158,12 @@ type OrderRow = {
   order_note?: string | null;
   payment_method: string | null;
   total_price: number | string;
+  subtotal?: number | string | null;
+  vat_rate?: number | string | null;
+  vat_amount?: number | string | null;
+  service_charge_rate?: number | string | null;
+  service_charge_amount?: number | string | null;
+  discount_amount?: number | string | null;
   created_at: string;
   payment_verified_at?: string | null;
   items?: ItemRow[] | string | null;
@@ -463,7 +469,7 @@ function customerTypeLabel(session: DiningSessionSummary) {
   return "Restaurant Guest";
 }
 
-function buildFinalBillReviewModel(
+export function buildFinalBillReviewModel(
   session: DiningSessionSummary,
   restaurant: CashierRestaurant,
   cashierName: string,
@@ -483,14 +489,16 @@ function buildFinalBillReviewModel(
       current.total += item.quantity * item.price;
       grouped.set(key, current);
     }
+  const paidBatches = session.batches.filter((batch) => batch.invoiceStatus === "paid");
   const total = session.verifiedTotal;
-  // Preview totals are placeholders only; the printable receipt is replaced by
-  // the backend canonical bill payload before printing.
-  const subtotal = total;
+  const subtotal = paidBatches.reduce((sum, batch) => sum + Number(batch.subtotal ?? 0), 0);
+  const vatAmount = paidBatches.reduce((sum, batch) => sum + Number(batch.vatAmount ?? 0), 0);
+  const serviceChargeAmount = paidBatches.reduce((sum, batch) => sum + Number(batch.serviceChargeAmount ?? 0), 0);
+  const discountAmount = paidBatches.reduce((sum, batch) => sum + Number(batch.discountAmount ?? 0), 0);
+  const vatRate = subtotal > 0 ? vatAmount / subtotal : 0;
+  const serviceChargeRate = subtotal > 0 ? serviceChargeAmount / subtotal : 0;
   const methods = new Map<string, number>();
-  for (const batch of session.batches.filter(
-    (batch) => batch.invoiceStatus === "paid",
-  ))
+  for (const batch of paidBatches)
     methods.set(
       batch.paymentMethod || "Other",
       (methods.get(batch.paymentMethod || "Other") ?? 0) + batch.totalPrice,
@@ -524,11 +532,11 @@ function buildFinalBillReviewModel(
     items: [...grouped.values()],
     totals: {
       subtotal,
-      vatRate: 0,
-      vatAmount: 0,
-      serviceChargeRate: 0,
-      serviceChargeAmount: 0,
-      discountAmount: 0,
+      vatRate,
+      vatAmount,
+      serviceChargeRate,
+      serviceChargeAmount,
+      discountAmount,
       grandTotal: total,
     },
     payments: [...methods].map(([method, amount]) => ({ method, amount })),
@@ -747,6 +755,12 @@ function normalizeOrder(
     orderNote: row.order_note ?? null,
     paymentMethod: row.payment_method,
     totalPrice: Number(row.total_price),
+    subtotal: Number(row.subtotal ?? 0),
+    vatRate: Number(row.vat_rate ?? 0),
+    vatAmount: Number(row.vat_amount ?? 0),
+    serviceChargeRate: Number(row.service_charge_rate ?? 0),
+    serviceChargeAmount: Number(row.service_charge_amount ?? 0),
+    discountAmount: Number(row.discount_amount ?? 0),
     createdAt: row.created_at,
     paymentVerifiedAt: row.payment_verified_at ?? row.invoice_paid_at ?? null,
     items,

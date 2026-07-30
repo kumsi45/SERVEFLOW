@@ -475,8 +475,8 @@
   cursor: pointer;
 }
 
-.modern-bottom-nav button.active,
-.modern-bottom-nav button.has-order { color: #fff; }
+.modern-bottom-nav button.active { color: #fff; }
+.modern-bottom-nav button.has-order:not(.active) { color: rgba(255, 255, 255, .82); }
 .modern-bottom-nav span { font-size: 10px; font-weight: 800; }
 .modern-bottom-nav em { position: absolute; top: 7px; right: calc(50% - 19px); width: 7px; height: 7px; border: 2px solid var(--modern-orange); border-radius: 50%; background: var(--modern-yellow); }
 

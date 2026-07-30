@@ -2511,7 +2511,12 @@
 .cd-shift-hero-stat:first-of-type { margin-top: 12px; }
 .cd-shift-hero-stat span { color: var(--cd-muted); font-size: 10px; }
 .cd-shift-hero-stat strong, .cd-shift-hero-stat.primary strong { color: #f8fafc; font-size: 15px; }
-.cd-close-shift-btn { width: 100%; min-height: 40px; margin-top: 10px; border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); color: #f87171; }
+.cd-shift-hero.active .cd-close-shift-btn { width: 100%; min-height: 44px; margin-top: 10px; border: 1px solid #ef4444; background: #b91c1c; color: #fff; }
+.cd-shift-hero.active .cd-close-shift-btn:hover, .cd-shift-hero.active .cd-close-shift-btn:focus-visible { border-color: #f87171; background: #991b1b; color: #fff; }
+.cd-shift-hero.active .cd-close-shift-btn:disabled { border-color: #7f1d1d; background: #7f1d1d; color: #fecaca; opacity: 1; }
+.cd-modal .cd-primary-action { border: 1px solid #fb923c; background: #c2410c; color: #fff; }
+.cd-modal .cd-primary-action:hover, .cd-modal .cd-primary-action:focus-visible { border-color: #fdba74; background: #9a3412; color: #fff; }
+.cd-modal .cd-primary-action:disabled { border-color: #7c2d12; background: #7c2d12; color: #fed7aa; opacity: 1; }
 
 .cd-kpi-grid { grid-column: 2; grid-row: 1; grid-template-columns: repeat(6, minmax(90px, 1fr)); gap: 8px; }
 .cd-kpi-card { min-height: 92px; padding: 14px; border-color: var(--cd-border); border-radius: 12px; background: var(--cd-surface); }
@@ -2725,6 +2730,37 @@
 .cd-error-banner {
   position: relative;
   z-index: 2;
+}
+.cd-realtime-notice {
+  position: fixed;
+  z-index: 320;
+  top: 72px;
+  left: 50%;
+  width: min(620px, calc(100vw - 40px));
+  min-height: 56px;
+  transform: translateX(-50%);
+  border-color: #60a5fa;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .36);
+  animation: cd-notice-enter 180ms ease-out;
+}
+@keyframes cd-notice-enter {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (max-width: 600px) {
+  .cd-realtime-notice {
+    top: 66px;
+    left: 12px;
+    width: calc(100vw - 24px);
+    transform: none;
+  }
+  @keyframes cd-notice-enter {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cd-realtime-notice { animation: none; }
 }
 .cd-side-stack .cd-card-header {
   min-height: 42px;

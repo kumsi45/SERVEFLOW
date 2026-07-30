@@ -48,6 +48,12 @@ export type CashierOrder = {
   orderNote?: string | null;
   paymentMethod: string | null;
   totalPrice: number;
+  subtotal?: number;
+  vatRate?: number;
+  vatAmount?: number;
+  serviceChargeRate?: number;
+  serviceChargeAmount?: number;
+  discountAmount?: number;
   createdAt: string;
   paymentVerifiedAt: string | null;
   items: CashierOrderItem[];
