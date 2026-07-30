@@ -20,6 +20,12 @@ const input: MenuItemImageInput = {
     status: "APPROVED",
     version: 1,
     url: "https://cdn.example/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-2048w.webp",
+    metadata: {
+      responsiveVariants: [320, 512, 1024, 2048].map((width) => ({
+        width,
+        publicUrl: `https://cdn.example/smart-menu-images/restaurant/burgers/beef-burger/v001/beef-burger-v001-${width}w.webp`,
+      })),
+    },
   },
   placeholderUrl: "/menu-placeholder.svg",
 };
@@ -43,6 +49,21 @@ describe("Phase 9.13.7A Smart Image Delivery Engine", () => {
       expect(resolved.url).not.toContain("-2048w.webp");
       expect(resolved.previewUrl).toContain("-320w.webp");
     }
+  });
+
+  it("preserves the registered master URL when a requested derivative does not exist", () => {
+    const onlyMaster = {
+      ...input,
+      master: {
+        ...input.master!,
+        status: "PENDING_REVIEW" as const,
+        metadata: { responsiveVariants: [{ width: 2048, publicUrl: input.master!.url }] },
+      },
+    };
+    const resolved = resolveSmartImage(onlyMaster, "card", "owner-review");
+    expect(resolved.url).toBe(input.master!.url);
+    expect(resolved.source).toBe("MASTER");
+    expect(resolved.lifecycle).toBe("PENDING_REVIEW");
   });
 
   it("keeps pending masters private from customers but visible in Review Studio", () => {

@@ -7,6 +7,9 @@ export function menuReviewImageCandidates(draft: MenuReviewImageDraft) {
     ?? null;
   if (!selected) return { custom: null, master: null };
   const ownerUpload = selected.source === "owner";
+  const responsiveVariants = draft.versions
+    .filter((version) => version.source === selected.source && version.version === selected.version && version.imageUrl)
+    .map((version) => ({ width: version.width, publicUrl: version.imageUrl }));
   const candidate: MenuImageCandidate = {
     id: selected.id,
     source: ownerUpload ? "CUSTOM" : "MASTER",
@@ -19,7 +22,7 @@ export function menuReviewImageCandidates(draft: MenuReviewImageDraft) {
     height: selected.height,
     mimeType: selected.mimeType,
     checksumSha256: selected.checksumSha256,
-    metadata: selected.providerMetadata,
+    metadata: { ...(selected.providerMetadata ?? {}), responsiveVariants },
   };
   return ownerUpload ? { custom: candidate, master: null } : { custom: null, master: candidate };
 }

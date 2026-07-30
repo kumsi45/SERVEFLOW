@@ -70,8 +70,7 @@ function candidateUrl(candidate: MenuImageCandidate, width: number) {
     const value = exact?.publicUrl ?? exact?.public_url ?? exact?.url;
     if (typeof value === "string" && value) return value;
   }
-  if (!candidate.url) return null;
-  return replaceVariantWidth(candidate.url, width);
+  return candidate.url;
 }
 
 export function resolveSmartImage(
@@ -95,7 +94,9 @@ export function resolveSmartImage(
     previewUrl,
     placeholderUrl,
     cacheKey: `${input.itemId}:${candidate.source}:v${candidate.version}:${width}:${url ?? "fallback"}`,
-    storagePath: candidate.storagePath ? replaceVariantWidth(candidate.storagePath, width) : null,
+    storagePath: candidate.storagePath && url !== candidate.url
+      ? replaceVariantWidth(candidate.storagePath, width)
+      : candidate.storagePath ?? null,
   };
 }
 

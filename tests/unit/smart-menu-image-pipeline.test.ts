@@ -1,9 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { normalizeAiMenuResult } from "../../supabase/functions/menu-ai-import/contracts";
 import { createMenuReviewState, createSmartMenuImageDraft } from "../../src/modules/setup-wizard/services/menuReviewState";
 import { resolveMenuItemImage } from "../../src/core/presentation/menuItemImage";
+import { resolveSmartImage } from "../../src/core/presentation/smartImageDelivery";
+import { menuReviewImageCandidates } from "../../src/modules/setup-wizard/services/menuReviewImageCandidates";
+import { SmartImage } from "../../src/core/presentation/SmartImage";
 import type { ExtractedMenuItem, ExtractedSmartImage } from "../../src/modules/setup-wizard/services/menuExtractionTypes";
 
 const edgeFunction = readFileSync(
@@ -135,6 +140,19 @@ describe("Phase 9.13.3.1 Smart Menu image pipeline", () => {
     }, () => "review-id");
     expect(state.items[0].imageDraft.status).toBe("PENDING_REVIEW");
     expect(state.items[0].imageDraft.versions[0].imageUrl).toContain("chechebsa-v001-2048w.webp");
+    const candidates = menuReviewImageCandidates(state.items[0].imageDraft);
+    const resolved = resolveSmartImage({ itemId: state.items[0].id, ...candidates, placeholderUrl: "placeholder.webp" }, "card", "owner-review");
+    expect(resolved.source).toBe("MASTER");
+    expect(resolved.url).toContain("chechebsa-v001-2048w.webp");
+    const html = renderToStaticMarkup(createElement(SmartImage, {
+      resolution: resolved,
+      alt: "Chechebsa",
+      fallback: "C",
+      fallbackClassName: "placeholder",
+      eager: true,
+    }));
+    expect(html).toContain('src="https://project.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-2048w.webp"');
+    expect(html).toContain('alt="Chechebsa"');
   });
 
   it("loads versions, overrides, and public URLs without upload or generation calls", () => {
