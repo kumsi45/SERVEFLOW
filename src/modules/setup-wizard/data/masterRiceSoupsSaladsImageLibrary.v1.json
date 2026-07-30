@@ -1,0 +1,1326 @@
+{
+  "library": "ServeFlow Phase 9.13.8 Rice Soups Salads Master Images",
+  "version": "1.0",
+  "phase": "9.13.8",
+  "categories": [
+    "Rice Dishes",
+    "Soups",
+    "Salads"
+  ],
+  "generated_at": "2026-07-30T23:51:43.289281+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "d414e778-d809-5291-99b7-a03cc52c9971",
+      "dish_name": "Beef Rice",
+      "slug": "beef-rice",
+      "category": "Rice Dishes",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/rice-dishes/beef-rice",
+      "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-2048w.webp",
+      "checksum_sha256": "bbb66fe4eeb9e1330296d89450d3372a77fe86f37143acd76fd8c6b4781c1788",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 483026,
+          "checksum_sha256": "bbb66fe4eeb9e1330296d89450d3372a77fe86f37143acd76fd8c6b4781c1788"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 262520,
+          "checksum_sha256": "de3ffc6051f37aac8fbef4688a5d56fbda6dbba2ee7739bce34207d8e77ed6c9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 188546,
+          "checksum_sha256": "0357b9d2ee49f8ef4d2372e35ce8a9199a090d444df35befb4b21e7c58773f90"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 123550,
+          "checksum_sha256": "53f94b8d7be52f4b5c3814fd0b28dcb86dd784f20a0681d9e0525cec734fc6e2"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 61216,
+          "checksum_sha256": "5f0810855c2084c096ccbc83560f1f38e01245eb5a04717bc1bad39889071e5a"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/beef-rice/v001/beef-rice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27936,
+          "checksum_sha256": "48809045e6e92ca345921e82cd6ae51477afa0b6ac36ee04d919298d8e00165e"
+        }
+      ]
+    },
+    {
+      "dish_id": "06f53e4d-bf9d-5329-b0a9-a898383c04b5",
+      "dish_name": "Chicken Rice",
+      "slug": "chicken-rice",
+      "category": "Rice Dishes",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/rice-dishes/chicken-rice",
+      "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-2048w.webp",
+      "checksum_sha256": "dfb4b09e8c3021d65a8424099c33a1cc94e22feab487e45fa017c4da35d31912",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 379956,
+          "checksum_sha256": "dfb4b09e8c3021d65a8424099c33a1cc94e22feab487e45fa017c4da35d31912"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 205920,
+          "checksum_sha256": "eb60fc7d3d3315e3e560eaaf39348cbd42f4546f59624883f91633005fc0fa5b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 147626,
+          "checksum_sha256": "52f96a6a3ca1b32a707d0c7f717633c1c5bdc54ae34f5783cdb5146945ca5c50"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 98042,
+          "checksum_sha256": "d19752be38eef5934323fd0f1422bd9cc905db6202cbfc288276dcb7879204a9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 49384,
+          "checksum_sha256": "4bda3ba27c3fa1c62fcdfd660115df12355a093c0d3be1da3964f57a411f2948"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/chicken-rice/v001/chicken-rice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23212,
+          "checksum_sha256": "3f6c2611341565132e3a6ee4c3bb029241e0d330b8b97aab522f0b8cda7432b3"
+        }
+      ]
+    },
+    {
+      "dish_id": "79af1c28-1e63-507d-b05e-18c0b391cd27",
+      "dish_name": "Fried Rice",
+      "slug": "fried-rice",
+      "category": "Rice Dishes",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/rice-dishes/fried-rice",
+      "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-2048w.webp",
+      "checksum_sha256": "5e88a29b915ad4a09f264038345800678890a8e161110bc6f2835f49fa735a45",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 469592,
+          "checksum_sha256": "5e88a29b915ad4a09f264038345800678890a8e161110bc6f2835f49fa735a45"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 254858,
+          "checksum_sha256": "7aa2d8d307f086b39c0304113181aaf514b11dbeff88b987dfa96ec3c8afad38"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 180404,
+          "checksum_sha256": "60d3b8a5274681fefef409417a91ec3108e621a665b69e7582da4178022c69ee"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 114714,
+          "checksum_sha256": "0d6e652b0106e7bc39c7e7c83b716c2dce37aca6d4163212c447254296693f48"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 57606,
+          "checksum_sha256": "838d2b83ee10b08e016e1056864abe4ca82ad0a1787dbc6e8304810d906b6ae5"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/fried-rice/v001/fried-rice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26842,
+          "checksum_sha256": "076d92e510cd9ef7bb1a42a3d30a98589deb6630cee284357b11953fe5b53a3e"
+        }
+      ]
+    },
+    {
+      "dish_id": "9520e425-4b13-5d32-9f59-479b754ac217",
+      "dish_name": "Vegetable Rice",
+      "slug": "vegetable-rice",
+      "category": "Rice Dishes",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/rice-dishes/vegetable-rice",
+      "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-2048w.webp",
+      "checksum_sha256": "44323297f3da894ced79c6930fd544bb5530eac97d918cd63ab0010bab7d8df8",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 396284,
+          "checksum_sha256": "44323297f3da894ced79c6930fd544bb5530eac97d918cd63ab0010bab7d8df8"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 210038,
+          "checksum_sha256": "814981c612b454417b555bddc123a5a942868b735a4634956a521aabfe0e8736"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 156918,
+          "checksum_sha256": "c911000cbcd8942a08f646b06eed6886f1889f7974df52421181e22947531d86"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 102948,
+          "checksum_sha256": "cb0a8f8fc366b44c361df735f487269844a577f078dcdb77b47200127789bc81"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 56102,
+          "checksum_sha256": "710af13910cc8d95e505133d5dc87c350e31b35f896d978e6166d75a1da8de71"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/rice-dishes/vegetable-rice/v001/vegetable-rice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26888,
+          "checksum_sha256": "392f2d6f86871d15f92ae67381012bca4e446e147073a6e24f4dd8c539a36aee"
+        }
+      ]
+    },
+    {
+      "dish_id": "9bd0ab15-a29f-58a0-b6f8-28bc35376701",
+      "dish_name": "Chicken Soup",
+      "slug": "chicken-soup",
+      "category": "Soups",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/soups/chicken-soup",
+      "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-2048w.webp",
+      "checksum_sha256": "db017d035fe1fa2f0729b69961187617a96bcc32510fd93705f03c831500ea51",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 531580,
+          "checksum_sha256": "db017d035fe1fa2f0729b69961187617a96bcc32510fd93705f03c831500ea51"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 274544,
+          "checksum_sha256": "33e30027ebb94e95e707aea92d7de38f301630e9f97c5ee97382ece718480bd7"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 189676,
+          "checksum_sha256": "b8c1f34c321858b7e6453b4abbf1a4e98918200a6db56fb025304635b539ca64"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 112474,
+          "checksum_sha256": "ea95e8a3fe34bb03fec4c0b82bfae8f8b425cb97a3cce7377897f61eb64bc7a1"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 56744,
+          "checksum_sha256": "470fee52c8cdb3369ce9d0d897ff4952b5cca7516d710efb3be59bc581195e4c"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/soups/chicken-soup/v001/chicken-soup-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/chicken-soup/v001/chicken-soup-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25442,
+          "checksum_sha256": "31825a123d119676c9d37d76c50d48840a1c7dd8bb510d568e28e79468ef5801"
+        }
+      ]
+    },
+    {
+      "dish_id": "836c798f-3399-508c-9832-46124988631b",
+      "dish_name": "Fish Soup",
+      "slug": "fish-soup",
+      "category": "Soups",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/soups/fish-soup",
+      "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-2048w.webp",
+      "checksum_sha256": "9bbc1e0ffa6e2c4ed7c0a900412ca1fee1beea15f10f156ca29f0f3248eafb41",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 408880,
+          "checksum_sha256": "9bbc1e0ffa6e2c4ed7c0a900412ca1fee1beea15f10f156ca29f0f3248eafb41"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 221832,
+          "checksum_sha256": "98dd79a173ba09e71cf2b5b1baee22bdef2fa6fb4978bbc390380468ee62209a"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 163698,
+          "checksum_sha256": "8646aa66f289325681d7022aeb2c90819752d1383a520fc06a1f6b9a130eb57e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 98830,
+          "checksum_sha256": "211a59c4b68fa26c8d627f40218e02e8d447a258065e3cbea1357816721891dd"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50900,
+          "checksum_sha256": "33584fc5fbae6dd87f9bf9aa3c455ef136d2cb6ecebb858182a1f3628ac72834"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/soups/fish-soup/v001/fish-soup-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/fish-soup/v001/fish-soup-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22940,
+          "checksum_sha256": "8daef4ab6cbd40468a733caf375ff9af7d7e99c48fc263c87a982b519a6aa437"
+        }
+      ]
+    },
+    {
+      "dish_id": "3e7d3d89-e821-5a3b-bc94-8be09c301eca",
+      "dish_name": "Mushroom Soup",
+      "slug": "mushroom-soup",
+      "category": "Soups",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/soups/mushroom-soup",
+      "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-2048w.webp",
+      "checksum_sha256": "84d4230576b37c4d199a6705d560069c6b3d19f93c98c5fbbce0722eb73ca68e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 448066,
+          "checksum_sha256": "84d4230576b37c4d199a6705d560069c6b3d19f93c98c5fbbce0722eb73ca68e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 237296,
+          "checksum_sha256": "91c0fbc22b72362bd040c571bda8446575978e67c90633119792bf24949bc50b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 168310,
+          "checksum_sha256": "b715a27c4ab952a0e66a6cd7f96b2d28f81039afe2023c19a13eb1d2ddb45826"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 102674,
+          "checksum_sha256": "1e5005accc3a489aaea848cf53ca48c306eb128d9781ebbbb98879b35ac03b5b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 49726,
+          "checksum_sha256": "8f7f044736cdbd1c486f4290824ba188005f2c891b522da5785ad7744fa543d7"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/soups/mushroom-soup/v001/mushroom-soup-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soups/mushroom-soup/v001/mushroom-soup-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22478,
+          "checksum_sha256": "54e06354a86391dbaba41e87ddcccb85f7c563f118644fd2c471517b2d9af8b7"
+        }
+      ]
+    },
+    {
+      "dish_id": "cba5dc5b-5195-50c9-b025-af263e005870",
+      "dish_name": "Tomato Soup",
+      "slug": "tomato-soup",
+      "category": "Soups",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/soups/tomato-soup",
+      "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-2048w.webp",
+      "checksum_sha256": "92bf40d23a1c88cfce65e65723cc3de41d18be4adc81feb5d19f11572cf0ff39",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 277228,
+          "checksum_sha256": "92bf40d23a1c88cfce65e65723cc3de41d18be4adc81feb5d19f11572cf0ff39"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 128958,
+          "checksum_sha256": "42395e79f08173083c6beb0ec1c35fad7aed21c8fbabfba5dc28898d3237ec07"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 87472,
+          "checksum_sha256": "9b6febe35cfdd27c996126dfddc4cb8eb4dc1eb23bef3ddb1085ee636c96597e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52742,
+          "checksum_sha256": "d15085248f1f0c5de635a1a54e624af3c61125c3ac47e0ad8e2d4df6c934ca03"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25882,
+          "checksum_sha256": "9b4216e7f4191730e073b237b522480f3e6836a7e66a9b77748a0328a2ab8061"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/soups/tomato-soup/v001/tomato-soup-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/tomato-soup/v001/tomato-soup-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 12418,
+          "checksum_sha256": "8e055cd024ed69dcb9272e7992229e994445609ff870acf84e5ffc7bb9732447"
+        }
+      ]
+    },
+    {
+      "dish_id": "66c00462-d1d4-5d67-8903-ff58de1df351",
+      "dish_name": "Vegetable Soup",
+      "slug": "vegetable-soup",
+      "category": "Soups",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/soups/vegetable-soup",
+      "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-2048w.webp",
+      "checksum_sha256": "d40dffc364175178dede060110db9c69e5c3e9a3a9efc58f28a43abc695210c2",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 419706,
+          "checksum_sha256": "d40dffc364175178dede060110db9c69e5c3e9a3a9efc58f28a43abc695210c2"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 219176,
+          "checksum_sha256": "0c2ffa49bf82a586ed1af4f95ee4048ebe59363bf0a4d4df053fd57595cd6551"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 154396,
+          "checksum_sha256": "bac9b319de30885d9d123e7c9098b84fe5a5f258667a11d56a6bd229780aafe0"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 95162,
+          "checksum_sha256": "91fe72328eda55cd91d0de578009987cf4605bbd833b1268e49df2c04a9a418a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 49624,
+          "checksum_sha256": "31ebd5408b3b27042ce3dbaf3219e6c6425d1a8cc79b41649f0dd02a0e3171f7"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/soups/vegetable-soup/v001/vegetable-soup-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23166,
+          "checksum_sha256": "efc88ef52d1cf0e5b5c8b4f424a59d28de0e6c92c7b7e2bef50eddc5e9e128b1"
+        }
+      ]
+    },
+    {
+      "dish_id": "2c054562-00b2-5c6d-a0a4-be1ea093f953",
+      "dish_name": "Caesar Salad",
+      "slug": "caesar-salad",
+      "category": "Salads",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/salads/caesar-salad",
+      "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-2048w.webp",
+      "checksum_sha256": "e1bdfc649cd3ab0839745c701484a4ca6d685dc96946b75469e02d892f9ea4fd",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 644650,
+          "checksum_sha256": "e1bdfc649cd3ab0839745c701484a4ca6d685dc96946b75469e02d892f9ea4fd"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 365136,
+          "checksum_sha256": "673639337a61299edcca9221730453ba75c9bd6c185fb19ce6a5949635a5d365"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 264090,
+          "checksum_sha256": "16487f73e14b7c5e920abd3419d9e8304194009bca1ab6c6dfbe7f363ff048f3"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 166472,
+          "checksum_sha256": "fb0cb7aa75f0bba71c58f742f0da9270b352e014dbd9aab5e3b54903b5cd7a05"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 84122,
+          "checksum_sha256": "71218e895a99db623882a8230aa2db3fc53d2ac3e2ebbb60c7aa56668754cad3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/salads/caesar-salad/v001/caesar-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/caesar-salad/v001/caesar-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 38130,
+          "checksum_sha256": "5dda114e619648cdc920d4b94014dfb43430d32638793e2d923008c801352094"
+        }
+      ]
+    },
+    {
+      "dish_id": "2205c478-863d-562c-9510-e4e53df769a6",
+      "dish_name": "Chicken Salad",
+      "slug": "chicken-salad",
+      "category": "Salads",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/salads/chicken-salad",
+      "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-2048w.webp",
+      "checksum_sha256": "148087a86bbcd5f9f9f54f51a7c0f0c4df556458368738bc1751b7c4591a3ebf",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 632730,
+          "checksum_sha256": "148087a86bbcd5f9f9f54f51a7c0f0c4df556458368738bc1751b7c4591a3ebf"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 358088,
+          "checksum_sha256": "32bc3ce0a32a8fed93eb024b8048f9dd4cfc69bb4da2131f644af8192e740c16"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 254228,
+          "checksum_sha256": "2facf78d081e9ced643df43bef6686377634a2316a8ecfb2045bebec306d76cc"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 157002,
+          "checksum_sha256": "bf92a3175bf4ddf42fbabf0a80d3947eacb1a22aae83098afdc8c07f03c2b9a2"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 79212,
+          "checksum_sha256": "0b9b2ff3acea13000b9ef2a93f84ec53017eacdc0c4932018c941b8a8ba1d11b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/salads/chicken-salad/v001/chicken-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/chicken-salad/v001/chicken-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35538,
+          "checksum_sha256": "0c5f3d496a513fd12eb8cb62f4d55a9a78119b2a587bbe201f6c0f88e88f29c7"
+        }
+      ]
+    },
+    {
+      "dish_id": "7928ecbe-68e5-5f54-981a-190ad0359f82",
+      "dish_name": "Garden Salad",
+      "slug": "garden-salad",
+      "category": "Salads",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/salads/garden-salad",
+      "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-2048w.webp",
+      "checksum_sha256": "24f5e62d708e5f3f7be4855bb791227e5af3dd522b21ec5fbcee54411075ae0c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 586928,
+          "checksum_sha256": "24f5e62d708e5f3f7be4855bb791227e5af3dd522b21ec5fbcee54411075ae0c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 323412,
+          "checksum_sha256": "56111d674302b8ed343fd9cfa0875cd0a784311871aaaa00c3e3f033f47bcf11"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 236092,
+          "checksum_sha256": "51251586823bef343c37ea3cd6707119577473dc65f8a56e2f32a4232f8faad3"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 144378,
+          "checksum_sha256": "71492c5a986d6ae7886797356f12673e01d4730a3e6e5f739be3d14468c26725"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 71796,
+          "checksum_sha256": "f16a62cdd7ac0cc6214e2988da7bfdcddbbebb2a00b747688a10f0e78838d148"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/salads/garden-salad/v001/garden-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/garden-salad/v001/garden-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32426,
+          "checksum_sha256": "abc7c9f19eb89295901ffabb0b3547ba68292149a77bb31a94897e521f2f6ad3"
+        }
+      ]
+    },
+    {
+      "dish_id": "bca1dac4-7f8c-530d-8f25-4bbf8e92a51b",
+      "dish_name": "Greek Salad",
+      "slug": "greek-salad",
+      "category": "Salads",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/salads/greek-salad",
+      "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-2048w.webp",
+      "checksum_sha256": "4ed131b223efb50578e0bde86c24bf1ebf8e4a6b9d5ea26b1a5cf30348e984d5",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 596918,
+          "checksum_sha256": "4ed131b223efb50578e0bde86c24bf1ebf8e4a6b9d5ea26b1a5cf30348e984d5"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 344154,
+          "checksum_sha256": "f92b51ba011f9b4b879d38915ade29a38d7f002e5a9ce572df24628f9433b8bc"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 245916,
+          "checksum_sha256": "3f32e96d93effabb47f585ff888d24b5355cee0ce0c2a39defcad61acdf4c74e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 153910,
+          "checksum_sha256": "4c4887b51a44da3b4f15ea221757745997030c91489db1c635a9c14f0bc01a04"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 78384,
+          "checksum_sha256": "df1e2c58ce6382def84a0ac86d6ea001069d066f7898b60cc7c5da399bf82a00"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/salads/greek-salad/v001/greek-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/salads/greek-salad/v001/greek-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35642,
+          "checksum_sha256": "08d68135aa9d25c8dfa1827fa8ac54cf83d9cf3500f64e5477d82010415c5501"
+        }
+      ]
+    },
+    {
+      "dish_id": "51785a96-c859-585a-a71c-87eff9db34b3",
+      "dish_name": "Green Salad",
+      "slug": "green-salad",
+      "category": "Salads",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/salads/green-salad",
+      "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-2048w.webp",
+      "checksum_sha256": "84ffd14cd827720b647856fd790a9aee618aa564677d102174a39bf7dbaa5d2a",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 542566,
+          "checksum_sha256": "84ffd14cd827720b647856fd790a9aee618aa564677d102174a39bf7dbaa5d2a"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 304568,
+          "checksum_sha256": "b553e01de8bd724d84eaf78dcee8433a2d05dbfea6273c57e72d7cfcbdb0a25c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 228302,
+          "checksum_sha256": "9ce799422fccb7db6c7d9a0b314ccd191d04284570a3ed85952b8f291ce5508b"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 145474,
+          "checksum_sha256": "e1313f58a2f137102e002e052e529fd0aa25108be92d0fb65c6e2af49bd82812"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 72046,
+          "checksum_sha256": "44d4645dc7bd5ad9bff79b02d00825a029d69c8a460b006ebc023760f24a4e2a"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/salads/green-salad/v001/green-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/green-salad/v001/green-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33190,
+          "checksum_sha256": "42d3fddffae221855120851c177927ef65bca625093087d9f18c985ccef3b764"
+        }
+      ]
+    },
+    {
+      "dish_id": "6b247461-45da-5e08-9653-353028380d14",
+      "dish_name": "Mixed Salad",
+      "slug": "mixed-salad",
+      "category": "Salads",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/salads/mixed-salad",
+      "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-2048w.webp",
+      "checksum_sha256": "f59751f74db5cb987ebf2e08a83548075ebd198b3172375c73c37ca41ad5d019",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 535308,
+          "checksum_sha256": "f59751f74db5cb987ebf2e08a83548075ebd198b3172375c73c37ca41ad5d019"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 288974,
+          "checksum_sha256": "dc1842be57230d753e45b47d3270f040bee7448746236a605d38c6d6cec689f5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 219998,
+          "checksum_sha256": "d4f4a6871c58ca30a55dd90e666d4c436efa0f09c3783daba3efae744fd4e7da"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 139062,
+          "checksum_sha256": "072e4bf0f07ba29e2361b2f78d78f7a49411d7c66457e3fa93dd31e616cfac96"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 71872,
+          "checksum_sha256": "f1c8444f4050c30a18bb3db7e1b40d2ebfa61f3b0830c6958b474ad0ef4f6232"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/salads/mixed-salad/v001/mixed-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/mixed-salad/v001/mixed-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33556,
+          "checksum_sha256": "0b7d987e61644c5cfaf571731223c5442f5a02a25368fb984dd4b4007d620e08"
+        }
+      ]
+    },
+    {
+      "dish_id": "bb3ee98a-0430-52da-9291-d068edaa32c6",
+      "dish_name": "Tuna Salad",
+      "slug": "tuna-salad",
+      "category": "Salads",
+      "restaurant_type": "Restaurant",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "restaurant/salads/tuna-salad",
+      "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-2048w.webp",
+      "checksum_sha256": "3a7b1dd8553f53f3288d3f9c54850e038247f8ad3fc08df6c1b54c7c008b9bc0",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T23:51:43.289281+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 552546,
+          "checksum_sha256": "3a7b1dd8553f53f3288d3f9c54850e038247f8ad3fc08df6c1b54c7c008b9bc0"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 314770,
+          "checksum_sha256": "167220ea0a802d0ea6c5754ff9ab8db62134e82cd260a9be36fa960b82940562"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 237920,
+          "checksum_sha256": "1a1fa0d8cc3e1339c7e2eec8a21c734a4c63c1adb33e740c66c1ce22dcf02e73"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 152130,
+          "checksum_sha256": "b4d4158af7923627f237b908729c78d3683a65580487cd96b650845da5bcc918"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 80798,
+          "checksum_sha256": "9d8e85d3c9fb4a76d4e6f03acbc0d9a6b762de5f0a51987cdb4521025271a603"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/salads/tuna-salad/v001/tuna-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/salads/tuna-salad/v001/tuna-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 37416,
+          "checksum_sha256": "1d70c4a47e7945ccdd57f2c4cdb942b84793df753b9dcad4efe95e7b32df5f62"
+        }
+      ]
+    }
+  ]
+}
