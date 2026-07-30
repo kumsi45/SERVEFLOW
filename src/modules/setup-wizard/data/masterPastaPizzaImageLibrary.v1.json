@@ -1,0 +1,973 @@
+{
+  "library": "ServeFlow Phase 9.13.6 Pasta and Pizza Master Images",
+  "version": "1.0",
+  "phase": "9.13.6",
+  "categories": [
+    "Pasta",
+    "Pizza"
+  ],
+  "generated_at": "2026-07-30T16:35:50.706250+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "a2a25ba0-fe45-5c3b-968d-547d62e7be35",
+      "dish_name": "Spaghetti",
+      "slug": "spaghetti",
+      "category": "Pasta",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pasta/spaghetti",
+      "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-2048w.webp",
+      "checksum_sha256": "131c5df8060ecedb9bcd7875128ec2f78b61bc83c258f78050d3fe2ebfbe1989",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 339158,
+          "checksum_sha256": "131c5df8060ecedb9bcd7875128ec2f78b61bc83c258f78050d3fe2ebfbe1989"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 176938,
+          "checksum_sha256": "b2f1b60110e59634fd343483e0c792dea2c720a3a5ce1037bce69a83d7a24228"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 122568,
+          "checksum_sha256": "23414ba367a3c256a6289f3f7c348aedbc86f19b2983402ddb84934e642c8c03"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 77498,
+          "checksum_sha256": "1257c170c7b80af68aefc44aee8082d8649742856368868ab9d6f3b6678bffaa"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 39534,
+          "checksum_sha256": "a8de87d6a100efbdb95fe1e314c47954632db015a9615ec8385b9eae770c06ee"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pasta/spaghetti/v001/spaghetti-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/spaghetti/v001/spaghetti-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 18972,
+          "checksum_sha256": "12d1c3df74986408439614fd19e2254c39ccf711134f1ee4a812e51c273ce0e6"
+        }
+      ]
+    },
+    {
+      "dish_id": "1c7a0257-c738-510a-b930-75bbd2cef3f3",
+      "dish_name": "Pasta Alfredo",
+      "slug": "pasta-alfredo",
+      "category": "Pasta",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pasta/pasta-alfredo",
+      "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-2048w.webp",
+      "checksum_sha256": "bfe72f42a8e05a83eb1820bdbcab97c98f57205442a9665fbffce68d1f7e377a",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 492642,
+          "checksum_sha256": "bfe72f42a8e05a83eb1820bdbcab97c98f57205442a9665fbffce68d1f7e377a"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 260914,
+          "checksum_sha256": "8746ce282ddc7c3f165d3c6b225e809042621825e4e15fa68539a90752d5125b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 189174,
+          "checksum_sha256": "e2343e77086c56a2bca79db1c4964f5c0ac688c8a92b3afa5806a2a4f54f94f4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 114756,
+          "checksum_sha256": "4b5dd3f9b34e8e8d4a8de6e8ae6a99e31a688e97b02adab737a72a7b727b208e"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 55666,
+          "checksum_sha256": "8a494b5c1b76055dd5035aceb2b31ca6a57725126faccf08c1fa0ce0a9966212"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-alfredo/v001/pasta-alfredo-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24804,
+          "checksum_sha256": "ca5e2aaed6c4d0b528a0ee1c89c8a672fca1fbe14ce7038a43aa796168dee975"
+        }
+      ]
+    },
+    {
+      "dish_id": "eda35ffd-0ce9-5dc1-853a-999f1794a6d7",
+      "dish_name": "Macaroni",
+      "slug": "macaroni",
+      "category": "Pasta",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pasta/macaroni",
+      "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-2048w.webp",
+      "checksum_sha256": "76541f9e88746a760de8c10092497145d2d81314029717ebd160cfd025fae648",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 390416,
+          "checksum_sha256": "76541f9e88746a760de8c10092497145d2d81314029717ebd160cfd025fae648"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 206756,
+          "checksum_sha256": "f6a9dd8da6a2dadd8774f20acb89900cc94b78fc5ab8395808ee3e73b61002da"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 148840,
+          "checksum_sha256": "aff6eb32965265d93c7b388ef62a2892cb8cf5944dd63e99a67808bd07cda44e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 93006,
+          "checksum_sha256": "f3a0ee51c36b26296bccba979ba714f45ce622e2159e599a2cf87a1bef1313a3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 48242,
+          "checksum_sha256": "e81e165ac221b8a0d29dad3b62a59e8464430e5c2b8ae8a2b25bb7d978438ce2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pasta/macaroni/v001/macaroni-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/macaroni/v001/macaroni-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24094,
+          "checksum_sha256": "5269757e6456f17a822826277ea3d82cc8610918255e7d24bf7d963354b09065"
+        }
+      ]
+    },
+    {
+      "dish_id": "60720c87-d25e-5275-bb77-09c254fda79c",
+      "dish_name": "Pasta with Chicken",
+      "slug": "pasta-with-chicken",
+      "category": "Pasta",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pasta/pasta-with-chicken",
+      "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-2048w.webp",
+      "checksum_sha256": "4804fdac69ba4da604385d62181fbdcbb9965bdf9ad299e694999f1dbd7b55a0",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 513662,
+          "checksum_sha256": "4804fdac69ba4da604385d62181fbdcbb9965bdf9ad299e694999f1dbd7b55a0"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 280556,
+          "checksum_sha256": "f503c6afc79eed7c28a34a66074196ac5bab2629661d12b6fd0275c1ac48d9fc"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 199016,
+          "checksum_sha256": "542f8e8b1275e038c32b116bd3b3e9ecb4d0a009229863e444667c8eb93123f9"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 125122,
+          "checksum_sha256": "db31b1189906524f67fcc9d6bd473afacd509823e9a581e433d3550d58f90f0d"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 59476,
+          "checksum_sha256": "0ad6145ce9762213991df70f5523551ad09e3e194377cf3194ebc26c493ecf86"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-chicken/v001/pasta-with-chicken-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25852,
+          "checksum_sha256": "f0d7d5473db799de66a6fa4e729b020331e934b9e286b0d80877de51b55d5dd8"
+        }
+      ]
+    },
+    {
+      "dish_id": "5117d2ca-0842-56e9-bca5-962d0f14a274",
+      "dish_name": "Pasta with Beef",
+      "slug": "pasta-with-beef",
+      "category": "Pasta",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pasta/pasta-with-beef",
+      "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-2048w.webp",
+      "checksum_sha256": "61e486cdbb7fa7bc981168b2211a1898a87200c085a844ab86267a34179749ea",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 504772,
+          "checksum_sha256": "61e486cdbb7fa7bc981168b2211a1898a87200c085a844ab86267a34179749ea"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 269998,
+          "checksum_sha256": "1073401c1b2f739b021183d5436c55224b583f05c54d211df0bbd2ce874cd88f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 187898,
+          "checksum_sha256": "9dc33835d1a8af87e38116ed14bf71800c46f5bef98dc8b71495eef2afb8a110"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 120338,
+          "checksum_sha256": "00f80d9496f011b5564a7710c6172d5470324f33cb1249a4e4abb0984c7d7dc7"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 59122,
+          "checksum_sha256": "21dd39e1d415576f2a892601011018a1fc17552a31005b166853ddc3cdf1c449"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pasta/pasta-with-beef/v001/pasta-with-beef-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26654,
+          "checksum_sha256": "6a2af720ae85e19cec05dbbb31aa447f53bd73cfd54cb94f068d9588ab2e6671"
+        }
+      ]
+    },
+    {
+      "dish_id": "4cb2909a-ab86-5211-965d-0e8b8fbe5c50",
+      "dish_name": "Margherita Pizza",
+      "slug": "margherita-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pizza/margherita-pizza",
+      "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-2048w.webp",
+      "checksum_sha256": "25695d06bf6ec7844501c8a4a445328b6c612bca33a03aae3b83f9187905dbca",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 860610,
+          "checksum_sha256": "25695d06bf6ec7844501c8a4a445328b6c612bca33a03aae3b83f9187905dbca"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 457198,
+          "checksum_sha256": "a785857a6737e590c8ab988f8bb4bdf7dba23848910ef62cb79e3e49aa9715d3"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 324240,
+          "checksum_sha256": "99420ba65e149d340f1f65f3b1ad6848dccc991c85146bec568d709dfae85447"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 195154,
+          "checksum_sha256": "82a2b0a15b7d7f6280d34f1ffa7eee78ba9efd490b93172937804741f174b101"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 94304,
+          "checksum_sha256": "5ad87870cf217b7e86371a3c199204cf4dd46fe76e8c471871d0217c174e52c9"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/margherita-pizza/v001/margherita-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 40340,
+          "checksum_sha256": "5f3c637d6c0af456cd41107494baef72d35ab08d324ae4c22770d5a4e7b831ca"
+        }
+      ]
+    },
+    {
+      "dish_id": "1dffe318-9931-5995-9bbb-df9a8a50ec77",
+      "dish_name": "Beef Pizza",
+      "slug": "beef-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pizza/beef-pizza",
+      "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-2048w.webp",
+      "checksum_sha256": "9016fc291a03cd1e2266a8b4a2893a226be9e4cd5cf7e2ff8c719ed6315ccc89",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 1101702,
+          "checksum_sha256": "9016fc291a03cd1e2266a8b4a2893a226be9e4cd5cf7e2ff8c719ed6315ccc89"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 588558,
+          "checksum_sha256": "a9c62df914a65472a2fdd4cbbef4106b913cc744db14d6c1941f6531ea32716f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 406456,
+          "checksum_sha256": "1c104c66fb6ae5b3c88ee90ec805d1584899f468a28a9f57770977118c21d1ab"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 243180,
+          "checksum_sha256": "347d564bf102c8110b3fd96807fa10655c72272cd8c2f5ae4fa27a3995321b01"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 111054,
+          "checksum_sha256": "9cac5644807e082df2668086ca48121401b82421cfcf6d8ea5a675a3b21ca327"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pizza/beef-pizza/v001/beef-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/beef-pizza/v001/beef-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 45470,
+          "checksum_sha256": "6f5dfa85487372535da4f9f26f00b855dee53b283114083d5ac63087ff8acfb1"
+        }
+      ]
+    },
+    {
+      "dish_id": "7623b9a8-d9fd-5bf4-a24b-d288d718a638",
+      "dish_name": "Chicken Pizza",
+      "slug": "chicken-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pizza/chicken-pizza",
+      "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-2048w.webp",
+      "checksum_sha256": "4fbbe4290da45adfc4501f697404b486aa4bc793699c2b9f2b52ada32e526436",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 899636,
+          "checksum_sha256": "4fbbe4290da45adfc4501f697404b486aa4bc793699c2b9f2b52ada32e526436"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 504020,
+          "checksum_sha256": "bca198634843de38bb947e7d1a18812c4efc68199c31e2724a8261d20452f5b4"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 345940,
+          "checksum_sha256": "cead5b9f3fe439d656645a50c1551f61a6ab0a5ec4766d17bdf1fd46026156ad"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 208620,
+          "checksum_sha256": "6ed038ac79e379cde7ef1441214f14ed93eea7305046a5d2ea1f58dac24302b6"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 98272,
+          "checksum_sha256": "4277f9ecd70de53ac55626d42895f1d3904bd0b1112cfb431848dea2bf2ea1fc"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/chicken-pizza/v001/chicken-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42326,
+          "checksum_sha256": "bafdedd61d424089c098f3a97a95a084ea904c15671a4954b12d5bf8e202bc87"
+        }
+      ]
+    },
+    {
+      "dish_id": "9d838295-1633-5877-b7bf-26fc821f31cb",
+      "dish_name": "Vegetable Pizza",
+      "slug": "vegetable-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pizza/vegetable-pizza",
+      "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-2048w.webp",
+      "checksum_sha256": "0e088e0f8c5bc48c93a850f59de13676a08bc0c2c150943d37ce8e73b38b1749",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 1068746,
+          "checksum_sha256": "0e088e0f8c5bc48c93a850f59de13676a08bc0c2c150943d37ce8e73b38b1749"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 591508,
+          "checksum_sha256": "b1e589896bdc065a1dcac20f291f95c7a32859df70b03f900555b618b461b266"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 401592,
+          "checksum_sha256": "53969382069385f8bbbdb276e8c11eaed4d200454a4b7822104d8c64fd89a1c2"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 238092,
+          "checksum_sha256": "4d916dd0617995c496ca28a1fcaa13ef49cc973f6e849b56325a0a521b73c122"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107362,
+          "checksum_sha256": "3d5fb1d6a0507c17823f471e433c3f7bc321e3e2fc556b4386d6e1cfacf582e6"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/vegetable-pizza/v001/vegetable-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43824,
+          "checksum_sha256": "5cbb22a7572bc6aba955ad136e2cfcd411924f4cce82484f9d8dd6aecacc31cd"
+        }
+      ]
+    },
+    {
+      "dish_id": "b6d8a426-382d-5347-9152-e31a0ba7594e",
+      "dish_name": "Mini Pizza",
+      "slug": "mini-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Fast Food",
+      "version": 1,
+      "base_storage_path": "fast-food/pizza/mini-pizza",
+      "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-2048w.webp",
+      "checksum_sha256": "fdf10780f62ceb241f5f2f75785d5fd45d19f455e49ec4a0542c8e1190f429e8",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 245784,
+          "checksum_sha256": "fdf10780f62ceb241f5f2f75785d5fd45d19f455e49ec4a0542c8e1190f429e8"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 124408,
+          "checksum_sha256": "486044aad5404b9a2e842b56ac91c4943dec49300a8bafbfe934074a4bff5650"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 87434,
+          "checksum_sha256": "87eae2cce485361c8eb2592961803fe72c008ac0902b03734b92b6650b7f34ca"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 54468,
+          "checksum_sha256": "c8f9ef3103f8d65724e8d89108b52b93c59c17d5942e9964ce1eca0291490f43"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27706,
+          "checksum_sha256": "e242d1f4d659f7df8fb544c706632e1563e89ef48613b35565f38905d769f170"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/pizza/mini-pizza/v001/mini-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/mini-pizza/v001/mini-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 12884,
+          "checksum_sha256": "a733bf87a4369793aa18a2cc6ca8673afc7e3b3d7a2c0bfdd17a36674dbcc4e7"
+        }
+      ]
+    },
+    {
+      "dish_id": "bfea4811-e046-5060-a405-faba91e6be95",
+      "dish_name": "Tuna Pizza",
+      "slug": "tuna-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Restaurant",
+      "version": 1,
+      "base_storage_path": "restaurant/pizza/tuna-pizza",
+      "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-2048w.webp",
+      "checksum_sha256": "f6d992e255cf5dafa5c559223080df26242436f77e754b70d8fe94e91c9e85ca",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 988602,
+          "checksum_sha256": "f6d992e255cf5dafa5c559223080df26242436f77e754b70d8fe94e91c9e85ca"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 536008,
+          "checksum_sha256": "e65c5a8db46c40ca05b8b3236b100b586cbb5d8672d7666e6a838fe52af727af"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 366548,
+          "checksum_sha256": "7ce01b3198173e7c621cdc387796cc308ecc5264e92b0973683952349f9085a0"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 221618,
+          "checksum_sha256": "dcc7bdfb288c79fcb95877897cdc6aa103bdec3efc5b64c91c90297c08245f00"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 105060,
+          "checksum_sha256": "77871d21de2eb4de4e9d115ef3d9782afeb292920937633d0efbfbc512343f6e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/pizza/tuna-pizza/v001/tuna-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43602,
+          "checksum_sha256": "73d289690e33cd6f5e021ad7bea368c299f1e92b17bee83408a2b549567a03fd"
+        }
+      ]
+    },
+    {
+      "dish_id": "2ead6b88-03f8-5535-adae-1a05cc9490df",
+      "dish_name": "Pepperoni Pizza",
+      "slug": "pepperoni-pizza",
+      "category": "Pizza",
+      "restaurant_type": "Fast Food",
+      "version": 1,
+      "base_storage_path": "fast-food/pizza/pepperoni-pizza",
+      "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-2048w.webp",
+      "checksum_sha256": "2c62de9f2097ac295e1c1db3f3770b6e90053214a7aa489ba81bb2358da02ab4",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-30T16:35:50.706250+00:00",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 1047602,
+          "checksum_sha256": "2c62de9f2097ac295e1c1db3f3770b6e90053214a7aa489ba81bb2358da02ab4"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 558424,
+          "checksum_sha256": "8be9c0d6898ac451b71bed849e8ab4cccf6eda02a1652abe6f7ba5c57ed5380c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 375650,
+          "checksum_sha256": "8c853a04390ce947a1c0e4ced1a462246bcfb7147fd33dbed3d18ab075bc8b09"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 222096,
+          "checksum_sha256": "67c9a0d0c608624fa4cc2dd5d046a16c55e1abab4c18d8f3d7ed55756114765a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 103024,
+          "checksum_sha256": "2a55e9a64e2689972eae0a62f1ddbb2f6ccbef653975834731dfb70b25885672"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/pizza/pepperoni-pizza/v001/pepperoni-pizza-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42608,
+          "checksum_sha256": "6fc06d427e7e3e3dd97356436e11ce8ce617256d8fe723eedf3bc48fc5b8e356"
+        }
+      ]
+    }
+  ]
+}

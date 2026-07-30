@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-30T15:20:39.723Z
+Generated: 2026-07-30T16:50:47.879Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 615 | 0 | 42 |
+| 618 | 0 | 42 |
 
 ## Regressions
 
@@ -383,6 +383,9 @@ No failing regressions.
 - PASS - Phase 9.13.4 Master Ethiopian Food Library contains only the ten approved unique dishes
 - PASS - Phase 9.13.4 Master Ethiopian Food Library uses the canonical specifications and pending-review metadata
 - PASS - Phase 9.13.4 Master Ethiopian Food Library matches every WebP file to its recorded size and checksum
+- PASS - Phase 9.13.6 Pasta and Pizza master images contains exactly every active dish in the approved categories
+- PASS - Phase 9.13.6 Pasta and Pizza master images keeps all generated masters pending human review
+- PASS - Phase 9.13.6 Pasta and Pizza master images provides immutable, valid, unique WebP responsive variants
 - PASS - public menu language dropdown uses one accessible dropdown instead of a floating button group
 - PASS - public menu language dropdown anchors the dropdown to the safe top-right corner
 - PASS - Phase 8.3.4 Menu to Recipe Linking adds one optional same-restaurant recipe relationship to menu items
