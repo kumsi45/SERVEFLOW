@@ -1,12 +1,12 @@
 # ServeFlow Production Regression Report
 
-Generated: 2026-07-30T08:38:21.531Z
+Generated: 2026-07-30T08:51:08.330Z
 
 ## Result
 
 | PASS | FAIL | SKIP |
 | ---: | ---: | ---: |
-| 603 | 0 | 42 |
+| 610 | 0 | 42 |
 
 ## Regressions
 
@@ -386,6 +386,10 @@ No failing regressions.
 - PASS - Phase 8.3.4 Menu to Recipe Linking centralizes search, link mutation, and reverse usage lookup
 - PASS - Phase 8.3.4 Menu to Recipe Linking supports explicit no-tracking menu items without a recipe
 - PASS - Phase 8.3.4 Menu to Recipe Linking does not implement downstream operational behavior
+- PASS - Modern digital menu bottom navigation visibility always renders both Home and Orders
+- PASS - Modern digital menu bottom navigation visibility does not turn an inactive Orders tab white solely because an order exists
+- PASS - Modern digital menu bottom navigation visibility defines visible inactive and active colors on customized light menus
+- PASS - Modern digital menu bottom navigation visibility preserves visible contrast in dark and automatic dark modes
 - PASS - Phase 9.8.4 multilingual menu foundation supports exactly English, Afaan Oromoo, and Amharic
 - PASS - Phase 9.8.4 multilingual menu foundation preserves source text and populates only its detected language
 - PASS - Phase 9.8.4 multilingual menu foundation detects Ethiopic and mixed scripts without guessing Latin language
@@ -655,6 +659,9 @@ No failing regressions.
 - PASS - waiter appended order batch reuses the open-session base and preserves a separate invoice batch
 - PASS - waiter appended order batch stamps the authenticated waiter identity
 - PASS - waiter appended order batch applies kitchen-before-payment or payment-first behavior from canonical timing
+- PASS - waiter cart isolation starts every waiter table visit with an ephemeral empty cart
+- PASS - waiter cart isolation does not hydrate or save an ephemeral cart and removes legacy saved contents
+- PASS - waiter cart isolation keeps persistence enabled by default for public QR carts
 - PASS - official waiter order lifecycle engine exposes exactly the two supported restaurant waiter modes
 - PASS - official waiter order lifecycle engine keeps Customer QR permanently payment-before-kitchen
 - PASS - official waiter order lifecycle engine routes waiter Pay Before Kitchen through cashier before kitchen

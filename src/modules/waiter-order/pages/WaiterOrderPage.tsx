@@ -43,7 +43,7 @@ export function WaiterOrderPage({ restaurantSlug, tableNumber }: Props) {
     currencySymbol: menu.restaurant.currency_symbol,
     locale: menu.restaurant.locale,
   } : null);
-  const cart = usePublicQrCart(restaurantSlug, `waiter:${tableNumber}`);
+  const cart = usePublicQrCart(restaurantSlug, `waiter:${tableNumber}`, { persist: false });
   const favoriteKey = `serveflow.waiter.favorites:${restaurantSlug}`;
   const recentKey = `serveflow.waiter.recents:${restaurantSlug}`;
   const [session, setSession] = useState<WaiterOrderSession | null>(null);

@@ -71,8 +71,19 @@ function readStoredCartItems(restaurantSlug: string, sessionKey = ""): PublicQrC
   }
 }
 
-export function usePublicQrCart(restaurantSlug: string, sessionKey = "") {
-  const [items, setItems] = useState<PublicQrCartItem[]>(() => readStoredCartItems(restaurantSlug, sessionKey));
+type PublicQrCartOptions = {
+  persist?: boolean;
+};
+
+export function usePublicQrCart(
+  restaurantSlug: string,
+  sessionKey = "",
+  options: PublicQrCartOptions = {},
+) {
+  const persist = options.persist ?? true;
+  const [items, setItems] = useState<PublicQrCartItem[]>(() =>
+    persist ? readStoredCartItems(restaurantSlug, sessionKey) : [],
+  );
 
   const itemCount = useMemo(
     () => items.reduce((total, item) => total + item.quantity, 0),
@@ -88,6 +99,11 @@ export function usePublicQrCart(restaurantSlug: string, sessionKey = "") {
     try {
       const storageKey = getCartStorageKey(restaurantSlug, sessionKey);
 
+      if (!persist) {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+
       if (items.length > 0) {
         window.localStorage.setItem(storageKey, JSON.stringify(items));
         return;
@@ -97,11 +113,11 @@ export function usePublicQrCart(restaurantSlug: string, sessionKey = "") {
     } catch {
       // localStorage may be unavailable in private browsing or embedded webviews.
     }
-  }, [items, restaurantSlug, sessionKey]);
+  }, [items, persist, restaurantSlug, sessionKey]);
 
   useEffect(() => {
-    setItems(readStoredCartItems(restaurantSlug, sessionKey));
-  }, [restaurantSlug, sessionKey]);
+    setItems(persist ? readStoredCartItems(restaurantSlug, sessionKey) : []);
+  }, [persist, restaurantSlug, sessionKey]);
 
   function addItem(input: AddPublicQrCartItemInput) {
     const quantity = normalizeQuantity(input.quantity);
