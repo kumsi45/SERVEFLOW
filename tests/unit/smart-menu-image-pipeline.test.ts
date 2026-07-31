@@ -160,6 +160,8 @@ describe("Phase 9.13.3.1 Smart Menu image pipeline", () => {
     expect(edgeFunction).toContain('from("serveflow_smart_menu_image_versions")');
     expect(edgeFunction).toContain('from("restaurant_smart_menu_image_overrides")');
     expect(edgeFunction).toContain('getPublicUrl(version.storage_path)');
+    expect(edgeFunction).toContain("masterSelectionScore");
+    expect(edgeFunction).toContain("master.current_version > 0 && versionedMasterIds.has(master.id)");
     expect(edgeFunction).not.toContain('.storage.from("smart-menu-images").upload(');
   });
 });

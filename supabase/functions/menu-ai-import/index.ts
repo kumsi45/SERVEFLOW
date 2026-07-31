@@ -244,8 +244,7 @@ async function loadSmartLibrary(
 
   const { data: masters, error: masterError } = await service
     .from("serveflow_smart_menu_images")
-    .select("id,item_id,status,current_version,base_storage_path,placeholder_storage_path,provider_key,provider_metadata")
-    .eq("library_id", library.id)
+    .select("id,item_id,library_id,status,current_version,base_storage_path,placeholder_storage_path,provider_key,provider_metadata")
     .in("item_id", itemIds);
   if (masterError) throw new Error(masterError.message);
   const masterIds = (masters ?? []).map((master) => master.id);
@@ -265,7 +264,17 @@ async function loadSmartLibrary(
     .in("item_id", itemIds);
   if (overrideError) throw new Error(overrideError.message);
 
-  const masterByItem = new Map((masters ?? []).map((master) => [master.item_id, master]));
+  const versionedMasterIds = new Set((versions ?? []).map((version) => version.smart_image_id));
+  const masterByItem = new Map<string, NonNullable<typeof masters>[number]>();
+  const masterSelectionScore = (master: NonNullable<typeof masters>[number]) =>
+    (master.library_id === library.id ? 1 : 0) +
+    (master.current_version > 0 && versionedMasterIds.has(master.id) ? 2 : 0);
+  for (const master of masters ?? []) {
+    const selected = masterByItem.get(master.item_id);
+    if (!selected || masterSelectionScore(master) > masterSelectionScore(selected)) {
+      masterByItem.set(master.item_id, master);
+    }
+  }
   const overrideByItem = new Map((overrides ?? []).map((override) => [override.item_id, override]));
   for (const mapping of mappings) {
     const item = mapping.item && typeof mapping.item === "object"
