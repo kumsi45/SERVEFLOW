@@ -1,0 +1,1247 @@
+{
+  "library": "ServeFlow Phase 9.13.14 Snacks Master Images",
+  "version": "1.0",
+  "phase": "9.13.14",
+  "categories": [
+    "Donuts",
+    "Cupcakes",
+    "Pies",
+    "Fries",
+    "Snacks",
+    "Bar Snacks"
+  ],
+  "generated_at": "2026-07-31T13:48:27.197471+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "a4446880-3fab-596a-a7c1-5f799c19ce3b",
+      "dish_name": "Apple Pie",
+      "slug": "apple-pie",
+      "category": "Pies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/apple-pie",
+      "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-2048w.webp",
+      "checksum_sha256": "751ccff106de71155cd4cf80afd05ad081733c892ae357ac6f1e48c9e76bb8b4",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 662646,
+          "checksum_sha256": "751ccff106de71155cd4cf80afd05ad081733c892ae357ac6f1e48c9e76bb8b4"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 366650,
+          "checksum_sha256": "2d2a0f1bb9876acd135e547ad0d3a6fa1d3f0d1169c51c2bdba4d85b027919ec"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 255454,
+          "checksum_sha256": "d56374dc7f48ff6df0edbf0824153384b05b3cef16b741fde69371724f4c528e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 161318,
+          "checksum_sha256": "cb0d102bb2c8ff7b5f88f0213b1c98a5013503554ea802b3984ae758b3c589f3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 81140,
+          "checksum_sha256": "a7671356f68a05092afba41e47ea8ae4aa0bea6947e0e5e74f28d1613daccd28"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/apple-pie/v001/apple-pie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/apple-pie/v001/apple-pie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35968,
+          "checksum_sha256": "3bc101fe900b758a2ab401930a5283284d92eb82cd2276a2958d2dc5125dcff8"
+        }
+      ]
+    },
+    {
+      "dish_id": "87742e92-d4ef-5421-acea-aa7d7fa25b37",
+      "dish_name": "Chicken Pie",
+      "slug": "chicken-pie",
+      "category": "Pies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/chicken-pie",
+      "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-2048w.webp",
+      "checksum_sha256": "dfc7f4ee7f002c7b6cc8f7d369310c3a5cab5390b2313f74629ce5207223fa38",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 472106,
+          "checksum_sha256": "dfc7f4ee7f002c7b6cc8f7d369310c3a5cab5390b2313f74629ce5207223fa38"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 258302,
+          "checksum_sha256": "0a578c98852cfbeb36896c561bc1adc379b763d193b40eb949c90b0834c1384e"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 184418,
+          "checksum_sha256": "3abe6993c815c1289490233cdb679453fbe0b93234366447cd58fea250603231"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 114182,
+          "checksum_sha256": "88e27a3933a6d4170d3edac9bdbd9f2e38e0391c6cb62840f41a30509cdc8f75"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 58764,
+          "checksum_sha256": "f6125ad417e88d41598d3ee880358020198ff9f139405a2d444bb46a96a4c492"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/chicken-pie/v001/chicken-pie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chicken-pie/v001/chicken-pie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27598,
+          "checksum_sha256": "248e73e91239f916a2903288cd5f0208a91990c702499542465bc1492c1d392f"
+        }
+      ]
+    },
+    {
+      "dish_id": "9823be7b-dbc5-5f9b-a84c-3a1b1a797d2d",
+      "dish_name": "Meat Pie",
+      "slug": "meat-pie",
+      "category": "Pies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/meat-pie",
+      "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-2048w.webp",
+      "checksum_sha256": "826aa9116ec4eb5bd061209f8132866d9dd032d33c00138bb669db3d8212b5cb",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 651038,
+          "checksum_sha256": "826aa9116ec4eb5bd061209f8132866d9dd032d33c00138bb669db3d8212b5cb"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 344834,
+          "checksum_sha256": "cfb7b424731b5588dd89f186d03897cf77f17df38a39e3c3ba6609095a107aee"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 244444,
+          "checksum_sha256": "8fb63a6620492ad19f0ee974c2652410c4824bc0a2db3c1fcaf42fa20cf95765"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 141450,
+          "checksum_sha256": "658d18b8d7b791378c3b87ac49f9fac7182264ae2cd6a18e32069622dfde6807"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 66508,
+          "checksum_sha256": "11d0e656462218d5bdb9bc86efbd33c9a48b02d1d07c9b912dfaa6a3e15cfe5c"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/meat-pie/v001/meat-pie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/meat-pie/v001/meat-pie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28234,
+          "checksum_sha256": "b1353076962bcc998a4884f62439fe79c05da5c23e3f0532291a6b0d5e388527"
+        }
+      ]
+    },
+    {
+      "dish_id": "406bc6b1-4fee-5c3c-9e2a-0e49bb90feca",
+      "dish_name": "Chocolate Cupcake",
+      "slug": "chocolate-cupcake",
+      "category": "Cupcakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/chocolate-cupcake",
+      "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-2048w.webp",
+      "checksum_sha256": "66afca73b2d99f5f2d9a09df9f5724c52a73363e773e5e5b46b8ad8a53fdc662",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 449156,
+          "checksum_sha256": "66afca73b2d99f5f2d9a09df9f5724c52a73363e773e5e5b46b8ad8a53fdc662"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 241018,
+          "checksum_sha256": "be7d6376f42675ad2d5c2965571dc648f3ba1381c72b40934a6bae0674c98a8b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 170494,
+          "checksum_sha256": "873bef7277dfa639e1f3ba9be093acef6cbe3d3c0dd55ffa548e3d7b5cd32bb0"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 106474,
+          "checksum_sha256": "833bd44da07fec0e7049802b5676afb92fea7935dcfd1612a04736ad947f4254"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52928,
+          "checksum_sha256": "1689921de92fa626652fa8203870866398246e55e041f7f25b75d227759d9337"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cupcake/v001/chocolate-cupcake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24822,
+          "checksum_sha256": "ca5bb948f3798efbd234a7b1b41609c8b06b5cea2a555fe279c0cc4bd271886f"
+        }
+      ]
+    },
+    {
+      "dish_id": "6ec41284-d91e-5cb9-8df7-34bc263b8de7",
+      "dish_name": "Strawberry Cupcake",
+      "slug": "strawberry-cupcake",
+      "category": "Cupcakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/strawberry-cupcake",
+      "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-2048w.webp",
+      "checksum_sha256": "6287dca3bc791e6b4bbba5abe0aba07ba0b789b81cec21041e4e6c2e28584a35",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 493176,
+          "checksum_sha256": "6287dca3bc791e6b4bbba5abe0aba07ba0b789b81cec21041e4e6c2e28584a35"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 252066,
+          "checksum_sha256": "11eda93f3d661737d3ec14740c65d9486803b9cdf44fe19b553100427a6d1a00"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 175630,
+          "checksum_sha256": "56beec0dc7972d41fe3172994ed5c3cf9264dd852f085bf8e28cd8ddd56f84ce"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 102240,
+          "checksum_sha256": "172d03860e95c6d925afbcb7c7ba6cf481b7120b21b4d63b3b0de6ecafc40da3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 48662,
+          "checksum_sha256": "a7d2d39bce86b8b618653b02d067f0073cae6a78f346a8c9ce3bfe85f7296bc5"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/strawberry-cupcake/v001/strawberry-cupcake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22160,
+          "checksum_sha256": "abb71c4e804edc7c14774f4ae8942238018492e100c8a3767b0d5df4a18e7697"
+        }
+      ]
+    },
+    {
+      "dish_id": "dd44008d-08de-5686-8639-0a35d508a406",
+      "dish_name": "Vanilla Cupcake",
+      "slug": "vanilla-cupcake",
+      "category": "Cupcakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/vanilla-cupcake",
+      "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-2048w.webp",
+      "checksum_sha256": "e9197bd31b85f26bfe5bef9f82d48ba8f5bf519f657b720eb667b83bdd8d8d8b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 240770,
+          "checksum_sha256": "e9197bd31b85f26bfe5bef9f82d48ba8f5bf519f657b720eb667b83bdd8d8d8b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 118836,
+          "checksum_sha256": "643fb640b449ea138c05f1efb5a5784039653b6305d33afc256023b6ab72d6fc"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 85504,
+          "checksum_sha256": "7ffa3c77b759fdb77304fcb7a489a4d0d3a7255f72ce69b60b4ad53b5a3e4e1e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 59408,
+          "checksum_sha256": "f8454c5f59b1a9942db345bfddae84b116e1912e1bb60bee52446265e09b3ad9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32970,
+          "checksum_sha256": "8517a8d86130e44f5e73e94dac22564d054c015dcfcd395b053ce896c76762b3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/vanilla-cupcake/v001/vanilla-cupcake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 16518,
+          "checksum_sha256": "0e9c7cb8032e2cdffc5985e430f988521776611968d284c32b671a679461932f"
+        }
+      ]
+    },
+    {
+      "dish_id": "f58482e6-f629-53f4-8dea-cd7eb294e411",
+      "dish_name": "Chocolate Donut",
+      "slug": "chocolate-donut",
+      "category": "Donuts",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/chocolate-donut",
+      "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-2048w.webp",
+      "checksum_sha256": "626649c261fe96c06be76439409d1c5b90cc602e2eba42c709cd7ba4104a3c02",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 453962,
+          "checksum_sha256": "626649c261fe96c06be76439409d1c5b90cc602e2eba42c709cd7ba4104a3c02"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 222092,
+          "checksum_sha256": "eda8e26752170defda7598ba4f429b5ddc2464a935dcf2417f24c720de756de6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 159766,
+          "checksum_sha256": "4dd948ffe036c43b8aaac5867115f52cdcfda66b4a4bc0a693f2b97ef9ae664a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 95552,
+          "checksum_sha256": "10371af08aa9afc021fb7ac77db975c1c84c778a222fc64f096c5c82d9093c08"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 45286,
+          "checksum_sha256": "2d866e68a9be2d8b7a2919a5bc9ef5ef950c1722dd19580e6eacef8cc266c35d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-donut/v001/chocolate-donut-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20218,
+          "checksum_sha256": "317a67ea1b6b100a594621a26939e2df7ffe926472ce976d8cb1990c01886ed1"
+        }
+      ]
+    },
+    {
+      "dish_id": "19eee099-c2e4-5c6c-88b5-5df97ad97285",
+      "dish_name": "Filled Donut",
+      "slug": "filled-donut",
+      "category": "Donuts",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/filled-donut",
+      "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-2048w.webp",
+      "checksum_sha256": "0fddb30c3bb1308203feff5f7f0239a9d05a034aa14c9106de6895e6a2ed553e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 573988,
+          "checksum_sha256": "0fddb30c3bb1308203feff5f7f0239a9d05a034aa14c9106de6895e6a2ed553e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 310388,
+          "checksum_sha256": "acb21060d743c5cd225b3718848eef984c81cc2d8d89c9477027a497b43ee986"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 217986,
+          "checksum_sha256": "c6a9ae19f32489ab244c45b41a1878ea59ec7b79177853bcc3e555bfe2476757"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 134064,
+          "checksum_sha256": "bb864aad51b1e2cada15df9df2dbbf94c91d4344beccde9aabf08bc791a9aeab"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65216,
+          "checksum_sha256": "9bb1fc4e57eefdb0befa7cb1e1e28a940923283c9c54af40323793b853901b22"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/filled-donut/v001/filled-donut-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/filled-donut/v001/filled-donut-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27786,
+          "checksum_sha256": "9c4bdd2220a0025962fd988d667ae4c56492e8372b0ae279403b426545ac0f88"
+        }
+      ]
+    },
+    {
+      "dish_id": "96598b16-7894-5e2a-b66b-7bd7aae052f2",
+      "dish_name": "Glazed Donut",
+      "slug": "glazed-donut",
+      "category": "Donuts",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/glazed-donut",
+      "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-2048w.webp",
+      "checksum_sha256": "cdbf12ae7a41b59909196ef30f9c8bfc8afe7d018bf2cde7fe02cebca665f7a0",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 447326,
+          "checksum_sha256": "cdbf12ae7a41b59909196ef30f9c8bfc8afe7d018bf2cde7fe02cebca665f7a0"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 240230,
+          "checksum_sha256": "edd6714a02472fe2f051078266b68f2821e1b8dbe129250143334c253d4b2e5a"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 169632,
+          "checksum_sha256": "032759e56c83d630a9c3594cc965b004c755044b7f89375306663ca54f37fbc6"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 106752,
+          "checksum_sha256": "a74feec72b74b615b6c36feeb284e129c3b967309f9998439aa52582d32e1e34"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 55484,
+          "checksum_sha256": "ca9d5c189cc206f69f41981c26e574c0af9e4c416995169d2a8e9faa7196c713"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/glazed-donut/v001/glazed-donut-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/glazed-donut/v001/glazed-donut-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25092,
+          "checksum_sha256": "2fe2a21a7b77cd039d4aaaa5c355de911722be633b6acf4d3fc04f7c12ea98c0"
+        }
+      ]
+    },
+    {
+      "dish_id": "7d4b2ee7-3ae1-581d-a8dc-b91ccc234908",
+      "dish_name": "Loaded Fries",
+      "slug": "loaded-fries",
+      "category": "Fries",
+      "restaurant_type": "Fast Food",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "fast-food/snacks-fast-food/loaded-fries",
+      "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-2048w.webp",
+      "checksum_sha256": "72145df1927e16147e81af6cdcfde37d833db6beca40ffb15e1f04331b001580",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 733438,
+          "checksum_sha256": "72145df1927e16147e81af6cdcfde37d833db6beca40ffb15e1f04331b001580"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 401094,
+          "checksum_sha256": "b97c749038af5c82d3af8c3dd2a0371a2e247a109d086dcf9ce2ab5f2ecbe8d1"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 273962,
+          "checksum_sha256": "9d7dfef5cb400c1f8eceef2da658dc6c95309f44eb876106922443bca9ff4c60"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 165168,
+          "checksum_sha256": "3cd0e860be0e583911e1d6a10ca06fd82f66155e50fbccb9ea428ee21653e81b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 78706,
+          "checksum_sha256": "ad712f0d0016d0580f487b9d29e5fbf03523e338b9175e3f502204c4c0294d45"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/loaded-fries/v001/loaded-fries-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 34766,
+          "checksum_sha256": "6e91e977aaa6de9d714fbba5fe154d029e1ab689aa535e57a6e22920111a4b6f"
+        }
+      ]
+    },
+    {
+      "dish_id": "fc97678c-8e32-5386-b05b-878951797004",
+      "dish_name": "Potato Wedges",
+      "slug": "potato-wedges",
+      "category": "Fries",
+      "restaurant_type": "Fast Food",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "fast-food/snacks-fast-food/potato-wedges",
+      "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-2048w.webp",
+      "checksum_sha256": "02e3fde6c7e029e0fc41c4633f15166042054c5fcb4ea00d05a1d5a1e54677c0",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 787370,
+          "checksum_sha256": "02e3fde6c7e029e0fc41c4633f15166042054c5fcb4ea00d05a1d5a1e54677c0"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 425376,
+          "checksum_sha256": "84b2a7356fe90bdbebc6bbd11802eb4f4430920032b781de33fe507807cb19f5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 291870,
+          "checksum_sha256": "d0a41c632c4b933af9c435228962709cb0190b2abf8064ee3585cf4000eb2d56"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 174620,
+          "checksum_sha256": "4cff04c4927d294828ba6c51b6150e82800dfd1003f8a9f1149707c5291a01a4"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 82012,
+          "checksum_sha256": "43df97408d28314bcfdcc1a7afbd011228bf037c925b6207d966e2cdc3f50440"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/snacks-fast-food/potato-wedges/v001/potato-wedges-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35634,
+          "checksum_sha256": "a0eb8cdeb5da753866a0e9ae1f4326d55e3aacb3abfd1733c6655c5322e449bd"
+        }
+      ]
+    },
+    {
+      "dish_id": "da34241d-780f-5116-8763-e2bdb93ffa94",
+      "dish_name": "Pizza Slice",
+      "slug": "pizza-slice",
+      "category": "Snacks",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/snacks-fast-food/pizza-slice",
+      "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-2048w.webp",
+      "checksum_sha256": "f2fd5da23e0596ccfcdc5cc658a46500d56807a9e07c917abe54c4fed39a56cb",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 628046,
+          "checksum_sha256": "f2fd5da23e0596ccfcdc5cc658a46500d56807a9e07c917abe54c4fed39a56cb"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 315738,
+          "checksum_sha256": "7f731668fcf309822c1466ed37d2c5d896e5aab6b4a33e2edbc84edb4fe7104a"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 212588,
+          "checksum_sha256": "8ef80adb5a2504a6f802844a4deec9d80c01cdb026700882eb89deca0456e8cf"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 124194,
+          "checksum_sha256": "ba4091cb41d68339336de612b154f3c5c7c578ad81ca0cac8d0e79c682155269"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 57406,
+          "checksum_sha256": "93dc1487ed1fe1156a0511e0b8f46f5623a44783ceacde97033e5e47a83b3ef0"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/snacks-fast-food/pizza-slice/v001/pizza-slice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24800,
+          "checksum_sha256": "5df6930df462b4fe7b1360b75a8d1fdf9053c0eb0c264d690470417c859db156"
+        }
+      ]
+    },
+    {
+      "dish_id": "10e5b870-9fdc-5d96-ad83-b0d14298ea1e",
+      "dish_name": "Nachos",
+      "slug": "nachos",
+      "category": "Bar Snacks",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/snacks-fast-food/nachos",
+      "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-2048w.webp",
+      "checksum_sha256": "08939888c5225785dbe1e45849239572da76cf987d65bd372b82076050df27ec",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 778544,
+          "checksum_sha256": "08939888c5225785dbe1e45849239572da76cf987d65bd372b82076050df27ec"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 430690,
+          "checksum_sha256": "3cc6f17cb742c6ad0929ab45cefb656dd02932a64d8cf4491549eb6bc06d69d3"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 297818,
+          "checksum_sha256": "27e03efd20534525ae1c04da408228549b022e0e135b438dc7356c32f4062ed7"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 176592,
+          "checksum_sha256": "2f5740b0405608c34fb24c144a4bce1b94edd441331395859694fd26d08eec41"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 85596,
+          "checksum_sha256": "5c2afda0e4309f2492c949c8e2cba60fdc7722e928f19b6ab14763b16117e633"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/nachos/v001/nachos-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 37330,
+          "checksum_sha256": "359698157679368724d6c45eed4c5fe1330bc7403926b24d037999c30c2b7585"
+        }
+      ]
+    },
+    {
+      "dish_id": "81b6fed7-f813-5e32-9cec-d5fe74754f6e",
+      "dish_name": "Peanuts",
+      "slug": "peanuts",
+      "category": "Bar Snacks",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/snacks-fast-food/peanuts",
+      "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-2048w.webp",
+      "checksum_sha256": "d54bf1d2b63d735ed2da393fe7693909311d7fcbec2080534553b1402ca5106d",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 551698,
+          "checksum_sha256": "d54bf1d2b63d735ed2da393fe7693909311d7fcbec2080534553b1402ca5106d"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 301668,
+          "checksum_sha256": "5b07228cdf3bf4e2ed2fa10058c31db3bca44bd511cdb8a7d779722f9f740777"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 211970,
+          "checksum_sha256": "d26d0788a7b8261be714d36ba73637a23860051da5d060177515767ddb37c6e2"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 127882,
+          "checksum_sha256": "3a8e99481472a94a4c9984336aa12ff6a5c04850fcd55f9ba65e6814a0807696"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62250,
+          "checksum_sha256": "1ef4e4c7876cfbfbe332edce566cce4046885e52c163235a5df991c0ad0a8ff9"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/peanuts/v001/peanuts-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28406,
+          "checksum_sha256": "86ec793feff71a27abe396dcbd89b73aead1047d004b1c03296885ca3fb3c17e"
+        }
+      ]
+    },
+    {
+      "dish_id": "7e8d9f8f-3157-5649-920f-a6a4c05e555d",
+      "dish_name": "Popcorn",
+      "slug": "popcorn",
+      "category": "Bar Snacks",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/snacks-fast-food/popcorn",
+      "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-2048w.webp",
+      "checksum_sha256": "96784f24e1819b4e76de5fe3c594b29c5c02fd33b65e9f5add241d63898a84e0",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T13:48:27.197471+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 562656,
+          "checksum_sha256": "96784f24e1819b4e76de5fe3c594b29c5c02fd33b65e9f5add241d63898a84e0"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 302762,
+          "checksum_sha256": "c3ef1d1deae04ab0c697eac15dc2b13fadb8a5f1f8078e615780143028231bce"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 217444,
+          "checksum_sha256": "31069b5b04ee278daa9c6fa95af0921707b7617397542d5b9e14841c1d84f80a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 131590,
+          "checksum_sha256": "42831e727853fd749e73c8cac1613b53c144a26cdc633a4e5cff3555027483a0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 67164,
+          "checksum_sha256": "7dee02f021a787aae0247b558246fcb510310254c5a17cb3d59f83b1604f7768"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/snacks-fast-food/popcorn/v001/popcorn-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 30154,
+          "checksum_sha256": "960bf97826f7519f1041c57cc49d2b53c919ecda1d6b1ac5f313c6c303b84850"
+        }
+      ]
+    }
+  ]
+}
