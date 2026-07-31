@@ -1,0 +1,998 @@
+{
+  "library": "ServeFlow Phase 9.13.13 Dessert Master Images",
+  "version": "1.0",
+  "phase": "9.13.13",
+  "categories": [
+    "Cakes",
+    "Desserts",
+    "Cookies"
+  ],
+  "generated_at": "2026-07-31T12:13:07.177299+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "ececa20d-de84-5690-86b3-ea8258935ddb",
+      "dish_name": "Birthday Cake",
+      "slug": "birthday-cake",
+      "category": "Cakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/birthday-cake",
+      "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-2048w.webp",
+      "checksum_sha256": "b40199c43c402a947fe0ff9047e701354ca5b1ca7ae81fa3326350a9acabe022",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 333182,
+          "checksum_sha256": "b40199c43c402a947fe0ff9047e701354ca5b1ca7ae81fa3326350a9acabe022"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 169988,
+          "checksum_sha256": "44914c002cc82c8e8633c54a3292cca35eeb0d27404931d99ea691dc26b98fdf"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 124470,
+          "checksum_sha256": "ceea7aa098cbad1732732ad12fd8853522dc84f47676a79612a31eeb136eda4c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 85350,
+          "checksum_sha256": "4835c3ccb2818315ae64916fbd1b87e31753f89136428b9770dd9ae5a94d78e0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 44572,
+          "checksum_sha256": "f5f9730d5c825925cb2bf3e2acd86ad7dbf8fae7a585606c89bb507e58ac8a83"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/birthday-cake/v001/birthday-cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/birthday-cake/v001/birthday-cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 21152,
+          "checksum_sha256": "c1dc9951192b1b0ec1a1c57bb848713e111325a3bbb7704c50d0c0d83938b7be"
+        }
+      ]
+    },
+    {
+      "dish_id": "622858dc-0a8e-5c99-b818-18341dd94c6a",
+      "dish_name": "Black Forest Cake",
+      "slug": "black-forest-cake",
+      "category": "Cakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/black-forest-cake",
+      "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-2048w.webp",
+      "checksum_sha256": "c13a8287f030ddd15aeab4822ea7af6f8c486d51f0f9a0ce4547a054d991e165",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 519796,
+          "checksum_sha256": "c13a8287f030ddd15aeab4822ea7af6f8c486d51f0f9a0ce4547a054d991e165"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 289320,
+          "checksum_sha256": "f4223de6b208fd999ae0cb18e2b26cbc93bef9e65cd6df35c72fa72c582ab37f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 210248,
+          "checksum_sha256": "b2faf9a44d9cf621c1ecc43e64c70e8ca4f1b74a0875100766165e3c2150081c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 129594,
+          "checksum_sha256": "ec0232132e9aa5e0efea9c15ad196d8cdba2109e36fba7ce18b395bf2a0127b3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65944,
+          "checksum_sha256": "e774c1058db15ede2a98c0d90ff5ec332a4986f8a6e4250a37188b8f0ef0b5b5"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/black-forest-cake/v001/black-forest-cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 31400,
+          "checksum_sha256": "1d358a2abf95403128c804ecdfb2c979ab6d6af1a8a871cdb8abd987eeffee3c"
+        }
+      ]
+    },
+    {
+      "dish_id": "98ee4f11-65a0-5552-bca9-5960fe96553a",
+      "dish_name": "Chocolate Cake",
+      "slug": "chocolate-cake",
+      "category": "Cakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/chocolate-cake",
+      "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-2048w.webp",
+      "checksum_sha256": "13ba1b45261a6be0d0d8797515bc89d4443c20d1b4f3490fedc00001a90bb766",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 599802,
+          "checksum_sha256": "13ba1b45261a6be0d0d8797515bc89d4443c20d1b4f3490fedc00001a90bb766"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 322534,
+          "checksum_sha256": "1dfdca342a0ff834ce4def4c9d7be52319a5339174f617317bf5d608490be5ec"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 226254,
+          "checksum_sha256": "735bf2d09270c867c47e5c28104c487887ddecffbff056e0e67324d8d4ce1ecb"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 136816,
+          "checksum_sha256": "7bebc059b083660c275def5c33d6ebc2b03e2f7047f7d3f2175051f161aff8c6"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 64746,
+          "checksum_sha256": "1fca9554c504be1006431fe85e38522a035a0bd300ac6559bdab4382d583bc1d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-cake/v001/chocolate-cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28248,
+          "checksum_sha256": "e01f288f067981e66aff597a2946ad1f769c4e024cf960a85b30e7ee818b3769"
+        }
+      ]
+    },
+    {
+      "dish_id": "b9dbec8a-3dee-58c8-8b9a-df94dbb642f0",
+      "dish_name": "Red Velvet Cake",
+      "slug": "red-velvet-cake",
+      "category": "Cakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/red-velvet-cake",
+      "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-2048w.webp",
+      "checksum_sha256": "7441a4cfe272f32008bb7a2e641a77f64910f3408dcd9d08502575a959bf1813",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 461982,
+          "checksum_sha256": "7441a4cfe272f32008bb7a2e641a77f64910f3408dcd9d08502575a959bf1813"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 247992,
+          "checksum_sha256": "cd1d0886f15314ee5fa36e9a2667df24ee202e3be65c422799f623a6e285e4dc"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 182532,
+          "checksum_sha256": "a29fbafacd55629dfbe53812adeb8ad8fc77438ff7882d892b9f46c0641bd6e4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 120450,
+          "checksum_sha256": "acdcd776bcb2b170c0f92134c57b9e839208ca252a515a6230965f89815873d6"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 61426,
+          "checksum_sha256": "3a1d7c10850aac79b2d5ce4b651bead5861bff42dfa9421962ca930c5beb89c5"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/red-velvet-cake/v001/red-velvet-cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28978,
+          "checksum_sha256": "812907d424f78a9c16ac418a17c087dd81764162f2a5818015c71aefa6a7645d"
+        }
+      ]
+    },
+    {
+      "dish_id": "bab6d9e8-93ce-54a2-9441-28ec7da785e5",
+      "dish_name": "White Forest Cake",
+      "slug": "white-forest-cake",
+      "category": "Cakes",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/white-forest-cake",
+      "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-2048w.webp",
+      "checksum_sha256": "a42eb7d722a72a13103ecbbed49a39aef800251cafc05b66519f641c0ee7e57e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 342292,
+          "checksum_sha256": "a42eb7d722a72a13103ecbbed49a39aef800251cafc05b66519f641c0ee7e57e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 177682,
+          "checksum_sha256": "9dab40bfaa8a55c4f2ebee3713bad06350bb44d304a64b6c0210b91aed587992"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 122344,
+          "checksum_sha256": "c4df64ecfae1adc8ee30ba38b3cfbdf5a7a391c7f08504a022a24659e555ac1a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 80634,
+          "checksum_sha256": "7e830f1359753cd42bd271a928cb790b5ad3a1e78cb3d3ae259dcf52d98e15e8"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 45178,
+          "checksum_sha256": "7a23dcf831b9af1a8c2124cad9909c2d64ebf7b9f9bbfd84a395dea7d6beea7b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/white-forest-cake/v001/white-forest-cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20942,
+          "checksum_sha256": "6f2f20813a890a89d08a6ab82bf11d5f8dea22f98cb41352da09d779b308c9a4"
+        }
+      ]
+    },
+    {
+      "dish_id": "ce9850d8-e329-5cb0-80ba-2c00a80c6361",
+      "dish_name": "Butter Cookie",
+      "slug": "butter-cookie",
+      "category": "Cookies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/butter-cookie",
+      "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-2048w.webp",
+      "checksum_sha256": "79fda0a69211bc8ae01233975ba6f0d9f80a065fa5a936527beb0600f6cf42fe",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 330206,
+          "checksum_sha256": "79fda0a69211bc8ae01233975ba6f0d9f80a065fa5a936527beb0600f6cf42fe"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 163556,
+          "checksum_sha256": "736032121273ed6fdd9587359881bf4ee03b632d48504d30159730c7c5e335e5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 118628,
+          "checksum_sha256": "a23864fdc94df7afd836d119e450cedcf25b492ba44d444cb2ce58a5814708d3"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 76848,
+          "checksum_sha256": "fccb6e3027f0303bddc4101f2a38d1e6e72eddbc1deb2d56bfd967af8e22de89"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 40630,
+          "checksum_sha256": "46db128f8f6994d2bf22445ea7eb857af7f988940519a6a5e8a907495f9a2a72"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/butter-cookie/v001/butter-cookie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/butter-cookie/v001/butter-cookie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20830,
+          "checksum_sha256": "44e430dfc0ed6f733067787dbf20f69773f4cb5dafa4ed5f702762e022d8cfd0"
+        }
+      ]
+    },
+    {
+      "dish_id": "c03a6fda-9d7d-5a6f-9577-98475b22ffc3",
+      "dish_name": "Cake",
+      "slug": "cake",
+      "category": "Desserts",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/desserts/cake",
+      "storage_path": "cafe/desserts/cake/v001/cake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-2048w.webp",
+      "checksum_sha256": "09d8da0005fef9fb4945cf608397529a759ef9005562bf498f07a1e5243d2206",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 471346,
+          "checksum_sha256": "09d8da0005fef9fb4945cf608397529a759ef9005562bf498f07a1e5243d2206"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 237612,
+          "checksum_sha256": "d9cb7f1f0119ec5a4e045f97a7a7c532d533bb583c824f0d512792a9955c6892"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 168644,
+          "checksum_sha256": "e864a9ac4058be2c58de2c34827ef7aab043dbc8a403ba24a2e6d66638f54501"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 102006,
+          "checksum_sha256": "7197fd09fcac2e30e13e9421ab383a80644ef9fd38f33c1c4a3313a71c4595a5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 48244,
+          "checksum_sha256": "24b66e00bcc64fee2c93fb9fcc4f973fa9a83432c531a96932cc5c4abcdb7f4f"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/desserts/cake/v001/cake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/cake/v001/cake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22916,
+          "checksum_sha256": "f67a2c733f95cfbed627f1bb8838f8212bc79292fe6dfd2a20b23a2f5aa0e7ce"
+        }
+      ]
+    },
+    {
+      "dish_id": "1a4b9268-d095-5c91-96c3-aaf17696e54a",
+      "dish_name": "Chocolate Chip Cookie",
+      "slug": "chocolate-chip-cookie",
+      "category": "Cookies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/chocolate-chip-cookie",
+      "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-2048w.webp",
+      "checksum_sha256": "20a03958b4536103dac98266e756db6bfa2a090658ace44dac825b79a2054c1c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 433044,
+          "checksum_sha256": "20a03958b4536103dac98266e756db6bfa2a090658ace44dac825b79a2054c1c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 227488,
+          "checksum_sha256": "29fe041faaaa8f9377c0b89fd9e0b1a702e53887ceb82d5a53e80f95aaa9fa2e"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 167798,
+          "checksum_sha256": "a7d3ec9ee01ff371aea92a07e6ba2ee56b9a7924c1f1d82c69904135975fb1da"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 108546,
+          "checksum_sha256": "b4a8a873e0a384b46f9b12a1968b4976c762dd27d3dffac1f6784f1f80c2915c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 54622,
+          "checksum_sha256": "c70318ecf424a3eef18783d1e0ecaee4233d3bb7315b669268fc6f594de9c74e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/chocolate-chip-cookie/v001/chocolate-chip-cookie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25450,
+          "checksum_sha256": "8496dfa2232fa23652ffc36e013d8afaac550d707788afa12b041090cfb92891"
+        }
+      ]
+    },
+    {
+      "dish_id": "c4674376-f07a-538a-ae12-d46badcb7cd8",
+      "dish_name": "Oat Cookie",
+      "slug": "oat-cookie",
+      "category": "Cookies",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/desserts/oat-cookie",
+      "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-2048w.webp",
+      "checksum_sha256": "04c680a1d7b00a372ed46f918e4f09ff1e6265ba1042d1084ad49d180afe290f",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 577082,
+          "checksum_sha256": "04c680a1d7b00a372ed46f918e4f09ff1e6265ba1042d1084ad49d180afe290f"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 318664,
+          "checksum_sha256": "fa5f56fafb7d1b77666a8001f199763b1d55a629ab1d61f552db60ca9707a2c4"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 228266,
+          "checksum_sha256": "e29a143479aa97ad4490bde0feaf5bf3d6f8a3ee76aa5c5eaf2a5608c2527b80"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 143606,
+          "checksum_sha256": "9fc1af5485f477dbc3edf384d8c0ad70b41a8a1ab344535245232cb626711258"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 71434,
+          "checksum_sha256": "b55bb824b4fc6de7d2335badd1b859efb4c2de01263230710b37105d739e6519"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/desserts/oat-cookie/v001/oat-cookie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/desserts/oat-cookie/v001/oat-cookie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32370,
+          "checksum_sha256": "81ca22fe7599ae1dbf1fdb0ddba248b157e46a7b2dec51bd89bf22ac9a2fefa7"
+        }
+      ]
+    },
+    {
+      "dish_id": "38f64122-33bb-5a85-a718-a8928cacff58",
+      "dish_name": "Fruit Salad",
+      "slug": "fruit-salad",
+      "category": "Desserts",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/desserts/fruit-salad",
+      "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-2048w.webp",
+      "checksum_sha256": "fa2a1649e6ff5b310434e4de4c93e30331e1698d4ac875fb121adac034be2579",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 617348,
+          "checksum_sha256": "fa2a1649e6ff5b310434e4de4c93e30331e1698d4ac875fb121adac034be2579"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 331574,
+          "checksum_sha256": "ea263fa96eaee570c74a3197d723939cc9f604bb4b9eb24fce250f4341fddf5c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 228470,
+          "checksum_sha256": "e36d0017bf88dbfda760f924c9cefcddaf2c8ff5b86e00d2e871e344c5a57c14"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 136672,
+          "checksum_sha256": "126f4a7f88e2b3830012b36450a497dee564d04de6c65ad5f9426f61ca613f0a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 63454,
+          "checksum_sha256": "dedf9df9afa3ed0c78bbaf3234854cfa01ebcd22cef46d22c3e60b56c45dcb21"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/desserts/fruit-salad/v001/fruit-salad-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/desserts/fruit-salad/v001/fruit-salad-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27978,
+          "checksum_sha256": "66e5d0f72e18d5a6034c2db994c29a56d6ad2cea52fba0c8335343d9f23bfea2"
+        }
+      ]
+    },
+    {
+      "dish_id": "dd65b83d-1d1a-5ba1-8dc2-d3c15b4b7187",
+      "dish_name": "Ice Cream",
+      "slug": "ice-cream",
+      "category": "Desserts",
+      "restaurant_type": "Fast Food",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "fast-food/desserts/ice-cream",
+      "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-2048w.webp",
+      "checksum_sha256": "bff1b3543fb5147fc61b8762c6114e4a30d5ca1100e94ef312c663c8c5b531a4",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 387774,
+          "checksum_sha256": "bff1b3543fb5147fc61b8762c6114e4a30d5ca1100e94ef312c663c8c5b531a4"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 203788,
+          "checksum_sha256": "d80e945679f5251eeb3fd3dc7fedbf0593a772be825266790c63b26151e9ec98"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 153530,
+          "checksum_sha256": "5782bf1b0e40fea3afce149fead39f994c12ebb755c6841e9db7537d9c4d924a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 100980,
+          "checksum_sha256": "60ca39aacfce0fc3ee012439d07a0413f33a21854e7ed4bffd59047d97f0f8e9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 53278,
+          "checksum_sha256": "8b7482de7d960bdcfdeb5258b524cb2695e5b6a818334e5419c446186493c209"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/desserts/ice-cream/v001/ice-cream-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/ice-cream/v001/ice-cream-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23970,
+          "checksum_sha256": "c1928dcdf6e8cd25e573fd770e5cf19fcf0235077c41741b9cde2e0bf855420b"
+        }
+      ]
+    },
+    {
+      "dish_id": "79631fc9-2543-5cd8-a334-74d77dace1ea",
+      "dish_name": "Sundae",
+      "slug": "sundae",
+      "category": "Desserts",
+      "restaurant_type": "Fast Food",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "fast-food/desserts/sundae",
+      "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-2048w.webp",
+      "checksum_sha256": "885ca45db83ba6c67fa8694a356e5326d5cdab7eb84b8bed3eb6f686f158e871",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T12:13:07.177299+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 453548,
+          "checksum_sha256": "885ca45db83ba6c67fa8694a356e5326d5cdab7eb84b8bed3eb6f686f158e871"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 214842,
+          "checksum_sha256": "d92c0295c6c2cd80e5d078065f1b299a25f7adc83fda19e83a979a29a62b6af6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 158276,
+          "checksum_sha256": "7f2023fa6d85b3e8625e3aa2a77e0a37eef175da6f0772753cd744aa7ef1f036"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 99428,
+          "checksum_sha256": "a50897a23363062f8c89f366d6048724186d14076e25d9fc1a7a799ae6cf9283"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 53532,
+          "checksum_sha256": "fd69c1d2bf02bb1db42d0c28a81aea4e0aaf7a46d7238547c2da65eccdca0387"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "fast-food/desserts/sundae/v001/sundae-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/fast-food/desserts/sundae/v001/sundae-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26080,
+          "checksum_sha256": "0d042e2c9b3ee01cc4905dcb6a64d0698cc10c3ffe8959dfbbb70dad098f09e5"
+        }
+      ]
+    }
+  ]
+}
