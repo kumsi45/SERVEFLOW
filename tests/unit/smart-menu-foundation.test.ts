@@ -38,9 +38,9 @@ describe("Phase 9.12 ServeFlow Smart Menu foundation", () => {
     ]) {
       expect(libraryStep).toContain(`\"${type}\"`);
     }
-    expect(libraryStep).toContain('<select');
-    expect(libraryStep).toContain('id="smart-menu-restaurant-type"');
-    expect(libraryStep).not.toContain('role="radiogroup"');
+    expect(libraryStep).toContain('SmartMenuBusinessType');
+    expect(libraryStep).toContain('libraryTypeForBusiness');
+    expect(libraryStep).toContain('Business Type');
   });
 
   it("keeps the six global restaurant-type libraries", () => {

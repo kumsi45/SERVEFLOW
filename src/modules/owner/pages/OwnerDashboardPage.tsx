@@ -8672,11 +8672,17 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
 
 type SettingsFormState = {
   name: string;
+  businessType: string;
   totalTables: string;
   phone: string;
   email: string;
   address: string;
   description: string;
+  website: string;
+  instagram: string;
+  facebook: string;
+  tinVat: string;
+  receiptFooter: string;
   timezone: string;
   currency: string;
   currencySymbol: string;
@@ -8727,11 +8733,17 @@ function configToSettingsForm(
 
   return {
     name: config?.name ?? fallbackName,
+    businessType: jsonString(config?.profile ?? {}, "restaurant_type", "Restaurant"),
     totalTables: String(config?.total_tables ?? 20),
     phone: jsonString(config?.profile ?? {}, "phone"),
     email: jsonString(config?.profile ?? {}, "email"),
     address: jsonString(config?.profile ?? {}, "address"),
     description: jsonString(config?.profile ?? {}, "description"),
+    website: jsonString((config?.profile?.social_links as Record<string, unknown>) ?? {}, "website"),
+    instagram: jsonString((config?.profile?.social_links as Record<string, unknown>) ?? {}, "instagram"),
+    facebook: jsonString((config?.profile?.social_links as Record<string, unknown>) ?? {}, "facebook"),
+    tinVat: jsonString(config?.profile ?? {}, "tin_vat"),
+    receiptFooter: jsonString(config?.profile ?? {}, "receipt_footer"),
     timezone: jsonString(config?.profile ?? {}, "timezone", "Africa/Nairobi"),
     currency: config?.currency_code ?? "ETB",
     currencySymbol: config?.currency_symbol ?? "Br",
@@ -8987,6 +8999,14 @@ function SettingsPage({
           email: form.email.trim(),
           address: form.address.trim(),
           description: form.description.trim(),
+          restaurant_type: form.businessType,
+          tin_vat: form.tinVat.trim(),
+          receipt_footer: form.receiptFooter.trim(),
+          social_links: {
+            website: form.website.trim(),
+            instagram: form.instagram.trim(),
+            facebook: form.facebook.trim(),
+          },
           timezone: form.timezone.trim(),
           currency: currencyCode,
         },
@@ -9180,7 +9200,7 @@ function SettingsPage({
             <section className="od-card">
               <div className="od-card-header">
                 <div>
-                  <div className="od-card-title">Restaurant Profile</div>
+                  <div className="od-card-title">Business Information</div>
                   <div className="od-card-subtitle">
                     Core information used across owner and public experiences.
                   </div>
@@ -9188,7 +9208,7 @@ function SettingsPage({
               </div>
               <div className="od-settings-grid">
                 <label>
-                  Restaurant Name
+                  Business Name
                   <input
                     value={form.name}
                     onChange={(event) =>
@@ -9196,6 +9216,12 @@ function SettingsPage({
                     }
                     disabled={working}
                   />
+                </label>
+                <label>
+                  Business Type
+                  <select value={form.businessType} onChange={(event) => updateField("businessType", event.target.value)} disabled={working}>
+                    {['Restaurant', 'Cafe', 'Hotel', 'Fast Food', 'Bar', 'Lounge'].map((type) => <option value={type} key={type}>{type}</option>)}
+                  </select>
                 </label>
                 <label>
                   Phone
@@ -9237,6 +9263,26 @@ function SettingsPage({
                     }
                     disabled={working}
                   />
+                </label>
+                <label>
+                  Website
+                  <input inputMode="url" value={form.website} onChange={(event) => updateField("website", event.target.value)} disabled={working} />
+                </label>
+                <label>
+                  Instagram
+                  <input value={form.instagram} onChange={(event) => updateField("instagram", event.target.value)} disabled={working} />
+                </label>
+                <label>
+                  Facebook
+                  <input value={form.facebook} onChange={(event) => updateField("facebook", event.target.value)} disabled={working} />
+                </label>
+                <label>
+                  VAT / TIN
+                  <input value={form.tinVat} onChange={(event) => updateField("tinVat", event.target.value)} disabled={working} />
+                </label>
+                <label className="wide">
+                  Receipt Footer
+                  <input value={form.receiptFooter} onChange={(event) => updateField("receiptFooter", event.target.value)} disabled={working} />
                 </label>
                 <label>
                   Timezone

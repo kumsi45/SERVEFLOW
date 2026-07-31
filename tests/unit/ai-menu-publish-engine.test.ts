@@ -21,7 +21,8 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(preview).toContain("MENU_THEMES");
     expect(preview).toContain("PublicQrCartPanel");
     expect(preview).toContain("FoodInfoPanel");
-    expect(preview).toContain("Menu Ready Checklist");
+    expect(preview).toContain("Ready to publish");
+    expect(preview).toContain("Supported Languages");
     expect(preview).toContain("Refresh Preview");
     expect(preview).toContain('placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "owner-review")');
   });
@@ -63,7 +64,7 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(restoreMigration).toContain("restore_ai_menu_publish_version");
     expect(studio).toContain('setPublishStage("Publishing")');
     expect(studio).not.toContain("window.setInterval");
-    expect(studio).toContain("committing the menu atomically");
+    expect(studio).toContain("Approved content is being committed safely");
     expect(studio).toContain("Your Restaurant Is Live");
     expect(studio).toContain("Download QR");
     expect(studio).toContain("Print QR");
@@ -77,7 +78,7 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
   });
 
   it("finishes onboarding through the existing setup RPC after confirmed publish", () => {
-    expect(setup).toContain('title: "Customer Preview"');
+    expect(setup).toContain('title: "Preview & Publish"');
     expect(setup).toContain('mode="preview"');
     expect(setup).toContain("onFinishSetup={completeSetup}");
     expect(setup).toContain('supabase.rpc("complete_restaurant_setup"');

@@ -41,7 +41,17 @@ export async function loadMenuPreviewRestaurant(restaurantId: string): Promise<M
 
 export async function publishMenuDraft(restaurantId: string, draftId: string, expectedRevision: number): Promise<MenuPublishSummary> {
   const { data, error } = await supabase.functions.invoke("menu-publish", { body: { restaurantId, draftId, expectedRevision } });
-  if (error) throw new Error(error.message);
+  if (error) {
+    let message = error.message;
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = await context.clone().json() as { error?: unknown };
+        if (typeof payload.error === "string" && payload.error.trim()) message = payload.error;
+      } catch { /* Keep the SDK fallback when the response is not JSON. */ }
+    }
+    throw new Error(message);
+  }
   const payload = data as MenuPublishSummary & { error?: string };
   if (payload.error) throw new Error(payload.error);
   return payload;

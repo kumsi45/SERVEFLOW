@@ -108,7 +108,7 @@ export const OwnerMenuItemCard = memo(function OwnerMenuItemCard({
       </div>
 
       <footer>
-        <button className="danger" type="button" onClick={onRemove} disabled={!canEdit}>Remove</button>
+        <button className="danger" type="button" onClick={onRemove} disabled={!canEdit}>Delete</button>
       </footer>
     </article>
   );

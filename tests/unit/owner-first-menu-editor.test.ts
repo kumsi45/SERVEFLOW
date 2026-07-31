@@ -14,9 +14,9 @@ const ownerBranch = studio.slice(
 
 describe("Phase 9.12.3 owner-first menu editor", () => {
   it("uses the approved onboarding title and simple summary", () => {
-    expect(wizard).toContain('title: "Edit Your Digital Menu"');
-    expect(wizard).toContain("Review your menu before publishing. Change prices, photos, descriptions and categories anytime.");
-    for (const label of ["Menu Items", "Categories", "Need Prices", "Ready"]) {
+    expect(wizard).toContain('title: "Review Your Menu"');
+    expect(wizard).toContain("Add prices and make any final edits before continuing.");
+    for (const label of ["Menu Items", "Categories", "Missing Prices", "Ready Items"]) {
       expect(ownerBranch).toContain(label);
     }
   });
@@ -39,9 +39,11 @@ describe("Phase 9.12.3 owner-first menu editor", () => {
     expect(card).not.toMatch(/confidence|language|translation|inventory|nutrition|notes|source|approve/i);
   });
 
-  it("relies on autosave and provides only Remove on each card", () => {
-    expect(card).toContain(">Remove</button>");
-    expect(card).not.toMatch(/>Save<|>Delete<|>Duplicate<|Hide from|Generate|Restore|Approve/);
+  it("relies on autosave and provides premium card actions", () => {
+    expect(card).toContain("Change Photo");
+    expect(card).not.toContain("Upload Photo");
+    expect(card).toContain(">Delete</button>");
+    expect(card).not.toMatch(/>Save<|>Duplicate<|Hide from|Generate|Restore|Approve/);
     expect(ownerBranch).toContain('"✓ Saved"');
     expect(ownerBranch).toContain('"Saving..."');
   });

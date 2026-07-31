@@ -30,11 +30,11 @@ const css = read(
 describe("Phase 9.8.1 AI Menu Builder upload foundation", () => {
   it("uses the five-step menu-first onboarding flow", () => {
     const flow = [
-      "Restaurant Basics",
-      "Choose Restaurant Type",
-      "Edit Your Digital Menu",
-      "Restaurant Branding",
-      "Customer Preview",
+      "Business Information",
+      "Choose Your Smart Menu Library",
+      "Review Your Menu",
+      "Brand Your Menu",
+      "Preview & Publish",
     ];
     let previousIndex = -1;
     for (const label of flow) {

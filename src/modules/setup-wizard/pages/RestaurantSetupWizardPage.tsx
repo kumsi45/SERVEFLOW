@@ -3,8 +3,7 @@ import { supabase } from "../../../core/database";
 import { createSmartImagePublicUrl } from "../../../core/presentation/smartImageDelivery";
 import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { AiMenuReviewStudio } from "../components/AiMenuReviewStudio";
-import { SmartMenuLibraryStep, type SmartMenuRestaurantType } from "../components/SmartMenuLibraryStep";
-import { persistMenuPreviewTheme } from "../services/menuPublishService";
+import { SmartMenuLibraryStep, type SmartMenuBusinessType } from "../components/SmartMenuLibraryStep";
 import { clearReviewStudioSession } from "../services/reviewStudioSessionService";
 import "./restaurantSetupWizard.css";
 
@@ -16,51 +15,29 @@ type SetupWizardProps = {
 
 type BrandingAssetType = "logo" | "cover";
 
-const RESTAURANT_TYPES: SmartMenuRestaurantType[] = [
-  "Restaurant", "Hotel", "Cafe", "Fast Food", "Bar & Lounge", "Bakery",
-];
+const BUSINESS_TYPES: SmartMenuBusinessType[] = ["Restaurant", "Cafe", "Hotel", "Fast Food", "Bar", "Lounge"];
 
-const WEEK_DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-] as const;
-
-const LANGUAGES = [
-  { id: "en", label: "English" },
-  { id: "am", label: "Amharic" },
-  { id: "om", label: "Afaan Oromoo" },
-] as const;
-
-const THEMES: Array<{ id: MenuTheme; label: string }> = [
-  { id: "modern", label: "Modern" },
-  { id: "luxury", label: "Premium" },
-];
 
 const STEPS = [
   {
-    title: "Restaurant Basics",
-    subtitle: "Tell us the essentials. You can refine everything later.",
+    title: "Business Information",
+    subtitle: "Just the essentials to get your business ready.",
   },
   {
-    title: "Choose Restaurant Type",
-    subtitle: "Start with a professionally curated ServeFlow Smart Menu.",
+    title: "Choose Your Smart Menu Library",
+    subtitle: "Start with a professionally curated menu built for your business.",
   },
   {
-    title: "Edit Your Digital Menu",
-    subtitle: "Review your menu before publishing. Change prices, photos, descriptions and categories anytime.",
+    title: "Review Your Menu",
+    subtitle: "Add prices and make any final edits before continuing.",
   },
   {
-    title: "Restaurant Branding",
-    subtitle: "Make the customer experience feel unmistakably yours.",
+    title: "Brand Your Menu",
+    subtitle: "Add your logo and cover, or continue with ServeFlow defaults.",
   },
   {
-    title: "Customer Preview",
-    subtitle: "See exactly what customers will see, then publish when ready.",
+    title: "Preview & Publish",
+    subtitle: "Choose a theme, preview every device, and go live.",
   },
 ] as const;
 
@@ -99,7 +76,7 @@ export function RestaurantSetupWizardPage({
   const [tableCount, setTableCount] = useState(20);
   const [restaurantInfo, setRestaurantInfo] = useState({
     restaurantName,
-    restaurantType: "Restaurant" as SmartMenuRestaurantType,
+    restaurantType: "Restaurant" as SmartMenuBusinessType,
     phone: "",
     address: "",
     description: "",
@@ -155,8 +132,8 @@ export function RestaurantSetupWizardPage({
 
         setRestaurantInfo({
           restaurantName: typeof data?.name === "string" ? data.name : restaurantName,
-          restaurantType: RESTAURANT_TYPES.includes(profile.restaurant_type as SmartMenuRestaurantType)
-            ? profile.restaurant_type as SmartMenuRestaurantType
+          restaurantType: BUSINESS_TYPES.includes(profile.restaurant_type as SmartMenuBusinessType)
+            ? profile.restaurant_type as SmartMenuBusinessType
             : "Restaurant",
           phone: typeof profile.phone === "string" ? profile.phone : "",
           address: typeof profile.address === "string" ? profile.address : "",
@@ -238,28 +215,6 @@ export function RestaurantSetupWizardPage({
     return () => window.clearTimeout(timer);
   }, [sessionRestored]);
 
-  function toggleClosedDay(day: string) {
-    setHours((previous) => ({
-      ...previous,
-      closedDays: previous.closedDays.includes(day)
-        ? previous.closedDays.filter((entry) => entry !== day)
-        : [...previous.closedDays, day],
-    }));
-  }
-
-  function toggleLanguage(language: string) {
-    setBranding((previous) => {
-      const selected = previous.languages.includes(language);
-      if (selected && previous.languages.length === 1) return previous;
-      return {
-        ...previous,
-        languages: selected
-          ? previous.languages.filter((entry) => entry !== language)
-          : [...previous.languages, language],
-      };
-    });
-  }
-
   async function uploadBrandingAsset(assetType: BrandingAssetType, file: File | null) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -302,10 +257,8 @@ export function RestaurantSetupWizardPage({
   function canContinue() {
     if (step === 0) {
       return restaurantInfo.restaurantName.trim().length >= 2
-        && restaurantInfo.phone.trim().length > 0
-        && restaurantInfo.address.trim().length > 0;
+        && restaurantInfo.phone.trim().length > 0;
     }
-    if (step === 3) return Boolean(hours.opensAt && hours.closesAt && branding.languages.length);
     return true;
   }
 
@@ -315,17 +268,6 @@ export function RestaurantSetupWizardPage({
       return;
     }
     setError(null);
-    if (step === 3) {
-      try {
-        setSubmitting(true);
-        await persistMenuPreviewTheme(restaurantId, branding.theme);
-      } catch (themeError) {
-        setError(themeError instanceof Error ? themeError.message : "Could not save the selected theme.");
-        return;
-      } finally {
-        setSubmitting(false);
-      }
-    }
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -413,15 +355,16 @@ export function RestaurantSetupWizardPage({
         <div className="setup-body">
           {step === 0 ? (
             <div className="setup-grid setup-basics-form">
-              <label>Restaurant Name<input autoFocus required autoComplete="organization" value={restaurantInfo.restaurantName} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantName: event.target.value })} /></label>
-              <label>Phone<input required inputMode="tel" autoComplete="tel" value={restaurantInfo.phone} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, phone: event.target.value })} /></label>
-              <label>Address<input required autoComplete="street-address" value={restaurantInfo.address} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, address: event.target.value })} /></label>
-              <label className="wide">Short Description<textarea maxLength={240} value={restaurantInfo.description} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, description: event.target.value })} /><small>{restaurantInfo.description.length}/240</small></label>
+              <label>Business Name <span className="setup-required">Required</span><input autoFocus required autoComplete="organization" value={restaurantInfo.restaurantName} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantName: event.target.value })} /></label>
+              <label>Business Type <span className="setup-required">Required</span><select required value={restaurantInfo.restaurantType} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, restaurantType: event.target.value as SmartMenuBusinessType })}>{BUSINESS_TYPES.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
+              <label>Phone Number <span className="setup-required">Required</span><input required inputMode="tel" autoComplete="tel" value={restaurantInfo.phone} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, phone: event.target.value })} /></label>
+              <label>Address <span className="setup-optional">Optional</span><input autoComplete="street-address" value={restaurantInfo.address} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, address: event.target.value })} /></label>
+              <label className="wide">Short Description <span className="setup-optional">Optional</span><textarea maxLength={240} value={restaurantInfo.description} onChange={(event) => setRestaurantInfo({ ...restaurantInfo, description: event.target.value })} /><small>{restaurantInfo.description.length}/240</small></label>
             </div>
           ) : null}
 
           {step === 1 ? (
-            <SmartMenuLibraryStep restaurantId={restaurantId} selectedType={restaurantInfo.restaurantType} onTypeChange={(restaurantType) => setRestaurantInfo({ ...restaurantInfo, restaurantType })} onBusyChange={handleImportBusyChange} onLoaded={() => void next()} />
+            <SmartMenuLibraryStep restaurantId={restaurantId} selectedType={restaurantInfo.restaurantType} onBusyChange={handleImportBusyChange} onLoaded={() => void next()} />
           ) : null}
 
           {step === 2 ? (
@@ -430,42 +373,20 @@ export function RestaurantSetupWizardPage({
 
           {step === 3 ? (
             <div className="setup-branding">
-              <section className="setup-branding-assets" aria-label="Restaurant images">
+              <div className="setup-default-branding-note"><strong>Branding is optional</strong><span>If you skip this step, your menu will use polished ServeFlow default branding.</span></div>
+              <section className="setup-branding-assets" aria-label="Business images">
                 <label className="setup-asset-card logo">
-                  <span>Logo</span>
-                  <span className="setup-asset-preview">{logoPreviewUrl ? <img src={logoPreviewUrl} alt="Restaurant logo preview" /> : <span aria-hidden="true">Logo</span>}</span>
+                  <span>Logo <small>Optional</small></span>
+                  <span className="setup-asset-preview">{logoPreviewUrl ? <img src={logoPreviewUrl} alt="Business logo preview" /> : <span aria-hidden="true">SF</span>}</span>
                   <span className="setup-upload-button">{assetUploading === "logo" ? "Uploading..." : "Choose Logo"}<input type="file" accept="image/*" disabled={assetUploading !== null} onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} /></span>
                 </label>
                 <label className="setup-asset-card cover">
-                  <span>Cover Image</span>
-                  <span className="setup-asset-preview cover">{coverPreviewUrl ? <img src={coverPreviewUrl} alt="Restaurant cover preview" /> : <span aria-hidden="true">Cover</span>}</span>
+                  <span>Cover Image <small>Optional</small></span>
+                  <span className="setup-asset-preview cover">{coverPreviewUrl ? <img src={coverPreviewUrl} alt="Business cover preview" /> : <span aria-hidden="true">ServeFlow default cover</span>}</span>
                   <span className="setup-upload-button">{assetUploading === "cover" ? "Uploading..." : "Choose Cover"}<input type="file" accept="image/*" disabled={assetUploading !== null} onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} /></span>
                 </label>
               </section>
 
-              <section className="setup-branding-section">
-                <h2>Menu style</h2>
-                <div className="setup-theme-options">{THEMES.map((theme) => <button type="button" aria-pressed={branding.theme === theme.id} className={branding.theme === theme.id ? "selected" : ""} onClick={() => setBranding({ ...branding, theme: theme.id })} key={theme.id}><span className={`setup-theme-swatch ${theme.id}`} />{theme.label}</button>)}</div>
-              </section>
-
-              <section className="setup-branding-section">
-                <h2>Business hours</h2>
-                <div className="setup-grid"><label>Opening<input type="time" value={hours.opensAt} onChange={(event) => setHours({ ...hours, opensAt: event.target.value })} /></label><label>Closing<input type="time" value={hours.closesAt} onChange={(event) => setHours({ ...hours, closesAt: event.target.value })} /></label></div>
-                <div className="setup-choice-row wrap" aria-label="Closed days">{WEEK_DAYS.map((day) => <button type="button" aria-pressed={hours.closedDays.includes(day)} className={hours.closedDays.includes(day) ? "selected" : ""} onClick={() => toggleClosedDay(day)} key={day}>{day.slice(0, 3)}</button>)}</div>
-              </section>
-
-              <section className="setup-branding-section">
-                <h2>Menu languages</h2>
-                <div className="setup-choice-row">{LANGUAGES.map((language) => <button type="button" aria-pressed={branding.languages.includes(language.id)} className={branding.languages.includes(language.id) ? "selected" : ""} onClick={() => toggleLanguage(language.id)} key={language.id}>{language.label}</button>)}</div>
-              </section>
-
-              <section className="setup-grid setup-branding-details">
-                <label>Instagram<input placeholder="@restaurant" value={branding.instagram} onChange={(event) => setBranding({ ...branding, instagram: event.target.value })} /></label>
-                <label>Facebook<input placeholder="Page name or URL" value={branding.facebook} onChange={(event) => setBranding({ ...branding, facebook: event.target.value })} /></label>
-                <label>Website<input inputMode="url" placeholder="https://" value={branding.website} onChange={(event) => setBranding({ ...branding, website: event.target.value })} /></label>
-                <label>VAT / TIN<input value={branding.tinVat} onChange={(event) => setBranding({ ...branding, tinVat: event.target.value })} /></label>
-                <label className="wide">Receipt Footer<input value={branding.receiptFooter} onChange={(event) => setBranding({ ...branding, receiptFooter: event.target.value })} /></label>
-              </section>
             </div>
           ) : null}
 

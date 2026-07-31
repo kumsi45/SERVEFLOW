@@ -9,6 +9,12 @@ export type SmartMenuRestaurantType =
   | "Bar & Lounge"
   | "Bakery";
 
+export type SmartMenuBusinessType = "Restaurant" | "Cafe" | "Hotel" | "Fast Food" | "Bar" | "Lounge";
+
+export function libraryTypeForBusiness(type: SmartMenuBusinessType): SmartMenuRestaurantType {
+  return type === "Bar" || type === "Lounge" ? "Bar & Lounge" : type;
+}
+
 const OPTIONS: Array<{
   type: SmartMenuRestaurantType;
   label: string;
@@ -24,8 +30,7 @@ const OPTIONS: Array<{
 
 type Props = {
   restaurantId: string;
-  selectedType: SmartMenuRestaurantType;
-  onTypeChange: (type: SmartMenuRestaurantType) => void;
+  selectedType: SmartMenuBusinessType;
   onBusyChange: (busy: boolean) => void;
   onLoaded: () => void;
 };
@@ -33,20 +38,20 @@ type Props = {
 export const SmartMenuLibraryStep = memo(function SmartMenuLibraryStep({
   restaurantId,
   selectedType,
-  onTypeChange,
   onBusyChange,
   onLoaded,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const selectedOption = OPTIONS.find((option) => option.type === selectedType) ?? OPTIONS[0];
+  const libraryType = libraryTypeForBusiness(selectedType);
+  const selectedOption = OPTIONS.find((option) => option.type === libraryType) ?? OPTIONS[0];
 
   async function loadLibrary() {
     try {
       setBusy(true);
       onBusyChange(true);
       setError(null);
-      await createSmartMenuLibraryDraft(restaurantId, selectedType);
+      await createSmartMenuLibraryDraft(restaurantId, libraryType);
       onLoaded();
     } catch {
       setError("We couldn't load the ServeFlow Smart Menu. Please retry.");
@@ -61,30 +66,22 @@ export const SmartMenuLibraryStep = memo(function SmartMenuLibraryStep({
       <div className="smart-menu-library-intro">
         <span className="smart-menu-library-mark" aria-hidden="true">SF</span>
         <div>
-          <h2>Choose your restaurant type</h2>
-          <p>ServeFlow will prepare a professionally curated menu draft for your restaurant type.</p>
+          <h2>Choose Your Smart Menu Library</h2>
+          <p>A professionally curated starting point, selected for your business and ready to personalize.</p>
         </div>
       </div>
 
-      <label className="smart-menu-type-field" htmlFor="smart-menu-restaurant-type">
-        <span>Restaurant type</span>
-        <select
-          id="smart-menu-restaurant-type"
-          value={selectedType}
-          onChange={(event) => onTypeChange(event.target.value as SmartMenuRestaurantType)}
-        >
-          {OPTIONS.map((option) => (
-            <option value={option.type} key={option.type}>{option.label}</option>
-          ))}
-        </select>
-        <small>{selectedOption.description}</small>
-      </label>
+      <dl className="smart-menu-library-details">
+        <div><dt>Business Type</dt><dd>{selectedType}</dd></div>
+        <div><dt>Selected Library</dt><dd>{selectedOption.label}</dd></div>
+      </dl>
 
       <section className="smart-menu-library-summary" aria-live="polite">
         <div>
           <span>Selected library</span>
-          <strong>{selectedType}</strong>
-          <small>Categories, descriptions and image references included. Add your prices in Review Studio.</small>
+          <strong>{selectedOption.label} Essentials</strong>
+          <small>{selectedOption.description}. A polished foundation you can edit before publishing.</small>
+          <ul aria-label="Included with this library"><li>Categories</li><li>Menu Items</li><li>AI Food Photography</li><li>Smart Descriptions</li><li>Smart Organization</li></ul>
         </div>
         <button className="setup-primary" type="button" disabled={busy} onClick={() => void loadLibrary()}>
           {busy ? "Preparing Menu..." : "Load Smart Menu"}
