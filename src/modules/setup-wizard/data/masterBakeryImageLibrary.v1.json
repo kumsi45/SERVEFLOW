@@ -1,0 +1,916 @@
+{
+  "library": "ServeFlow Phase 9.13.12 Bakery Master Images",
+  "version": "1.0",
+  "phase": "9.13.12",
+  "categories": [
+    "Bread",
+    "Bakery",
+    "Pastries"
+  ],
+  "generated_at": "2026-07-31T11:29:25.827737+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "b9a7621a-0f98-5f3f-ac30-1aa5238bc952",
+      "dish_name": "Brown Bread",
+      "slug": "brown-bread",
+      "category": "Bread",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/brown-bread",
+      "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-2048w.webp",
+      "checksum_sha256": "e2b4e634e2a6f637c229e6e3e78421114f83357b44e6219bacdda65b98176203",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 754678,
+          "checksum_sha256": "e2b4e634e2a6f637c229e6e3e78421114f83357b44e6219bacdda65b98176203"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 412820,
+          "checksum_sha256": "d3dd07398152bf020d1add4c9b74995a55a51a9460f725fe50a4ed0f8d2783b8"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 284886,
+          "checksum_sha256": "5bf97f6f28d4eaa6d6e7a65ffd9f7ac2d03b213133240d458c5d74964b5b2019"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 176016,
+          "checksum_sha256": "bef8a6118b39eff2d69b75cd31623ec877a5ed06f80edda5e2be497fd1aaa970"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 84932,
+          "checksum_sha256": "b8fb1ecf479b64f3409863c3e8af3ed4d2d8622e7967858af2842dad03b4442f"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/brown-bread/v001/brown-bread-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/brown-bread/v001/brown-bread-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35936,
+          "checksum_sha256": "f594160175a9e5cc6512bb051a7d00c21c383e45d3b1422cf13802e6c1792bc8"
+        }
+      ]
+    },
+    {
+      "dish_id": "962c82ff-7c95-52dd-9577-2c2a1ae3e88f",
+      "dish_name": "French Bread",
+      "slug": "french-bread",
+      "category": "Bread",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/french-bread",
+      "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-2048w.webp",
+      "checksum_sha256": "9cdbc3f6fd9dd9a36eff37b450312962c56ead3d98a6484de6e72023bd43e6fe",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 453538,
+          "checksum_sha256": "9cdbc3f6fd9dd9a36eff37b450312962c56ead3d98a6484de6e72023bd43e6fe"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 240904,
+          "checksum_sha256": "bafc341b51868832501a690df063c83f76f15174fa1d5da08adad9c9352452ae"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 169324,
+          "checksum_sha256": "bce1f8d72cccabac2e668413d2eaba191c3f3d70231372c34a8bd7578a54f4a4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107228,
+          "checksum_sha256": "7b5099b221906e2e8045fa6aa7b6779f5f2bf4d09cf78ce2dfc4c9ffc7e3dc57"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50636,
+          "checksum_sha256": "f496bac0660b0484d460ec3fd6d6aff4ba4587574a93df00432a5bbc418e0af6"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/french-bread/v001/french-bread-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/french-bread/v001/french-bread-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22574,
+          "checksum_sha256": "07e21dd5517b0d370944c25f9143a1e27da5b07cc391acb373c54fc4044cbad2"
+        }
+      ]
+    },
+    {
+      "dish_id": "fbea8708-6c8b-5be1-ac51-34903b2cdd7a",
+      "dish_name": "Milk Bread",
+      "slug": "milk-bread",
+      "category": "Bread",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/milk-bread",
+      "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-2048w.webp",
+      "checksum_sha256": "9c4ca70a192711c4cc37954313386c38bb584fe61e9f95676f82c48d7dd62fd9",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 513934,
+          "checksum_sha256": "9c4ca70a192711c4cc37954313386c38bb584fe61e9f95676f82c48d7dd62fd9"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 267270,
+          "checksum_sha256": "494002ddd3e690afcf4711e939821fadb00c21acc23336e4929d456b562f7eea"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 199774,
+          "checksum_sha256": "0b91fd248561d70f1058cc2f45084799651fc2330061590d77c5644b8c6027d8"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 125626,
+          "checksum_sha256": "5cef60e6cc776fa62f0f6efb9d351c5bd80428d7a07290514a858d21e22e8e1c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 59690,
+          "checksum_sha256": "ca6ab7c92423a1b862ef26136c3e76736f7e007195036af98f206be19b75e1dc"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/milk-bread/v001/milk-bread-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/milk-bread/v001/milk-bread-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26194,
+          "checksum_sha256": "ed51372c74bf3376dc474bfef0dd4c48708de94859b85b5cec8cc96992e73679"
+        }
+      ]
+    },
+    {
+      "dish_id": "f5cec876-c9a0-5303-bc3a-23496fb5af6e",
+      "dish_name": "White Bread",
+      "slug": "white-bread",
+      "category": "Bread",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/white-bread",
+      "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-2048w.webp",
+      "checksum_sha256": "d92e4fd399a92b070c462f6742be9d3a68649fb83ad8ad18b37bb96e6316b222",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 571582,
+          "checksum_sha256": "d92e4fd399a92b070c462f6742be9d3a68649fb83ad8ad18b37bb96e6316b222"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 310164,
+          "checksum_sha256": "aa6ee1560739bc96bd72fc493bffa7a84d8513393e0cc0e4e75a0e78b03275fe"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 222496,
+          "checksum_sha256": "9fb26c64f523c096362ba82a0b8d532812ddf6ef868accb1905163d0f7596596"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 136950,
+          "checksum_sha256": "8d5bb20e216cedafc43caa296dfae90582cd06015ba24dec8e415cb393ffe6a7"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62934,
+          "checksum_sha256": "ed4536196ea4c24fa013f981e7b0a32fc796456e3c1c86b1d6be35f28c8345d9"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/white-bread/v001/white-bread-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/white-bread/v001/white-bread-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25776,
+          "checksum_sha256": "e4084cbe090b8601906dfb73086383e09a769675cfbc8a4147d3d49b5eb4b619"
+        }
+      ]
+    },
+    {
+      "dish_id": "12417436-2667-5deb-92c2-2cbe83f924e5",
+      "dish_name": "Brownie",
+      "slug": "brownie",
+      "category": "Bakery",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/desserts/brownie",
+      "storage_path": "cafe/desserts/brownie/v001/brownie-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-2048w.webp",
+      "checksum_sha256": "7a64ac491b1910be1a433d15935c8430f304935fe8492386fdb3b6da35d86baf",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 450010,
+          "checksum_sha256": "7a64ac491b1910be1a433d15935c8430f304935fe8492386fdb3b6da35d86baf"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 232222,
+          "checksum_sha256": "79e73421287fc6e4c907df0cdb2bd2f79ad0a0d50af2cb429f8a68a8236558f9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 167896,
+          "checksum_sha256": "cf932fba7e733fa04547593b50b7a3da6515aebab17dfe44dd57e618860d2f38"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104858,
+          "checksum_sha256": "c42203d0324b9b8ca22cb7e941072d9d0b25f3b2554716c3d21a84b68fd03069"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 53624,
+          "checksum_sha256": "c04fe258dc0034192b169a9e92e20c2c70a01f817f13b60b305c35baa2f44d1d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/desserts/brownie/v001/brownie-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/desserts/brownie/v001/brownie-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24770,
+          "checksum_sha256": "2066bd96a6a28aef55b1676408a15c979f0903a05c4e3e8558983a4724d15467"
+        }
+      ]
+    },
+    {
+      "dish_id": "2432907a-0532-574c-b89d-639975fdafc3",
+      "dish_name": "Cookies",
+      "slug": "cookies",
+      "category": "Bakery",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/bakery/cookies",
+      "storage_path": "cafe/bakery/cookies/v001/cookies-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-2048w.webp",
+      "checksum_sha256": "bb65ec4b9ef8a0a3fa3a13f1e9b9d33100f730a9ccdd29adab9266c38b49dffa",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 450226,
+          "checksum_sha256": "bb65ec4b9ef8a0a3fa3a13f1e9b9d33100f730a9ccdd29adab9266c38b49dffa"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 243824,
+          "checksum_sha256": "0ab78af92701e5a758ba1419184d3d85d34db19c093fcbee032a1332c5ca1202"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 183228,
+          "checksum_sha256": "62e2af53dd2dda68e48ed4cef411df26ca48735bfef2baab371135931eeb49d2"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 115540,
+          "checksum_sha256": "1fed622b99e81f9eadf92e010c8e7b02f7641d9b848f1152d7e6abeff6c5b589"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 58432,
+          "checksum_sha256": "dca526e711dbdc36d91fc548191a6128c587f3e78caf22dd123c518be679b1d9"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/bakery/cookies/v001/cookies-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/cookies/v001/cookies-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26296,
+          "checksum_sha256": "1dbfd03422580cfa1016f44fc4403ff959ddf36b7e7f616a053f600bf28513b3"
+        }
+      ]
+    },
+    {
+      "dish_id": "2620886f-4485-52d4-ae85-53a2033ca031",
+      "dish_name": "Croissant",
+      "slug": "croissant",
+      "category": "Bakery",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/croissant",
+      "storage_path": "bakery/bakery/croissant/v001/croissant-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-2048w.webp",
+      "checksum_sha256": "58039ff1015e41bbd83fa8366a49fb572834b666ec6bad316a6294680a9d4ab1",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 560536,
+          "checksum_sha256": "58039ff1015e41bbd83fa8366a49fb572834b666ec6bad316a6294680a9d4ab1"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 296562,
+          "checksum_sha256": "3d369884ba90773127d69b15a774de8ac4e61e3358a73e3bc34ff92e596ecc96"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 209424,
+          "checksum_sha256": "c82abe424975db16b409d809a7f8633829f6fba4cf71125dc6e4ea11e7613e34"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 128340,
+          "checksum_sha256": "746e5db35149bd67c8ba342aefc18be803b0c8f540caf0f7850de00289b71b21"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62808,
+          "checksum_sha256": "450a428215cdaae44b4d12719fe7be9447eb74905173ffa7a361ae0be079c54d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/croissant/v001/croissant-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/croissant/v001/croissant-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26964,
+          "checksum_sha256": "50d89b89d077408046837d28f3e5ca4b9696b1795ea60cc5e90c5f4ac013aff8"
+        }
+      ]
+    },
+    {
+      "dish_id": "b37f2cde-c997-5038-bc83-a83706efdeff",
+      "dish_name": "Danish Pastry",
+      "slug": "danish-pastry",
+      "category": "Pastries",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/danish-pastry",
+      "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-2048w.webp",
+      "checksum_sha256": "275569a6736bdc429101730258e079b8282b2a574cae5251fcc470c105b50804",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 468922,
+          "checksum_sha256": "275569a6736bdc429101730258e079b8282b2a574cae5251fcc470c105b50804"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 260268,
+          "checksum_sha256": "b6c9f582d67869c298536a7c8546eda392e559c3b5bdfa13c2cd3b0110ea7706"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 181038,
+          "checksum_sha256": "15b2bc531b9634abd8366f37027abdcd7ad786a3ca53af0120e0cd6f04e0f43e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 118184,
+          "checksum_sha256": "f9844775422fdca860cb10668e95a7c4cba9d8d32f180031e561263d4a093ef9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 59700,
+          "checksum_sha256": "1ab5f177a5bd9ba07a423003d6a5449a7d7ff693f94d0e40eef391b9d0f0e2f2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/danish-pastry/v001/danish-pastry-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/danish-pastry/v001/danish-pastry-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26744,
+          "checksum_sha256": "65ec04cc29ab788a15df40d2c0c7cfa35e1a60fcf7cf4211c7c862615c5f92e5"
+        }
+      ]
+    },
+    {
+      "dish_id": "8641a384-fdb6-5de8-a441-8495794881c7",
+      "dish_name": "Donut",
+      "slug": "donut",
+      "category": "Bakery",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/bakery/donut",
+      "storage_path": "cafe/bakery/donut/v001/donut-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-2048w.webp",
+      "checksum_sha256": "e408fe859bbd5df34a5241c3a4d8acff24b050762e4492d970df3747d27b9b58",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 415916,
+          "checksum_sha256": "e408fe859bbd5df34a5241c3a4d8acff24b050762e4492d970df3747d27b9b58"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 202270,
+          "checksum_sha256": "0f56cd6c010d07c829a243179989f971f4da1acfd0bffb208b10954e5f974a88"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 140630,
+          "checksum_sha256": "b1bbce6ef4a1209c16bb520c99ce040cab2bed46f611c938dc2ded82e5fce53f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 88138,
+          "checksum_sha256": "5d861acaec71f22205efff093e209d5fa357a78abc5c12e8178e1cf9f0d10ebc"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 41850,
+          "checksum_sha256": "33b1bb5e033369b2a564b3436ab4d2568eaf7abde95f2e36fa93c4d64461945a"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/bakery/donut/v001/donut-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/donut/v001/donut-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 18612,
+          "checksum_sha256": "4316a54cdae143111f112ff8434a515ac0cf437506ab5cca5e7474c99351bdaa"
+        }
+      ]
+    },
+    {
+      "dish_id": "f9a87de5-4fce-5971-a06d-6da30631f4c9",
+      "dish_name": "Muffin",
+      "slug": "muffin",
+      "category": "Bakery",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/bakery/muffin",
+      "storage_path": "cafe/bakery/muffin/v001/muffin-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-2048w.webp",
+      "checksum_sha256": "8012ff6d5fb0bc464d77332ba823e43c7f4ea68635f801611e0eeec8ea1eddb8",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 471412,
+          "checksum_sha256": "8012ff6d5fb0bc464d77332ba823e43c7f4ea68635f801611e0eeec8ea1eddb8"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 254292,
+          "checksum_sha256": "c52d3557344130bff5ebbcbeb8bb249ca0b3a59f09e2962922ca6f2339d8f71b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 186158,
+          "checksum_sha256": "fc52f17e2c61c28d4fe627c5eddbff4f81c0d5e00bf073ab43df0885c0681230"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 111790,
+          "checksum_sha256": "b9ca514112f006f54b9b2ad7ff9deb5509b5afb1244b3b4be14ab7b39db2cd33"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 56882,
+          "checksum_sha256": "8a52baf3d7894a804814620d53fdb94c236087daa974da6aa57a676915fd30c1"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/bakery/muffin/v001/muffin-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/bakery/muffin/v001/muffin-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25108,
+          "checksum_sha256": "11ef336e1eeaea3a08036d3648fa7d4de35d13151f861a5e4d8a6a4140f88ca0"
+        }
+      ]
+    },
+    {
+      "dish_id": "c217f7bc-53f7-5b09-847a-78a66d6989a1",
+      "dish_name": "Puff Pastry",
+      "slug": "puff-pastry",
+      "category": "Pastries",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/bakery/puff-pastry",
+      "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-2048w.webp",
+      "checksum_sha256": "ae5dc5186642c834ea696683852b8d107e65fa42712682b766100257e0227012",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T11:29:25.827737+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 474902,
+          "checksum_sha256": "ae5dc5186642c834ea696683852b8d107e65fa42712682b766100257e0227012"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 253054,
+          "checksum_sha256": "3366283abca5897d35135972139056002f66d346637322cba82544a0fcc123b8"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 182116,
+          "checksum_sha256": "3ee026365a934605cb62140e173cc0a5cdce826c7114a78a3cf47f4448d09f92"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 116932,
+          "checksum_sha256": "b9de43089bfd29c1b876700ec4910ceec8abf8feaaa3419c270374127b98b3ad"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 56862,
+          "checksum_sha256": "4c29bc8f2617da47c40818f2b386a62170bc6f92ae44489cc9d91a69ce8f5dc7"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/bakery/puff-pastry/v001/puff-pastry-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/bakery/puff-pastry/v001/puff-pastry-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25778,
+          "checksum_sha256": "bea023c14d22d5f20b1d5d16b21c5921e53e89094ccef1c5c86cf9550a95d7a3"
+        }
+      ]
+    }
+  ]
+}
