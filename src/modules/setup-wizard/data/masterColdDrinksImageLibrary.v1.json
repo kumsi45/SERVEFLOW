@@ -1,0 +1,1163 @@
+{
+  "library": "ServeFlow Phase 9.13.10 Cold Drinks Master Images",
+  "version": "1.0",
+  "phase": "9.13.10",
+  "categories": [
+    "Fresh Juice",
+    "Milkshakes",
+    "Cold Drinks",
+    "Soft Drinks"
+  ],
+  "generated_at": "2026-07-31T07:19:00.710755+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "170edee2-4a21-55be-af23-8247c3aa20ea",
+      "dish_name": "Avocado Juice",
+      "slug": "avocado-juice",
+      "category": "Fresh Juice",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/fresh-juice/avocado-juice",
+      "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-2048w.webp",
+      "checksum_sha256": "cbf888ab9d39ee2e97a06002e5cb49f40d155e4cdfff7dc578e0e3fff8594188",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 261392,
+          "checksum_sha256": "cbf888ab9d39ee2e97a06002e5cb49f40d155e4cdfff7dc578e0e3fff8594188"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 130918,
+          "checksum_sha256": "498727d0985d522b26f5e452cf7b5ba7e6aac0fb877f419e81f8c0e0e33610a5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 91106,
+          "checksum_sha256": "8a42d3ff0aba39e2561e560937bd7915b87052d671001fd96bb28d23e78cbd43"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 55562,
+          "checksum_sha256": "d96a390f604939394e7725037f984718c1b16fa462af024f331b1accab0c7d96"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27268,
+          "checksum_sha256": "5b5d940b8b13e0e7788bbc493117fb0ad36437396ba80271f78239fb6716702a"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/avocado-juice/v001/avocado-juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 12782,
+          "checksum_sha256": "8f83904919d04e133bf0efee628376408895878d8801906c39ea56557fd5d603"
+        }
+      ]
+    },
+    {
+      "dish_id": "4f16772a-f6ff-5f61-a118-06d1c78daed4",
+      "dish_name": "Mango Juice",
+      "slug": "mango-juice",
+      "category": "Fresh Juice",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/fresh-juice/mango-juice",
+      "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-2048w.webp",
+      "checksum_sha256": "66ad48f0349013eb01ee649577338af46cba30433a16691d4806c6eca0790520",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 319150,
+          "checksum_sha256": "66ad48f0349013eb01ee649577338af46cba30433a16691d4806c6eca0790520"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 164252,
+          "checksum_sha256": "95fca7562a35c5a4334fbe6b3e368bde135b93c72469cd5aeec8e7dfb1327f52"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 115642,
+          "checksum_sha256": "1a30455ce6cd43faaec5b79f12c527dff0a62d9ef2f47283ab5e2cdd3aaf0e1d"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 72710,
+          "checksum_sha256": "0fae283a5c3c2a1e291d9e17d57737b84e7bb1d8dcb64f5ed649b87b23011030"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35398,
+          "checksum_sha256": "ca429b8c3e41bbebe8c8d156dfaeb7beac8d620d7ae2fc593fa0c362e7fbb94c"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/fresh-juice/mango-juice/v001/mango-juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mango-juice/v001/mango-juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 15430,
+          "checksum_sha256": "c051a6de73a77125f7ecde501fad3fc174dd2e2e076c304749f5ccd30255c074"
+        }
+      ]
+    },
+    {
+      "dish_id": "4f473267-6395-576f-8962-a8a2bc6a1984",
+      "dish_name": "Orange Juice",
+      "slug": "orange-juice",
+      "category": "Fresh Juice",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/fresh-juice/orange-juice",
+      "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-2048w.webp",
+      "checksum_sha256": "af822c7d2342e108290961328f1a0fc446e16a3939c9a2b6071a59b260767364",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 285058,
+          "checksum_sha256": "af822c7d2342e108290961328f1a0fc446e16a3939c9a2b6071a59b260767364"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 144146,
+          "checksum_sha256": "b19ba5d311a6583eb4e1a4c3ea01843b6704bd54aeb36101787a47ec02a42e0e"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 101614,
+          "checksum_sha256": "c566b8236c295f0d37bdf416eecfe919f46e0f1c6ec90fdd954bb4a0099726d4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62874,
+          "checksum_sha256": "ec80d7ded03ab91b65d8b593a6f0f73132abdb613415fc0fc2b554b78744c23d"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 29802,
+          "checksum_sha256": "bfa34b4757f05aad1c45899650074cb6b0f547511a4772a4aafbe591508659f0"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/fresh-juice/orange-juice/v001/orange-juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/orange-juice/v001/orange-juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 14800,
+          "checksum_sha256": "1e68a3628e6f5861dbe7b29ff8678c531fd206260cf19913b9f6b2dacbe2b6f8"
+        }
+      ]
+    },
+    {
+      "dish_id": "b4cfc000-63af-51f7-b9a4-1d1aac2f698b",
+      "dish_name": "Pineapple Juice",
+      "slug": "pineapple-juice",
+      "category": "Fresh Juice",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/fresh-juice/pineapple-juice",
+      "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-2048w.webp",
+      "checksum_sha256": "68873ae450209fb3b0c4b5d464473b0aaab86853116e42ccaa0d7e4b5f036a66",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 329176,
+          "checksum_sha256": "68873ae450209fb3b0c4b5d464473b0aaab86853116e42ccaa0d7e4b5f036a66"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 174046,
+          "checksum_sha256": "f57738058bcc5d7f3265d23b5ee698bb94f1b04abfd2afa34f8962f1cde6f7a5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 122380,
+          "checksum_sha256": "43a646fc5cfa9205667329c0bfd75ab8f76d10901d82f139d65ddf189a16aa22"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 74148,
+          "checksum_sha256": "2d2114d7a3d5dc94913fadba2b0ca6ef4df5fa387e5e2817bcc29a17bfeff33b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 37358,
+          "checksum_sha256": "3962fce078d018ccf2f2f048d5c96786d79f3ada1de3546203543f1ff0c58149"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/pineapple-juice/v001/pineapple-juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 15946,
+          "checksum_sha256": "8f7b28f87c5698dd4b0832501e2423153f0fd2653e0a6a46f4272e485e48e417"
+        }
+      ]
+    },
+    {
+      "dish_id": "21b46c49-457b-51a0-b858-3d1c203900b2",
+      "dish_name": "Mixed Juice",
+      "slug": "mixed-juice",
+      "category": "Fresh Juice",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/fresh-juice/mixed-juice",
+      "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-2048w.webp",
+      "checksum_sha256": "2f62cca92e22ad3eebb2ad2f0d0aeee39a01b00e7456c7b38f74a5c3bd79e82b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 307350,
+          "checksum_sha256": "2f62cca92e22ad3eebb2ad2f0d0aeee39a01b00e7456c7b38f74a5c3bd79e82b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 157314,
+          "checksum_sha256": "1e063859a033fe11dd426b7e285f2091cd980c9fcd24e05e0ef2de4f4f920b58"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107394,
+          "checksum_sha256": "d8813bd301ed057ce530817b3ab95f54e85caa0c5f569c14c3e43420f20746e9"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65460,
+          "checksum_sha256": "0b7ac5fabb8a444c80a9ec3a35d1729c391503d63f9c097faffcecbec5650f24"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33684,
+          "checksum_sha256": "25e96937966a6fda0326968d5b136aa1450026069fb6abda33eb43685008a1cc"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/fresh-juice/mixed-juice/v001/mixed-juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 14590,
+          "checksum_sha256": "c74f437182752b59ec638ba9737dcf735547c57fa5b8067059314a449c1be42a"
+        }
+      ]
+    },
+    {
+      "dish_id": "4784a011-f05e-566f-b286-d199700f7cc2",
+      "dish_name": "Juice",
+      "slug": "juice",
+      "category": "Cold Drinks",
+      "restaurant_type": "Bakery",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bakery/fresh-juice/juice",
+      "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-2048w.webp",
+      "checksum_sha256": "8e70f07cd71a0be25400511f961a8502133c54604ae57219a558190bd962f172",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 344400,
+          "checksum_sha256": "8e70f07cd71a0be25400511f961a8502133c54604ae57219a558190bd962f172"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 177666,
+          "checksum_sha256": "f92425f62fae1ae28c531ef234ea2e33100c1d1fd06ea571ab2155c840ddca20"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 125544,
+          "checksum_sha256": "8bab6798224208db35e9bd4be873c36fdaff973643ae7c979d56fa0130fc5478"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 77956,
+          "checksum_sha256": "5ac123fb389f06b799e36db988c2c32f4fcb63aa4dbc803c1606dfeadfd24759"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 41098,
+          "checksum_sha256": "acae2a2feefe107c79c6ca2e822da2b7f17c9c110cc2178c8b8f74bb4b922646"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bakery/fresh-juice/juice/v001/juice-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bakery/fresh-juice/juice/v001/juice-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 17906,
+          "checksum_sha256": "edfd6e73cb08a4b9e283cc8e8fa33fa7251d47be962ac7ee4fc22fa464d33a45"
+        }
+      ]
+    },
+    {
+      "dish_id": "0a8f3247-f067-5bf7-bd57-0b576d842ba7",
+      "dish_name": "Banana Milkshake",
+      "slug": "banana-milkshake",
+      "category": "Milkshakes",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/smoothies-milkshakes/banana-milkshake",
+      "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-2048w.webp",
+      "checksum_sha256": "d79685bb2cec90ea4a1f2ba7ed4ed475ec52ce6b4004cbb6c979c02eda51384d",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 201642,
+          "checksum_sha256": "d79685bb2cec90ea4a1f2ba7ed4ed475ec52ce6b4004cbb6c979c02eda51384d"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104010,
+          "checksum_sha256": "5e19659f6bee2fa073548ca6f3dc630b835bcdf5f7a07aac3076ba144c5f9244"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 78412,
+          "checksum_sha256": "b5dfc164855671542e2de058805bc08f6ba4aabf58c5a182ae2bca0c46d5a034"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50878,
+          "checksum_sha256": "0d30b43c2e62241957c193753c35ec8901a67ee640c8f1e485a58862cb368569"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26524,
+          "checksum_sha256": "e1c2b6ef5ef09f5baabfe8ce5d10e5ed960550d68d17f1658fdc488d1c89b408"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/banana-milkshake/v001/banana-milkshake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 13212,
+          "checksum_sha256": "948100685f70e9025f203099ef7b252b27cb4382b76d8304b714b3ee74fa7914"
+        }
+      ]
+    },
+    {
+      "dish_id": "cd14607f-ce95-5838-a823-e2c18c4a254a",
+      "dish_name": "Chocolate Milkshake",
+      "slug": "chocolate-milkshake",
+      "category": "Milkshakes",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake",
+      "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-2048w.webp",
+      "checksum_sha256": "436862eb15a2c9497f0a2ac145a4f772fd660e4fd62a9f26517502341f7fa77c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 321044,
+          "checksum_sha256": "436862eb15a2c9497f0a2ac145a4f772fd660e4fd62a9f26517502341f7fa77c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 167518,
+          "checksum_sha256": "a9a5a87919c8110adcce9b8f997084829b2108c5addca2929d1d94ed3f424cf1"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 121318,
+          "checksum_sha256": "9353cbd98dc9ac056c99d591153facba5b2cbed3daf25f349a66363e5e1bf576"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 83286,
+          "checksum_sha256": "240e9468864dc8d8c044770e1656e9644d6a4ed3dc065e5005b21694909fc9f8"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42910,
+          "checksum_sha256": "56e518625febebff8d3cf10986822823a0c5734264ee89cdda4f2d418e88ddd0"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/chocolate-milkshake/v001/chocolate-milkshake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20340,
+          "checksum_sha256": "1f2d1ba876970ffc2efb65be713140a50f93133aedbdefb10fb0b3f971a63dc3"
+        }
+      ]
+    },
+    {
+      "dish_id": "ea5a40b0-e425-5b29-98f1-862867b26f80",
+      "dish_name": "Mango Milkshake",
+      "slug": "mango-milkshake",
+      "category": "Milkshakes",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/smoothies-milkshakes/mango-milkshake",
+      "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-2048w.webp",
+      "checksum_sha256": "d8c90a4a468638407a60b749885e51340a0a271c4d7933dace454496a9bd84fe",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 256702,
+          "checksum_sha256": "d8c90a4a468638407a60b749885e51340a0a271c4d7933dace454496a9bd84fe"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 131002,
+          "checksum_sha256": "45992167044cdd3511d03f7fd5a6b57045b593c401a1edd028ca9c22b8d8ed2f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 93122,
+          "checksum_sha256": "3b3a90ce0ef8f33fe57982695852d8a0c141a5595641b3cdad45984539178c3f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 58336,
+          "checksum_sha256": "d499ebd25194bd605ddaace17ccd80d2f71a54b9a70119fcaa3eea741d9a516d"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28332,
+          "checksum_sha256": "678df40da39fa313ee85d1c73e276846d4b205ff8ce543204a11b8a797d9cb6e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/mango-milkshake/v001/mango-milkshake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 14322,
+          "checksum_sha256": "3301d8ac2f700b4429b644d264258577eb728fcd9926df59f5a3c987a2feece5"
+        }
+      ]
+    },
+    {
+      "dish_id": "230c45b7-5e32-5ad7-9c82-7f224a870bf5",
+      "dish_name": "Strawberry Milkshake",
+      "slug": "strawberry-milkshake",
+      "category": "Milkshakes",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake",
+      "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-2048w.webp",
+      "checksum_sha256": "98d4392ebda05bbd1f928fcbe4e958644e13788ba993181af873cb31b3fe0b45",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 252412,
+          "checksum_sha256": "98d4392ebda05bbd1f928fcbe4e958644e13788ba993181af873cb31b3fe0b45"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 131568,
+          "checksum_sha256": "aa137bf345c3f0906a1d615911933f5418a13677efca4cfed27ce616240f75dd"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 94306,
+          "checksum_sha256": "cacc45f8ddb6324efa1152ff246b33cb90eb8ebbd393bb697107c89c6532cfcb"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 61320,
+          "checksum_sha256": "6bfb1874516f7849ea0164390145cd2a17e75190dda76115ac6275012128b5e3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32396,
+          "checksum_sha256": "dbfd537e4e4d1c174c66abd1396c3f5b7a7ec9691d9a893237f39082933907b7"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/strawberry-milkshake/v001/strawberry-milkshake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 15978,
+          "checksum_sha256": "ba54e2cdc1f79df96741e297f9fbde4ce1db3554e06ab0dee47badf9537c605d"
+        }
+      ]
+    },
+    {
+      "dish_id": "1163e6a0-a13a-5653-990e-00806f534dc1",
+      "dish_name": "Vanilla Milkshake",
+      "slug": "vanilla-milkshake",
+      "category": "Milkshakes",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake",
+      "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-2048w.webp",
+      "checksum_sha256": "04d5330f078279216baff01d3d4e35be0721a0330d0f5c31f213cb91009fa564",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 218232,
+          "checksum_sha256": "04d5330f078279216baff01d3d4e35be0721a0330d0f5c31f213cb91009fa564"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 111658,
+          "checksum_sha256": "794d3ce72349220c869c3917725a3f6727b234146f997b1033e9cb3f756ca59c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 82382,
+          "checksum_sha256": "b3b927f2322588d60c2024651f94d0b448f6d6bbf305412460f698f0810cea87"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 51486,
+          "checksum_sha256": "7cf91b4ccbcb76de82836ab9ec7ce1477d8614991549357c1b0864486c5ecc3a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27410,
+          "checksum_sha256": "7f009d5e0350a03cb4b6d7025fd2c8c69e14286a8a9d1cf7f0fd8af2273b9881"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/smoothies-milkshakes/vanilla-milkshake/v001/vanilla-milkshake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 12768,
+          "checksum_sha256": "e7f238bcefdebb5567a473f01595b82e0ee64091389eb35dc8b9249e45bee377"
+        }
+      ]
+    },
+    {
+      "dish_id": "eb10584e-257f-580d-9a45-45215a29c3fc",
+      "dish_name": "Energy Drink",
+      "slug": "energy-drink",
+      "category": "Cold Drinks",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/soft-drinks/energy-drink",
+      "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-2048w.webp",
+      "checksum_sha256": "25296ab608343461412be8439f4882a0845160576b33b42305dd35880e9e0940",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 439626,
+          "checksum_sha256": "25296ab608343461412be8439f4882a0845160576b33b42305dd35880e9e0940"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 227486,
+          "checksum_sha256": "f01cf75c2b2f084a13566efe50b3089224d103ba4753bcc4954db06922558c9d"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 159588,
+          "checksum_sha256": "0bc2f20b096f2c531e946e8ee555e916592b272faa671146d6a77c707a149845"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 95070,
+          "checksum_sha256": "2bd3886a0175785af83f37238145bc6b8591f9b409d625a8a7563eb01db5883a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 45002,
+          "checksum_sha256": "36246c83156ed9f5c8a824f2c2fea27daefaa8aaf3ef4d328beff065e7f48b79"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/energy-drink/v001/energy-drink-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20182,
+          "checksum_sha256": "414de906c2d11628771b36210ca905cac4d6ea7d2c539210dcdf99be6fd0fc81"
+        }
+      ]
+    },
+    {
+      "dish_id": "52576e73-81fe-5ed2-808d-bad16397366f",
+      "dish_name": "Water",
+      "slug": "water",
+      "category": "Cold Drinks",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/soft-drinks/water",
+      "storage_path": "hotel/soft-drinks/water/v001/water-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-2048w.webp",
+      "checksum_sha256": "791493332f6407eaa501142a579b3a95fe1325cc5c1ba74287c663f483365a92",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 307036,
+          "checksum_sha256": "791493332f6407eaa501142a579b3a95fe1325cc5c1ba74287c663f483365a92"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 156376,
+          "checksum_sha256": "0cf6d542e1edc6aebbffae47585f61c9901dab19b9b2572e8cbc1540baa00bba"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 108770,
+          "checksum_sha256": "7726398dddbcff60339e835239d903769eb37fec3dc7bda863d867ee074ffa8c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65380,
+          "checksum_sha256": "2409864606de558b07648002a4ee02a2843f28bf7c7d9eb0bf97d985d4eae47c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32610,
+          "checksum_sha256": "a17bc620b33dcd139c90a60c229e719b3b911c5778ddb8b203cfeec4664a6eb2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/soft-drinks/water/v001/water-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/soft-drinks/water/v001/water-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 14034,
+          "checksum_sha256": "0761d3d8b58e5ded08acdbf2121eafa19345c69b655f274727fdbe21ae09936e"
+        }
+      ]
+    },
+    {
+      "dish_id": "71b8bcd3-e416-57c6-9964-7d7484854838",
+      "dish_name": "Soda Water",
+      "slug": "soda-water",
+      "category": "Soft Drinks",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/soft-drinks/soda-water",
+      "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-2048w.webp",
+      "checksum_sha256": "71b86b202613ebd9dd7d20a4a59e4b18a0e6fd529d07c3178b3f9c370df4533b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T07:19:00.710755+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 421018,
+          "checksum_sha256": "71b86b202613ebd9dd7d20a4a59e4b18a0e6fd529d07c3178b3f9c370df4533b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 227040,
+          "checksum_sha256": "9e4b8ea3ea42831ca32b083308592fc0fa892bf285efa37d1d0145c5e6158dec"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 159386,
+          "checksum_sha256": "44f3545d98169ee1bc65809bf8e803ac3c2dbca4324ea569f1b89b0611f414eb"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 94554,
+          "checksum_sha256": "fab13af91e083c0f465e044ff9641a938b10eb36d91f9d8c043f486eaf62c751"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 44342,
+          "checksum_sha256": "d87b0e5a45248284198bf81fe4b78f2c9aea3965798a83afb9520fc1017048fc"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/soft-drinks/soda-water/v001/soda-water-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 18934,
+          "checksum_sha256": "f981857a54c446e8a70df9cb013ea26084c1e3662d6e8b8d1e1c070a7c7838da"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1410 @@
+{
+  "library": "ServeFlow Phase 9.13.11 Alcohol Master Images",
+  "version": "1.0",
+  "phase": "9.13.11",
+  "categories": [
+    "Beer",
+    "Wine",
+    "Whisky",
+    "Cocktails",
+    "Mocktails"
+  ],
+  "generated_at": "2026-07-31T09:03:13.477571+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "4e58bb2a-752c-50a2-8406-b6f66e84649f",
+      "dish_name": "Bottled Beer",
+      "slug": "bottled-beer",
+      "category": "Beer",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/bottled-beer",
+      "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-2048w.webp",
+      "checksum_sha256": "463afc6a2f53cd007a4575e67a6e71120c82e66304764627da899b59c5492b29",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 484936,
+          "checksum_sha256": "463afc6a2f53cd007a4575e67a6e71120c82e66304764627da899b59c5492b29"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 258144,
+          "checksum_sha256": "8ef082db741dffb572af443ef92ccbc94171d440ba394dd555ce79065d93b767"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 179740,
+          "checksum_sha256": "d4ae5de383680c29a9047d7cb6476e855d15c72f22970955a090bbc2dd14d7ea"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 113020,
+          "checksum_sha256": "3f5ab06ecfaf5420baebb94904f982c6a16051518a44a9e2a1edc8dec394dd61"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 51780,
+          "checksum_sha256": "fa8473a5acf6d1e6bcae48b216122720b56066f54ecf57b348f67c46457cc8ad"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/bottled-beer/v001/bottled-beer-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 22458,
+          "checksum_sha256": "5291800186de44b922044f57fbd1d3eab9ce1100fc5d4e97c45a53aa802bfb83"
+        }
+      ]
+    },
+    {
+      "dish_id": "fc79b14f-3929-5e9a-9a54-642fd296c4bb",
+      "dish_name": "Draft Beer",
+      "slug": "draft-beer",
+      "category": "Beer",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/draft-beer",
+      "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-2048w.webp",
+      "checksum_sha256": "e20dcfe193ae5a5d38862cd25274ad9ba1e08ecc391fa1a4f02815bfef16bd1e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 635674,
+          "checksum_sha256": "e20dcfe193ae5a5d38862cd25274ad9ba1e08ecc391fa1a4f02815bfef16bd1e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 341840,
+          "checksum_sha256": "197047be760f2afcc02bcc1bbcade86af2e95ea598b7969104c97ce56d6bac1a"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 235278,
+          "checksum_sha256": "6347856baed96942f753db91d61a1ed0f7020b07f5da7e9b5c92c9807764f90e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 136816,
+          "checksum_sha256": "41a8ba59f40ef75bcf5503561710db9bfd1de455d123dce75a35d88a3c1ad0c4"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65040,
+          "checksum_sha256": "35375c123ad17d953ebf12f0dcb7682cb96e3acc0b09b3771be721057d10637e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/draft-beer/v001/draft-beer-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27596,
+          "checksum_sha256": "d27b11a42d97fe438d30fcf21d6d579f16be107dbcf77e216967ff7869cacd79"
+        }
+      ]
+    },
+    {
+      "dish_id": "8212c572-1970-5063-8d8d-13a9c6bb7064",
+      "dish_name": "Local Beer",
+      "slug": "local-beer",
+      "category": "Beer",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/local-beer",
+      "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-2048w.webp",
+      "checksum_sha256": "85dd1264b2e8e52cb3fbbc45bc2f9ed76c42be40d843aa98d858359a50240b2b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 558216,
+          "checksum_sha256": "85dd1264b2e8e52cb3fbbc45bc2f9ed76c42be40d843aa98d858359a50240b2b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 289594,
+          "checksum_sha256": "4049142405dfdf7b2c2d94e39baed793770bf82b2af8407c618a4ab36c3887ad"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 201724,
+          "checksum_sha256": "ff0ea96f369b773a60eac77baa35d4d0d1288df6fccb903ef7ad5cffcee07bf1"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 119850,
+          "checksum_sha256": "e0fd14dba72a7e61ddfeb1ddda5edeac4216cc3905dab15b5023b03d10350a61"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 56786,
+          "checksum_sha256": "d9f7583d65195171acadd427e2fbb09b7cc56a3fa97e5582c43050d842a5d9c2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/local-beer/v001/local-beer-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24282,
+          "checksum_sha256": "c5281c68baf4945df32eb4c9583f0236d73c09fc79d8b221bc59a61baa19e6d1"
+        }
+      ]
+    },
+    {
+      "dish_id": "b68ea5a0-a7b3-505a-8f3d-5e03265089fe",
+      "dish_name": "Red Wine",
+      "slug": "red-wine",
+      "category": "Wine",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/red-wine",
+      "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-2048w.webp",
+      "checksum_sha256": "df215225afe9372d59720e514719f38c1c16e0ddb9230dea1a511cacc2b09d63",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 251842,
+          "checksum_sha256": "df215225afe9372d59720e514719f38c1c16e0ddb9230dea1a511cacc2b09d63"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 132878,
+          "checksum_sha256": "66cd0684f3720dc116412710034a5674ccda606f337213836a492ffe2a34679b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 99272,
+          "checksum_sha256": "e8153c482e44191382b60a9348c2c664ce6f538618c7326800c6cb9b2649f761"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 70974,
+          "checksum_sha256": "cc489a6be29c6d8b85d61d397f28ec69c2345e1172c70aa6ad88edbb048407b5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 39664,
+          "checksum_sha256": "5d2f36744293b1fe94c994d4726d559a5cc40478b8626f7b1ada3eb81b7bc042"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/red-wine/v001/red-wine-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20690,
+          "checksum_sha256": "90bde0b571c6d090379f368d4339a793cd18cd01aa539e49b9eca2d6563f930c"
+        }
+      ]
+    },
+    {
+      "dish_id": "0607807f-128a-5bfe-a7d9-acb1b10e9013",
+      "dish_name": "White Wine",
+      "slug": "white-wine",
+      "category": "Wine",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/white-wine",
+      "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-2048w.webp",
+      "checksum_sha256": "e0e40c3ec1a0edb681787e10c7da82cdc0adb1e2a2d595dd4aa629a4c57a30b1",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 309070,
+          "checksum_sha256": "e0e40c3ec1a0edb681787e10c7da82cdc0adb1e2a2d595dd4aa629a4c57a30b1"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 137476,
+          "checksum_sha256": "b6af4df35b1167c84d6bdfc83da96796b064fac70b41d15b70622bdb6f81f5ad"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 95978,
+          "checksum_sha256": "8f7154080d2f211e0fccb4f7d9698ea4b34a6dc700ed10c4f3af5dab0dcd40af"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 64022,
+          "checksum_sha256": "3de4d4c568d0c4b80b08e3cb51275edda0a1a5eb7546b8e32f567ee6b7768389"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 34228,
+          "checksum_sha256": "2c51aa3e92966a0e1cc930b8d521036571b858095a227b5ca58bce6104a0c95b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/white-wine/v001/white-wine-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 16684,
+          "checksum_sha256": "944d712b4613245ee1bd3a0ad39d7b251a5b7de3858a23a7c95ee07204fc5623"
+        }
+      ]
+    },
+    {
+      "dish_id": "0bb9e0db-05eb-50d3-b74e-6b4a8972843e",
+      "dish_name": "Sparkling Wine",
+      "slug": "sparkling-wine",
+      "category": "Wine",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine",
+      "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-2048w.webp",
+      "checksum_sha256": "de6ac1c51b9c78483f47181af01dec754eec54e50eca758f74a04018723da167",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 349106,
+          "checksum_sha256": "de6ac1c51b9c78483f47181af01dec754eec54e50eca758f74a04018723da167"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 181420,
+          "checksum_sha256": "2875a005abed63934398db12cc9152321d915990b11f64df66f7fda81b1d1ea9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 128102,
+          "checksum_sha256": "f7fc252c9ab1c63fa7a30595c2ef8ecb35dd13c63fbb81e213c9d417d9827274"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 83304,
+          "checksum_sha256": "07340ab6bb8bf4cecd9dd67413f960fea087cf0c6f4737d1774eb2570393410c"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42018,
+          "checksum_sha256": "24643d23c0da342c4e2bcbcd7a71d5b3ba22564cc9f648fe04e93a5caeaab8f8"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/sparkling-wine/v001/sparkling-wine-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 19932,
+          "checksum_sha256": "fea8fbff29ac43bc2b6676a219371392fdef110a744a56b17c2c4a035a11dec9"
+        }
+      ]
+    },
+    {
+      "dish_id": "b76b9d36-0d85-5a37-8b10-1f95a262d670",
+      "dish_name": "Jack Daniel's",
+      "slug": "jack-daniel-s",
+      "category": "Whisky",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s",
+      "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-2048w.webp",
+      "checksum_sha256": "63631ba5063b02eccf539d4d0b5a1163851f103f52a94a5c2bc1cbe4491b5080",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 461376,
+          "checksum_sha256": "63631ba5063b02eccf539d4d0b5a1163851f103f52a94a5c2bc1cbe4491b5080"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 240060,
+          "checksum_sha256": "2760e53dd1a9922fecb6a6ef63622e8a606f4a18fd95b87d7e4b119eb52ce184"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 171150,
+          "checksum_sha256": "93094c03f208f96099c089a1800eb21e9532f2a6c166c39ce5dc1a45d1d315db"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 108346,
+          "checksum_sha256": "c08fd1c2d5f4ff15d12399a6064e4731b664e738623a27b195b2f044bddd77b2"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52618,
+          "checksum_sha256": "4f45853de6b02ab0b1ee473f3c9ef832904f540d9e1d18c50a77afc3b427b78d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jack-daniel-s/v001/jack-daniel-s-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 24236,
+          "checksum_sha256": "9c7a6080cd897c78b22e9c9a86511938d87e652f47a310ffd9c1fcb2881181d6"
+        }
+      ]
+    },
+    {
+      "dish_id": "57057cb0-d265-55bf-88ee-1ff9ef2e9a5a",
+      "dish_name": "Jameson",
+      "slug": "jameson",
+      "category": "Whisky",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/jameson",
+      "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-2048w.webp",
+      "checksum_sha256": "436225a74f8c401d1f21bc6e31c3ae23cadf2d2be14c02bd0ad893df99927b0e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 334250,
+          "checksum_sha256": "436225a74f8c401d1f21bc6e31c3ae23cadf2d2be14c02bd0ad893df99927b0e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 169010,
+          "checksum_sha256": "eeb49a3054aea1c4c179cb4547f5e68d7ec3080f1de9870b6206cd37c10f44f6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 124048,
+          "checksum_sha256": "2bbfdd8b18c6ea1250a6b8daf6920f97371b9c645aecb95d06cc51be3c60c1ea"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 80738,
+          "checksum_sha256": "0271db1f7d53926198b4b900a09fc956696552c94a096ee932cbc41f4ac0ebd6"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43824,
+          "checksum_sha256": "b1fad6903e091742a0c4191452b5bb70b5848fbbd411108e76902cf82567bed3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/jameson/v001/jameson-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20386,
+          "checksum_sha256": "cc2b6c08fd8f79f241fa40d9b2f06689b7eb4dc088bd1e54f0af5ed3f200aa91"
+        }
+      ]
+    },
+    {
+      "dish_id": "046ebc5e-0eec-572b-8626-72592be4104d",
+      "dish_name": "Johnnie Walker",
+      "slug": "johnnie-walker",
+      "category": "Whisky",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker",
+      "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-2048w.webp",
+      "checksum_sha256": "8826247c38db4c5e6f686bb47dc0f19a82f6247ff3528256559bb597981c906c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 375486,
+          "checksum_sha256": "8826247c38db4c5e6f686bb47dc0f19a82f6247ff3528256559bb597981c906c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 197690,
+          "checksum_sha256": "34edda0711e8f00482445cb2840e446f18f30dc0b5b1b2b7a309841ed9bd4eb7"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 138504,
+          "checksum_sha256": "3aab9696f3e9b1864c055289919ac699af8ccc0fb87a8932388c8d8c56ff816e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 90966,
+          "checksum_sha256": "39d8ab2196d7943098098e2623e5714e23e3ebceb870dc630b466c83d1cff190"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 45742,
+          "checksum_sha256": "a562c3cb6c9b10fcd7947be7e5079d82097a2d1aad5ad297d9542be2bc945581"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/johnnie-walker/v001/johnnie-walker-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 21694,
+          "checksum_sha256": "2651811bafeb2aab31cec73ccac2b07a35c302022d4fc04348c24e90ca129e41"
+        }
+      ]
+    },
+    {
+      "dish_id": "3ccf9561-d6e7-5450-bf84-632f5d0e1ebf",
+      "dish_name": "Cosmopolitan",
+      "slug": "cosmopolitan",
+      "category": "Cocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan",
+      "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-2048w.webp",
+      "checksum_sha256": "cda2a097fa5e6c8016ab8e405171e1d8c3e75f817a286bfcb0def06888aa3e00",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 273210,
+          "checksum_sha256": "cda2a097fa5e6c8016ab8e405171e1d8c3e75f817a286bfcb0def06888aa3e00"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 132596,
+          "checksum_sha256": "ce0acffa0cf887454946249db476f8eca38e01dc83b0dbc02bdd2528dda36e6b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 97272,
+          "checksum_sha256": "5d594765e33586fe120ac4a9e4e8268ebddc671f55469ae92c6c74041997b209"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 63192,
+          "checksum_sha256": "909c6d2dd3735d021b23d34139af7ba4dda70aca5488bd06b9043a69413039e5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35546,
+          "checksum_sha256": "edce83d7cb20e2fe7bcc3eeae6dc485c09eab929ceda05fd005f28dc9e9f9023"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/cosmopolitan/v001/cosmopolitan-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 18080,
+          "checksum_sha256": "9ea0674c70e631bcda4321ce6e697aefaaae7725316e0332905baacfbb7a0002"
+        }
+      ]
+    },
+    {
+      "dish_id": "5561b217-f23f-5dae-9d0a-f77f7fcf591f",
+      "dish_name": "Long Island Iced Tea",
+      "slug": "long-island-iced-tea",
+      "category": "Cocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea",
+      "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-2048w.webp",
+      "checksum_sha256": "b78f798bdbbf98b913c19af628555367ec04da788d5b762ab5cd1391b63e0d79",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 521520,
+          "checksum_sha256": "b78f798bdbbf98b913c19af628555367ec04da788d5b762ab5cd1391b63e0d79"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 274574,
+          "checksum_sha256": "fb9ee63cea3fd39c082053dbe6ccabec50b2a8ebde3270064926b4753c8762bc"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 189742,
+          "checksum_sha256": "0296513ba6f968a8b8ba230094bfe93a35001aa772c2f8af2f4bd388c93c8f2d"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 113788,
+          "checksum_sha256": "20170ebbf38e20ae531417836f024a3a310c63acc1d508d0c86f03f947831fd0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 53616,
+          "checksum_sha256": "5299b1a6d628302d6407e44fc936f2eb5266b818f5117d10bd4fb1253f42f482"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/long-island-iced-tea/v001/long-island-iced-tea-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23718,
+          "checksum_sha256": "990a86d552fdfa29427a4efd3b3d1d3223aaafce7ae32deb94b518d663e09fc3"
+        }
+      ]
+    },
+    {
+      "dish_id": "0b3316b1-6154-5bc8-b2f6-2319cb61fa10",
+      "dish_name": "Margarita",
+      "slug": "margarita",
+      "category": "Cocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/margarita",
+      "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-2048w.webp",
+      "checksum_sha256": "fb5df2679fb2a7d6cc0acc8887cdc0c0c190f72eb6d566c837730e55f2487c8f",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 284022,
+          "checksum_sha256": "fb5df2679fb2a7d6cc0acc8887cdc0c0c190f72eb6d566c837730e55f2487c8f"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 144580,
+          "checksum_sha256": "f5eeeeaffcb1a4bd58975395079314adc49562734ed7ed0259c2f954ec003a65"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107282,
+          "checksum_sha256": "774e00f7e78ca13069e7ef9e23fe82212d10b07210959f7afaf6e67a934b6968"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 67782,
+          "checksum_sha256": "e1abd3d61ec04dc0c7946bc2b23a42053e74167b67aed0079455e7175e3ede97"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 39048,
+          "checksum_sha256": "5f0ed78e1d1d8be347254bd054a76cc2adae6e7bf27bafa32df832d19da4ccd5"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/margarita/v001/margarita-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 19828,
+          "checksum_sha256": "8248b40958da9303e9d39e3eb4eb341b24b544135e74834bde46fda269cf5815"
+        }
+      ]
+    },
+    {
+      "dish_id": "f97503f6-9513-5b29-9a80-e558c958627f",
+      "dish_name": "Martini",
+      "slug": "martini",
+      "category": "Cocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/martini",
+      "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-2048w.webp",
+      "checksum_sha256": "673b8e0669399c7463e74e9edc389632c4452a5dae7fa2be34638f14f29a5499",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 281368,
+          "checksum_sha256": "673b8e0669399c7463e74e9edc389632c4452a5dae7fa2be34638f14f29a5499"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 139736,
+          "checksum_sha256": "6c5fff95af3645fd5f0757d35436224bd58c87f8dd75789533b689e97ba2fc39"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 98594,
+          "checksum_sha256": "89990ed884e23eb48711d05068c9a046c7527076c44162503ebe72b1807e6856"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 61534,
+          "checksum_sha256": "aa35dddc06736c84ca9d66bdd6b20b48f1484a87f1b076afa4655a15e3d9ba93"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 31970,
+          "checksum_sha256": "b0d2a3a045dd9b3bc5dc298edd176f0b279c4a8ca47bb5902090fa9f9a41923b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/martini/v001/martini-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/martini/v001/martini-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 16618,
+          "checksum_sha256": "4800813c35130b1029788db6b1ddcba73cc84729e4dbabacc76ad684af5902de"
+        }
+      ]
+    },
+    {
+      "dish_id": "a344e9a2-d5c1-59e4-9c78-594a01755055",
+      "dish_name": "Mojito",
+      "slug": "mojito",
+      "category": "Cocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/alcoholic-drinks/mojito",
+      "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-2048w.webp",
+      "checksum_sha256": "d4c3314c8daf446bb972e18e6d3e85f61beab41522a4a543c931972dbd18d7eb",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 444754,
+          "checksum_sha256": "d4c3314c8daf446bb972e18e6d3e85f61beab41522a4a543c931972dbd18d7eb"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 242188,
+          "checksum_sha256": "de9e179ddbcb64de3ba60fb874ef5d1faa897d8f81403ed1f0cfe07389535753"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 168352,
+          "checksum_sha256": "5a8fe4ae62c6b86718ab613e5b08f5aa5286d85b2353ea875a962236cf8825e7"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 102382,
+          "checksum_sha256": "c64a5aa6883e9aaf280ce4b4df51fe7d06979769f0cf653cf9134cc5f029dd53"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 49394,
+          "checksum_sha256": "e63645451e4a9357e6d5c8ec40862ea495e7432de24ac00100c15264ea4ddee3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/alcoholic-drinks/mojito/v001/mojito-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 21936,
+          "checksum_sha256": "331b2c94f33b6be14ba67f401ffa962a312f0a11df64f676e2f05f9eb8f880c7"
+        }
+      ]
+    },
+    {
+      "dish_id": "6da49cda-90b3-57d1-ad11-fa95dc6f278b",
+      "dish_name": "Fruit Punch",
+      "slug": "fruit-punch",
+      "category": "Mocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/fresh-juice/fruit-punch",
+      "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-2048w.webp",
+      "checksum_sha256": "383976187a3b888c2eaf3c3df1f149470e6060a9c0e2799d3aec7591955e2cd5",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 372254,
+          "checksum_sha256": "383976187a3b888c2eaf3c3df1f149470e6060a9c0e2799d3aec7591955e2cd5"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 190786,
+          "checksum_sha256": "5192e47e223ed20b3dbeba052f107b5e34294c192a545e7eb184302e927177d4"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 134556,
+          "checksum_sha256": "6cd92fd471bb6b103bc93b09c2d579b4bed1204844276d7bb158e9223d687b52"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 82054,
+          "checksum_sha256": "ee92a32dd65ed2160684aeee86f0a8906e41c2a5f697cd15aeeeaaa0afc74534"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 40132,
+          "checksum_sha256": "c2f2e0dfb704b4e11d67d4f6784d695575e3e8447ec63aece9563b943e308a96"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/fruit-punch/v001/fruit-punch-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 17648,
+          "checksum_sha256": "6e44aac2939f5a9e09cb49070d3ada55cff43af61de2fbd7b12ed1556b2f0f2b"
+        }
+      ]
+    },
+    {
+      "dish_id": "4581bd2a-a98b-5c1c-b6ea-45947644a003",
+      "dish_name": "Lemon Mint",
+      "slug": "lemon-mint",
+      "category": "Mocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/fresh-juice/lemon-mint",
+      "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-2048w.webp",
+      "checksum_sha256": "66669b840230ef1569389b0c1d6da0425c4b153ad6d0cea3c95ed64cffaf5a38",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 397676,
+          "checksum_sha256": "66669b840230ef1569389b0c1d6da0425c4b153ad6d0cea3c95ed64cffaf5a38"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 209602,
+          "checksum_sha256": "efb50d309888865644b8d009bba9ca3325ea3d0138a7306d2886f333d1e4c019"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 147368,
+          "checksum_sha256": "a44abcac6d662b286d5e09af3edfcdbebfe1784d39c247ae3a6b8f2b5dc51148"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 94170,
+          "checksum_sha256": "9003721389847561e4deee1c2a95c5f627eec6e39424626c2c36336ace956066"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 47346,
+          "checksum_sha256": "5cc7c3152f52886808d79609d994a71c1833d0dc43581f310cde28cef8709c46"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/lemon-mint/v001/lemon-mint-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 21548,
+          "checksum_sha256": "a78ff321cd129b34f26af9c1bc51354ade58f17e9741f6c35676a7a3c63b3a60"
+        }
+      ]
+    },
+    {
+      "dish_id": "c42ec6f2-7145-5cd7-8d49-0c595bf1e547",
+      "dish_name": "Virgin Mojito",
+      "slug": "virgin-mojito",
+      "category": "Mocktails",
+      "restaurant_type": "Bar & Lounge",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "bar-lounge/fresh-juice/virgin-mojito",
+      "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-2048w.webp",
+      "checksum_sha256": "3608c4c2011bffcc22bd993dbaa170219db69a7b1f68d4324147a2a6cada7456",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T09:03:13.477571+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 448136,
+          "checksum_sha256": "3608c4c2011bffcc22bd993dbaa170219db69a7b1f68d4324147a2a6cada7456"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 244400,
+          "checksum_sha256": "3959ac9a498b373f967ad3e23a8f4dbd7ce26d9bc6eb0195031d4dd7b255ba8f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 170210,
+          "checksum_sha256": "07afaa89e6bca1d438e96a48cfe01910286ae0c7ca5b9e76935162fb95862522"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104850,
+          "checksum_sha256": "bfb5f8cae89b819fe08cc8059d906d7227e42b5c8f3a4a150ebeb15a973a6769"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52828,
+          "checksum_sha256": "3a12f1c7378eaecd57c25d332fbf3145cb68139e6a0de21198183bcd309a7f1b"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/bar-lounge/fresh-juice/virgin-mojito/v001/virgin-mojito-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23506,
+          "checksum_sha256": "44b0f6af17211524f55a19fd10bbfa84cc716a225e3c8a36babb7c91c9b1e851"
+        }
+      ]
+    }
+  ]
+}
