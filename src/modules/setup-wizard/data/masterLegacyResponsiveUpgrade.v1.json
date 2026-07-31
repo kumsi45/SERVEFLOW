@@ -1,0 +1,1132 @@
+{
+  "library": "ServeFlow Phase 9.13.14B Legacy Responsive Upgrade",
+  "phase": "9.13.14B",
+  "version": "1.0",
+  "generated_at": "2026-07-31T16:12:26.002700+00:00",
+  "source_width": 2048,
+  "added_widths": [
+    1280,
+    1024,
+    768,
+    512,
+    320
+  ],
+  "masters": [
+    {
+      "dish_name": "Chechebsa",
+      "slug": "chechebsa",
+      "specification_id": "8a3b8183-4af9-5427-9443-9b192dfec95d",
+      "base_storage_path": "restaurant/breakfast/chechebsa",
+      "master_storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-2048w.webp",
+      "master_checksum_sha256": "684b999264b271762d1a6642287cce94a787a21fef9e784becfc7104b196bfc6",
+      "master_byte_size": 722148,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 373810,
+          "checksum_sha256": "aea07b1401a2186079d1bf45ea4baa6db1c9d42b9ab040209f0028d5558d3feb"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 273262,
+          "checksum_sha256": "d2b105f6e3d3e90a56543fcfb69d02cc11f5278e07ed6f1011ace37ae5d789a2"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 168354,
+          "checksum_sha256": "74a1f5886b7a3f57f23d72a3e304bb366b16ccf68a4f5fdf7dadb97c0ca72d59"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 78498,
+          "checksum_sha256": "0f3283b2b095171d80591aef71a719f850c56eaa64d6238e18e2f9d1023c7e1e"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/chechebsa/v001/chechebsa-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/chechebsa/v001/chechebsa-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33890,
+          "checksum_sha256": "d83233b2e514dea0d8d16fd560a561fe6862f02d07f80d8a7804a9ce743261b2"
+        }
+      ]
+    },
+    {
+      "dish_name": "Firfir",
+      "slug": "firfir",
+      "specification_id": "42a63118-86c6-57bd-870f-4b28e9fafa70",
+      "base_storage_path": "restaurant/breakfast/firfir",
+      "master_storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-2048w.webp",
+      "master_checksum_sha256": "c457ea4332839add7659d4cb6f7fc3d7effa798747cdec5094ccd731bab0c9e4",
+      "master_byte_size": 690390,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/firfir/v001/firfir-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 356158,
+          "checksum_sha256": "5e64fd5d46cd60b13c85ff26fc40a939c663c1fd5afdedf14f6129f9c0e19874"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/firfir/v001/firfir-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 259506,
+          "checksum_sha256": "7cc1f9fb5a6508ec6ce30352668c0bc5b31a49454aba84582b45c5bea35b93be"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/firfir/v001/firfir-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 154838,
+          "checksum_sha256": "2a7078a3d0caf435d6641102f1ecbf8cba5a404d4cbdc923369293e540a65ed9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/firfir/v001/firfir-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 70954,
+          "checksum_sha256": "5622d3ef2b1d0e9116bd42d532060074dc78d5131dfa5c23187b3d6ae6044a36"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/firfir/v001/firfir-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/firfir/v001/firfir-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 30022,
+          "checksum_sha256": "f2391979fb931c6d23fcee28cc0376a5e6bb9d00cd8fd26702f56b6bc5cc1d0a"
+        }
+      ]
+    },
+    {
+      "dish_name": "Ful",
+      "slug": "ful",
+      "specification_id": "b69b6080-e47e-58cd-81da-40741bec93d9",
+      "base_storage_path": "restaurant/breakfast/ful",
+      "master_storage_path": "restaurant/breakfast/ful/v001/ful-v001-2048w.webp",
+      "master_checksum_sha256": "20753bbd3c7d415ae9e00496bf406e29c614ef1b7080e7b6c51a75876ddb504e",
+      "master_byte_size": 497558,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/ful/v001/ful-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/ful/v001/ful-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 259278,
+          "checksum_sha256": "03e83d382a6f575ab2955ae46d1e38170c3e20ac2b92ae68dbafce35da0ce528"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/ful/v001/ful-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/ful/v001/ful-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 189484,
+          "checksum_sha256": "a9f1bb723a6788514a65773204a41deae1dfdcc227e35056e486676449a1e61e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/ful/v001/ful-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/ful/v001/ful-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 118062,
+          "checksum_sha256": "2fc8bdfcc57ccf14a703a212bf3fc2262ec8f29c1ae172b1921f21aaff7edc9f"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/ful/v001/ful-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/ful/v001/ful-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 60070,
+          "checksum_sha256": "9f71505f646cd443b79f9aa6036b1a97340ccd0b94c0dbd09a2b9769be3ebbaf"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/ful/v001/ful-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/ful/v001/ful-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 26088,
+          "checksum_sha256": "d7398933f8ab3eab14b43a2a4c72e6b88305d87a1640a88b943099c6eab24997"
+        }
+      ]
+    },
+    {
+      "dish_name": "Fetira",
+      "slug": "fetira",
+      "specification_id": "b1a42dd8-f0d7-5708-931a-c9442ff5be5b",
+      "base_storage_path": "restaurant/breakfast/fetira",
+      "master_storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-2048w.webp",
+      "master_checksum_sha256": "d321922c45871fdf83fb93c07563d920bb5a179c3e392829b07a05c4d3540b8a",
+      "master_byte_size": 605046,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/fetira/v001/fetira-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 303414,
+          "checksum_sha256": "571c498950551e01842cf42b23d0d6b2c9465dca74152e1ccb2a7ff82bd6dec0"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/fetira/v001/fetira-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 210500,
+          "checksum_sha256": "b0857b17987ae6f0104585acd17e16f9f4cbfb198e3bdefffc77f14674fde93c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/fetira/v001/fetira-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 124532,
+          "checksum_sha256": "5400f07b3a6a9287b231258671f128e9e56cfc4ad3939eaf30e7b3de1e5d7ac3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/fetira/v001/fetira-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 58714,
+          "checksum_sha256": "53adface6fbd9748d8b2f8031dcadeeae82f44338a5d70240cdb9ba838ddf995"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/fetira/v001/fetira-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/fetira/v001/fetira-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25110,
+          "checksum_sha256": "b7e795c6dc083d3407a876ccb4825b2ea5c1afc6b2423f3506fea3605a253511"
+        }
+      ]
+    },
+    {
+      "dish_name": "Omelette",
+      "slug": "omelette",
+      "specification_id": "28ddfdba-184e-56e0-8c5f-c696714ef9c1",
+      "base_storage_path": "restaurant/breakfast/omelette",
+      "master_storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-2048w.webp",
+      "master_checksum_sha256": "2e94bb27911f2a37c0ca25a1e8419f0b004682299ef56eacb5b0ecd37381b0b7",
+      "master_byte_size": 370460,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/omelette/v001/omelette-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 174812,
+          "checksum_sha256": "4218b51fa765da3475c797cdded94a57579754e963183d356a41030cad29586b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/omelette/v001/omelette-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 127772,
+          "checksum_sha256": "9d2ae8eb190c2368b35f3062efdd0117342aa9c906167a86f2348cf29a0b2b93"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/omelette/v001/omelette-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 76872,
+          "checksum_sha256": "1e8e4b2385a6be49024eeeccb1b9d2c8ecb2835b60817f104794d8d6cc59be8b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/omelette/v001/omelette-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 38178,
+          "checksum_sha256": "efe7e1a18576fb9394d9c1adae20642837b8240ff507f367d6011e6c3b01b7a7"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/omelette/v001/omelette-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/omelette/v001/omelette-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 17702,
+          "checksum_sha256": "6a25eb9d7dc54bf688730058494ff16cc6905f9c773a30925f4e7bbefee70f60"
+        }
+      ]
+    },
+    {
+      "dish_name": "Scrambled Eggs",
+      "slug": "scrambled-eggs",
+      "specification_id": "8010196c-3459-560c-97e4-88bf9b391f4e",
+      "base_storage_path": "restaurant/breakfast/scrambled-eggs",
+      "master_storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-2048w.webp",
+      "master_checksum_sha256": "cc569c58dcffd9966f2568506328b50edacee3aff2ce9b16b5c8c7218fb3f692",
+      "master_byte_size": 362518,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 177774,
+          "checksum_sha256": "652059b844d5034de68249e6bc60655ec8249324d23febd43f8489f7accdf66c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 133450,
+          "checksum_sha256": "8c11a292620c75edffb8a6e5c2280d5e1f4009d9f570d3d52baff215d8a001b0"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 81702,
+          "checksum_sha256": "af1c990c27ed0d019855c98f15dce9652cfbee8bf385a75f5545e087ebcb8c36"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42790,
+          "checksum_sha256": "19b1f01b6c75da52fb5d392f80240df08d0a488afe13ab7e94a4fe759be6a23a"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/scrambled-eggs/v001/scrambled-eggs-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 20050,
+          "checksum_sha256": "e6923973f0d5750c31f6cd85d0daaa0ad7d7b12b63bb4d9daa89906cfe3d194f"
+        }
+      ]
+    },
+    {
+      "dish_name": "Kinche",
+      "slug": "kinche",
+      "specification_id": "6d6faca9-c77b-51f7-b047-87de0ed65848",
+      "base_storage_path": "restaurant/breakfast/kinche",
+      "master_storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-2048w.webp",
+      "master_checksum_sha256": "b6ce15fd85d407466706e6859ebd2a03d46c76ca4da9966e1d4ee3a6104b92ce",
+      "master_byte_size": 683746,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/kinche/v001/kinche-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 362804,
+          "checksum_sha256": "e2db1438501f59c6328419c0d6dc6be195c19622ea8232a9f428fc734be3be34"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/kinche/v001/kinche-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 269362,
+          "checksum_sha256": "7c489e4bb39e2aead402a3b529e065a41d5361638127e88479b717da11171451"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/kinche/v001/kinche-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 164232,
+          "checksum_sha256": "ffe2a0ae7393e4f87c8b01eb00b94686e221b4bbec7047aa1b80199a214af8ab"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/kinche/v001/kinche-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 78424,
+          "checksum_sha256": "f0ba73c4df1cc1807a5b7c6608c679f3956bb92c99b8cecd55fdea42096023b2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/kinche/v001/kinche-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/kinche/v001/kinche-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32718,
+          "checksum_sha256": "f7b3b001829a0cdc882aaf33b3fc5f583bf34e425dbf0833687e41bdcba97fb0"
+        }
+      ]
+    },
+    {
+      "dish_name": "Dulet",
+      "slug": "dulet",
+      "specification_id": "a51f2d79-1639-5379-96bf-a49942037572",
+      "base_storage_path": "restaurant/breakfast/dulet",
+      "master_storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-2048w.webp",
+      "master_checksum_sha256": "8f8a62e407c8029df2539bb9225aa1afb5b779a30f9b917dd0d6549bf8ca4d63",
+      "master_byte_size": 655150,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/dulet/v001/dulet-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 337354,
+          "checksum_sha256": "59b4433d691a69d12431a75fa8efaa6aaa09bce474158b498ea5ecff139c98e5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/dulet/v001/dulet-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 248458,
+          "checksum_sha256": "39534e6163b11cbe7fbc3c3366ae8cdeee358b8c251674bf5220207d7ebb1f47"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/dulet/v001/dulet-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 150484,
+          "checksum_sha256": "3538b64bb2a2c0c9c724bdd76d855d5f9252dab76f24aa8206cbffc9d1fd5cb0"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/dulet/v001/dulet-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 71154,
+          "checksum_sha256": "b4502e9c116ddbf0e2594a4f60780c1fa9611d2e1f67d9547cf790c32d1a2d74"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/breakfast/dulet/v001/dulet-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/breakfast/dulet/v001/dulet-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 31742,
+          "checksum_sha256": "85a1ec597cef1b5eaa60e0a7bebe35098643bacd309b99d577d6724572db1ee2"
+        }
+      ]
+    },
+    {
+      "dish_name": "Kitfo",
+      "slug": "kitfo",
+      "specification_id": "5577cdfe-2b1e-5b60-8c47-e249615cc024",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/kitfo",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-2048w.webp",
+      "master_checksum_sha256": "d9c95125dbb3080257612abdfb49931d03c457c5381db76ce6ead3a8e8c0e762",
+      "master_byte_size": 588278,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 320572,
+          "checksum_sha256": "e67de7a86749105c736385c0507c574cf543c8e94fc5c6ee34e5debaeef78fd2"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 243510,
+          "checksum_sha256": "04daf4eacec4d54d8a8e0b0f676fb04be31b520ee5a168e5f08132d3f269856d"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 153810,
+          "checksum_sha256": "03d66dfa3825d7674eb7ad2ce3a9a091b8264bf960ca3d90a3922abb66ea9f93"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 76626,
+          "checksum_sha256": "7288e97bbad4ef3342c933f91144240fc5cfd25a098299d0f7aa72ba718b8103"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/kitfo/v001/kitfo-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32428,
+          "checksum_sha256": "bbf5025e2d0aa2ce06eb7eb35d0ed8cf218423fed9ffd290d7e3aa9b5c61d2c2"
+        }
+      ]
+    },
+    {
+      "dish_name": "Tibs",
+      "slug": "tibs",
+      "specification_id": "f1be1b3a-5cef-5e34-aa83-f792ddc756de",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/tibs",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-2048w.webp",
+      "master_checksum_sha256": "e1f4853d82db62ed89de46f55eb620ab6a7e5d8b295454f79c4d4a2d4fc6654b",
+      "master_byte_size": 925156,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 474170,
+          "checksum_sha256": "0fdd0098ea1f027d60c49d303ed168453895cd1ddc2f746a22dda9cc55dcefb7"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 326088,
+          "checksum_sha256": "912b52889dd6ea5c3e574b96860b11646cd544487aabdc7b197b0525e8a9d651"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 195774,
+          "checksum_sha256": "cd9c9fe0468eb452d175784652cc469e76b241de8eb3de7d9edfb3886546bc23"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 92758,
+          "checksum_sha256": "e65807943f5b0ac4e768b44917f5254810334969d62f126412dedd3e9008774d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tibs/v001/tibs-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 37572,
+          "checksum_sha256": "bee4d6bfeea036da6d6a2d4b458e541f54f6bb5e7f929247cdeddc39a3f6386b"
+        }
+      ]
+    },
+    {
+      "dish_name": "Shekla Tibs",
+      "slug": "shekla-tibs",
+      "specification_id": "34b7d6b9-e70b-523d-9960-548d7486e791",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-2048w.webp",
+      "master_checksum_sha256": "79546b57cbf07dadd6944217ed0cabf70e1b82dc9a4ea436f3e80e458057a6d7",
+      "master_byte_size": 732580,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 409746,
+          "checksum_sha256": "f591e99a5309891896ab5d77b9f5400c72c63283189a39f14acbe4b12e0b99f8"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 288282,
+          "checksum_sha256": "c8e6b6303e77f639122c1e6e1d2b01a81be76fd3a0d75127f7d32219daec9c39"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 180584,
+          "checksum_sha256": "a5c2afd14ae14228e8e2a5826f0117bb8211ec63ecd0a2815531eb96852edc40"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 89572,
+          "checksum_sha256": "b01aa396103136c70cb57e5f01336e3aac58813a6a2d91d46955f966047b87a2"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shekla-tibs/v001/shekla-tibs-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 38132,
+          "checksum_sha256": "1812810b5f3fdf81b06245b439b3c364c312954072a8cf3a9ad18075384d53a8"
+        }
+      ]
+    },
+    {
+      "dish_name": "Doro Wot",
+      "slug": "doro-wot",
+      "specification_id": "7584552b-f4ab-5d4c-9adb-96c0a86de4b3",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-2048w.webp",
+      "master_checksum_sha256": "9accb0054599383eb1d404c451adb411e4608506765736b5c8ab23dbaf0548ba",
+      "master_byte_size": 1047584,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 522856,
+          "checksum_sha256": "d67e979ac1407c1b493c1fa473284815ca05462fa969ecbbda1101f3cce5733f"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 367034,
+          "checksum_sha256": "94119e58114d62d63843d98749ee910b0622c926ca9fe996253294a5aa782efb"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 220108,
+          "checksum_sha256": "1c21aa0aa38a43876014df08baf3b848d74a07799493de11e131ab6ef1dfdff1"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 100318,
+          "checksum_sha256": "dc93c4f8d27ebdf66cbdde815d964b7274876d239271549704910b94e123f57c"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/doro-wot/v001/doro-wot-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 40018,
+          "checksum_sha256": "2d1b4d3d4cee921da8f8f853e363317c5361c479e77ce15c52f4272dd6aad2e9"
+        }
+      ]
+    },
+    {
+      "dish_name": "Key Wot",
+      "slug": "key-wot",
+      "specification_id": "b3a6d38d-76d3-55ed-86a0-e7d5b7ac6bd0",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/key-wot",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-2048w.webp",
+      "master_checksum_sha256": "1937de635fceeb489a11453aa7a3d726dc3d0d0cb040f789757f927b579cc35c",
+      "master_byte_size": 947502,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 503544,
+          "checksum_sha256": "c03e5e5e9e1fc40b6c2625aad26c9ecbb25343a9897160fc6bd17dfccf34ad4d"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 363498,
+          "checksum_sha256": "8d3d905bfe1ed572ba8f5d2d06c1b6f0314f2589bf368ea44b03d1874f2616b4"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 218978,
+          "checksum_sha256": "596fe5e7205f7ab5d39b12000536405f8ef510e17eb0ccf7b8c0c18ba698e6bd"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104032,
+          "checksum_sha256": "2debdc192ae941ab3f4ac98fd9b0147698a4ee27c055dbc43460c26dcd27dc07"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/key-wot/v001/key-wot-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 41020,
+          "checksum_sha256": "7d015a96b6ebe4decef34212106a8a953565161fe56429dc6f6b63ac4de26af6"
+        }
+      ]
+    },
+    {
+      "dish_name": "Gored Gored",
+      "slug": "gored-gored",
+      "specification_id": "0704df1f-c441-5d8f-b2ef-e1e8114d8d04",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-2048w.webp",
+      "master_checksum_sha256": "cf16bdb4fb9230d1310c4125dc1407b6d01bf850f822d988d643de19754bd30e",
+      "master_byte_size": 984724,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 513200,
+          "checksum_sha256": "25ed8b1110fdb0819440779fc1090996f69e876c7643bb55be82058cd01183f6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 373440,
+          "checksum_sha256": "b1f50b811210b19cb26c5ae039ddebe8a2d248611bd3d34bb579c4ef39fde820"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 227314,
+          "checksum_sha256": "3d0ba845b5dad9201a528ea85ad21df9d63e503acf570f1ce8a9308327b21ce3"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107572,
+          "checksum_sha256": "e446fa9a5e0a511e2bff8fb4310bae813af7692e4e38a27420cd018bc7b979b3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/gored-gored/v001/gored-gored-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43804,
+          "checksum_sha256": "cc519b2399f1c75435f3cd66be2a19db2d282a8b77075c43abf4086272bc3a3a"
+        }
+      ]
+    },
+    {
+      "dish_name": "Shiro",
+      "slug": "shiro",
+      "specification_id": "e031f8fd-64f9-5530-b37b-146948680c13",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/shiro",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-2048w.webp",
+      "master_checksum_sha256": "5397d489f20fb94d874e239076795183988f208ef52f131c0a5c39f1dd6199a1",
+      "master_byte_size": 652132,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 356892,
+          "checksum_sha256": "aff0e0cc69bdcef31d52caeabe3bf9715f8e47d93566732db9933d921c904f24"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 263596,
+          "checksum_sha256": "4c862c366771cd56c8ef424b0ca5e8ba9530ebb5fb8ecc59fb47601044696c40"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 162558,
+          "checksum_sha256": "3e96bbc134ed086cd48000fbb79e8f5f7853043fb0e84a49513a1f883cb11d93"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 79270,
+          "checksum_sha256": "b7d137da3b4a068483d99dd7642f098ec2b97ca15abce9a9f1246c55eb8d61b3"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/shiro/v001/shiro-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33014,
+          "checksum_sha256": "e9ae18915235116576bec54c2d9ab5cd4b3e2b8b05db58db53288ad4eb34345a"
+        }
+      ]
+    },
+    {
+      "dish_name": "Misir Wot",
+      "slug": "misir-wot",
+      "specification_id": "6155f27a-f0db-58da-816d-1feca1b2e1c2",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-2048w.webp",
+      "master_checksum_sha256": "df10a00047beb03dce9b171a20dae49f98101700d300af7858bd5f011c78a3fd",
+      "master_byte_size": 764504,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 416576,
+          "checksum_sha256": "4d093122b5d21ecbea1810b7c4d22c741319e2814f0c7e42065b0c5f5303aebd"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 303050,
+          "checksum_sha256": "239251d5c96946a3e06a1d132c6bbfa8c87b8a9c4310edf712061f70f83148bd"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 181980,
+          "checksum_sha256": "e5166f88ad26288dd4b11bd837a97d876b89e00de0a1af66f2558978ae5cefed"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 89188,
+          "checksum_sha256": "e5a85864a98e5cfd29e210221f208a0146a1b62e18c6e1d433cd2120c568f1db"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/misir-wot/v001/misir-wot-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 36354,
+          "checksum_sha256": "4616b95ee3b1a7573fc54af0b99fdeda0650ecf43ce064f651cc9abf8a5642ab"
+        }
+      ]
+    },
+    {
+      "dish_name": "Beyaynetu",
+      "slug": "beyaynetu",
+      "specification_id": "e3f12a81-7312-5e1c-978a-024ede058b52",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-2048w.webp",
+      "master_checksum_sha256": "f36fcb29ea72cd1fcb59155ddea9e22f9796cf960ae56bee66ae9bcc1ea3bed7",
+      "master_byte_size": 1123322,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 587056,
+          "checksum_sha256": "34ac2d0ce6471463b01dd5e61666769dda1345243247b3b3f597e3cc80b5d411"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 399412,
+          "checksum_sha256": "021546381b10a0df9c8522757d71671b4608900e31616fbd33feb0c36d0ad81b"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 244774,
+          "checksum_sha256": "4d44adf7ce873052a8c4400359ac7b792727961fda610fd01376057b28c4d2d9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 110198,
+          "checksum_sha256": "d16cbb9310048ea35a6eefb00a475249a19e1293b6f2fd1e64f6e42fbe9967a1"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/beyaynetu/v001/beyaynetu-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 44558,
+          "checksum_sha256": "08b3e594fd0c2d9e057d775743fab153080ac364f5c56d99eb1a58e7ac751905"
+        }
+      ]
+    },
+    {
+      "dish_name": "Tegabino",
+      "slug": "tegabino",
+      "specification_id": "3700878a-9f93-5376-af30-cc0e5951ba9d",
+      "base_storage_path": "restaurant/ethiopian-traditional-dishes/tegabino",
+      "master_storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-2048w.webp",
+      "master_checksum_sha256": "5d29b349b009eeb5c7aeb77c59102007cb0c4d035d0751406c33fb698c455f3c",
+      "master_byte_size": 784310,
+      "version": 1,
+      "version_label": "v001",
+      "status": "PENDING_REVIEW",
+      "provider_key": "openai-built-in-imagegen",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants_added": [
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 424714,
+          "checksum_sha256": "f5b825d0432f4457bf0b3a1d580f3d39c8cc81e92b33bd3d86f925780ed7a152"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 304560,
+          "checksum_sha256": "1493f0f962c8eaafa791c9ff5b07e527205857be75a7b5d189a9b1a004023fb7"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 187918,
+          "checksum_sha256": "6baa070562b3c2f1efd0fbc4d4e4d90456b54c7dcbd016b1c9db5bff5d36d495"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 88862,
+          "checksum_sha256": "ef1bdb28e86150d38f688be24b91484229db27b6f9f2154d07f2e68d12ff87c8"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/restaurant/ethiopian-traditional-dishes/tegabino/v001/tegabino-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 37224,
+          "checksum_sha256": "580baaefa99f61acab1307b72f753a37ced9d096a540727ac6e60ff25f93a3f7"
+        }
+      ]
+    }
+  ]
+}

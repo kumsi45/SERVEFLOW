@@ -1,0 +1,504 @@
+{
+  "library": "ServeFlow Phase 9.13.14A Breakfast Completion",
+  "version": "1.0",
+  "phase": "9.13.14A",
+  "categories": [
+    "Breakfast"
+  ],
+  "generated_at": "2026-07-31T15:53:09.481186+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "f23ddf9d-4ec4-55fe-ac13-b842959636e7",
+      "dish_name": "Cereals",
+      "slug": "cereals",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/cereals",
+      "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-2048w.webp",
+      "checksum_sha256": "ba1496c0fa871cf4431a1afefb704dc56b00451422fefaf531c3828be2be7f1c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 600850,
+          "checksum_sha256": "ba1496c0fa871cf4431a1afefb704dc56b00451422fefaf531c3828be2be7f1c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 324130,
+          "checksum_sha256": "50abdfee9a8eede188e472b44542d1bc25327faa36745717b0ac6e56dbfe5cb9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 231912,
+          "checksum_sha256": "b21a87e15b3727638317757be7269848502571ca9d8ae66441a9c48fc266ea0c"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 146542,
+          "checksum_sha256": "ba864d6e5e58b9cf22472f5602752cc276ebb6f82621039d1cfa7f2c1b4d80a2"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 72630,
+          "checksum_sha256": "f9f89a0470bf5f64c35a683e4b986233d029247b6e96f48ef193ac9fdb55cadb"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/cereals/v001/cereals-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/cereals/v001/cereals-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 32016,
+          "checksum_sha256": "70e86b2d0f2093b481e52efd48dfa42af09f99c1048ecd34d53d3d83c5051e32"
+        }
+      ]
+    },
+    {
+      "dish_id": "8651284f-c5d3-5955-a59b-a5d3183427a0",
+      "dish_name": "Continental Breakfast",
+      "slug": "continental-breakfast",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/continental-breakfast",
+      "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-2048w.webp",
+      "checksum_sha256": "cc26f9559f4742955584f91ac02b72cb1f21ed90d1dae18f1a3fe6af9cd71f42",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 337602,
+          "checksum_sha256": "cc26f9559f4742955584f91ac02b72cb1f21ed90d1dae18f1a3fe6af9cd71f42"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 175676,
+          "checksum_sha256": "77ee7cd0c45d4c1647c9c8fb61cd61d84aa9b23babd7478f6cc62089a7cc64d9"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 125278,
+          "checksum_sha256": "c050e1d5ef82eac1eda3556d36e7ed7f2eecf26557ff9c9487dada0caf9c9360"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 79270,
+          "checksum_sha256": "0506a945f09ff698e7b30c802fe7f8f967b2b54f878cf6a1102c22e042e11831"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 40888,
+          "checksum_sha256": "90680dd8a4e5ea38d8e12b4c37f4c7e11e89c76554db7da888b0f19bab9e620d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/continental-breakfast/v001/continental-breakfast-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 19276,
+          "checksum_sha256": "5dcb324337d6233146248efe1369611fc297c36440f93a9f7b11102c38411c1a"
+        }
+      ]
+    },
+    {
+      "dish_id": "ad591395-ff44-5f26-abc9-07995f17eb0b",
+      "dish_name": "Ethiopian Breakfast",
+      "slug": "ethiopian-breakfast",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/ethiopian-breakfast",
+      "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-2048w.webp",
+      "checksum_sha256": "6bf908d4986ceccc3c603b43e5e46b7ac0322d5a2afd5ae5e802cc81092e38f5",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 955796,
+          "checksum_sha256": "6bf908d4986ceccc3c603b43e5e46b7ac0322d5a2afd5ae5e802cc81092e38f5"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 538368,
+          "checksum_sha256": "0ae6854e3580fc3d859faf2a66dc665edc75d50de8329fe37a770ab09b7246e2"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 364544,
+          "checksum_sha256": "984810e3789452a3cffed895eb5eb13ff1ceee03cc365c1083cce6d0fa2497c6"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 219126,
+          "checksum_sha256": "06a1334f3601dc661fa4481deb1d346289ffa2784ee36bb142af9887257895f8"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 100880,
+          "checksum_sha256": "24d1a00c3088465c9fdc22e5a3991bd70fc3d11556b545cf90782dc5b0c198b1"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/ethiopian-breakfast/v001/ethiopian-breakfast-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 42446,
+          "checksum_sha256": "befe9916f2cc4635ab69ee6a19a4a017cda91383620639fc32d8d7bbf0cf0129"
+        }
+      ]
+    },
+    {
+      "dish_id": "cba06f1e-e099-532a-a59d-83f9c90f93b3",
+      "dish_name": "Fresh Fruits",
+      "slug": "fresh-fruits",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/fresh-fruits",
+      "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-2048w.webp",
+      "checksum_sha256": "6ff7a40da62f6392eac1507f6761539b601a5ef13c41df8b2eeeb7cf82230ccc",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 514118,
+          "checksum_sha256": "6ff7a40da62f6392eac1507f6761539b601a5ef13c41df8b2eeeb7cf82230ccc"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 258060,
+          "checksum_sha256": "fdae001702e805bfa7596702939c94175eec210909ae4998cdd57bb7cecf1053"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 185244,
+          "checksum_sha256": "9ad05745f41874af3168a2c6a9d155031640caca443c78fbfd250c7935e54010"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107622,
+          "checksum_sha256": "6879f8d50f6fc14a9a311d58c2e4288af3c1a63ac000160435bcc2e6a9959353"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 51692,
+          "checksum_sha256": "8dce01ef1d153b53ecdfa36b5484a76bb8aefde7d35d531b016f5558ede3224d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/fresh-fruits/v001/fresh-fruits-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23056,
+          "checksum_sha256": "e77bcaa2637f13f85065fac7be340adb73cb6d2ca272ed5ec8d30597a404f202"
+        }
+      ]
+    },
+    {
+      "dish_id": "84acc56a-4615-5d64-a30a-816d39e25c78",
+      "dish_name": "Pancake",
+      "slug": "pancake",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/pancake",
+      "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-2048w.webp",
+      "checksum_sha256": "e93e4a02460a647e78d17d7497fc6b729a2a4541465ce4c7b4d7f2bc9cf2232e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 487626,
+          "checksum_sha256": "e93e4a02460a647e78d17d7497fc6b729a2a4541465ce4c7b4d7f2bc9cf2232e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 244372,
+          "checksum_sha256": "b064c5881cab08166a1c6f321db06bd353247b4669335e5063429f1df53ecbb6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 169758,
+          "checksum_sha256": "a4c8dfb1c44e1d622fe8371bcd7e64369b3f622327e0b7019a015205f3e69480"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 104570,
+          "checksum_sha256": "8c6369c2b154d4a6d384c6bad119b007a383e683e66828beadfffb66a589199b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 50056,
+          "checksum_sha256": "3d2aac7106ca6bfc2292422e59012b98095945b28fa7f08bbd33ff9aad181c10"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/pancake/v001/pancake-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/pancake/v001/pancake-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 21942,
+          "checksum_sha256": "6ca8648ea053805edbdd92cfc14a16f5bb80a4fa0a3b9a23a29498468a02514f"
+        }
+      ]
+    },
+    {
+      "dish_id": "ac6eb791-72f6-5179-b880-70b8245c2cb7",
+      "dish_name": "Toast",
+      "slug": "toast",
+      "category": "Breakfast",
+      "restaurant_type": "Hotel",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "hotel/breakfast/toast",
+      "storage_path": "hotel/breakfast/toast/v001/toast-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-2048w.webp",
+      "checksum_sha256": "8dbcadbb8fc05774850958ff6aaa45d4d3e4a6dce4535b8e70a465c771ca6fb2",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T15:53:09.481186+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 600590,
+          "checksum_sha256": "8dbcadbb8fc05774850958ff6aaa45d4d3e4a6dce4535b8e70a465c771ca6fb2"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 311440,
+          "checksum_sha256": "b4c92e2634e83fb83cd8051dde998dff704ea9b6032aad922ac278d22f54b692"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 216026,
+          "checksum_sha256": "6d6a454f986c2f6d2a4917d1e3bd489d5f00af65f1e41d5291bdad685d22d90a"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 128072,
+          "checksum_sha256": "635ff84c89b818b95282f1fd09e13a215125f96e01c521f85a63789d3d56dd3a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 60834,
+          "checksum_sha256": "33ab5862586a3d1e0489d049d417d1f092e56f4737f11dbe5363d614d8e430b8"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "hotel/breakfast/toast/v001/toast-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/hotel/breakfast/toast/v001/toast-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25142,
+          "checksum_sha256": "f29a36517907472eb7edf87612dad8fa007614119f821d790324e37f5840c6c6"
+        }
+      ]
+    }
+  ]
+}
