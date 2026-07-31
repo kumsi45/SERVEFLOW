@@ -23,6 +23,7 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(preview).toContain("FoodInfoPanel");
     expect(preview).toContain("Menu Ready Checklist");
     expect(preview).toContain("Refresh Preview");
+    expect(preview).toContain('placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "owner-review")');
   });
 
   it("publishes only through the owner-authenticated Edge Function", () => {

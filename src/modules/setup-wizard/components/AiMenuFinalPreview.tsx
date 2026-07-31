@@ -50,7 +50,7 @@ export function AiMenuFinalPreview({ restaurant: sourceRestaurant, state, draftV
       checksumSha256: selected.checksumSha256,
       metadata: selected.providerMetadata,
     } satisfies MenuImageCandidate : null;
-    const image = resolveMenuItemImage({ itemId: item.id, custom: candidate?.source === "CUSTOM" ? candidate : null, master: candidate?.source === "MASTER" ? candidate : null, placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE });
+    const image = resolveMenuItemImage({ itemId: item.id, custom: candidate?.source === "CUSTOM" ? candidate : null, master: candidate?.source === "MASTER" ? candidate : null, placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "owner-review");
     return { id: item.id, restaurant_id: sourceRestaurant.id, category_id: item.categoryId!, name: item.name.value ?? "Untitled item", description: item.description.value, price: item.price.value ?? 0, image_url: image.source === "PLACEHOLDER" ? null : image.url, effective_image_url: image.url, custom_image: candidate?.source === "CUSTOM" ? candidate : null, master_image: candidate?.source === "MASTER" ? candidate : null, available: true, localizations: Object.fromEntries(MENU_LANGUAGE_OPTIONS.map(({ code }) => [code, { name: item.nameLocalization.values[code].value, description: item.descriptionLocalization.values[code].value }])) };
   }), [certification.items, sourceRestaurant.id]);
   const localized = useMemo(() => localizeMenuPresentation(categories, items, language), [categories, items, language]);
