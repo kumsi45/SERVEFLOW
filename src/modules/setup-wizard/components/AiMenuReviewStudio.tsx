@@ -20,6 +20,7 @@ import {
 } from "../../../core/menu/menuLanguage";
 import {
   createAiMenuImportDraft,
+  createSmartMenuLibraryDraft,
   createStarterMenuReviewDraft,
   getMenuReviewAccess,
   listMenuExtractionDrafts,
@@ -28,6 +29,7 @@ import {
 import { formatConfidence } from "../services/menuExtractionTypes";
 import {
   createMenuReviewState,
+  refreshMenuReviewStateImages,
   createMenuReviewLocalization,
   createPendingImageDraft,
   getDuplicateItemIds,
@@ -236,8 +238,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         listMenuExtractionDrafts(restaurantId),
         getMenuReviewAccess(restaurantId),
       ]);
+      const libraryExtractions = loadedExtractions.filter((entry) => entry.sourceKind === "smart_library");
       const visibleExtractions = smartLibraryOnly
-        ? loadedExtractions.filter((entry) => entry.sourceKind === "smart_library")
+        ? await Promise.all(libraryExtractions.map((entry) => entry.sourceReference
+          ? createSmartMenuLibraryDraft(restaurantId, entry.sourceReference)
+          : Promise.resolve(entry)))
         : loadedExtractions;
       const visibleSourceDrafts = smartLibraryOnly ? [] : drafts;
       const states: Record<string, MenuReviewState> = {};
@@ -245,13 +250,19 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       const statuses: Record<string, SaveStatus> = {};
       for (const extraction of visibleExtractions) {
         if (extraction.status !== "completed" || !extraction.result) continue;
-        states[extraction.id] =
-          extraction.reviewState ?? createMenuReviewState(extraction.result);
+        states[extraction.id] = extraction.reviewState
+          ? refreshMenuReviewStateImages(extraction.reviewState, extraction.result)
+          : createMenuReviewState(extraction.result);
         revisions[extraction.id] = extraction.reviewRevision;
         statuses[extraction.id] = "saved";
       }
       const recoverCachedEdits = Boolean(cached?.unsynced && Object.keys(cached.reviewStates).length);
-      const restoredStates = recoverCachedEdits ? cached!.reviewStates : states;
+      const restoredStates = recoverCachedEdits
+        ? Object.fromEntries(Object.entries(cached!.reviewStates).map(([id, state]) => {
+          const result = visibleExtractions.find((entry) => entry.id === id)?.result;
+          return [id, result ? refreshMenuReviewStateImages(state, result) : state];
+        }))
+        : states;
       const restoredRevisions = recoverCachedEdits ? cached!.revisions : revisions;
       reviewStatesRef.current = restoredStates;
       revisionsRef.current = restoredRevisions;

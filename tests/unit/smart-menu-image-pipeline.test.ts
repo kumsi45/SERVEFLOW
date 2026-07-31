@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { normalizeAiMenuResult } from "../../supabase/functions/menu-ai-import/contracts";
-import { createMenuReviewState, createSmartMenuImageDraft } from "../../src/modules/setup-wizard/services/menuReviewState";
+import { createMenuReviewState, createSmartMenuImageDraft, refreshMenuReviewStateImages } from "../../src/modules/setup-wizard/services/menuReviewState";
 import { resolveMenuItemImage } from "../../src/core/presentation/menuItemImage";
 import { resolveSmartImage } from "../../src/core/presentation/smartImageDelivery";
 import { menuReviewImageCandidates } from "../../src/modules/setup-wizard/services/menuReviewImageCandidates";
@@ -15,6 +15,7 @@ const edgeFunction = readFileSync(
   resolve(process.cwd(), "supabase/functions/menu-ai-import/index.ts"),
   "utf8",
 );
+const reviewStudio = readFileSync(resolve(process.cwd(), "src/modules/setup-wizard/components/AiMenuReviewStudio.tsx"), "utf8");
 
 const field = <T>(value: T | null) => ({ value, confidence: value === null ? 0 : 1 });
 
@@ -155,6 +156,17 @@ describe("Phase 9.13.3.1 Smart Menu image pipeline", () => {
     expect(html).toContain('alt="Chechebsa"');
   });
 
+  it("refreshes a stale owner review state when a master is deployed later", () => {
+    const source = { schemaVersion: 1 as const, restaurantName: field<string>(null), categories: [field("Breakfast")], items: [extractedItem(null)], unrecognizedSections: [] };
+    const stale = createMenuReviewState(source, () => "review-id");
+    stale.items[0].approved = true;
+    const refreshed = refreshMenuReviewStateImages(stale, { ...source, items: [extractedItem(smartImage())] });
+    expect(refreshed.items[0].approved).toBe(true);
+    expect(refreshed.items[0].imageDraft.status).toBe("PENDING_REVIEW");
+    expect(refreshed.items[0].imageDraft.selectedVersionId).toBe("20000000-0000-4000-8000-000000000001");
+    expect(refreshed.items[0].imageDraft.versions[0].imageUrl).toContain("smart-menu-images");
+  });
+
   it("loads versions, overrides, and public URLs without upload or generation calls", () => {
     expect(edgeFunction).toContain('from("serveflow_smart_menu_images")');
     expect(edgeFunction).toContain('from("serveflow_smart_menu_image_versions")');
@@ -162,6 +174,8 @@ describe("Phase 9.13.3.1 Smart Menu image pipeline", () => {
     expect(edgeFunction).toContain('getPublicUrl(version.storage_path)');
     expect(edgeFunction).toContain("masterSelectionScore");
     expect(edgeFunction).toContain("master.current_version > 0 && versionedMasterIds.has(master.id)");
+    expect(edgeFunction).toContain("smartImagesRefreshed: true");
+    expect(reviewStudio).toContain("createSmartMenuLibraryDraft(restaurantId, entry.sourceReference)");
     expect(edgeFunction).not.toContain('.storage.from("smart-menu-images").upload(');
   });
 });

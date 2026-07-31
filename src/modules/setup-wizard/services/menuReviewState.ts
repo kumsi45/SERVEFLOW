@@ -334,6 +334,25 @@ export function createMenuReviewState(
   };
 }
 
+/** Refreshes server-owned masters without discarding owner review edits or uploads. */
+export function refreshMenuReviewStateImages(
+  state: MenuReviewState,
+  source: MenuReviewSource,
+): MenuReviewState {
+  const fresh = createMenuReviewState(source);
+  const freshBySourceId = new Map(fresh.items.filter((item) => item.sourceItemId).map((item) => [item.sourceItemId, item]));
+  const freshByName = new Map(fresh.items.map((item) => [normalizedName(item.name.value ?? ""), item]));
+  return {
+    ...state,
+    items: state.items.map((item) => {
+      if (item.imageDraft.versions.some((version) => version.source === "owner" && version.id === item.imageDraft.selectedVersionId)) return item;
+      const replacement = (item.sourceItemId ? freshBySourceId.get(item.sourceItemId) : null) ?? freshByName.get(normalizedName(item.name.value ?? ""));
+      if (!replacement?.imageDraft.versions.some((version) => version.source === "master" && Boolean(version.imageUrl))) return item;
+      return { ...item, imageDraft: replacement.imageDraft };
+    }),
+  };
+}
+
 function isLocalization(value: unknown): value is MenuReviewLocalization {
   if (!value || typeof value !== "object") return false;
   const localization = value as Partial<MenuReviewLocalization>;

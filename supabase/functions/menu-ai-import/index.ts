@@ -419,17 +419,24 @@ Deno.serve(async (request) => {
           .limit(1)
           .maybeSingle();
         if (existingError) throw new Error(existingError.message);
-        const existingItems = existing?.structured_result &&
-            typeof existing.structured_result === "object" &&
-            Array.isArray((existing.structured_result as Record<string, unknown>).items)
-          ? (existing.structured_result as Record<string, unknown>).items as Array<Record<string, unknown>>
-          : [];
-        const hasSmartImageContract = existingItems.length > 0 && existingItems.every(
-          (item) => item.smartImage && typeof item.smartImage === "object",
-        );
-        if (existing && hasSmartImageContract) {
-          diagnostic("review_draft_reused", { reviewDraftId: existing.id, sourceKind: "smart_library" });
-          return jsonResponse(200, { importDraft: existing });
+        if (existing) {
+          // Master images are deployed independently of owner review drafts. Refresh
+          // canonical library data on every open so an older draft cannot pin the
+          // Review Studio to PLACEHOLDER after a master reaches PENDING_REVIEW.
+          // review_state remains untouched, preserving all owner menu edits.
+          const refreshedResult = normalizeAiMenuResult(smartLibraryResult(
+            await loadSmartLibrary(service, restaurantType, restaurantId),
+          ));
+          const { data: refreshed, error: refreshError } = await service
+            .from("ai_menu_import_drafts")
+            .update({ structured_result: refreshedResult })
+            .eq("id", existing.id)
+            .eq("restaurant_id", restaurantId)
+            .select("*")
+            .single();
+          if (refreshError || !refreshed) throw new Error(refreshError?.message || "The Smart Library draft could not be refreshed.");
+          diagnostic("review_draft_reused", { reviewDraftId: refreshed.id, sourceKind: "smart_library", smartImagesRefreshed: true });
+          return jsonResponse(200, { importDraft: refreshed });
         }
         const { error: cleanupError } = await service
           .from("ai_menu_import_drafts")
