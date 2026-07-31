@@ -1,0 +1,752 @@
+{
+  "library": "ServeFlow Phase 9.13.9 Coffee Tea Hot Drinks Master Images",
+  "version": "1.0",
+  "phase": "9.13.9",
+  "categories": [
+    "Coffee",
+    "Tea",
+    "Hot Drinks"
+  ],
+  "generated_at": "2026-07-31T06:13:27.725076+00:00",
+  "lifecycle": "PENDING_REVIEW",
+  "images": [
+    {
+      "dish_id": "b49ca4c9-f6d9-5f84-8ac8-1f17de7005b9",
+      "dish_name": "Americano",
+      "slug": "americano",
+      "category": "Coffee",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/americano",
+      "storage_path": "cafe/coffee/americano/v001/americano-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-2048w.webp",
+      "checksum_sha256": "35cb737b947d18b560116542b179eb96d0a60995cbb9559063c3473440ad764b",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 242364,
+          "checksum_sha256": "35cb737b947d18b560116542b179eb96d0a60995cbb9559063c3473440ad764b"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 119532,
+          "checksum_sha256": "5fd03cc2c27f56d9f421644b268a845384c6c027673c31df255ba451239089a8"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 85414,
+          "checksum_sha256": "9a065018fbc909c6dc6a8654d60733f97e109d3aa8bbb966ed18b8b33404f432"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 51168,
+          "checksum_sha256": "dd4eac1d5859676a0de75c9ce8f0dfaaca44b594bad34f554430d048b7762ce5"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 27174,
+          "checksum_sha256": "5428b1b1f0f9e9f0b1bc74dfb1cbab846fcc777b9315c7e23e6c141dcf2eb20d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/americano/v001/americano-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/americano/v001/americano-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 12896,
+          "checksum_sha256": "f71872355925b565d62dbab1319c9d904f483b6e4a6081160f17dea7b5dd243a"
+        }
+      ]
+    },
+    {
+      "dish_id": "8285d75f-2a74-5b0f-9c85-98874a18408a",
+      "dish_name": "Latte",
+      "slug": "latte",
+      "category": "Coffee",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/latte",
+      "storage_path": "cafe/coffee/latte/v001/latte-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-2048w.webp",
+      "checksum_sha256": "3563d4dcad782813ca68f76497ad9c1b8af60659a9772773fc58b28956a2d82e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 316682,
+          "checksum_sha256": "3563d4dcad782813ca68f76497ad9c1b8af60659a9772773fc58b28956a2d82e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 159140,
+          "checksum_sha256": "e17399c6912d812e28cb61beba7f53ac4b0544bee9c61575ffaf0f20febdffb5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 109782,
+          "checksum_sha256": "845f53a8efd9c79c6bbfccbff81f200295e30aadb4bdff38f30b18a71ad8d903"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 65006,
+          "checksum_sha256": "7a7f0df62e32e1dd3fbb752958ff41b1075ab24aa3fc54a10bc466745215e0a9"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33418,
+          "checksum_sha256": "fd7b9c4abe8eac0fa24ef85ebccb01b4d4e4c0b432e102bb396b755ba57f1c1d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/latte/v001/latte-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/latte/v001/latte-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 16082,
+          "checksum_sha256": "c28122caa4b5d15d5d33f9b7ac81365ae479fc259ae27e3ca2678580507639e3"
+        }
+      ]
+    },
+    {
+      "dish_id": "c1ed1080-e187-59ea-b7c7-7a0dd366aedc",
+      "dish_name": "Macchiato",
+      "slug": "macchiato",
+      "category": "Coffee",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/macchiato",
+      "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-2048w.webp",
+      "checksum_sha256": "1175944a77b570377df2b880d2b54dfca9d357b8eec295b7d276d7c409bf188c",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 210944,
+          "checksum_sha256": "1175944a77b570377df2b880d2b54dfca9d357b8eec295b7d276d7c409bf188c"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 106386,
+          "checksum_sha256": "e4ef2e1112cf03fa7408a4312fd80443fd6300dda534973a8f8ed05486f0b8bd"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 76096,
+          "checksum_sha256": "6f94c2a60d7630d15efac98b19f758c60d1b3ff35b7e13487d33b88f6a78161e"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 49236,
+          "checksum_sha256": "b3389f17aaa151ae5b677c8ba275b6b8f7cbf5c670b6746147fb38dd3b8a302e"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 25832,
+          "checksum_sha256": "b3df7d3a57652691420887e66135796cfee5abd6236c3ecf52d6cb7b777f8711"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/macchiato/v001/macchiato-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/macchiato/v001/macchiato-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 13338,
+          "checksum_sha256": "a060190d52cb24a80ae55832d4846e6e298bb04eb3924aec8bbb39bc12b6bbfe"
+        }
+      ]
+    },
+    {
+      "dish_id": "c816fbc9-80fc-5826-ac77-10fdc88d9241",
+      "dish_name": "Mocha",
+      "slug": "mocha",
+      "category": "Coffee",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/mocha",
+      "storage_path": "cafe/coffee/mocha/v001/mocha-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-2048w.webp",
+      "checksum_sha256": "1fe67c8624afe5e8b2505765ea48e8f3c2402b1eb18d483dc2a0e82f15c460f9",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 300078,
+          "checksum_sha256": "1fe67c8624afe5e8b2505765ea48e8f3c2402b1eb18d483dc2a0e82f15c460f9"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 149144,
+          "checksum_sha256": "776fc895f7f2cad54eccb61b623a8129d31cd24177ef0cf202b1eb0205d58b3d"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 107584,
+          "checksum_sha256": "216e23d6cf3eaa42c0e1cf4681ca3305df485896bd93e35313e1b9578997c1f9"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 71358,
+          "checksum_sha256": "d480ea5f5e22a5ad0003139697c150d428dd007249401f761b2dc5cbbe023444"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 35990,
+          "checksum_sha256": "239f942cd9864ad87b952aca83500582fcd604812a8762053c7f2e2b150b914d"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/mocha/v001/mocha-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/mocha/v001/mocha-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 17002,
+          "checksum_sha256": "c3abd6b5d10397357999ded9e6341a3d9d4d0f27fe81040a5b71b9241c37ac3a"
+        }
+      ]
+    },
+    {
+      "dish_id": "d82c1f09-99bf-5dc9-b066-c12a57b57a21",
+      "dish_name": "Black Tea",
+      "slug": "black-tea",
+      "category": "Tea",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/tea-hot-drinks/black-tea",
+      "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-2048w.webp",
+      "checksum_sha256": "a2381f248146797ba002c1e813c6ea54ba55f2ae1981b3e76cc35a3e8871b1df",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 262740,
+          "checksum_sha256": "a2381f248146797ba002c1e813c6ea54ba55f2ae1981b3e76cc35a3e8871b1df"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 129882,
+          "checksum_sha256": "52298d1bdd5549c928af9394d0096a8a2a4b4370b4e8724bc79aad20a8c8c35b"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 88382,
+          "checksum_sha256": "27fdfb77ac8253c47c211e424baf0e38a595681d8b565ca9a55f97d3c8b7fb7f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 55020,
+          "checksum_sha256": "df9fbc8b032f847e12cef026b2368de196b14c9b51cea33e9287c11ea04eb13a"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28174,
+          "checksum_sha256": "b8e91fb2f7842ba88b7eaf7e1e9cd31ee1064879c476c5606474abf483abef20"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/black-tea/v001/black-tea-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 14680,
+          "checksum_sha256": "fff33b4c93a673213e32ed57759f4127a3a37ea3ce842dd22e124b6d88152158"
+        }
+      ]
+    },
+    {
+      "dish_id": "36b93522-ba2c-57dd-a455-33aa043bddf2",
+      "dish_name": "Green Tea",
+      "slug": "green-tea",
+      "category": "Tea",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/tea-hot-drinks/green-tea",
+      "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-2048w.webp",
+      "checksum_sha256": "f853ce17d07f6b1852a89038e10e5a0fd410ce981553ad542e5b6e5d750ef771",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 276874,
+          "checksum_sha256": "f853ce17d07f6b1852a89038e10e5a0fd410ce981553ad542e5b6e5d750ef771"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 144206,
+          "checksum_sha256": "7b742e5f804cef6e5a41f3575b54802301ca9aba4cfc37dad12640bda756d61c"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 101450,
+          "checksum_sha256": "3deae16959f60d8ba7eda911dcd23e7c89cdb503461347c36eece03f77ec8477"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 62838,
+          "checksum_sha256": "8c65d820c6da04439b6a592040803a07b8ea7e6020fb624a57ce70e494bdcd57"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 31722,
+          "checksum_sha256": "ba80d6076ef362d17ef3a859b9bf5e5cf9c56f2cee3dfe43a2d224a2511e2640"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/green-tea/v001/green-tea-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 15814,
+          "checksum_sha256": "ddabf6085462dc0df99885cbacb644bd8726cb0f7a1ef687671d4393b739f0a0"
+        }
+      ]
+    },
+    {
+      "dish_id": "29ec7d61-70ab-53d7-9963-8af53e3155fe",
+      "dish_name": "Milk Tea",
+      "slug": "milk-tea",
+      "category": "Tea",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/tea-hot-drinks/milk-tea",
+      "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-2048w.webp",
+      "checksum_sha256": "00733625925f1ad914e9ae7942b4b0150fcc00ee079e79488c98b03ed4fd1b7e",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 216114,
+          "checksum_sha256": "00733625925f1ad914e9ae7942b4b0150fcc00ee079e79488c98b03ed4fd1b7e"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 110826,
+          "checksum_sha256": "f2ec9b651b5c6b5bf66d1bd647ebb7bcf8ce86883f5a95d0c312b53ebcb795e5"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 80206,
+          "checksum_sha256": "9378adc8302c603d84ee838ca60b48463855e254b17b1911403aa42b7050437f"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 52778,
+          "checksum_sha256": "d16b96008f443fd96264e9ebc6ae6aa108888c9fce3aac63bb788f1a31f3729b"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 28586,
+          "checksum_sha256": "029b3a29d356d8b6ec04dc88c22315927875c7299caf11d1497dc9b4e3f7b6a4"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/tea-hot-drinks/milk-tea/v001/milk-tea-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 15268,
+          "checksum_sha256": "8c584b4429778a4875e07d01157b650234105ab26c0c06e1d3782a45167a4115"
+        }
+      ]
+    },
+    {
+      "dish_id": "f872255c-eac0-5def-ad91-1e3a6d9cf94d",
+      "dish_name": "Cappuccino",
+      "slug": "cappuccino",
+      "category": "Hot Drinks",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/cappuccino",
+      "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-2048w.webp",
+      "checksum_sha256": "d84b64820642a156a5732d62958c7994a3cae1891cf4284e32ec25fd771333ed",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 281150,
+          "checksum_sha256": "d84b64820642a156a5732d62958c7994a3cae1891cf4284e32ec25fd771333ed"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 143632,
+          "checksum_sha256": "b00d31b303e801770fef13c82768e92cbf317b33cbb0ed45fd65ca4790cb7bd8"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 101834,
+          "checksum_sha256": "df06f8ad395ff24fb9d982fecc78e53aa06721333a041f03000aebcdef1e6720"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 66154,
+          "checksum_sha256": "f7e1ef3a4c7fe51163f745bcc0f384de4168cda95740ab821995876ed7790edf"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 33964,
+          "checksum_sha256": "5630d2321b1904292ee17144d031d280c75c46d9c7995216b9343606ddd45d90"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/cappuccino/v001/cappuccino-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/cappuccino/v001/cappuccino-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 16712,
+          "checksum_sha256": "5a78e1449c50e7c1e8872fd873a200b7668c91102d4ca91028984750c5637493"
+        }
+      ]
+    },
+    {
+      "dish_id": "e91dfdac-128e-59dc-82ef-c7fd737e2b0f",
+      "dish_name": "Espresso",
+      "slug": "espresso",
+      "category": "Hot Drinks",
+      "restaurant_type": "Cafe",
+      "provider": "openai-built-in-imagegen",
+      "provider_key": "openai-built-in-imagegen",
+      "version": 1,
+      "version_label": "v001",
+      "base_storage_path": "cafe/coffee/espresso",
+      "storage_path": "cafe/coffee/espresso/v001/espresso-v001-2048w.webp",
+      "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-2048w.webp",
+      "checksum_sha256": "90710bdec3ecb2deb0e7d3173b456cc001cf3ce172e0777bffc1989494b8fb07",
+      "mime_type": "image/webp",
+      "width": 2048,
+      "height": 2048,
+      "lifecycle": "PENDING_REVIEW",
+      "lifecycle_history": [
+        "GENERATING",
+        "PENDING_REVIEW"
+      ],
+      "created_at": "2026-07-31T06:13:27.725076+00:00",
+      "style_guide_id": "serveflow-food-photography-v1",
+      "style_guide_version": "1.0",
+      "responsive_variants": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-2048w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-2048w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 199798,
+          "checksum_sha256": "90710bdec3ecb2deb0e7d3173b456cc001cf3ce172e0777bffc1989494b8fb07"
+        },
+        {
+          "width": 1280,
+          "height": 1280,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-1280w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-1280w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 96570,
+          "checksum_sha256": "7a1b8692a0f577d1a24bebcb73c72ffa2845f2510e7f603070b9da7fa71bfdf6"
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-1024w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-1024w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 68280,
+          "checksum_sha256": "a6602f39d0b031c8c7dc03c9ee544442b455db8e4cdeeeba070507a87f2a8808"
+        },
+        {
+          "width": 768,
+          "height": 768,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-768w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-768w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 43364,
+          "checksum_sha256": "ba4f76523f0bf07c54bef5330cda738c22d6c40744bb6f012d372dd1cc5d8ccd"
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-512w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-512w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 23222,
+          "checksum_sha256": "a62a2a4a13559cf35c84cd544c21605fdc40009c919d9e45ec2fc86d14145902"
+        },
+        {
+          "width": 320,
+          "height": 320,
+          "storage_path": "cafe/coffee/espresso/v001/espresso-v001-320w.webp",
+          "public_url": "https://dbdhuuanfsniqvcyuscd.supabase.co/storage/v1/object/public/smart-menu-images/cafe/coffee/espresso/v001/espresso-v001-320w.webp",
+          "mime_type": "image/webp",
+          "byte_size": 11488,
+          "checksum_sha256": "430848ec6c39cf3c257c9f866951f67057b06c3a36e3b5ec978f38bfd753bd95"
+        }
+      ]
+    }
+  ]
+}
