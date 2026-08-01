@@ -258,6 +258,17 @@ export async function fetchSmartQrPortalState(input: {
   const payload = data as Record<string, unknown>;
   const mode = String(payload.mode ?? "available");
   if (!["available", "customer", "waiter", "occupied"].includes(mode)) throw new Error("Table status is unavailable.");
+  logPublicQrContext("smartQrDecision:result", {
+    restaurantId: payload.restaurant_id,
+    tableId: payload.table_id,
+    tableNumber: payload.table_number,
+    diningSessionId: payload.dining_session_id ?? payload.order_id,
+    createdBy: payload.created_by,
+    sessionStatus: payload.session_status,
+    paymentStatus: payload.payment_status,
+    orderStatus: payload.order_status ?? payload.status,
+    decisionResult: payload.decision_result ?? mode,
+  });
   return {
     ...(payload as unknown as SmartQrPortalState),
     mode: mode as SmartQrPortalState["mode"],

@@ -6348,7 +6348,9 @@ async function loadOwnerFeedbackReportRows(
 
     const { data: itemRows, error: itemError } = await supabase
       .from("order_items")
-      .select("order_id,menu_item_id,menu_items(name)")
+      .select(
+        "order_id,menu_item_id,menu_items!order_items_menu_item_same_restaurant(name)",
+      )
       .eq("restaurant_id", restaurantId)
       .in("order_id", orderIds);
     if (itemError) throw new Error(`Could not load feedback items: ${itemError.message}`);
@@ -6415,7 +6417,8 @@ async function buildOwnerReportDataFromTables(
     supabase
       .from("restaurant_staff")
       .select("id,display_name,role")
-      .eq("restaurant_id", restaurantId),
+      .eq("restaurant_id", restaurantId)
+      .neq("role", "owner"),
   ]);
 
   if (orderError) throw new Error(orderError.message);

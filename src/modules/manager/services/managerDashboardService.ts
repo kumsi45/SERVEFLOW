@@ -243,6 +243,7 @@ async function fetchStaffOnDuty(restaurantId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", restaurantId)
     .eq("active", true)
+    .neq("role", "owner")
     .eq("staff_session_active", true);
 
   if (error) throw new Error(error.message);

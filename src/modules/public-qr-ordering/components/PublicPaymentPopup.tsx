@@ -53,6 +53,7 @@ export function PublicPaymentPopup({ open, businessName, total, methods, selecte
   const [referenceNumber, setReferenceNumber] = useState(() => { try { return window.localStorage.getItem(`${persistenceKey}:reference`) ?? ""; } catch { return ""; } });
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [showAllMethods, setShowAllMethods] = useState(!selectedMethod);
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -69,6 +70,7 @@ export function PublicPaymentPopup({ open, businessName, total, methods, selecte
   const account = selected?.accounts[0];
   const isCash = selected?.code === "cash";
   const copyValue = account?.accountNumber || account?.phoneNumber || "";
+  const visibleMethods = selected && !showAllMethods ? [selected] : methods;
 
   return createPortal(<div className="public-payment-overlay" role="presentation">
     <button type="button" className="public-payment-dismiss" aria-label="Close payment methods" onClick={onBack} />
@@ -76,20 +78,21 @@ export function PublicPaymentPopup({ open, businessName, total, methods, selecte
       <div className="public-payment-handle" aria-hidden="true" />
       <header><h2 id="public-payment-title">Payment Method</h2><button type="button" aria-label="Close payment methods" onClick={onBack}>×</button></header>
       {successMessage ? <div className="public-payment-success" role="status"><span>✓</span><strong>Your Order Has Been Sent</strong><p>{successMessage}</p><div className="public-payment-success-actions"><button type="button" onClick={onViewOrders ?? onBack}>View Orders</button><button type="button" className="secondary" onClick={onBack}>Back To Menu</button></div></div> : <div className="public-payment-methods">
-        {loading ? <div className="public-payment-empty" role="status"><strong>Loading payment methods…</strong><span>Please wait a moment.</span></div> : error && methods.length === 0 ? <div className="public-payment-empty" role="alert"><strong>Payment methods could not be loaded.</strong><button type="button" onClick={onRetry}>Try Again</button></div> : methods.length === 0 ? <div className="public-payment-empty"><strong>No payment method is currently available.</strong><span>Please contact {businessName}.</span></div> : methods.map((method) => {
+        {selected && !showAllMethods && !proofOpen ? <div className="public-payment-selection-bar"><span>Selected payment method</span><button type="button" onClick={() => { setShowAllMethods(true); setProofOpen(false); }}>Change</button></div> : null}
+        {loading ? <div className="public-payment-empty" role="status"><strong>Loading payment methods…</strong><span>Please wait a moment.</span></div> : error && methods.length === 0 ? <div className="public-payment-empty" role="alert"><strong>Payment methods could not be loaded.</strong><button type="button" onClick={onRetry}>Try Again</button></div> : methods.length === 0 ? <div className="public-payment-empty"><strong>No payment method is currently available.</strong><span>Please contact {businessName}.</span></div> : visibleMethods.map((method) => {
           const active = method.displayName === selectedMethod;
           const details = method.accounts[0];
-          return <article className={active ? "selected" : ""} key={method.code}>
-            <button type="button" className="public-payment-method-head" onClick={() => { onSelect(method.displayName as PublicQrPaymentMethod); setProofOpen(false); setCopyStatus("idle"); }} aria-pressed={active}>
+          return <article className={`${active ? "selected" : ""}${active && proofOpen ? " proof-open" : ""}`} key={method.code}>
+            <button type="button" className="public-payment-method-head" onClick={() => { onSelect(method.displayName as PublicQrPaymentMethod); setShowAllMethods(false); setProofOpen(false); setCopyStatus("idle"); }} aria-pressed={active}>
               <span>{methodMeta[method.code]?.icon ?? "PM"}</span><span><strong>{method.displayName}</strong><small>{methodMeta[method.code]?.detail ?? "Payment method"}</small></span><i>{active ? "✓" : ""}</i>
             </button>
             {active ? <div className="public-payment-details">
               {method.code === "cash" ? <p className="public-payment-cash">Please pay at the cashier.</p> : <>
-                <dl>
+                {!proofOpen ? <dl>
                   {method.code === "bank_transfer" && details?.provider ? <div><dt>Bank Name</dt><dd>{details.provider.replace(/_/g, " ")}</dd></div> : null}
                   <div><dt>Owner Name</dt><dd>{details?.accountName || details?.businessName || businessName}</dd></div>
                   {copyValue ? <div><dt>{method.code === "bank_transfer" ? "Account Number" : "Number"}</dt><dd>{copyValue}</dd></div> : null}
-                </dl>
+                </dl> : null}
                 {!proofOpen ? <div className="public-payment-actions">
                   <button type="button" disabled={!copyValue} onClick={() => void copyPaymentValue(copyValue).then((copied) => setCopyStatus(copied ? "copied" : "failed"))}>{copyStatus === "copied" ? "Copied" : details?.accountNumber ? "Copy Account Number" : "Copy Number"}</button>
                   <button type="button" className="primary" onClick={() => setProofOpen(true)}>I Have Paid</button>

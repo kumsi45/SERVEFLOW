@@ -192,7 +192,8 @@ export async function loadManagerAiOperations(
         "id,display_name,role,active,staff_session_active,assigned_kitchen_station_id",
       )
       .eq("restaurant_id", restaurantId)
-      .eq("active", true),
+      .eq("active", true)
+      .neq("role", "owner"),
     supabase
       .from("orders")
       .select(
