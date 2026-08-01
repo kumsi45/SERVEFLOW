@@ -20,7 +20,6 @@ export type PaymentMethodRuntime = {
 };
 
 export type PublicPaymentRuntime = {
-  restaurantId: string;
   businessName: string;
   paymentPolicy: PaymentPolicy;
   methods: PaymentMethodRuntime[];

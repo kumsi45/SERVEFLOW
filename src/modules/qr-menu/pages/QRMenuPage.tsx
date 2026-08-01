@@ -32,12 +32,14 @@ import { useQRMenu } from "../hooks/useQRMenu";
 import { logPublicQrScan } from "../services/qrMenuService";
 import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/PublicQrCheckoutPanel";
 import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrCartPanel";
+import { PublicPaymentPopup, type PublicPaymentProof } from "../../public-qr-ordering/components/PublicPaymentPopup";
 import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart";
 import { usePublicQrCheckoutState } from "../../public-qr-ordering/hooks/usePublicQrCheckoutState";
 import {
   fetchPublicQrOrderSession,
   fetchPublicPaymentRuntime,
   submitPublicOrderFeedback,
+  submitPublicPaymentProof,
   submitPublicQrOrder,
   uploadPublicOrderFeedbackPhoto,
 } from "../../public-qr-ordering/services/publicQrOrderService";
@@ -132,6 +134,13 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
   const [submitError, setSubmitError] = useState<string>();
   const [paymentRuntime, setPaymentRuntime] = useState<PublicPaymentRuntime | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [paymentRetry, setPaymentRetry] = useState(0);
+  const [paymentSuccess, setPaymentSuccess] = useState<string>();
+  const [paymentPopupOpen, setPaymentPopupOpen] = useState(() => {
+    try { return window.localStorage.getItem(`serveflow.payment-popup:${restaurantSlug}`) === "open"; }
+    catch { return false; }
+  });
   const [submittedOrder, setSubmittedOrder] = useState<
     SubmittedPublicQrOrder | undefined
   >(() => {
@@ -157,6 +166,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const previousActiveSessionId = useRef<string | null>(null);
   const currentSessionKeyRef = useRef(checkout.sessionKey);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [foodInfoItem, setFoodInfoItem] = useState<MenuItem>();
   const [trackerExpanded, setTrackerExpanded] = useState(false);
@@ -216,7 +226,15 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   useSmartImagePrefetch(nearbyImageInputs, "card");
 
   useEffect(() => {
+    try {
+      if (paymentPopupOpen) window.localStorage.setItem(`serveflow.payment-popup:${restaurantSlug}`, "open");
+      else window.localStorage.removeItem(`serveflow.payment-popup:${restaurantSlug}`);
+    } catch { /* Persistence is optional in restricted webviews. */ }
+  }, [paymentPopupOpen, restaurantSlug]);
+
+  useEffect(() => {
     let active = true;
+    setPaymentLoading(true);
     void fetchPublicPaymentRuntime(restaurantSlug)
       .then((runtime) => {
         if (!active) return;
@@ -228,9 +246,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       })
       .catch((runtimeError) => {
         if (active) setSubmitError(runtimeError instanceof Error ? runtimeError.message : "Payment configuration is unavailable.");
-      });
+      })
+      .finally(() => { if (active) setPaymentLoading(false); });
     return () => { active = false; };
-  }, [restaurantSlug]);
+  }, [paymentRetry, restaurantSlug]);
 
   useEffect(() => {
     const previousHtmlLanguage = document.documentElement.lang;
@@ -480,7 +499,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     });
   }
 
-  async function submitOrder() {
+  async function submitOrder(proof: PublicPaymentProof = { referenceNumber: "", screenshot: null }) {
+    if (submittingRef.current) return;
     const tableNum = checkout.tableNumber.trim();
     const customerName = checkout.customerName.trim();
     const tableNumberValidationMessage =
@@ -496,6 +516,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     }
 
     setSubmitError(undefined);
+    submittingRef.current = true;
     setSubmitting(true);
     const requestSessionKey = checkout.sessionKey;
 
@@ -515,8 +536,22 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         items: cart.items,
       });
 
+      let proofWarning = "";
+      if (order.invoice_id && (proof.referenceNumber || proof.screenshot)) {
+        try {
+          await submitPublicPaymentProof({
+            restaurantSlug, tableNumber: tableNum, qrToken: checkout.qrToken,
+            browserSessionToken: checkout.browserSessionToken, invoiceId: order.invoice_id,
+            referenceNumber: proof.referenceNumber, screenshot: proof.screenshot,
+          });
+        } catch {
+          proofWarning = " Your order was placed, but the optional payment proof could not be uploaded. Please show it to the cashier.";
+        }
+      }
+
       if (currentSessionKeyRef.current === requestSessionKey) {
         setSubmittedOrder(order);
+        setPaymentSuccess(`Your order is confirmed.${proofWarning}`);
         cart.clearCart();
         await refreshActiveSession();
         checkout.resetCheckoutState();
@@ -528,6 +563,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         );
       }
     } finally {
+      submittingRef.current = false;
       if (currentSessionKeyRef.current === requestSessionKey) {
         setSubmitting(false);
       }
@@ -1039,7 +1075,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               onCustomerNameChange={checkout.setCustomerName}
               onTableNumberChange={checkout.setTableNumber}
               onPaymentMethodChange={checkout.setPaymentMethod}
-              onSubmit={submitOrder}
+              onSubmit={() => setPaymentPopupOpen(true)}
             />
           ) : (
             <PublicQrCartPanel
@@ -1080,6 +1116,22 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         }
         onRemove={cart.removeItem}
         onReviewOrder={() => checkout.setCheckoutVisible(true)}
+      />
+      <PublicPaymentPopup
+        open={paymentPopupOpen}
+        businessName={restaurant.name}
+        total={(activeSession?.total_price ?? 0) + cart.displaySubtotal}
+        methods={paymentRuntime?.methods ?? []}
+        selectedMethod={checkout.paymentMethod}
+        submitting={submitting}
+        error={submitError}
+        persistenceKey={`serveflow.payment-popup:${restaurantSlug}:${checkout.sessionKey}`}
+        successMessage={paymentSuccess}
+        loading={paymentLoading}
+        onRetry={() => { setSubmitError(undefined); setPaymentRetry((value) => value + 1); }}
+        onSelect={checkout.setPaymentMethod}
+        onBack={() => { setPaymentPopupOpen(false); setPaymentSuccess(undefined); }}
+        onConfirm={(proof) => void submitOrder(proof)}
       />
       {cart.itemCount > 0 ? (
         <button

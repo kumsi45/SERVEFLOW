@@ -1,5 +1,4 @@
 import {
-  PUBLIC_QR_PAYMENT_METHODS,
   type PublicQrCartItem,
   type PublicQrPaymentMethod,
   type PublicQrOrderSession,
@@ -51,13 +50,6 @@ function getTableNumberValidationMessage(tableNumber: string, tableCount?: numbe
   return undefined;
 }
 
-function getPaymentMethodValidationMessage(paymentMethod: PublicQrPaymentMethod | "") {
-  if (!paymentMethod) {
-    return "Please select a payment method before placing the order.";
-  }
-  return undefined;
-}
-
 export function PublicQrCheckoutPanel({
   customerName,
   displaySubtotal,
@@ -78,22 +70,18 @@ export function PublicQrCheckoutPanel({
   onSubmit,
 }: PublicQrCheckoutPanelProps) {
   const tableNumberValidationMessage = getTableNumberValidationMessage(tableNumber, tableCount);
-  const paymentMethodValidationMessage = getPaymentMethodValidationMessage(paymentMethod);
   const canSubmit =
     items.length > 0 &&
     !submitting &&
-    !tableNumberValidationMessage &&
-    !paymentMethodValidationMessage;
+    !tableNumberValidationMessage;
 
   const existingSubtotal = activeSession?.total_price ?? 0;
   const grandTotal = existingSubtotal + displaySubtotal;
   const isContinuingOrder = Boolean(activeSession);
   const activeOrderLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
-  const visibleMethods = enabledPaymentMethods
-    ? enabledPaymentMethods.map((method) => method.displayName as PublicQrPaymentMethod)
-    : PUBLIC_QR_PAYMENT_METHODS;
-  const selectedConfiguration = enabledPaymentMethods?.find((method) => method.displayName === paymentMethod);
-  const selectedAccount = selectedConfiguration?.accounts[0];
+  void paymentMethod;
+  void enabledPaymentMethods;
+  void onPaymentMethodChange;
 
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
@@ -170,47 +158,6 @@ export function PublicQrCheckoutPanel({
         />
       </label>
 
-      {/* Payment Method */}
-      <label className="public-checkout-field">
-        <span>Payment Method *</span>
-        <select
-          value={paymentMethod}
-          aria-invalid={paymentMethodValidationMessage ? "true" : "false"}
-          aria-describedby="public-checkout-payment-error"
-          onChange={(event) =>
-            onPaymentMethodChange(event.target.value as PublicQrPaymentMethod | "")
-          }
-        >
-          <option value="">Select payment method</option>
-          {visibleMethods.map((method) => (
-            <option value={method} key={method}>
-              {method}
-            </option>
-          ))}
-        </select>
-        {paymentMethodValidationMessage ? (
-          <p className="public-checkout-field-error" id="public-checkout-payment-error">
-            {paymentMethodValidationMessage}
-          </p>
-        ) : null}
-      </label>
-
-      {selectedAccount ? (
-        <section className="public-checkout-summary" aria-label="Payment instructions">
-          <h3>{selectedAccount.businessName || restaurantName || "Payment details"}</h3>
-          {selectedAccount.accountName ? <p><strong>Account name:</strong> {selectedAccount.accountName}</p> : null}
-          {selectedAccount.accountNumber ? <p><strong>Account number:</strong> {selectedAccount.accountNumber}</p> : null}
-          {selectedAccount.phoneNumber ? <p><strong>Phone:</strong> {selectedAccount.phoneNumber}</p> : null}
-          {selectedAccount.referenceFormat ? <p><strong>Reference:</strong> {selectedAccount.referenceFormat}</p> : null}
-          {selectedAccount.instructions ? <p>{selectedAccount.instructions}</p> : null}
-          {selectedAccount.qrImageUrl ? <img src={selectedAccount.qrImageUrl} alt={`${selectedConfiguration?.displayName ?? "Payment"} QR code`} width="192" height="192" /> : null}
-          <div className="public-cart-actions">
-            {selectedAccount.accountNumber ? <button type="button" onClick={() => void navigator.clipboard?.writeText(selectedAccount.accountNumber ?? "")}>Copy Account Number</button> : null}
-            {selectedAccount.qrImageUrl ? <a href={selectedAccount.qrImageUrl} download>Download QR</a> : null}
-          </div>
-        </section>
-      ) : null}
-
       {/* Order summary */}
       <div className="public-checkout-summary" aria-label="Order summary">
         <h3>{isContinuingOrder ? "Current order" : "Order summary"}</h3>
@@ -273,7 +220,7 @@ export function PublicQrCheckoutPanel({
               {isContinuingOrder ? "Adding items..." : "Sending order..."}
             </span>
           ) : (
-            isContinuingOrder ? "Add to Current Order" : "Place Order"
+            isContinuingOrder ? "Continue to Payment" : "Place Order"
           )}
         </button>
       </div>

@@ -59,7 +59,6 @@ function normalizePublicPaymentRuntime(value: unknown): PublicPaymentRuntime {
   if (!value || typeof value !== "object") throw new Error("Payment configuration is unavailable.");
   const payload = value as Record<string, unknown>;
   return {
-    restaurantId: String(payload.restaurant_id ?? ""),
     businessName: String(payload.business_name ?? ""),
     paymentPolicy: payload.payment_policy === "kitchen_before_payment" || payload.payment_policy === "mixed" ? payload.payment_policy : "pay_before_kitchen",
     methods: (Array.isArray(payload.methods) ? payload.methods : []).flatMap((entry) => {
@@ -334,6 +333,23 @@ export async function submitPublicQrOrder({
   });
 
   return submittedOrder;
+}
+
+export async function submitPublicPaymentProof(input: {
+  restaurantSlug: string; tableNumber: string; qrToken: string; browserSessionToken: string;
+  invoiceId: string; referenceNumber?: string; screenshot?: File | null;
+}) {
+  const form = new FormData();
+  form.set("restaurantSlug", input.restaurantSlug);
+  form.set("tableNumber", input.tableNumber);
+  form.set("qrToken", input.qrToken);
+  form.set("browserSessionToken", input.browserSessionToken);
+  form.set("invoiceId", input.invoiceId);
+  if (input.referenceNumber) form.set("referenceNumber", input.referenceNumber);
+  if (input.screenshot) form.set("screenshot", input.screenshot);
+  const { data, error } = await supabase.functions.invoke("submit-public-payment-proof", { body: form });
+  if (error) throw new Error(error.message);
+  return data as { submitted: boolean };
 }
 
 export async function uploadPublicOrderFeedbackPhoto({
