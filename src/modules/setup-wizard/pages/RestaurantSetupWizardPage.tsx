@@ -368,7 +368,7 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 2 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} smartLibraryOnly />
+            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} businessType={restaurantInfo.restaurantType} onBusyChange={handleImportBusyChange} mode="review" onBack={back} onContinue={() => void next()} smartLibraryOnly />
           ) : null}
 
           {step === 3 ? (
@@ -391,7 +391,7 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 4 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
+            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} businessType={restaurantInfo.restaurantType} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
           ) : null}
         </div>
 

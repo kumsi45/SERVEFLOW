@@ -22,7 +22,7 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(preview).toContain("PublicQrCartPanel");
     expect(preview).toContain("FoodInfoPanel");
     expect(preview).toContain("Ready to publish");
-    expect(preview).toContain("Supported Languages");
+    expect(preview).toContain("Menu languages");
     expect(preview).toContain("Refresh Preview");
     expect(preview).toContain('placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "owner-review")');
   });

@@ -236,7 +236,7 @@ describe("Phase 9.8.3 AI Menu Review Studio", () => {
       "revoke insert, update, delete on public.ai_menu_import_drafts",
     );
     expect(studio).toContain("Managers can review AI import drafts");
-    expect(studio).toContain("Read-only draft access");
+    expect(studio).toContain('access === "owner" ? saveStateLabel(saveStatus, offline) : "Synced"');
   });
 
   it("is memoized, virtualized, lazy, debounced, responsive, and accessible", () => {

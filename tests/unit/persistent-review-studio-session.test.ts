@@ -37,7 +37,7 @@ describe("Phase 9.12.3.3 persistent Review Studio session", () => {
   it("preserves lifecycle events and retries sync online", () => {
     for (const event of ["beforeunload", "visibilitychange", "pagehide", "focus", "online", "offline"]) expect(studio).toContain(event);
     expect(studio).toContain("queueSave(extractionId)");
-    expect(studio).toContain("Saved on this device");
+    expect(studio).toContain("saveStateLabel(saveStatus, offline)");
   });
 
   it("stores photo blobs durably and uploads through the existing bucket", () => {

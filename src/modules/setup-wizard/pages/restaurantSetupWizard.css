@@ -2863,3 +2863,28 @@
   .owner-menu-editor * { scroll-behavior: auto !important; transition: none !important; }
   .owner-menu-card.newly-created { animation: none; }
 }
+
+/* Phase 10 final preview refinements */
+.menu-orientation-picker button { width: 48px; min-width: 48px; padding: 0; display: grid; place-items: center; }
+.menu-orientation-shape { display: block; border: 2px solid currentColor; border-radius: 4px; }
+.menu-orientation-shape.portrait { width: 15px; height: 22px; }
+.menu-orientation-shape.landscape { width: 24px; height: 16px; }
+.menu-supported-languages { padding: 14px 16px; border: 1px solid #dce9e1; border-radius: 16px; background: linear-gradient(145deg, #f8fcf9, #eef7f1); }
+.menu-supported-languages > span { display: grid; gap: 2px; }
+.menu-supported-languages > span b { color: #173f2a; font-size: 13px; letter-spacing: 0; text-transform: none; }
+.menu-supported-languages > span small { color: #718078; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.menu-supported-languages strong { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #d9e8df; border-radius: 999px; background: #fff; color: #234f37; white-space: nowrap; }
+.menu-supported-languages strong i { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: #dff4e7; color: #167342; font-size: 11px; font-style: normal; }
+.menu-optional-note { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; padding: 12px 14px; border-radius: 13px; background: #f5f8f6; color: #53645a; }
+.menu-optional-note > span:first-child { width: 26px; height: 26px; flex: 0 0 26px; display: grid; place-items: center; border-radius: 50%; background: #e1f2e7; color: #237348; font-weight: 900; }
+.menu-optional-note > span:last-child { display: grid; gap: 2px; }
+.menu-optional-note strong { color: #294535; font-size: 13px; }
+.menu-optional-note small { color: #718078; line-height: 1.35; }
+
+@media (max-width: 767px) {
+  .menu-preview-controls > .menu-orientation-picker { display: flex; justify-content: flex-end; gap: 8px; }
+  .menu-preview-controls > .menu-orientation-picker button { width: 48px; min-width: 48px; }
+  .menu-supported-languages { grid-template-columns: 1fr 1fr !important; }
+  .menu-supported-languages > span { grid-column: 1 / -1 !important; }
+  .menu-supported-languages strong:last-child { grid-column: 1 / -1; justify-self: start; }
+}

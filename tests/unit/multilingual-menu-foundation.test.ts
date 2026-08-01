@@ -121,7 +121,7 @@ describe("Phase 9.8.4 multilingual menu foundation", () => {
     expect(studio).toContain("ownerEdited");
     expect(studio).toContain("CategoryLocalizedEditor");
     expect(studio).toContain("New category language");
-    expect(studio).toContain("Read-only draft access");
+    expect(studio).toContain('access === "owner" ? saveStateLabel(saveStatus, offline) : "Synced"');
   });
 
   it("resolves multilingual presentation without duplicating canonical items", () => {

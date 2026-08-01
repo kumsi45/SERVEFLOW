@@ -3,7 +3,7 @@ import { certifyMenuPreview } from "../../src/modules/setup-wizard/services/menu
 import type { MenuReviewState } from "../../src/modules/setup-wizard/services/menuReviewTypes";
 import type { MenuPreviewRestaurant } from "../../src/modules/setup-wizard/services/menuPublishService";
 
-const restaurant: MenuPreviewRestaurant = { id: "restaurant-1", name: "Test Cafe", slug: "test-cafe", menu_theme: "modern", logo_url: null, cover_url: null, ordering_settings: null, currency_code: "ETB", currency_symbol: "Br", locale: "en" };
+const restaurant: MenuPreviewRestaurant = { id: "restaurant-1", name: "Test Cafe", slug: "test-cafe", menu_theme: "modern", logo_url: null, cover_url: null, profile: { restaurant_type: "Cafe" }, ordering_settings: null, currency_code: "ETB", currency_symbol: "Br", locale: "en" };
 const localizedField = (value: string | null) => ({ values: { en: { value, confidence: 1 }, om: { value: null, confidence: 0 }, am: { value: null, confidence: 0 } }, detectedLanguage: "en" as const, languageConfidence: 1, ownerEdited: { en: false, om: false, am: false } });
 const state = (overrides: Partial<MenuReviewState["items"][number]> = {}): MenuReviewState => ({
   schemaVersion: 2,
@@ -26,8 +26,14 @@ describe("customer preview pre-publish certification", () => {
     const invalid = certifyMenuPreview(restaurant, state({ price: { value: null, confidence: 0 }, description: { value: null, confidence: 0 }, imageDraft: { status: "Pending", selectedVersionId: null, versions: [], lastPrompt: null, generationProgress: 0, errorMessage: null } }));
     expect(invalid.canPublish).toBe(false);
     expect(invalid.checks.find((check) => check.id === "prices")).toMatchObject({ ready: false, blocking: true });
-    expect(invalid.checks.find((check) => check.id === "images")).toMatchObject({ ready: false, blocking: false });
+    expect(invalid.checks.find((check) => check.id === "images")).toMatchObject({ ready: true, blocking: false });
     expect(invalid.checks.find((check) => check.id === "descriptions")).toMatchObject({ ready: false, blocking: false });
     expect(invalid.readiness).toBeLessThan(100);
+  });
+
+  it("does not reduce readiness for optional business or presentation fields", () => {
+    const result = certifyMenuPreview(restaurant, state());
+    expect(result.readiness).toBe(100);
+    expect(result.checks.filter((check) => !check.blocking && !check.ready).length).toBeGreaterThan(0);
   });
 });

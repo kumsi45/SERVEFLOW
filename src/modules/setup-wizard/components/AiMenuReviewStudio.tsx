@@ -20,7 +20,6 @@ import {
 } from "../../../core/menu/menuLanguage";
 import {
   createAiMenuImportDraft,
-  createSmartMenuLibraryDraft,
   createStarterMenuReviewDraft,
   getMenuReviewAccess,
   listMenuExtractionDrafts,
@@ -63,10 +62,12 @@ import { createSafeMenuDescription, SERVEFLOW_MENU_PLACEHOLDER_IMAGE } from "../
 import { readReviewStudioSession, writeReviewStudioSession } from "../services/reviewStudioSessionService";
 import { clearAddItemWorkspacePhoto, listQueuedReviewPhotos, queueReviewPhoto, readAddItemWorkspacePhoto, removeQueuedReviewPhoto, saveAddItemWorkspacePhoto, type QueuedReviewPhoto } from "../services/reviewPhotoUploadQueue";
 import { loadMenuPreviewRestaurant, loadMenuPublishHistory, persistMenuPreviewTheme, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
+import { draftFingerprint, draftManager, saveStateLabel, workflowErrorMessage } from "../services/draftManager";
 
 type AiMenuReviewStudioProps = {
   restaurantId: string;
   restaurantName?: string;
+  businessType?: string;
   onBusyChange: (busy: boolean) => void;
   onFinishSetup?: () => Promise<void>;
   mode?: "review" | "preview";
@@ -115,6 +116,7 @@ function freshItem(categoryId: string | null, order: number): MenuReviewItem {
 export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   restaurantId,
   restaurantName = "Your Restaurant",
+  businessType,
   onBusyChange,
   onFinishSetup,
   mode = "review",
@@ -172,7 +174,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   const reviewStatesRef = useRef(reviewStates);
   const revisionsRef = useRef<Record<string, number>>({});
   const versionsRef = useRef<Record<string, number>>({});
-  const savingIdsRef = useRef(new Set<string>());
+  const savePromisesRef = useRef(new Map<string, Promise<void>>());
+  const savedFingerprintsRef = useRef<Record<string, string>>({});
+  const saveErrorsRef = useRef<Record<string, Error | null>>({});
   const timersRef = useRef(new Map<string, number>());
   const persistRef = useRef<(extractionId: string) => Promise<void>>(async () => undefined);
   const restoredSessionRef = useRef(false);
@@ -191,41 +195,42 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   }, []);
 
   persistRef.current = async (extractionId: string) => {
-    if (savingIdsRef.current.has(extractionId)) return;
-    const state = reviewStatesRef.current[extractionId];
-    const revision = revisionsRef.current[extractionId];
-    if (!state || revision === undefined || access !== "owner") return;
-    const version = versionsRef.current[extractionId] ?? 0;
-    savingIdsRef.current.add(extractionId);
-    setSaveStatuses((current) => ({ ...current, [extractionId]: "saving" }));
-    try {
-      const saved = await saveMenuReviewDraft(extractionId, revision, state);
-      revisionsRef.current[extractionId] = saved.reviewRevision;
-      setExtractions((current) => current.map((entry) =>
-        entry.id === saved.id ? saved : entry
-      ));
-      if ((versionsRef.current[extractionId] ?? 0) === version) {
-        setSaveStatuses((current) => ({
-          ...current,
-          [extractionId]: "saved",
-        }));
-      } else {
-        setSaveStatuses((current) => ({
-          ...current,
-          [extractionId]: "dirty",
-        }));
-        queueSave(extractionId);
+    const existing = savePromisesRef.current.get(extractionId);
+    if (existing) return existing;
+    const save = (async () => {
+      try {
+        while (access === "owner") {
+          const state = reviewStatesRef.current[extractionId];
+          const revision = revisionsRef.current[extractionId];
+          if (!state || revision === undefined) return;
+          const fingerprint = draftFingerprint(state);
+          if (savedFingerprintsRef.current[extractionId] === fingerprint) {
+            setSaveStatuses((current) => ({ ...current, [extractionId]: "saved" }));
+            return;
+          }
+          setSaveStatuses((current) => ({ ...current, [extractionId]: "saving" }));
+          saveErrorsRef.current[extractionId] = null;
+          const saved = await saveMenuReviewDraft(extractionId, revision, state);
+          revisionsRef.current[extractionId] = saved.reviewRevision;
+          savedFingerprintsRef.current[extractionId] = fingerprint;
+          draftManager.synced(extractionId, state, saved.reviewRevision);
+          setExtractions((current) => current.map((entry) => entry.id === saved.id ? saved : entry));
+          if (draftFingerprint(reviewStatesRef.current[extractionId]) === fingerprint) {
+            setSaveStatuses((current) => ({ ...current, [extractionId]: "saved" }));
+            return;
+          }
+        }
+      } catch (saveError) {
+        saveErrorsRef.current[extractionId] = saveError instanceof Error ? saveError : new Error("We couldn't sync your changes.");
+        setSaveStatuses((current) => ({ ...current, [extractionId]: "error" }));
+        if (!navigator.onLine) setOffline(true);
+        else setError(workflowErrorMessage(saveError, "We couldn't sync your changes. Your draft is safe on this device."));
+      } finally {
+        savePromisesRef.current.delete(extractionId);
       }
-    } catch (saveError) {
-      setSaveStatuses((current) => ({
-        ...current,
-        [extractionId]: "error",
-      }));
-      if (!navigator.onLine) setOffline(true);
-      else setError(saveError instanceof Error ? saveError.message : "The menu draft could not be autosaved.");
-    } finally {
-      savingIdsRef.current.delete(extractionId);
-    }
+    })();
+    savePromisesRef.current.set(extractionId, save);
+    return save;
   };
 
   const load = useCallback(async () => {
@@ -239,11 +244,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         getMenuReviewAccess(restaurantId),
       ]);
       const libraryExtractions = loadedExtractions.filter((entry) => entry.sourceKind === "smart_library");
-      const visibleExtractions = smartLibraryOnly
-        ? await Promise.all(libraryExtractions.map((entry) => entry.sourceReference
-          ? createSmartMenuLibraryDraft(restaurantId, entry.sourceReference)
-          : Promise.resolve(entry)))
-        : loadedExtractions;
+      const visibleExtractions = smartLibraryOnly ? libraryExtractions : loadedExtractions;
       const visibleSourceDrafts = smartLibraryOnly ? [] : drafts;
       const states: Record<string, MenuReviewState> = {};
       const revisions: Record<string, number> = {};
@@ -269,6 +270,11 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       versionsRef.current = Object.fromEntries(
         Object.keys(restoredStates).map((id) => [id, 0]),
       );
+      savedFingerprintsRef.current = Object.fromEntries(Object.entries(states).map(([id, value]) => [id, draftFingerprint(value)]));
+      for (const extraction of visibleExtractions) {
+        const draftState = restoredStates[extraction.id];
+        if (draftState) draftManager.hydrate(extraction.id, draftState, restoredRevisions[extraction.id] ?? extraction.reviewRevision, recoverCachedEdits ? "Editing" : "Synced");
+      }
       setSourceDrafts(visibleSourceDrafts);
       setExtractions(visibleExtractions);
       setAccess(loadedAccess);
@@ -426,12 +432,14 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     const current = reviewStatesRef.current[extractionId];
     if (!current) return;
     const next = update(current);
+    if (draftFingerprint(next) === draftFingerprint(current)) return;
     reviewStatesRef.current = {
       ...reviewStatesRef.current,
       [extractionId]: next,
     };
     versionsRef.current[extractionId] =
       (versionsRef.current[extractionId] ?? 0) + 1;
+    draftManager.edit(extractionId, next);
     setReviewStates(reviewStatesRef.current);
     setSaveStatuses((statuses) => ({
       ...statuses,
@@ -953,6 +961,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
           : item
       ),
     }));
+    await persistRef.current(activeExtraction.id);
     try {
       const generated = await generateMenuItemImageDraft(
         target,
@@ -1143,9 +1152,16 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   async function openPreview() {
     if (!activeExtraction || !state || !canEdit) return;
     if (saveStatus === "dirty" || saveStatus === "saving") await persistRef.current(activeExtraction.id);
+    if (savePromisesRef.current.has(activeExtraction.id)) await savePromisesRef.current.get(activeExtraction.id);
+    if (saveErrorsRef.current[activeExtraction.id]) return;
     try {
       setError(null);
-      setPreviewRestaurant(await loadMenuPreviewRestaurant(restaurantId));
+      const restaurant = await loadMenuPreviewRestaurant(restaurantId);
+      setPreviewRestaurant({
+        ...restaurant,
+        name: restaurantName,
+        profile: { ...restaurant.profile, restaurant_type: businessType?.trim() || restaurant.profile.restaurant_type },
+      });
       setPublishHistory(await loadMenuPublishHistory(restaurantId, activeExtraction.id));
       setPreviewOpen(true);
     } catch (previewError) {
@@ -1160,6 +1176,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       items: current.items.map((item) => item.deleted ? item : { ...item, approved: true }),
     }));
     await persistRef.current(activeExtraction.id);
+    if (saveErrorsRef.current[activeExtraction.id]) return;
     await next();
   }
 
@@ -1317,7 +1334,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
             <span className="setup-visually-hidden">Search menu items by name or category</span>
             <input type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search menu..." />
           </label>
-          <span className="owner-save-status" aria-live="polite">{offline ? "Saved on this device" : saveStatus === "saving" || saveStatus === "dirty" ? "Saving..." : saveStatus === "error" ? "Sync pending" : "✓ Saved"}</span>
+          <span className="owner-save-status" aria-live="polite">{saveStateLabel(saveStatus, offline)}</span>
           <button type="button" onClick={() => void prepareOwnerMenu(openPreview)}>Preview Menu</button>
           <button className="setup-primary" type="button" disabled={!allActiveHavePrices} onClick={() => void prepareOwnerMenu(async () => onContinue?.())}>Continue</button>
         </header>
@@ -1426,15 +1443,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
         <div className="review-access-status">
           <strong>{access === "owner" ? "Owner editing" : "Manager review"}</strong>
           <span>
-            {access === "owner"
-              ? saveStatus === "saving"
-                ? "Autosaving..."
-                : saveStatus === "dirty"
-                  ? "Waiting to autosave"
-                  : saveStatus === "error"
-                    ? "Autosave needs attention"
-                    : "All changes saved"
-              : "Read-only draft access"}
+            {access === "owner" ? saveStateLabel(saveStatus, offline) : "Synced"}
           </span>
           {saveStatus === "error" && activeExtraction && canEdit ? (
             <button

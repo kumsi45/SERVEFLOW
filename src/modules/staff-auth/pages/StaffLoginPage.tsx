@@ -9,6 +9,8 @@ import {
 } from "../services/staffAuthService";
 import type { StaffDestination } from "../types";
 import "../styles/staffLogin.css";
+import "../../auth-experience/styles/authExperience.css";
+import { SocialLoginButton } from "../../auth-experience/components/AuthExperience";
 
 // ─── chart bar heights for the mockup ────────────────────────────────────────
 const chartBars = [30, 55, 40, 70, 50, 85, 60, 90, 45, 75, 65, 100];
@@ -243,8 +245,8 @@ export function StaffLoginPage() {
             <span className="sl-card-brand-name">ServeFlow</span>
           </div>
 
-          <h1 className="sl-heading">Welcome Back</h1>
-          <p className="sl-subheading">Sign in to access your restaurant workspace</p>
+          <h1 className="sl-heading">Welcome back</h1>
+          <p className="sl-subheading">Sign in to manage your hospitality business.</p>
 
           {error && (
             <div className="sl-error" role="alert">
@@ -320,23 +322,15 @@ export function StaffLoginPage() {
             {/* SSO divider */}
             <div className="sl-divider">
               <div className="sl-divider-line" />
-              <span className="sl-divider-text">Or sign in with SSO</span>
+              <span className="sl-divider-text">Or sign in with</span>
               <div className="sl-divider-line" />
             </div>
 
-            {/* SSO button */}
-            <button
-              type="button"
-              className="sl-sso-btn"
-              onClick={() => {}}
-              aria-label="Single Sign-On"
-            >
-              <span>⊞</span> Single Sign-On (SAML)
-            </button>
+            <SocialLoginButton />
 
             <p className="sl-register-row">
               Don't have an account?{" "}
-              <a href="/sign-up" className="sl-register-link">Request a demo</a>
+              <a href="/sign-up" className="sl-register-link">Create an account</a>
             </p>
           </form>
         </div>

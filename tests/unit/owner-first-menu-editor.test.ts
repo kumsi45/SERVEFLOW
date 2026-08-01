@@ -44,8 +44,7 @@ describe("Phase 9.12.3 owner-first menu editor", () => {
     expect(card).not.toContain("Upload Photo");
     expect(card).toContain(">Delete</button>");
     expect(card).not.toMatch(/>Save<|>Duplicate<|Hide from|Generate|Restore|Approve/);
-    expect(ownerBranch).toContain('"✓ Saved"');
-    expect(ownerBranch).toContain('"Saving..."');
+    expect(ownerBranch).toContain("saveStateLabel(saveStatus, offline)");
   });
 
   it("keeps only update price, move category and remove bulk actions", () => {

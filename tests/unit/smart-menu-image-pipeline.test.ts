@@ -175,7 +175,7 @@ describe("Phase 9.13.3.1 Smart Menu image pipeline", () => {
     expect(edgeFunction).toContain("masterSelectionScore");
     expect(edgeFunction).toContain("master.current_version > 0 && versionedMasterIds.has(master.id)");
     expect(edgeFunction).toContain("smartImagesRefreshed: true");
-    expect(reviewStudio).toContain("createSmartMenuLibraryDraft(restaurantId, entry.sourceReference)");
+    expect(reviewStudio).not.toContain("createSmartMenuLibraryDraft(restaurantId, entry.sourceReference)");
     expect(edgeFunction).not.toContain('.storage.from("smart-menu-images").upload(');
   });
 });

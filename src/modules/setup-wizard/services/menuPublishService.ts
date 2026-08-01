@@ -1,5 +1,6 @@
 import { supabase } from "../../../core/database";
 import type { MenuTheme } from "../../menu/theme-engine/ThemeTypes";
+import { workflowErrorMessage } from "./draftManager";
 
 export type MenuPublishSummary = {
   publishedVersion: number;
@@ -30,13 +31,15 @@ export type MenuPreviewRestaurant = {
   currency_code: string | null;
   currency_symbol: string | null;
   locale: string | null;
+  profile: Record<string, unknown>;
 };
 
 export async function loadMenuPreviewRestaurant(restaurantId: string): Promise<MenuPreviewRestaurant> {
-  const { data, error } = await supabase.from("restaurants").select("id,name,slug,menu_theme,branding,ordering_settings,currency_code,currency_symbol,locale").eq("id", restaurantId).single();
+  const { data, error } = await supabase.from("restaurants").select("id,name,slug,menu_theme,branding,profile,ordering_settings,currency_code,currency_symbol,locale").eq("id", restaurantId).single();
   if (error || !data) throw new Error(error?.message || "Restaurant preview is unavailable.");
   const branding = data.branding && typeof data.branding === "object" ? data.branding as Record<string, unknown> : {};
-  return { id: data.id, name: data.name, slug: data.slug, menu_theme: data.menu_theme, logo_url: typeof branding.logo_url === "string" ? branding.logo_url : null, cover_url: typeof branding.cover_url === "string" ? branding.cover_url : null, ordering_settings: data.ordering_settings, currency_code: data.currency_code, currency_symbol: data.currency_symbol, locale: data.locale };
+  const profile = data.profile && typeof data.profile === "object" ? data.profile as Record<string, unknown> : {};
+  return { id: data.id, name: data.name, slug: data.slug, menu_theme: data.menu_theme, logo_url: typeof branding.logo_url === "string" ? branding.logo_url : null, cover_url: typeof branding.cover_url === "string" ? branding.cover_url : null, profile, ordering_settings: data.ordering_settings, currency_code: data.currency_code, currency_symbol: data.currency_symbol, locale: data.locale };
 }
 
 export async function publishMenuDraft(restaurantId: string, draftId: string, expectedRevision: number): Promise<MenuPublishSummary> {
@@ -50,7 +53,7 @@ export async function publishMenuDraft(restaurantId: string, draftId: string, ex
         if (typeof payload.error === "string" && payload.error.trim()) message = payload.error;
       } catch { /* Keep the SDK fallback when the response is not JSON. */ }
     }
-    throw new Error(message);
+    throw new Error(workflowErrorMessage(new Error(message), "We couldn't publish your menu. Your draft is safe; please try again."));
   }
   const payload = data as MenuPublishSummary & { error?: string };
   if (payload.error) throw new Error(payload.error);
