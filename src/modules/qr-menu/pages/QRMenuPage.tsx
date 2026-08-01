@@ -33,10 +33,13 @@ import { logPublicQrScan } from "../services/qrMenuService";
 import { PublicQrCheckoutPanel } from "../../public-qr-ordering/components/PublicQrCheckoutPanel";
 import { PublicQrCartPanel } from "../../public-qr-ordering/components/PublicQrCartPanel";
 import { PublicPaymentPopup, type PublicPaymentProof } from "../../public-qr-ordering/components/PublicPaymentPopup";
+import { SmartCustomerPortal } from "../../public-qr-ordering/components/SmartCustomerPortal";
 import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart";
 import { usePublicQrCheckoutState } from "../../public-qr-ordering/hooks/usePublicQrCheckoutState";
 import {
   fetchPublicQrOrderSession,
+  fetchSmartQrPortalState,
+  callWaiterFromSmartQr,
   fetchPublicPaymentRuntime,
   submitPublicOrderFeedback,
   submitPublicPaymentProof,
@@ -55,6 +58,7 @@ import { isPaymentMethod } from "../../public-qr-ordering/types";
 import type {
   PublicQrOrderInvoice,
   PublicQrOrderSession,
+  SmartQrPortalState,
   SubmittedPublicQrOrder,
 } from "../../public-qr-ordering/types";
 import type { MenuItem } from "../types";
@@ -159,6 +163,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   });
   const [activeSession, setActiveSession] =
     useState<PublicQrOrderSession | null>(null);
+  const [smartPortal, setSmartPortal] = useState<SmartQrPortalState | null>(null);
+  const [portalLoading, setPortalLoading] = useState(true);
+  const [callingWaiter, setCallingWaiter] = useState(false);
+  const [waiterCallStatus, setWaiterCallStatus] = useState<string>();
   const activeSessionRef = useRef<PublicQrOrderSession | null>(null);
   const [realtimeState, setRealtimeState] =
     useState<RealtimeConnectionState>("connecting");
@@ -315,6 +323,16 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       return;
     }
 
+    const portal = await fetchSmartQrPortalState({
+      restaurantSlug, tableNumber: checkout.tableNumber, qrToken: checkout.qrToken,
+      browserSessionToken: checkout.browserSessionToken,
+    });
+    if (currentSessionKeyRef.current === requestSessionKey) setSmartPortal(portal);
+    if (portal.mode === "waiter") {
+      if (currentSessionKeyRef.current === requestSessionKey) setActiveSession(null);
+      return;
+    }
+
     const session = await fetchPublicQrOrderSession({
       restaurantSlug,
       tableNumber: checkout.tableNumber,
@@ -357,9 +375,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   ]);
 
   useEffect(() => {
+    setPortalLoading(true);
     void refreshActiveSession().catch(() => {
       setActiveSession(null);
-    });
+    }).finally(() => setPortalLoading(false));
   }, [refreshActiveSession]);
 
   useEffect(() => {
@@ -766,6 +785,39 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     { label: "Ready", title: "Ready", icon: "🍽" },
     { label: "Served", title: "Served", icon: "✓" },
   ];
+
+  if (portalLoading && checkout.tableNumber && checkout.qrToken) {
+    return <main className="qr-menu-page"><section className="menu-state" role="status"><h1>Opening your table</h1><p>Checking the current dining session…</p></section></main>;
+  }
+
+  if (smartPortal?.mode === "waiter" && smartPortal.order_id) {
+    const payableInvoice = [...(smartPortal.invoices ?? [])].reverse().find((invoice) => !["paid", "verified", "cancelled", "refunded"].includes(invoice.status));
+    const portalTotal = payableInvoice?.total_price ?? smartPortal.grand_total ?? smartPortal.total_price ?? 0;
+    const submitPortalPayment = async (proof: PublicPaymentProof) => {
+      if (!payableInvoice || submittingRef.current) return;
+      submittingRef.current = true; setSubmitting(true); setSubmitError(undefined);
+      try {
+        await submitPublicPaymentProof({ restaurantSlug, tableNumber: checkout.tableNumber, qrToken: checkout.qrToken,
+          browserSessionToken: checkout.browserSessionToken, invoiceId: payableInvoice.id,
+          referenceNumber: proof.referenceNumber, screenshot: proof.screenshot });
+        setPaymentSuccess("Payment submitted for cashier verification.");
+        await refreshActiveSession();
+      } catch (paymentError) { setSubmitError(paymentError instanceof Error ? paymentError.message : "Payment could not be submitted."); }
+      finally { submittingRef.current = false; setSubmitting(false); }
+    };
+    return <>
+      <SmartCustomerPortal state={smartPortal} calling={callingWaiter} callStatus={waiterCallStatus}
+        onViewBill={() => undefined}
+        onPayBill={() => { setPaymentSuccess(undefined); setSubmitError(undefined); setPaymentPopupOpen(true); }}
+        onCallWaiter={() => { if (callingWaiter) return; setCallingWaiter(true); setWaiterCallStatus(undefined); void callWaiterFromSmartQr({ restaurantSlug, tableNumber: checkout.tableNumber, qrToken: checkout.qrToken, browserSessionToken: checkout.browserSessionToken, orderId: smartPortal.order_id! }).then(() => setWaiterCallStatus("Your waiter has been notified.")).catch((callError) => setWaiterCallStatus(callError instanceof Error ? callError.message : "Could not call the waiter.")).finally(() => setCallingWaiter(false)); }}
+        onSubmitFeedback={async (rating, comment) => { const result = await submitPublicOrderFeedback({ restaurantSlug, tableNumber: checkout.tableNumber, qrToken: checkout.qrToken, orderId: smartPortal.order_id!, rating, reactions: [], comment, customerSessionKey: checkout.browserSessionToken }); if (result.duplicate) throw new Error("Feedback was already submitted for this dining session."); }} />
+      <PublicPaymentPopup open={paymentPopupOpen} businessName={smartPortal.restaurant_name} total={portalTotal}
+        methods={paymentRuntime?.methods ?? []} selectedMethod={checkout.paymentMethod} submitting={submitting}
+        error={submitError} persistenceKey={`serveflow.smart-payment:${smartPortal.order_id}`}
+        successMessage={paymentSuccess} loading={paymentLoading} onRetry={() => setPaymentRetry((value) => value + 1)}
+        onSelect={checkout.setPaymentMethod} onBack={() => setPaymentPopupOpen(false)} onConfirm={(proof) => void submitPortalPayment(proof)} />
+    </>;
+  }
 
   return (
     <ThemeProvider restaurant={restaurant}>

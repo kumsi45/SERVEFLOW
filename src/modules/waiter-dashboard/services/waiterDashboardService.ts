@@ -61,6 +61,15 @@ function normalizeTable(row: WaiterDashboardRow): WaiterDashboardTable {
   };
 }
 
+export async function loadWaiterAssistanceRequests(restaurantId: string) {
+  const { data, error } = await waiterSupabase.from("waiter_assistance_requests")
+    .select("id,order_id,table_id,requested_at")
+    .eq("restaurant_id", restaurantId).eq("status", "pending")
+    .order("requested_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function loadWaiterSessionDetail(
   orderId: string,
   restaurantId: string,

@@ -78,6 +78,26 @@ export type PublicQrOrderSession = {
   invoices: PublicQrOrderInvoice[];
 };
 
+export type SmartQrPortalState = {
+  mode: "available" | "customer" | "waiter" | "occupied";
+  restaurant_id: string;
+  restaurant_name: string;
+  table_number: number | string;
+  order_id?: string | null;
+  display_number?: string | null;
+  dining_session_display_number?: string | null;
+  status?: string;
+  total_price?: number;
+  subtotal?: number;
+  vat_amount?: number;
+  service_charge_amount?: number;
+  discount_amount?: number;
+  grand_total?: number;
+  created_at?: string;
+  items?: PublicQrSessionItem[];
+  invoices?: PublicQrOrderInvoice[];
+};
+
 export const PUBLIC_QR_PAYMENT_METHODS = [
   "Cash",
   "Telebirr",

@@ -15,6 +15,7 @@ import {
 import {
   loadWaiterDashboardTables,
   loadWaiterSessionDetail,
+  loadWaiterAssistanceRequests,
   loadWaiterTableMetrics,
   markWaiterOrderServed,
   moveWaiterDiningSession,
@@ -265,10 +266,20 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const idleTimer = useRef<number | null>(null);
   const knownReadyRef = useRef<Set<string>>(new Set());
   const readyHydratedRef = useRef(false);
+  const knownAssistanceRef = useRef(new Set<string>());
   const autoOpenedRef = useRef(false);
 
   const loadTables = useCallback(async () => {
     const rows = await loadWaiterDashboardTables(restaurantSlug);
+    if (rows[0]?.restaurantId) {
+      const requests = await loadWaiterAssistanceRequests(rows[0].restaurantId);
+      const newRequest = requests.find((request) => !knownAssistanceRef.current.has(request.id));
+      if (newRequest) {
+        const requestTable = rows.find((row) => row.tableId === newRequest.table_id);
+        setSessionNotice(`Table ${requestTable?.tableNumber ?? ""} needs assistance.`.replace("Table  needs", "A table needs"));
+      }
+      knownAssistanceRef.current = new Set(requests.map((request) => request.id));
+    }
     const nextMetrics = await loadWaiterTableMetrics(
       rows.flatMap((row) => (row.activeOrderId ? [row.activeOrderId] : [])),
     );
@@ -302,7 +313,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const connection: Connection = useTenantRealtime({
     channelName: "waiter-shared-tablet",
     restaurantId: summary?.restaurantId ?? "",
-    tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices"],
+    tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "waiter_assistance_requests"],
     client: waiterSupabase,
     refresh: () => loadTables().catch((e) => setError(e instanceof Error ? e.message : "Realtime update failed.")),
   });

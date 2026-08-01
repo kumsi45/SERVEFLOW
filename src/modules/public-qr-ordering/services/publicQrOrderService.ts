@@ -8,6 +8,7 @@ import type {
   PublicQrPaymentMethod,
   PublicQrSessionItem,
   SubmittedPublicQrOrder,
+  SmartQrPortalState,
 } from "../types";
 import type { PublicPaymentRuntime } from "../../../core/printing-payment/runtime";
 
@@ -241,6 +242,43 @@ export async function fetchPublicQrOrderSession({
     activeOrderId: session?.order_id ?? null,
   });
   return session;
+}
+
+export async function fetchSmartQrPortalState(input: {
+  restaurantSlug: string; tableNumber: string; qrToken: string; browserSessionToken: string;
+}): Promise<SmartQrPortalState> {
+  const { data, error } = await supabase.rpc("get_smart_qr_portal_state", {
+    target_restaurant_slug: input.restaurantSlug,
+    table_number: input.tableNumber,
+    qr_token: input.qrToken,
+    browser_session_token: input.browserSessionToken,
+  });
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== "object") throw new Error("Table status is unavailable.");
+  const payload = data as Record<string, unknown>;
+  const mode = String(payload.mode ?? "available");
+  if (!["available", "customer", "waiter", "occupied"].includes(mode)) throw new Error("Table status is unavailable.");
+  return {
+    ...(payload as unknown as SmartQrPortalState),
+    mode: mode as SmartQrPortalState["mode"],
+    total_price: Number(payload.total_price ?? 0), subtotal: Number(payload.subtotal ?? 0),
+    vat_amount: Number(payload.vat_amount ?? 0), service_charge_amount: Number(payload.service_charge_amount ?? 0),
+    discount_amount: Number(payload.discount_amount ?? 0), grand_total: Number(payload.grand_total ?? payload.total_price ?? 0),
+    items: (Array.isArray(payload.items) ? payload.items : []).flatMap((item) => normalizeSessionItem(item) ?? []),
+    invoices: (Array.isArray(payload.invoices) ? payload.invoices : []).flatMap((invoice) => normalizeSessionInvoice(invoice) ?? []),
+  };
+}
+
+export async function callWaiterFromSmartQr(input: {
+  restaurantSlug: string; tableNumber: string; qrToken: string; browserSessionToken: string; orderId: string;
+}) {
+  const { data, error } = await supabase.rpc("call_waiter_from_smart_qr", {
+    target_restaurant_slug: input.restaurantSlug, table_number: input.tableNumber,
+    qr_token: input.qrToken, browser_session_token: input.browserSessionToken,
+    target_order_id: input.orderId,
+  });
+  if (error) throw new Error(error.message);
+  return data as { requested: boolean; request_id: string; requested_at: string };
 }
 
 export async function submitPublicQrOrder({

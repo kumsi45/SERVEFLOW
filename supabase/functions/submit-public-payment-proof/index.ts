@@ -23,7 +23,14 @@ Deno.serve(async (request) => {
     const { data: session, error: sessionError } = await client.rpc("get_public_qr_order_session", {
       target_restaurant_slug: restaurantSlug, table_number: tableNumber, qr_token: qrToken, browser_session_token: browserSessionToken,
     });
-    if (sessionError || !session || !Array.isArray(session.invoices) || !session.invoices.some((invoice: { id?: string }) => invoice.id === invoiceId)) return json({ error: "Payment session could not be verified." }, 403);
+    let verifiedSession = !sessionError && session && Array.isArray(session.invoices) && session.invoices.some((invoice: { id?: string }) => invoice.id === invoiceId);
+    if (!verifiedSession) {
+      const { data: portal, error: portalError } = await client.rpc("get_smart_qr_portal_state", {
+        target_restaurant_slug: restaurantSlug, table_number: tableNumber, qr_token: qrToken, browser_session_token: browserSessionToken,
+      });
+      verifiedSession = !portalError && portal?.mode === "waiter" && Array.isArray(portal.invoices) && portal.invoices.some((invoice: { id?: string }) => invoice.id === invoiceId);
+    }
+    if (!verifiedSession) return json({ error: "Payment session could not be verified." }, 403);
 
     const { data: invoice, error: invoiceError } = await client.from("order_invoices").select("id,restaurant_id,status,payment_status,payment_recorded_at").eq("id", invoiceId).single();
     if (invoiceError || !invoice || !["pending", "paid", "verified"].includes(invoice.status)) return json({ error: "Invoice is not available for payment evidence." }, 409);
