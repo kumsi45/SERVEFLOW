@@ -71,6 +71,7 @@ type AiMenuReviewStudioProps = {
   businessType?: string;
   onBusyChange: (busy: boolean) => void;
   onFinishSetup?: () => Promise<void>;
+  onGoToDashboard?: () => void;
   mode?: "review" | "preview";
   onBack?: () => void;
   onContinue?: () => void;
@@ -120,6 +121,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
   businessType,
   onBusyChange,
   onFinishSetup,
+  onGoToDashboard,
   mode = "review",
   onBack,
   onContinue,
@@ -1218,6 +1220,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
       await persistMenuPreviewTheme(restaurantId, selectedTheme);
       setPreviewRestaurant((current) => current ? { ...current, menu_theme: selectedTheme } : current);
       const result = await publishMenuDraft(restaurantId, activeExtraction.id, revisionsRef.current[activeExtraction.id]);
+      if (onFinishSetup) await onFinishSetup();
       setPublishStage("Published");
       setPublishResult(result);
       setPublishedAt(new Date().toISOString());
@@ -1279,17 +1282,9 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     printWindow.document.close();
   }
 
-  async function finishPublishedSetup() {
-    if (!onFinishSetup || finishingSetup) return;
-    try {
-      setFinishingSetup(true);
-      setError(null);
-      await onFinishSetup();
-    } catch (finishError) {
-      setError(finishError instanceof Error ? finishError.message : "Restaurant setup could not be completed.");
-    } finally {
-      setFinishingSetup(false);
-    }
+  function finishPublishedSetup() {
+    if (!onGoToDashboard || finishingSetup) return;
+    onGoToDashboard();
   }
 
   async function restorePublishedDraft(versionId: string) {
@@ -1312,7 +1307,7 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
     return <div className="ai-review-studio">
       {error && publishStage !== "Failed" ? <div className="setup-warning" role="alert">{error}</div> : null}
       {publishStage && !publishResult ? <section className={`menu-publish-progress ${publishStage === "Failed" ? "failed" : ""}`} aria-live="polite"><span>{publishStage === "Failed" ? "Publishing paused" : "Publishing menu"}</span><strong>{publishStage === "Failed" ? "We couldn't publish yet" : "Publishing your menu securely..."}</strong>{publishing ? <div><span className="running" /></div> : null}{publishStage === "Failed" && error ? <p role="alert">{error}</p> : null}<small>{publishStage === "Failed" ? "Your draft is safe. Make the requested change and try again." : "Approved content is being committed safely. Optional images still awaiting review will be skipped."}</small></section> : null}
-      {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your Restaurant Is Live</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>QR Ordering</dt><dd><strong>READY</strong></dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}`} target="_blank" rel="noreferrer">Open Live Menu</a><button type="button" onClick={() => void downloadPublishedQr()}>Download QR</button><button type="button" onClick={() => void printPublishedQr()}>Print QR</button><button type="button" onClick={() => void sharePublishedMenu()}>Share Menu</button>{onFinishSetup ? <button type="button" disabled={finishingSetup} onClick={() => void finishPublishedSetup()}>{finishingSetup ? "Opening Dashboard..." : "Go To Dashboard"}</button> : <a href="/owner">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={onBack ?? (() => setPreviewOpen(false))} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
+      {publishResult ? <section className="menu-publish-success" role="status"><span className="menu-live-celebration" aria-hidden="true">✓</span><div><span>Publish complete</span><h2>Your menu is now live.</h2><p>{previewRestaurant.name} is ready for customers.</p></div><dl><div><dt>Menu Items</dt><dd>{publishResult.itemsPublished}</dd></div><div><dt>Categories</dt><dd>{publishResult.categoriesPublished}</dd></div><div><dt>Languages</dt><dd>{publishResult.languagesPublished}</dd></div><div><dt>Theme</dt><dd>{(previewRestaurant.menu_theme ?? "modern").replace("_", " ")}</dd></div><div><dt>Published At</dt><dd>{publishedAt ? new Date(publishedAt).toLocaleString() : "Just now"}</dd></div><div><dt>Status</dt><dd><strong>LIVE</strong></dd></div></dl>{publishResult.warnings.length ? <p className="menu-publish-warning">{publishResult.warnings.join(" ")}</p> : null}<div className="menu-success-actions"><a className="setup-primary" href={`/r/${previewRestaurant.slug}?published=${publishResult.publishedVersion}`} target="_blank" rel="noreferrer">View Digital Menu</a>{onGoToDashboard ? <button type="button" onClick={finishPublishedSetup}>Go To Dashboard</button> : <a href="/owner/dashboard">Go To Dashboard</a>}</div></section> : <AiMenuFinalPreview restaurant={previewRestaurant} state={state} draftVersion={activeExtraction?.reviewRevision ?? 0} lastUpdated={activeExtraction?.reviewUpdatedAt ?? activeExtraction?.updatedAt ?? new Date().toISOString()} onReturn={onBack ?? (() => setPreviewOpen(false))} onPublish={(theme) => void publishReviewedMenu(theme)} publishing={publishing} />}
       {publishHistory.length ? <section className="menu-publish-history"><h3>Publish History</h3>{publishHistory.map((entry) => <article key={entry.id}><strong>Version {entry.publishedVersion}</strong><span>{new Date(entry.publishedAt).toLocaleString()}</span><small>{entry.itemsPublished} items · {entry.imagesPublished} images · revision {entry.reviewRevision}</small><button type="button" disabled={publishing} onClick={() => void restorePublishedDraft(entry.id)}>Restore Previous Draft</button></article>)}</section> : null}
     </div>;
   }

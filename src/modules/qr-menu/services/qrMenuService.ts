@@ -50,7 +50,15 @@ export async function fetchQRMenuData(restaurantSlug: string): Promise<QRMenuDat
     categoryCount: data.categories.length,
     itemCount: data.items.length,
   });
-  return data;
+  return {
+    ...data,
+    // The published item image is authoritative. Category hero imagery must
+    // never impersonate a menu-item image when a snapshot intentionally has no image.
+    items: data.items.map((item) => ({
+      ...item,
+      effective_image_url: item.image_url ?? null,
+    })),
+  };
 }
 
 export async function logPublicQrScan({

@@ -318,8 +318,6 @@ export function RestaurantSetupWizardPage({
       if (setupError) throw new Error(setupError.message);
       window.localStorage.removeItem(getDraftStorageKey(restaurantId));
       clearReviewStudioSession(restaurantId);
-      window.history.replaceState({}, "", "/owner/dashboard");
-      onFinished();
     } catch (completeError) {
       setError(completeError instanceof Error ? completeError.message : "Could not finish setup.");
     } finally {
@@ -391,7 +389,7 @@ export function RestaurantSetupWizardPage({
           ) : null}
 
           {step === 4 ? (
-            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} businessType={restaurantInfo.restaurantType} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} smartLibraryOnly />
+            <AiMenuReviewStudio restaurantId={restaurantId} restaurantName={restaurantInfo.restaurantName} businessType={restaurantInfo.restaurantType} onBusyChange={handleImportBusyChange} mode="preview" onBack={back} onFinishSetup={completeSetup} onGoToDashboard={() => { window.history.replaceState({}, "", "/owner/dashboard"); onFinished(); }} smartLibraryOnly />
           ) : null}
         </div>
 

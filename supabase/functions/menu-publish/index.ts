@@ -86,7 +86,7 @@ Deno.serve(async (request) => {
       publishedImages[String(item.id)] = service.storage.from(PRODUCTION_BUCKET).getPublicUrl(targetPath).data.publicUrl;
     }
 
-    const { data, error } = await userClient.rpc("publish_ai_menu_draft", {
+    const { data, error } = await userClient.rpc("publish_ai_menu_draft_exact", {
       target_restaurant_id: payload.restaurantId,
       target_draft_id: payload.draftId,
       target_review_revision: payload.expectedRevision,

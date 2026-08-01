@@ -10,6 +10,10 @@ const publishStabilityMigration = readFileSync("supabase/migrations/195_producti
 const edge = readFileSync("supabase/functions/menu-publish/index.ts", "utf8");
 const setup = readFileSync("src/modules/setup-wizard/pages/RestaurantSetupWizardPage.tsx", "utf8");
 const ownerAsset = readFileSync("src/modules/setup-wizard/services/ownerImageAsset.ts", "utf8");
+const exactSnapshotMigration = readFileSync("supabase/migrations/204_phase9_15d_exact_published_menu_snapshot.sql", "utf8");
+const existingSnapshotRepair = readFileSync("supabase/migrations/205_phase9_15d_reconcile_existing_published_snapshots.sql", "utf8");
+const qrMenuHook = readFileSync("src/modules/qr-menu/hooks/useQRMenu.ts", "utf8");
+const qrMenuService = readFileSync("src/modules/qr-menu/services/qrMenuService.ts", "utf8");
 
 describe("Phase 9.8.6 AI menu publish engine", () => {
   it("reuses the production theme and food renderers for preview", () => {
@@ -31,7 +35,7 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
   it("publishes only through the owner-authenticated Edge Function", () => {
     expect(service).toContain('supabase.functions.invoke("menu-publish"');
     expect(edge).toContain('.eq("role", "owner")');
-    expect(edge).toContain('userClient.rpc("publish_ai_menu_draft"');
+    expect(edge).toContain('userClient.rpc("publish_ai_menu_draft_exact"');
     expect(edge).not.toContain("structured_result");
   });
 
@@ -78,16 +82,27 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(studio).toContain('setPublishStage("Publishing")');
     expect(studio).not.toContain("window.setInterval");
     expect(studio).toContain("Approved content is being committed safely");
-    expect(studio).toContain("Your Restaurant Is Live");
-    expect(studio).toContain("Download QR");
-    expect(studio).toContain("Print QR");
-    expect(studio).toContain("Share Menu");
+    expect(studio).toContain("Your menu is now live.");
+    expect(studio).toContain("View Digital Menu");
+    expect(studio).toContain("Go To Dashboard");
     expect(studio).toContain("finishPublishedSetup");
     expect(studio).toContain("Publish History");
     expect(studio).toContain("Restore Previous Draft");
     expect(studio).toContain("onReturn={onBack ?? (() => setPreviewOpen(false))}");
     expect(studio).toContain("onPublish={(theme) => void publishReviewedMenu(theme)}");
     expect(studio).toContain("persistMenuPreviewTheme");
+  });
+
+  it("reconciles the exact customer snapshot and completes onboarding atomically", () => {
+    expect(exactSnapshotMigration).toContain("publish_ai_menu_draft_exact");
+    expect(exactSnapshotMigration).toContain("set image_url = nullif");
+    expect(exactSnapshotMigration).toContain("and not (item.id = any(active_item_ids))");
+    expect(exactSnapshotMigration).toContain("'completed', true");
+    expect(qrMenuHook).not.toContain("serveflow:public-menu:");
+    expect(qrMenuHook).not.toContain("readCachedMenu");
+    expect(qrMenuService).toContain("effective_image_url: item.image_url ?? null");
+    expect(existingSnapshotRepair).toContain("distinct on (version.restaurant_id)");
+    expect(existingSnapshotRepair).toContain("draft.publish_status = 'published'");
   });
 
   it("finishes onboarding through the existing setup RPC after confirmed publish", () => {

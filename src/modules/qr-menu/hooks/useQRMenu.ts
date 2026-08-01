@@ -16,43 +16,8 @@ type QRMenuState = {
   error: string | null;
 };
 
-type CachedQRMenu = Pick<QRMenuState, "restaurant" | "categories" | "items"> & {
-  cachedAt: number;
-};
-
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-function menuCacheKey(slug: string) {
-  return `serveflow:public-menu:${slug}`;
-}
-
 function categoryCacheKey(slug: string) {
   return `serveflow:public-menu-category:${slug}`;
-}
-
-function readCachedMenu(slug: string): CachedQRMenu | null {
-  try {
-    const raw = window.localStorage.getItem(menuCacheKey(slug));
-    if (!raw) return null;
-    const cached = JSON.parse(raw) as CachedQRMenu;
-    if (
-      !cached.restaurant?.id ||
-      !Array.isArray(cached.categories) ||
-      !Array.isArray(cached.items) ||
-      Date.now() - cached.cachedAt > CACHE_MAX_AGE_MS
-    ) return null;
-    return cached;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedMenu(slug: string, value: Omit<CachedQRMenu, "cachedAt">) {
-  try {
-    window.localStorage.setItem(menuCacheKey(slug), JSON.stringify({ ...value, cachedAt: Date.now() }));
-  } catch {
-    // Browsers may disable storage; the live menu remains fully functional.
-  }
 }
 
 export function useQRMenu(
@@ -106,20 +71,13 @@ export function useQRMenu(
           loading: false,
           error: null,
         });
-        writeCachedMenu(restaurantSlug, data);
       })
       .catch((error: Error) => {
         if (!active) {
           return;
         }
 
-        const cached = readCachedMenu(restaurantSlug);
-        if (cached) {
-          setState({ ...cached, loading: false, error: null });
-          setUsingCachedMenu(true);
-        } else {
-          setState({ restaurant: null, categories: [], items: [], loading: false, error: error.message });
-        }
+        setState({ restaurant: null, categories: [], items: [], loading: false, error: error.message });
       });
 
     return () => {
