@@ -69,7 +69,12 @@ Deno.serve(async (request) => {
       if (item.deleted || item.hidden || item.rejected || !item.approved) continue;
       const imageDraft = item.imageDraft as { selectedVersionId?: string; versions?: Array<Record<string, unknown>> } | undefined;
       const selected = imageDraft?.versions?.find((version) => version.id === imageDraft.selectedVersionId);
-      if (!selected || !["approved", "owner upload"].includes(String(selected.status).toLocaleLowerCase())) continue;
+      if (!selected) continue;
+      const selectedStatus = String(selected.status).toLocaleLowerCase();
+      const selectedSource = String(selected.source).toLocaleLowerCase();
+      const publishable = ["approved", "owner upload"].includes(selectedStatus)
+        || (selectedSource === "master" && ["pending_review", "ready"].includes(selectedStatus));
+      if (!publishable) continue;
       const sourceUrl = typeof selected.imageUrl === "string" ? selected.imageUrl : "";
       const sourceObject = publicObject(sourceUrl);
       if (!sourceObject) throw new Error(`Approved image for ${String(item.id)} is temporary or unavailable.`);

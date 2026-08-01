@@ -21,7 +21,7 @@ export function certifyMenuPreview(restaurant: MenuPreviewRestaurant, state: Men
   const duplicateCategoryCount = normalizedCategories.length - new Set(normalizedCategories).size;
   const missingImages = items.filter((item) => {
     const candidates = menuReviewImageCandidates(item.imageDraft);
-    return !resolveSmartImage({ itemId: item.id, custom: candidates.custom, master: candidates.master, placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "card", "owner-review").url;
+    return resolveSmartImage({ itemId: item.id, custom: candidates.custom, master: candidates.master, placeholderUrl: SERVEFLOW_MENU_PLACEHOLDER_IMAGE }, "card", "owner-review").source === "PLACEHOLDER";
   }).length;
   const missingPrices = items.filter((item) => item.price.value === null || !Number.isFinite(item.price.value) || item.price.value < 0).length;
   const missingDescriptions = items.filter((item) => !item.description.value?.trim()).length;
@@ -40,7 +40,7 @@ export function certifyMenuPreview(restaurant: MenuPreviewRestaurant, state: Men
     { id: "categories", label: "Categories", detail: state.categories.length ? `${state.categories.length} categories` : "No categories", ready: state.categories.length > 0, blocking: true },
     { id: "items", label: "Menu Items", detail: items.length ? `${items.length} approved items` : "No approved menu items", ready: items.length > 0, blocking: true },
     { id: "prices", label: "Prices", detail: missingPrices ? `${missingPrices} missing or invalid` : "All prices ready", ready: missingPrices === 0, blocking: true },
-    { id: "images", label: "Images", detail: missingImages ? `${missingImages} items will use the ServeFlow default` : "Every item has a resolved image", ready: missingImages === 0, blocking: false },
+    { id: "images", label: "Images", detail: missingImages ? `${missingImages} items need an approved image` : "Every item has a resolved image", ready: missingImages === 0, blocking: true },
     { id: "descriptions", label: "Descriptions", detail: missingDescriptions ? `${missingDescriptions} menu items missing descriptions` : "All descriptions ready", ready: missingDescriptions === 0, blocking: false },
     { id: "theme", label: "Theme", detail: (restaurant.menu_theme ?? "modern").replace("_", " "), ready: true, blocking: false },
     { id: "languages", label: "Languages", detail: `${languageCount || 1} available`, ready: languageCount > 0, blocking: false },
@@ -53,7 +53,7 @@ export function certifyMenuPreview(restaurant: MenuPreviewRestaurant, state: Men
     { id: "address", label: "Address (optional)", detail: typeof restaurant.profile.address === "string" && restaurant.profile.address.trim() ? "Added" : "Can be added in Business Settings", ready: Boolean(typeof restaurant.profile.address === "string" && restaurant.profile.address.trim()), blocking: false },
     { id: "website", label: "Website (optional)", detail: typeof social.website === "string" && social.website.trim() ? "Added" : "Can be added later", ready: Boolean(typeof social.website === "string" && social.website.trim()), blocking: false },
   ];
-  const readinessIds = new Set(["business", "business-type", "categories", "items", "prices"]);
+  const readinessIds = new Set(["business", "business-type", "categories", "items", "prices", "images"]);
   const requiredChecks = checks.filter((check) => readinessIds.has(check.id));
   return {
     items,

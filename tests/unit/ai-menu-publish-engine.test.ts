@@ -12,6 +12,8 @@ const setup = readFileSync("src/modules/setup-wizard/pages/RestaurantSetupWizard
 const ownerAsset = readFileSync("src/modules/setup-wizard/services/ownerImageAsset.ts", "utf8");
 const exactSnapshotMigration = readFileSync("supabase/migrations/204_phase9_15d_exact_published_menu_snapshot.sql", "utf8");
 const existingSnapshotRepair = readFileSync("supabase/migrations/205_phase9_15d_reconcile_existing_published_snapshots.sql", "utf8");
+const finalConsistencyMigration = readFileSync("supabase/migrations/206_phase9_15e_promote_selected_master_images.sql", "utf8");
+const certification = readFileSync("scripts/certify-published-menu-consistency.mjs", "utf8");
 const qrMenuHook = readFileSync("src/modules/qr-menu/hooks/useQRMenu.ts", "utf8");
 const qrMenuService = readFileSync("src/modules/qr-menu/services/qrMenuService.ts", "utf8");
 
@@ -103,6 +105,11 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(qrMenuService).toContain("effective_image_url: item.image_url ?? null");
     expect(existingSnapshotRepair).toContain("distinct on (version.restaurant_id)");
     expect(existingSnapshotRepair).toContain("draft.publish_status = 'published'");
+    expect(finalConsistencyMigration).toContain("pending_review', 'ready'");
+    expect(finalConsistencyMigration).toContain("smart-menu-images");
+    expect(finalConsistencyMigration).toContain("Repair existing latest snapshots");
+    expect(certification).toContain("public QR data mismatch");
+    expect(certification).toContain('cache: "no-store"');
   });
 
   it("finishes onboarding through the existing setup RPC after confirmed publish", () => {

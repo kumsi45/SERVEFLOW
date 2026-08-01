@@ -22,11 +22,11 @@ describe("customer preview pre-publish certification", () => {
     expect(result.summary).toMatchObject({ itemCount: 1, categoryCount: 1, missingImages: 0, missingPrices: 0, missingDescriptions: 0 });
   });
 
-  it("blocks invalid prices but treats missing presentation content as fixable warnings", () => {
+  it("blocks invalid prices and unresolved images while keeping descriptions optional", () => {
     const invalid = certifyMenuPreview(restaurant, state({ price: { value: null, confidence: 0 }, description: { value: null, confidence: 0 }, imageDraft: { status: "Pending", selectedVersionId: null, versions: [], lastPrompt: null, generationProgress: 0, errorMessage: null } }));
     expect(invalid.canPublish).toBe(false);
     expect(invalid.checks.find((check) => check.id === "prices")).toMatchObject({ ready: false, blocking: true });
-    expect(invalid.checks.find((check) => check.id === "images")).toMatchObject({ ready: true, blocking: false });
+    expect(invalid.checks.find((check) => check.id === "images")).toMatchObject({ ready: false, blocking: true });
     expect(invalid.checks.find((check) => check.id === "descriptions")).toMatchObject({ ready: false, blocking: false });
     expect(invalid.readiness).toBeLessThan(100);
   });
