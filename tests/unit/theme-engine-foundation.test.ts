@@ -155,10 +155,9 @@ describe("Phase 9.1 database and integration boundaries", () => {
     expect(phaseMigrations).toEqual(["185_phase9_1_menu_theme_engine_foundation.sql"]);
   });
 
-  it("integrates the owner Theme Studio while preserving the existing settings save", () => {
-    expect(ownerPage).toContain("<ThemeCustomizationStudio");
-    expect(ownerPage).toContain('role="owner"');
-    expect(ownerPage).toContain("onPublished={onSettingsChanged}");
+  it("removes Theme Studio from Owner Settings while preserving theme persistence", () => {
+    expect(ownerPage).not.toContain("<ThemeCustomizationStudio");
+    expect(ownerPage).toContain("Business Configuration Center");
     expect(ownerPage).toContain("menu_theme: form.menuTheme");
     expect(ownerPage).toContain("publishMenuThemeSelection(restaurantId, form.menuTheme)");
   });
@@ -465,7 +464,7 @@ describe("Phase 9.6 restaurant theme customization studio", () => {
     }
     expect(livePreview).toContain("useQRMenu(restaurantSlug");
     expect(livePreview).toContain("<ThemeRenderer");
-    expect(ownerPage).toContain('role="owner"');
+    expect(ownerPage).not.toContain('<ThemeCustomizationStudio');
     expect(managerRoute).toContain('role="manager"');
     expect(managerRoute).toContain('section === "menu"');
   });

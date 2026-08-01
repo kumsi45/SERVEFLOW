@@ -105,7 +105,7 @@ describe("Phase 9.3 Premium Luxury rendering", () => {
     expect(definition.primaryColor).toBe("#0b0b0a");
     expect(definition.secondaryColor).toBe("#d7b56d");
     expect(definition.typography).toMatch(/Georgia|serif/);
-    expect(ownerPage).toContain("<ThemeCustomizationStudio");
+    expect(ownerPage).not.toContain("<ThemeCustomizationStudio");
   });
 
   it("leaves Modern output on its original presentation branch", () => {

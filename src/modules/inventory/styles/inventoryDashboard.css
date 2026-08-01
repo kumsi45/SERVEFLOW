@@ -6,6 +6,10 @@
   background: #f3f5f8;
 }
 
+/* Phase 10B premium inventory operations surface */
+.ia-shell{--ia-green:#176b47;--ia-ink:#14271f;--ia-line:#e1e9e4;--ia-soft:#f4f8f6;color:var(--ia-ink);background:#f5f8f6}.ia-sidebar{border-right-color:var(--ia-line);background:rgba(255,255,255,.98)}.ia-sidebar button,.ia-actions button,.ia-row-actions button,.ia-record footer button,.ia-pagination button,.ia-quick-grid button,.ia-metrics button,.ia-operation-grid button,.ia-modal header button,.ia-form footer button,.ia-list-row{min-height:44px;border-color:var(--ia-line);border-radius:11px}.ia-sidebar nav button.active,.ia-actions button:first-child,.ia-form footer button{border-color:var(--ia-green);background:var(--ia-green)}.ia-panel,.ia-toolbar,.ia-table-wrap,.ia-record,.ia-final-section,.ia-navigation-placeholder{border-color:var(--ia-line)!important;border-radius:17px!important;box-shadow:0 10px 30px rgba(18,54,38,.05)!important}.ia-table th{background:#f5f8f6;color:#6e7e76;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.ia-table tbody tr:hover{background:#f7faf8}.ia-search input,.ia-filters input,.ia-filters select,.ia-form input,.ia-form select,.ia-form textarea{min-height:44px;border-radius:11px;border-color:#dbe5df}.ia-dashboard-metrics,.ia-final-overview-grid{gap:11px}.ia-dashboard-metrics button,.ia-final-overview-grid>*{border-radius:15px!important;box-shadow:0 8px 22px rgba(19,53,38,.05)}
+@media(max-width:760px){.ia-shell{background:#f6f8f7}.ia-panel,.ia-toolbar,.ia-table-wrap,.ia-record,.ia-final-section{border-radius:15px!important}.ia-mobile-bottom-nav{padding-bottom:calc(7px + env(safe-area-inset-bottom))}.ia-main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}}
+
 .ia-shell,
 .ia-shell * {
   box-sizing: border-box;

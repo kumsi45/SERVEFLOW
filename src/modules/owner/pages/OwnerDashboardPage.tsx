@@ -26,7 +26,7 @@ import {
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
 import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
-import { ThemeCustomizationStudio } from "../../menu/theme-engine/customization/ThemeCustomizationStudio";
+import { OwnerAiAdvisor } from "../components/ai/OwnerAiAdvisor";
 import {
   searchActiveDirectInventoryItems,
   searchActiveMenuRecipes,
@@ -340,24 +340,24 @@ type NavId =
   | "qr"
   | "customers"
   | "reports"
+  | "printing"
   | "settings";
 
 type OwnerNavTarget = NavId | "inventory" | "recipes";
 
-const NAV_ITEMS: { id: OwnerNavTarget; icon: string; label: string }[] = [
-  { id: "overview", icon: "OV", label: "Overview" },
-  { id: "orders", icon: "OR", label: "Orders" },
-  { id: "analytics", icon: "AN", label: "Revenue & Analytics" },
-  { id: "menu", icon: "MN", label: "Menu" },
-  { id: "stations", icon: "KS", label: "Kitchen Stations" },
-  { id: "staff", icon: "ST", label: "Staff" },
-  { id: "qr", icon: "QR", label: "QR & Tables" },
-  { id: "customers", icon: "CU", label: "Customers" },
-  { id: "reports", icon: "RP", label: "Reports" },
-  { id: "recipes", icon: "RC", label: "Recipes" },
-  { id: "inventory", icon: "IN", label: "Inventory" },
-  { id: "settings", icon: "SE", label: "Settings" },
+const NAV_SECTIONS: Array<{ label: string | null; items: Array<{ id: OwnerNavTarget; icon: string; label: string }> }> = [
+  { label: null, items: [{ id: "overview", icon: "⌂", label: "Dashboard" }] },
+  { label: "Operations", items: [
+    { id: "orders", icon: "≡", label: "Orders" }, { id: "menu", icon: "◇", label: "Menu" },
+    { id: "stations", icon: "♨", label: "Kitchen" }, { id: "inventory", icon: "▦", label: "Inventory" },
+    { id: "customers", icon: "○", label: "Customers" }, { id: "staff", icon: "♙", label: "Staff" },
+  ] },
+  { label: "Business", items: [{ id: "analytics", icon: "$", label: "Finance" }, { id: "reports", icon: "↗", label: "Reports" }] },
+  { label: "Business management", items: [
+    { id: "qr", icon: "#", label: "QR & Tables" }, { id: "printing", icon: "▤", label: "Printing" }, { id: "settings", icon: "⚙", label: "Settings" },
+  ] },
 ];
+const NAV_ITEMS = NAV_SECTIONS.flatMap((section) => section.items);
 
 const ACTIVE_ORDER_STATUSES: OperationalStatus[] = [
   "new",
@@ -396,6 +396,7 @@ function navIconLabel(id: NavId) {
     qr: "#",
     customers: "o",
     reports: "|",
+    printing: "P",
     settings: "*",
   };
   return labels[id];
@@ -609,6 +610,19 @@ function exportRowsAsExcel(
   );
 }
 
+type OwnerUtilityPanelKind = "notifications" | "subscription" | "help" | "about" | "feedback";
+
+function OwnerUtilityPanel({ panel, onClose }: { panel: OwnerUtilityPanelKind; onClose: () => void }) {
+  const title = panel === "about" ? "About ServeFlow" : panel === "help" ? "Help Center" : panel === "feedback" ? "Send Feedback" : panel.charAt(0).toUpperCase() + panel.slice(1);
+  const helpTopics = ["Getting Started", "Orders", "Menu", "Kitchen", "Inventory", "Finance", "Printing", "Frequently Asked Questions", "Video Tutorials", "Contact Support"];
+  return <div className="od-utility-layer"><button type="button" className="od-assistant-backdrop" aria-label="Close panel" onClick={onClose} /><aside className={`od-utility-panel ${panel}`} aria-label={title}><header><div><span className="od-v10-eyebrow">ServeFlow support</span><h2>{title}</h2></div><button type="button" aria-label="Close panel" onClick={onClose}>×</button></header>
+    {panel === "help" ? <div className="od-help-center"><label><span aria-hidden="true">⌕</span><input type="search" placeholder="Search help articles" aria-label="Search Help Center" /></label><div className="od-help-grid">{helpTopics.map((topic, index) => <button type="button" key={topic}><span>{["↗", "▣", "◇", "♨", "▦", "$", "▤", "?", "▶", "◌"][index]}</span><strong>{topic}</strong><small>{index === 9 ? "Talk with the ServeFlow team" : "Guides and practical answers"}</small></button>)}</div></div> : null}
+    {panel === "about" ? <div className="od-about-page"><div className="od-about-brand"><div className="od-brand-icon">S</div><div><h3>ServeFlow</h3><p>Hospitality Business Management Platform</p></div><span>v1.0.0</span></div><dl><div><dt>Developed & Maintained by</dt><dd>KumsiTech</dd></div><div><dt>Founder & Lead Architect</dt><dd>Abdulhayi Alo</dd></div></dl><section><span className="od-v10-eyebrow">Our mission</span><p>ServeFlow helps cafés, restaurants, hotels, bars, lounges, bakeries, fast-food businesses, and other hospitality businesses manage daily operations through QR ordering, POS, Kitchen Display System, Inventory, Finance, Reporting, and AI-powered business intelligence.</p></section><section><span className="od-v10-eyebrow">Platform features</span><div className="od-about-features">{["QR Ordering", "Cashier", "Kitchen", "Waiter", "Inventory", "Finance", "Reports", "AI Business Advisor"].map((feature) => <span key={feature}>✓ {feature}</span>)}</div></section><nav aria-label="ServeFlow information"><button type="button">Official Website</button><button type="button">Privacy Policy</button><button type="button">Terms of Service</button><button type="button">Release Notes</button><button type="button">System Status</button><button type="button">Contact Support</button></nav></div> : null}
+    {panel === "feedback" ? <form className="od-feedback-page" onSubmit={(event) => event.preventDefault()}><p>Help us make ServeFlow better for every hospitality business.</p><fieldset><legend>What would you like to share?</legend><div><button type="button"><span>!</span><strong>Report Bug</strong></button><button type="button"><span>+</span><strong>Suggest Feature</strong></button><button type="button"><span>★</span><strong>Rate Experience</strong></button></div></fieldset><label>Tell us more<textarea rows={6} placeholder="Describe your experience or suggestion…" /></label><button type="submit" className="od-btn-primary">Send Feedback</button><small>Feedback submission will be enabled in a future release.</small></form> : null}
+    {panel === "notifications" || panel === "subscription" ? <div className="od-utility-content"><div className="od-brand-icon">S</div><p>{panel === "notifications" ? "Your business notifications will appear here." : "Manage your ServeFlow plan and billing from this dedicated account area."}</p><span>More account tools coming soon</span></div> : null}
+  </aside></div>;
+}
+
 export function OwnerDashboardPage({
   restaurantId,
   restaurantName,
@@ -633,6 +647,9 @@ export function OwnerDashboardPage({
       )[initialSection ?? ""] ?? "overview",
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [utilityPanel, setUtilityPanel] = useState<OwnerUtilityPanelKind | null>(null);
   const [orders, setOrders] = useState<OdOrder[]>([]);
   const [payments, setPayments] = useState<OdPayment[]>([]);
   const [staff, setStaff] = useState<OdStaff[]>([]);
@@ -1554,6 +1571,7 @@ export function OwnerDashboardPage({
     loading,
     dashboardReportsLoading,
   };
+  const currentNavLabel = NAV_ITEMS.find((item) => item.id === nav)?.label ?? "Dashboard";
 
   function handleDashboardNavigate(nextNav: OwnerNavTarget) {
     if (nextNav === "recipes") {
@@ -1588,7 +1606,7 @@ export function OwnerDashboardPage({
           >
             <span className="od-mobile-menu-icon" aria-hidden="true" />
           </button>
-          <button type="button" aria-label="Notifications">
+          <button type="button" aria-label="Notifications" onClick={() => setUtilityPanel("notifications")}>
             <span className="od-mobile-bell-icon" aria-hidden="true" />
           </button>
         </div>
@@ -1610,7 +1628,7 @@ export function OwnerDashboardPage({
                 </div>
                 <div>
                   <div className="od-restaurant-name">{restaurantName}</div>
-                  <div className="od-restaurant-role">Admin Access</div>
+                  <div className="od-restaurant-role">Business owner</div>
                 </div>
               </div>
               <button
@@ -1623,19 +1641,33 @@ export function OwnerDashboardPage({
             </div>
             <nav
               className="od-mobile-menu-nav"
-              aria-label="All owner dashboard sections"
+              aria-label="Complete owner navigation"
             >
-              {NAV_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={nav === item.id ? "active" : ""}
-                  onClick={() => handleMobileNavigate(item.id)}
-                >
-                  <span>{item.icon}</span>
-                  {item.label}
-                </button>
-              ))}
+              <button type="button" className={nav === "overview" ? "active" : ""} onClick={() => handleMobileNavigate("overview")}><span>⌂</span>Dashboard</button>
+              <div className="od-mobile-menu-group"><small>Operations</small>
+                <button type="button" className={nav === "orders" ? "active" : ""} onClick={() => handleMobileNavigate("orders")}><span>▣</span>Orders</button>
+                <button type="button" className={nav === "menu" ? "active" : ""} onClick={() => handleMobileNavigate("menu")}><span>◇</span>Menu</button>
+                <button type="button" className={nav === "stations" ? "active" : ""} onClick={() => handleMobileNavigate("stations")}><span>♨</span>Kitchen</button>
+                <button type="button" onClick={() => handleMobileNavigate("inventory")}><span>▦</span>Inventory</button>
+                <button type="button" className={nav === "customers" ? "active" : ""} onClick={() => handleMobileNavigate("customers")}><span>◎</span>Customers</button>
+                <button type="button" className={nav === "staff" ? "active" : ""} onClick={() => handleMobileNavigate("staff")}><span>♙</span>Staff</button>
+              </div>
+              <div className="od-mobile-menu-group"><small>Business</small>
+                <button type="button" className={nav === "analytics" ? "active" : ""} onClick={() => handleMobileNavigate("analytics")}><span>$</span>Finance</button>
+                <button type="button" className={nav === "reports" ? "active" : ""} onClick={() => handleMobileNavigate("reports")}><span>↗</span>Reports</button>
+              </div>
+              <div className="od-mobile-menu-group"><small>Management</small>
+                <button type="button" className={nav === "qr" ? "active" : ""} onClick={() => handleMobileNavigate("qr")}><span>#</span>QR & Tables</button>
+                <button type="button" className={nav === "printing" ? "active" : ""} onClick={() => handleMobileNavigate("printing")}><span>▤</span>Printing</button>
+              </div>
+              <div className="od-mobile-menu-group"><small>Help</small>
+                <button type="button" onClick={() => { setUtilityPanel("help"); setMobileMenuOpen(false); }}><span>?</span>Help Center</button>
+                <button type="button" onClick={() => { setUtilityPanel("about"); setMobileMenuOpen(false); }}><span>i</span>About ServeFlow</button>
+                <button type="button" onClick={() => { setUtilityPanel("feedback"); setMobileMenuOpen(false); }}><span>◌</span>Send Feedback</button>
+              </div>
+              <div className="od-mobile-menu-group"><small>System</small>
+                <button type="button" onClick={() => { setUtilityPanel("subscription"); setMobileMenuOpen(false); }}><span>◇</span>Subscription</button>
+              </div>
             </nav>
             <button
               className="od-mobile-menu-signout"
@@ -1648,36 +1680,37 @@ export function OwnerDashboardPage({
         </div>
       )}
 
-      <aside className="od-sidebar">
+      <aside className={`od-sidebar${sidebarCollapsed ? " collapsed" : ""}`}>
         <div className="od-sidebar-brand">
           <div className="od-brand-icon">S</div>
-          <div>
+          <div className="od-sidebar-copy">
             <div className="od-brand-text">ServeFlow</div>
-            <div className="od-brand-sub">Management Suite</div>
+            <div className="od-brand-sub">Business OS</div>
           </div>
+          <button type="button" className="od-sidebar-collapse" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed((value) => !value)}>{sidebarCollapsed ? "›" : "‹"}</button>
         </div>
 
         <nav className="od-nav" aria-label="Dashboard navigation">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`od-nav-item${nav === item.id ? " active" : ""}`}
-              onClick={() => handleDashboardNavigate(item.id)}
-            >
-              <span className="od-nav-icon">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+          {NAV_SECTIONS.map((section, sectionIndex) => <section key={section.label ?? "dashboard"} className="od-nav-section">
+            {section.label ? <div className="od-nav-section-label">{section.label}</div> : null}
+            {section.items.map((item) => <button key={item.id} title={sidebarCollapsed ? item.label : undefined} className={`od-nav-item${nav === item.id ? " active" : ""}`} onClick={() => handleDashboardNavigate(item.id)}><span className="od-nav-icon">{item.icon}</span><span className="od-nav-label">{item.label}</span></button>)}
+            {sectionIndex < NAV_SECTIONS.length - 1 ? <div className="od-nav-divider" /> : null}
+          </section>)}
         </nav>
 
         <div className="od-sidebar-footer">
+          <div className="od-sidebar-utility">
+            <button type="button" onClick={() => setUtilityPanel("subscription")}><span>◇</span><b>Subscription</b></button>
+            <button type="button" onClick={() => setUtilityPanel("help")}><span>?</span><b>Help & Support</b></button>
+            <button type="button" onClick={() => setUtilityPanel("about")}><span>i</span><b>About ServeFlow</b></button>
+          </div>
           <div className="od-restaurant-badge">
             <div className="od-restaurant-avatar">
               {restaurantName.charAt(0)}
             </div>
             <div>
               <div className="od-restaurant-name">{restaurantName}</div>
-              <div className="od-restaurant-role">Admin Access</div>
+              <div className="od-restaurant-role">Business owner</div>
             </div>
           </div>
         </div>
@@ -1685,7 +1718,7 @@ export function OwnerDashboardPage({
 
       <div className="od-main">
         <header className="od-topbar">
-          <div className="od-branch-selector">{restaurantName}</div>
+          <div className="od-breadcrumb"><span>Owner</span><b>/</b><strong>{currentNavLabel}</strong></div>
           <div className="od-topbar-search">
             <span className="od-search-icon">/</span>
             <input
@@ -1708,7 +1741,7 @@ export function OwnerDashboardPage({
               </div>
               <div className="od-profile-info">
                 <div className="od-profile-name">{ownerName || "Owner"}</div>
-                <div className="od-profile-role">Restaurant Owner</div>
+                <div className="od-profile-role">Business Owner</div>
               </div>
             </div>
             <button className="od-btn-ghost" onClick={handleSignOut}>
@@ -1720,11 +1753,10 @@ export function OwnerDashboardPage({
         {error && <div className="od-error">Warning: {error}</div>}
 
         {nav === "overview" && (
-          <OverviewPage
+          <ExecutiveOverviewV10
             data={dashboardData}
-            staff={staff}
             ownerName={ownerName}
-            onNavigate={setNav}
+            onNavigate={handleDashboardNavigate}
             now={now}
           />
         )}
@@ -1793,26 +1825,39 @@ export function OwnerDashboardPage({
             restaurantName={restaurantName}
           />
         )}
+        {nav === "printing" && <div className="od-page"><div className="od-page-header"><div><h1 className="od-page-title">Printing</h1><p className="od-page-subtitle">Manage business receipts, order tickets, and print-ready documents from one place.</p></div></div><div className="od-card"><div className="od-card-header"><div><div className="od-card-title">Printing workspace</div><div className="od-card-subtitle">Printing preferences remain connected to the existing business configuration.</div></div></div><div className="od-empty">Printer setup and device controls will appear here when printing hardware is connected.</div></div></div>}
         {nav === "settings" && (
           <SettingsPage
             restaurantId={restaurantId}
             fallbackRestaurantName={restaurantName}
             config={restaurantConfig}
             tables={restaurantTables}
+            menuItems={menuItems}
+            kitchenStations={kitchenStations}
+            staff={staff}
             onSettingsChanged={refreshRestaurantConfig}
           />
         )}
       </div>
+
+      <OwnerAiAdvisor
+        open={aiAssistantOpen}
+        onOpen={() => setAiAssistantOpen(true)}
+        onClose={() => setAiAssistantOpen(false)}
+        businessName={restaurantConfig?.name ?? restaurantName}
+      />
+
+      {utilityPanel && <OwnerUtilityPanel panel={utilityPanel} onClose={() => setUtilityPanel(null)} />}
 
       <nav
         className="od-mobile-bottom-nav"
         aria-label="Owner mobile navigation"
       >
         {[
-          { id: "overview" as NavId, label: "Overview" },
+          { id: "overview" as NavId, label: "Dashboard" },
           { id: "orders" as NavId, label: "Orders" },
           { id: "menu" as NavId, label: "Menu" },
-          { id: "stations" as NavId, label: "Stations" },
+          { id: "stations" as NavId, label: "Kitchen" },
           { id: "settings" as NavId, label: "Settings" },
         ].map((item) => (
           <button
@@ -1880,6 +1925,74 @@ type DashboardData = {
 };
 
 type OverviewRange = "today" | "yesterday" | "week" | "month" | "custom";
+
+function ExecutiveOverviewV10({ data, now, ownerName, onNavigate }: {
+  data: DashboardData;
+  now: Date;
+  ownerName?: string;
+  onNavigate: (nav: OwnerNavTarget) => void;
+}) {
+  const recentOrders = [...data.orders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
+  const recentPayments = [...data.payments].sort((a, b) => new Date(b.paid_at ?? b.created_at).getTime() - new Date(a.paid_at ?? a.created_at).getTime()).slice(0, 4);
+  const customers = new Set(data.todayOrders.map((order) => order.customer_name?.trim()).filter(Boolean)).size;
+  const kitchenActive = data.activeOrders.filter((order) => ["accepted", "preparing", "ready"].includes(order.operational_status)).length;
+  const pendingPayments = data.todayOrders.filter((order) => order.operational_status === "new").length;
+  const completedOrders = data.completedToday.length;
+  const todayStart = analyticsWindow("today", activeOwnerTimezone, undefined, undefined, now).rangeStart;
+  const todayPayments = data.payments.filter((payment) => Boolean(payment.paid_at) && payment.paid_at! >= todayStart);
+  const cashRevenue = todayPayments.filter((payment) => canonicalPaymentMethod(payment.payment_method) === "Cash").reduce((sum, payment) => sum + payment.total_price, 0);
+  const digitalRevenue = todayPayments.filter((payment) => canonicalPaymentMethod(payment.payment_method) !== "Cash").reduce((sum, payment) => sum + payment.total_price, 0);
+  const totalRevenue = cashRevenue + digitalRevenue;
+  const health = [
+    ["Orders today", String(data.todayOrders.length), `${data.activeOrders.length} currently active`, "neutral"],
+    ["Kitchen status", kitchenActive ? `${kitchenActive} active` : "Clear", kitchenActive ? "Orders moving through kitchen" : "No active queue", kitchenActive ? "warning" : "positive"],
+    ["Inventory alerts", "Review", "Open inventory health", "neutral"],
+    ["Staff working", String(data.activeStaff), `${data.kitchenStaff.length} kitchen team`, "positive"],
+    ["Pending payments", String(pendingPayments), pendingPayments ? "Needs attention" : "Everything settled", pendingPayments ? "warning" : "positive"],
+  ];
+  const performance = [
+    ["Today's revenue", fmtMoney(data.todayRevenue), "Verified sales", "↗"],
+    ["Average order", fmtMoney(Math.round(data.avgOrderValue)), `${data.todayOrders.length} orders today`, "≈"],
+    ["Customers", String(customers), "Named customers today", "◎"],
+    ["Completed orders", String(completedOrders), `${data.activeOrders.length} active`, "✓"],
+  ];
+  const actions: Array<[string, string, string, OwnerNavTarget, boolean?]> = [
+    ["New Order", "Open order workspace", "+", "orders", true],
+    ["New Menu Item", "Add to your menu", "◇", "menu"],
+    ["Adjust Inventory", "Update stock levels", "▦", "inventory"],
+    ["Record Expense", "Open financial reports", "−", "reports"],
+    ["Generate Report", "Export performance", "↗", "reports"],
+  ];
+
+  return <main className="od-page od-v10-overview">
+    <header className="od-v10-header">
+      <div className="od-v10-heading">
+        <span className="od-v10-eyebrow">Live operations</span>
+        <h1>{getOwnerGreeting(now).greeting}, {ownerName || "Owner"}</h1>
+      </div>
+    </header>
+
+    {data.loading ? <div className="od-v10-skeleton-grid" aria-label="Loading dashboard">{Array.from({ length: 10 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div> : <>
+      <section className="od-v10-health" aria-labelledby="business-health-title">
+        <header><div><h2 id="business-health-title">Business health</h2></div><span className="od-live-indicator">Live now</span></header>
+        <div className="od-v10-health-grid"><article className="od-v10-health-item od-v10-revenue-kpi"><span>Today's revenue</span><div><section><small>Cash</small><strong>{fmtMoney(cashRevenue)}</strong></section><section><small>Digital</small><strong>{fmtMoney(digitalRevenue)}</strong></section><section className="total"><small>Total</small><strong>{fmtMoney(totalRevenue)}</strong></section></div></article>{health.map(([name, value, detail, tone]) => <button key={name} type="button" className={`od-v10-health-item ${tone}`} onClick={() => name === "Inventory alerts" && onNavigate("inventory")} disabled={name !== "Inventory alerts"}><span>{name}</span><strong>{value}</strong><small>{detail}</small></button>)}</div>
+      </section>
+
+      <section className="od-v10-performance" aria-label="Performance summary">{performance.map(([name, value, detail, icon]) => <article key={name} className="od-v10-performance-card"><div><span>{name}</span><b>{icon}</b></div><strong>{value}</strong><small>{detail}</small></article>)}</section>
+
+      <section className="od-v10-layout">
+        <div className="od-v10-main-column">
+          <article className="od-v10-panel od-v10-revenue-panel"><header><div><span className="od-v10-eyebrow">Revenue today</span><h2>Payment summary</h2></div></header><div className="od-v10-revenue-split"><div><span>Cash</span><strong>{fmtMoney(cashRevenue)}</strong></div><div><span>Digital</span><strong>{fmtMoney(digitalRevenue)}</strong></div><div className="total"><span>Total</span><strong>{fmtMoney(totalRevenue)}</strong></div></div></article>
+          <article className="od-v10-panel"><header><div><span className="od-v10-eyebrow">Activity timeline</span><h2>Recent orders</h2></div><button type="button" onClick={() => onNavigate("orders")}>View all</button></header><div className="od-v10-timeline">{recentOrders.length ? recentOrders.map((order) => <button type="button" key={order.id} onClick={() => onNavigate("orders")}><span className="od-v10-timeline-icon">{order.status === "completed" ? "✓" : "•"}</span><span><strong>{fmtOrderLabel(order)}</strong><small>{order.table_number ? `Table ${order.table_number}` : "Takeout"} · {order.item_count} items · {fmtTimeAgo(order.created_at)}</small></span><span className="od-v10-timeline-end"><b>{fmtMoney(order.total_price)}</b><small className={statusClass(order.operational_status)}>{statusLabel(order.operational_status)}</small></span></button>) : <div className="od-v10-empty">Orders will appear here as your team starts serving customers.</div>}</div></article>
+        </div>
+        <aside className="od-v10-side-column">
+          <article className="od-v10-panel od-v10-actions-panel"><header><div><span className="od-v10-eyebrow">Shortcuts</span><h2>Quick actions</h2></div></header><div>{actions.map(([name, detail, icon, target, primary]) => <button type="button" key={name} className={primary ? "primary" : ""} onClick={() => onNavigate(target)}><span>{icon}</span><span><strong>{name}</strong><small>{detail}</small></span><b>›</b></button>)}</div></article>
+          <article className="od-v10-panel od-v10-payments"><header><div><span className="od-v10-eyebrow">Payments</span><h2>Latest payments</h2></div></header><div>{recentPayments.length ? recentPayments.map((payment) => <div key={payment.id}><span><strong>{canonicalPaymentMethod(payment.payment_method)}</strong><small>{fmtTimeAgo(payment.paid_at ?? payment.created_at)}</small></span><b>{fmtMoney(payment.total_price)}</b></div>) : <div className="od-v10-empty">No completed payments yet.</div>}</div></article>
+        </aside>
+      </section>
+    </>}
+  </main>;
+}
 
 function OverviewPage({
   data,
@@ -2493,7 +2606,7 @@ function OrdersPage({
       : orders.filter((order) => order.operational_status === tab);
 
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-orders-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Live Order Center</h1>
@@ -2834,12 +2947,12 @@ function AnalyticsPage({
   const distributionTotal = Math.max(grossRevenue, 1);
 
   return (
-    <div className="od-page">
+    <div className="od-page od-finance-center">
       <div className="od-page-header">
         <div>
-          <h1 className="od-page-title">Revenue &amp; Analytics</h1>
+          <h1 className="od-page-title">Finance</h1>
           <p className="od-page-subtitle">
-            Paid invoice revenue for your restaurant branch.
+            Revenue, payments, taxes, and daily financial performance.
           </p>
         </div>
         <div className="od-tabs">
@@ -2863,6 +2976,10 @@ function AnalyticsPage({
           )}
         </div>
       </div>
+
+      <nav className="od-finance-capabilities" aria-label="Finance workspaces">
+        {["Revenue", "Expenses", "Profit", "Cash Register", "Payment Methods", "Taxes", "Refunds", "Daily Closing", "Financial Summary"].map((item, index) => <button type="button" key={item} className={index === 0 ? "active" : ""}><span>{["↗", "−", "+", "▤", "◇", "%", "↙", "✓", "◎"][index]}</span>{item}</button>)}
+      </nav>
 
       {periodReportError && (
         <div className="od-error-inline">{periodReportError}</div>
@@ -3760,7 +3877,7 @@ function StaffPage({
   ).length;
 
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-staff-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Staff Management</h1>
@@ -3772,20 +3889,6 @@ function StaffPage({
           Add Staff
         </button>
       </div>
-
-      <IndependentModuleReport
-        restaurantId={restaurantId}
-        rpc="get_owner_staff_module_report"
-        columns={[
-          { key: "staff", label: "Employee" },
-          { key: "orders_taken", label: "Orders" },
-          { key: "revenue_generated", label: "Revenue", money: true },
-          { key: "customers_served", label: "Customers Served" },
-          { key: "average_bill", label: "Average Bill", money: true },
-          { key: "kitchen_speed", label: "Kitchen Speed", suffix: " min" },
-          { key: "attendance", label: "Attendance" },
-        ]}
-      />
 
       {(staffError || notice) && (
         <div className={staffError ? "od-error-inline" : "od-success-inline"}>
@@ -4451,7 +4554,7 @@ function KitchenStationsPage({
   }
 
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-kitchen-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Kitchen Stations</h1>
@@ -4469,23 +4572,6 @@ function KitchenStationsPage({
           </button>
         </div>
       </div>
-
-      <IndependentModuleReport
-        restaurantId={restaurantId}
-        rpc="get_owner_kitchen_module_report"
-        columns={[
-          { key: "name", label: "Station" },
-          { key: "orders", label: "Orders" },
-          {
-            key: "average_prep_time",
-            label: "Average Prep Time",
-            suffix: " min",
-          },
-          { key: "completed", label: "Completed" },
-          { key: "cancelled", label: "Cancelled" },
-          { key: "performance", label: "Performance", suffix: "%" },
-        ]}
-      />
 
       {(stationError || notice) && (
         <div className={stationError ? "od-error-inline" : "od-success-inline"}>
@@ -5346,12 +5432,12 @@ function MenuPage({
   }
 
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-menu-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Menu Management</h1>
           <p className="od-page-subtitle">
-            Manage your restaurant menu, categories, and pricing.
+            Manage your business menu, categories, pricing, and availability.
           </p>
         </div>
         <div className="od-header-actions">
@@ -5373,23 +5459,14 @@ function MenuPage({
           >
             Upload Menu
           </button>
+          <button className="od-btn-ghost" type="button" disabled title="Smart Item Library workspace is coming soon">
+            Smart Item Library
+          </button>
           <button className="od-btn-primary" onClick={openCreateModal}>
             Add Item
           </button>
         </div>
       </div>
-
-      <IndependentModuleReport
-        restaurantId={restaurantId}
-        rpc="get_owner_menu_module_report"
-        columns={[
-          { key: "name", label: "Menu Item" },
-          { key: "quantity_sold", label: "Quantity Sold" },
-          { key: "revenue", label: "Revenue", money: true },
-          { key: "average_price", label: "Average Price", money: true },
-          { key: "refunds", label: "Refunds" },
-        ]}
-      />
 
       {(menuError || notice) && (
         <div className={menuError ? "od-error-inline" : "od-success-inline"}>
@@ -6855,15 +6932,21 @@ type ReportsCenterRange =
   | "last_month"
   | "custom";
 const REPORT_MODULES = [
-  ["Sales Report", "sales", "summary"],
-  ["Revenue Report", "financial", "revenue"],
+  ["Executive Summary", "sales", "summary"],
+  ["Sales", "sales", "summary"],
+  ["Revenue", "financial", "revenue"],
+  ["Orders", "sales", "orders"],
   ["Menu Performance", "menu", "rows"],
   ["Kitchen Performance", "kitchen", "rows"],
   ["Staff Performance", "staff", "rows"],
-  ["Customer Insights", "customers", "rows"],
+  ["Customers", "customers", "rows"],
   ["Table Performance", "tables", "rows"],
-  ["Inventory Reports", "inventory", "rows"],
-  ["Financial Reports", "financial", "payments"],
+  ["Inventory", "inventory", "rows"],
+  ["Finance", "financial", "summary"],
+  ["Payment Methods", "sales", "payment_breakdown"],
+  ["Taxes", "financial", "taxes"],
+  ["Refunds", "financial", "refunds"],
+  ["Profit & Loss", "financial", "profit_loss"],
 ] as const;
 
 function ReportsPage({
@@ -6996,12 +7079,12 @@ function ReportsPage({
     ? (modules.ai.insights as Record<string, unknown>[])
     : [];
   return (
-    <div className="od-page od-print-area">
+    <div className="od-page od-print-area od-reports-center">
       <div className="od-page-header">
         <div>
-          <h1 className="od-page-title">Executive Business Intelligence</h1>
+          <h1 className="od-page-title">Reports Center</h1>
           <p className="od-page-subtitle">
-            What happened, why it happened, and what to do next.
+            Executive intelligence and every business report in one place.
           </p>
         </div>
         <div className="od-header-actions od-no-print">
@@ -7025,9 +7108,7 @@ function ReportsPage({
             "today",
             "yesterday",
             "week",
-            "last_week",
             "month",
-            "last_month",
             "custom",
           ] as ReportsCenterRange[]
         ).map((option) => (
@@ -7042,9 +7123,7 @@ function ReportsPage({
                   today: "Today",
                   yesterday: "Yesterday",
                   week: "Week",
-                  last_week: "Last Week",
                   month: "Month",
-                  last_month: "Last Month",
                   custom: "Custom",
                 } as Record<ReportsCenterRange, string>
               )[option]
@@ -7202,7 +7281,26 @@ function ModuleExportSection({
   value: unknown;
 }) {
   const rows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
-  const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const hiddenHeaders = new Set(["id", "menu_item_id", "kitchen_station_id", "station_id", "staff_id"]);
+  if (title === "Staff Performance") ["bill_request", "bill_requests", "bills_requested", "customers_served", "customer_served"].forEach((header) => hiddenHeaders.add(header));
+  const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter((header) => !hiddenHeaders.has(header));
+  const headerLabel = (header: string) => {
+    if (title === "Menu Performance" && header === "average_price") return "Item Price";
+    if (title === "Staff Performance" && header === "staff") return "Name";
+    return header.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  };
+  const durationLabel = (value: unknown) => {
+    const totalSeconds = Math.max(0, Math.round(Number(value ?? 0) * 60));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [hours ? `${hours} hr` : "", minutes ? `${minutes} min` : "", `${seconds} sec`].filter(Boolean).join(" ");
+  };
+  const displayValue = (row: Record<string, unknown>, header: string) => {
+    if ((title === "Kitchen Performance" && header === "average_prep_time") || (title === "Table Performance" && header === "average_stay")) return durationLabel(row[header]);
+    if (typeof row[header] === "number" && /(revenue|value|spend|bill|price)/.test(header)) return fmtMoney(Number(row[header]));
+    return String(row[header] ?? "—");
+  };
   return (
     <section className="od-card">
       <div className="od-card-header">
@@ -7216,7 +7314,7 @@ function ModuleExportSection({
           <thead>
             <tr>
               {headers.map((header) => (
-                <th key={header}>{header.replace(/_/g, " ")}</th>
+                <th key={header}>{headerLabel(header)}</th>
               ))}
             </tr>
           </thead>
@@ -7226,10 +7324,7 @@ function ModuleExportSection({
                 <tr key={index}>
                   {headers.map((header) => (
                     <td key={header}>
-                      {typeof row[header] === "number" &&
-                      /(revenue|value|spend|bill|price)/.test(header)
-                        ? fmtMoney(Number(row[header]))
-                        : String(row[header] ?? "—")}
+                      {displayValue(row, header)}
                     </td>
                   ))}
                 </tr>
@@ -7732,7 +7827,7 @@ function LegacyReportsPage({
 
 function CustomersPage({ restaurantId }: { restaurantId: string }) {
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-customers-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">Customer Insights</h1>
@@ -7741,17 +7836,6 @@ function CustomersPage({ restaurantId }: { restaurantId: string }) {
           </p>
         </div>
       </div>
-      <IndependentModuleReport
-        restaurantId={restaurantId}
-        rpc="get_owner_customers_module_report"
-        columns={[
-          { key: "customer_name", label: "Customer" },
-          { key: "customer_type", label: "New / Returning" },
-          { key: "average_spend", label: "Average Spend", money: true },
-          { key: "most_ordered_item", label: "Most Ordered Item" },
-          { key: "visit_frequency", label: "Visit Frequency" },
-        ]}
-      />
     </div>
   );
 }
@@ -8340,12 +8424,12 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
   }
 
   return (
-    <div className="od-page">
+    <div className="od-page od-operations-page od-qr-experience">
       <div className="od-page-header">
         <div>
           <h1 className="od-page-title">QR & Table Management</h1>
           <p className="od-page-subtitle">
-            Restaurant floor management for {restaurantName}
+            Business floor and QR management for {restaurantName}
           </p>
         </div>
         <div className="od-header-actions">
@@ -8362,21 +8446,10 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
             type="button"
             onClick={() => void printQrCards(rows)}
           >
-            Print Entire Restaurant
+            Print All Tables
           </button>
         </div>
       </div>
-      <IndependentModuleReport
-        restaurantId={restaurantId}
-        rpc="get_owner_tables_module_report"
-        columns={[
-          { key: "table_number", label: "Table" },
-          { key: "revenue_per_table", label: "Revenue Per Table", money: true },
-          { key: "invoices", label: "Invoices" },
-          { key: "average_stay", label: "Average Stay", suffix: " min" },
-          { key: "table_turnover", label: "Table Turnover" },
-        ]}
-      />
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
           <div className="od-kpi-label">Occupied Tables</div>
@@ -8401,7 +8474,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
       <div className="od-card">
         <div className="od-card-header">
           <div>
-            <div className="od-card-title">Restaurant Tables</div>
+            <div className="od-card-title">Business Tables</div>
             <div className="od-card-subtitle">
               Owner QR controls for the direct /r/{restaurantSlug || ":slug"}{" "}
               digital menu route.
@@ -8804,12 +8877,18 @@ function SettingsPage({
   fallbackRestaurantName,
   config,
   tables,
+  menuItems,
+  kitchenStations,
+  staff,
   onSettingsChanged,
 }: {
   restaurantId: string;
   fallbackRestaurantName: string;
   config: RestaurantConfig | null;
   tables: RestaurantTable[];
+  menuItems: OdMenuItem[];
+  kitchenStations: OdKitchenStation[];
+  staff: OdStaff[];
   onSettingsChanged: () => Promise<void>;
 }) {
   const [form, setForm] = useState<SettingsFormState>(() =>
@@ -9149,14 +9228,25 @@ function SettingsPage({
     setNotice(null);
   }
 
+  const settingsHealthChecks: Array<[string, boolean, string]> = [
+    ["Business Profile Complete", Boolean(form.name && form.businessType), "business-profile"],
+    ["QR Menu Published", form.acceptsQrOrders && menuItems.length > 0, "business-profile"],
+    ["Payment Methods Configured", false, "payment-billing"],
+    ["Kitchen Station Configured", kitchenStations.some((station) => station.active), "printing"],
+    ["Receipt Printer Connected", false, "printing"],
+    ["Kitchen Printer Connected", false, "printing"],
+    ["Inventory Ready", false, "notifications"],
+    ["Staff Ready", staff.some((member) => member.active && isOperationalStaff(member)), "notifications"],
+  ];
+
   return (
-    <div className="od-page">
-      <div className="od-page-header">
+    <div className="od-page od-config-page">
+      <div className="od-page-header od-config-header">
         <div>
-          <h1 className="od-page-title">Business Configuration</h1>
+          <span className="od-config-eyebrow">Owner settings</span>
+          <h1 className="od-page-title">Business Configuration Center</h1>
           <p className="od-page-subtitle">
-            Restaurant profile, tables, QR codes, ordering, branding,
-            notifications, billing, and security.
+            Configure the essentials that keep your hospitality business ready for service.
           </p>
         </div>
       </div>
@@ -9174,13 +9264,70 @@ function SettingsPage({
         </div>
       )}
 
-      <ThemeCustomizationStudio
-        restaurantId={restaurantId}
-        role="owner"
-        onPublished={onSettingsChanged}
-      />
+      <form className="od-config-center" onSubmit={handleSave}>
+        <aside className="od-health-card" aria-labelledby="system-health-title">
+          <div className="od-health-score"><span>{settingsHealthChecks.filter(([, ready]) => ready).length}/{settingsHealthChecks.length}</span><small>systems ready</small></div>
+          <div className="od-health-copy"><span className="od-config-eyebrow">System health</span><h2 id="system-health-title">Your business readiness</h2><p>See what is ready and jump directly to anything that still needs attention.</p></div>
+          <div className="od-health-grid">
+            {settingsHealthChecks.map(([label, ready, target]) => <a key={label} href={`#${target}`} className={ready ? "ready" : "attention"}><span aria-hidden="true">{ready ? "✓" : "!"}</span><strong>{label}</strong><small>{ready ? "Ready" : "Set up"}</small></a>)}
+          </div>
+        </aside>
 
-      <form className="od-settings-form" onSubmit={handleSave}>
+        <div className="od-config-toolbar"><div><strong>Configuration</strong><span>Four focused sections</span></div><div><button className="od-btn-ghost" type="button" onClick={handleCancel} disabled={working}>Discard</button><button className="od-btn-primary" type="submit" disabled={working}>{working ? "Saving…" : "Save changes"}</button></div></div>
+
+        <div className="od-config-sections">
+          <details className="od-config-section" id="business-profile" open>
+            <summary><span className="od-config-icon" aria-hidden="true">B</span><div><strong>Business</strong><small>Identity, location, hours, branding and regional preferences</small></div><span className="od-config-chevron" aria-hidden="true">⌄</span></summary>
+            <div className="od-config-content">
+              <div className="od-config-subhead"><h3>Business profile</h3><p>The information customers and staff use to recognize your business.</p></div>
+              <div className="od-settings-grid">
+                <label>Business Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} disabled={working} /></label>
+                <label>Business Type<select value={form.businessType} onChange={(event) => updateField("businessType", event.target.value)} disabled={working}>{["Cafe", "Restaurant", "Hotel", "Fast Food", "Bar", "Lounge", "Bakery", "Food Business"].map((type) => <option value={type} key={type}>{type}</option>)}</select><small>Used to tailor your ServeFlow experience.</small></label>
+                <label className="wide">Business Description<textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} disabled={working} placeholder="Tell customers what makes your business special." /></label>
+                <label className="wide">Address<input value={form.address} onChange={(event) => updateField("address", event.target.value)} disabled={working} /></label>
+              </div>
+              <div className="od-config-media-grid">
+                <label className="od-media-upload"><span>{form.logoUrl ? "Logo ready" : "Add business logo"}</span><small>Square image recommended</small><input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("logo", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
+                <label className="od-media-upload cover"><span>{form.coverUrl ? "Cover ready" : "Add cover image"}</span><small>Wide image recommended</small><input type="file" accept="image/*" onChange={(event) => void uploadBrandingAsset("cover", event.target.files?.[0] ?? null)} disabled={working || assetUploading !== null} /></label>
+              </div>
+              <div className="od-config-divider" />
+              <div className="od-config-subhead"><h3>Business hours</h3><p>Set the standard service window and closed days.</p></div>
+              <div className="od-settings-grid compact"><label>Opens At<input type="time" value={form.opensAt} onChange={(event) => updateField("opensAt", event.target.value)} disabled={working} /></label><label>Closes At<input type="time" value={form.closesAt} onChange={(event) => updateField("closesAt", event.target.value)} disabled={working} /></label></div>
+              <div className="od-day-pills">{BUSINESS_DAYS.map((day) => <label key={day} className={form.closedDays.includes(day) ? "closed" : ""}><input type="checkbox" checked={form.closedDays.includes(day)} onChange={() => toggleClosedDay(day)} disabled={working} /><span>{day.slice(0, 3)}</span><small>{form.closedDays.includes(day) ? "Closed" : "Open"}</small></label>)}</div>
+              <div className="od-config-divider" />
+              <div className="od-settings-grid compact"><label>Currency<select value={form.currency} onChange={(event) => updateField("currency", event.target.value)} disabled={working}><option value="ETB">ETB — Ethiopian Birr</option><option value="USD">USD — US Dollar</option><option value="EUR">EUR — Euro</option></select><small>Used across orders, reports and receipts.</small></label><label>Time Zone<input value={form.timezone} onChange={(event) => updateField("timezone", event.target.value)} disabled={working} /></label><label>Language<select value="current" disabled aria-label="Business language"><option value="current">Language configuration coming soon</option></select><small>Your current platform language remains unchanged.</small></label></div>
+            </div>
+          </details>
+
+          <details className="od-config-section" id="payment-billing">
+            <summary><span className="od-config-icon" aria-hidden="true">P</span><div><strong>Payment &amp; Billing</strong><small>Policies, methods, accounts, VAT and service charges</small></div><span className="od-config-chevron" aria-hidden="true">⌄</span></summary>
+            <div className="od-config-content">
+              <div className="od-config-subhead"><h3>Payment policy</h3><p>Choose when an order becomes eligible for kitchen preparation.</p></div>
+              <div className="od-choice-grid"><label className={form.paymentPolicy === "pay_before_kitchen" ? "selected" : ""}><input type="radio" name="paymentPolicy" checked={form.paymentPolicy === "pay_before_kitchen"} onChange={() => updateField("paymentPolicy", "pay_before_kitchen")} /><strong>Customer Pays Before Kitchen</strong><small>Best for QR and counter ordering.</small></label><label className={form.paymentPolicy === "kitchen_before_payment" ? "selected" : ""}><input type="radio" name="paymentPolicy" checked={form.paymentPolicy === "kitchen_before_payment"} onChange={() => updateField("paymentPolicy", "kitchen_before_payment")} /><strong>Waiter Places Order → Payment Due</strong><small>Best for table service.</small></label><label className="future"><input type="radio" disabled /><strong>Mixed Mode</strong><small>Future capability</small></label></div>
+              <div className="od-config-divider" />
+              <div className="od-config-subhead"><h3>Payment methods</h3><p>Manage the methods displayed during checkout.</p></div>
+              <div className="od-setting-list">{["Cash", "Telebirr", "CBE Birr", "Mobile Banking", "Bank Transfer", "Credit Card"].map((method, index) => <label key={method}><div><strong>{method}</strong><small>{index === 0 ? "Available for cashier payments" : "Account connection interface"}</small></div><input className="od-switch" type="checkbox" defaultChecked={index === 0} aria-label={`Enable ${method}`} /></label>)}</div>
+              <div className="od-config-divider" />
+              <div className="od-config-subhead"><h3>Business payment accounts</h3><p>Add Telebirr or bank settlement details. Account connections are presentation-only in this phase.</p></div>
+              <div className="od-account-grid"><article><span>Mobile money</span><strong>Telebirr</strong><p>Business name · Phone number · Reference format</p><button type="button" className="od-btn-ghost" disabled>Add account</button></article><article><span>Commercial bank</span><strong>CBE and other banks</strong><p>Account name · Account number · Bank</p><button type="button" className="od-btn-ghost" disabled>Add bank account</button></article></div>
+              <div className="od-config-divider" />
+              <div className="od-charge-grid"><article><div><strong>VAT</strong><input className="od-switch" type="checkbox" checked={form.vatEnabled} onChange={(event) => updateField("vatEnabled", event.target.checked)} /></div><label>Percentage<input type="number" min="0" max="100" value={form.vatPercentage} onChange={(event) => updateField("vatPercentage", event.target.value)} disabled={!form.vatEnabled || working} /></label><select disabled={!form.vatEnabled}><option>Added after price</option><option>Included in price</option></select></article><article><div><strong>Service charge</strong><input className="od-switch" type="checkbox" checked={form.serviceChargeEnabled} onChange={(event) => updateField("serviceChargeEnabled", event.target.checked)} /></div><label>Percentage<input type="number" min="0" max="30" value={form.serviceCharge} onChange={(event) => updateField("serviceCharge", event.target.value)} disabled={!form.serviceChargeEnabled || working} /></label><select disabled={!form.serviceChargeEnabled}><option>Percentage</option><option>Fixed amount</option></select></article><article><div><strong>Commission</strong><input className="od-switch" type="checkbox" disabled /></div><p>Commission configuration is ready for a future business rule.</p></article><article><div><strong>Daily closing</strong><input className="od-switch" type="checkbox" disabled /></div><p>Closing automation will appear when the service is available.</p></article></div>
+            </div>
+          </details>
+
+          <details className="od-config-section" id="printing">
+            <summary><span className="od-config-icon" aria-hidden="true">R</span><div><strong>Printing</strong><small>Receipt, kitchen and station output configuration</small></div><span className="od-config-chevron" aria-hidden="true">⌄</span></summary>
+            <div className="od-config-content"><div className="od-config-subhead"><h3>Printer connections</h3><p>Printer controls are ready for connection without changing printer services.</p></div><div className="od-printer-grid">{[["Receipt Printer","Not connected"],["Kitchen Printer","Not connected"],["Station Printers","No mappings"]].map(([name,status]) => <article key={name}><span className="od-printer-status" /><div><strong>{name}</strong><small>{status}</small></div><button type="button" className="od-btn-ghost" disabled>Configure</button></article>)}</div><div className="od-config-divider" /><div className="od-settings-grid compact"><label>Kitchen Output<select defaultValue="kds"><option value="kds">KDS</option><option value="printer">Printer</option><option value="both">Both</option></select><small>Choose how kitchen tickets are delivered.</small></label><label>Connection<select defaultValue="usb"><option value="usb">USB</option><option value="network">Network</option><option value="bluetooth" disabled>Bluetooth — Future</option></select></label><label>Printer Behaviour<select defaultValue="manual"><option value="manual">Print on demand</option><option value="automatic">Print automatically</option></select></label></div><div className="od-printer-map"><span>Printer mapping</span><div><strong>Kitchen</strong><small>Kitchen Printer</small></div><div><strong>Bar</strong><small>Bar Printer</small></div><div><strong>Bakery</strong><small>Bakery Printer</small></div></div><button type="button" className="od-btn-ghost" disabled>Run printer test</button></div>
+          </details>
+
+          <details className="od-config-section" id="notifications">
+            <summary><span className="od-config-icon" aria-hidden="true">N</span><div><strong>Notifications</strong><small>Choose the operational updates that deserve your attention</small></div><span className="od-config-chevron" aria-hidden="true">⌄</span></summary>
+            <div className="od-config-content"><div className="od-config-subhead"><h3>Business alerts</h3><p>Keep important activity visible without unnecessary noise.</p></div><div className="od-setting-list">{["Low Stock", "Orders", "Refunds", "Finance", "Attendance", "Daily Closing Reminder"].map((notification, index) => <label key={notification}><div><strong>{notification}</strong><small>{index < 2 ? "Recommended for daily operations" : "Optional owner notification"}</small></div><input className="od-switch" type="checkbox" defaultChecked={index < 2} aria-label={`Enable ${notification} notifications`} /></label>)}</div></div>
+          </details>
+        </div>
+      </form>
+
+      <form className="od-settings-form" onSubmit={handleSave} hidden aria-hidden="true">
         <div className="od-settings-actions">
           <button
             className="od-btn-ghost"

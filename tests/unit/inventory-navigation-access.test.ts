@@ -28,7 +28,7 @@ describe("inventory dashboard navigation and access", () => {
       read("src/modules/waiter-dashboard/pages/WaiterDashboardPage.tsx"),
     ].join("\n");
 
-    expect(owner).toContain('{ id: "inventory", icon: "IN", label: "Inventory" }');
+    expect(owner).toContain('{ id: "inventory", icon: "▦", label: "Inventory" }');
     expect(manager).toContain('{ key: "inventory", label: "Inventory"');
     expect(owner).toContain('"/inventory/dashboard"');
     expect(manager).toContain('href: "/inventory/dashboard"');
