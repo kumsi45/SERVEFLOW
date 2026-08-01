@@ -6,6 +6,7 @@ type Props = {
   restaurant: Restaurant;
   activeOrder?: ReactNode;
   previousOrder?: ReactNode;
+  kitchenStage?: "sent" | "preparing" | "ready" | "served";
   onNavigateHome: () => void;
 };
 
@@ -32,7 +33,7 @@ function ChevronIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>;
 }
 
-export const ModernOrdersView = memo(function ModernOrdersView({ restaurant, activeOrder, previousOrder, onNavigateHome }: Props) {
+export const ModernOrdersView = memo(function ModernOrdersView({ restaurant, activeOrder, previousOrder, kitchenStage = "sent", onNavigateHome }: Props) {
   const activeOrders = useMemo(() => Children.toArray(activeOrder), [activeOrder]);
   const previousOrders = useMemo(() => Children.toArray(previousOrder), [previousOrder]);
   const tableNumber = useMemo(readTableNumber, []);
@@ -52,6 +53,14 @@ export const ModernOrdersView = memo(function ModernOrdersView({ restaurant, act
         <section className="modern-visit-summary" aria-label="Current dining session">
           <div><small>Today's Visit</small><strong>{tableNumber ? `Table ${tableNumber}` : "Dine-in visit"}</strong></div>
           <span>{activeOrderCount} Active {activeOrderCount === 1 ? "Order" : "Orders"}</span>
+        </section>
+
+        <section className="modern-kitchen-progress" aria-label={`Kitchen progress: ${kitchenStage}`}>
+          <div><small>Kitchen progress</small><strong>Updates automatically</strong></div>
+          <ol>{(["sent", "preparing", "ready", "served"] as const).map((stage, index, stages) => {
+            const current = stages.indexOf(kitchenStage);
+            return <li className={index < current ? "done" : index === current ? "active" : ""} key={stage}><span />{stage[0].toUpperCase() + stage.slice(1)}</li>;
+          })}</ol>
         </section>
 
         {activeOrderCount === 0 ? (

@@ -537,7 +537,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       });
 
       let proofWarning = "";
-      if (order.invoice_id && (proof.referenceNumber || proof.screenshot)) {
+      if (order.invoice_id && order.payment_method !== "Cash") {
         try {
           await submitPublicPaymentProof({
             restaurantSlug, tableNumber: tableNum, qrToken: checkout.qrToken,
@@ -551,7 +551,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
 
       if (currentSessionKeyRef.current === requestSessionKey) {
         setSubmittedOrder(order);
-        setPaymentSuccess(`Your order is confirmed.${proofWarning}`);
+        const submittedQuantity = order.items_added?.reduce((sum, item) => sum + item.quantity, 0) ?? cart.itemCount;
+        setPaymentSuccess(`${getReadableOrderNumber(order.order_id, order.display_number, order.dining_session_display_number)} · ${submittedQuantity} ${submittedQuantity === 1 ? "item" : "items"} · ${formatMenuPrice(order.invoice_total ?? order.added_total ?? order.total_price)} · Status: Sent.${proofWarning}`);
         cart.clearCart();
         await refreshActiveSession();
         checkout.resetCheckoutState();
@@ -736,6 +737,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     submittedOrder?.items_added ??
     [];
   const trackingStep = customerTrackingStep(trackingStatus);
+  const isTrackingActive = Boolean(trackingOrderId) && trackingStatus !== "served" && trackingStatus !== "closed" && trackingPaymentStatus !== "cancelled";
   const trackingMessage = customerTrackingMessage(trackingStatus);
   const trackingEta = customerTrackingEta(trackingStatus);
   const trackingItemCount = trackingItems.reduce(
@@ -827,7 +829,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         <ModernOrdersView
           restaurant={restaurant}
           onNavigateHome={() => modernNavigation.navigate("home")}
-          activeOrder={trackingOrderId ? (
+          kitchenStage={trackingStep >= 4 ? "served" : trackingStep >= 3 ? "ready" : trackingStep >= 2 ? "preparing" : "sent"}
+          activeOrder={isTrackingActive ? (
         <section
           id="modern-order-tracker"
           className={`public-order-tracker${trackerExpanded ? " expanded" : ""}${showTrackerSuccess ? " success" : ""}`}
@@ -937,7 +940,18 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           ) : null}
         </section>
           ) : null}
-          previousOrder={servedFeedbackOrder ? (
+          previousOrder={<>
+          {activeSession?.invoices.filter((invoice) => isTrackingActive ? invoice.id !== trackingInvoice?.id : true).map((invoice) => {
+            const invoiceItems = activeSession.items.filter((item) => item.invoice_id === invoice.id);
+            const quantity = invoiceItems.reduce((sum, item) => sum + item.quantity, 0);
+            return <section className="modern-order-history-card" key={invoice.id}>
+              <div><small>{invoice.status === "cancelled" ? "Cancelled" : invoice.status === "pending" ? "Pending payment" : "Completed"}</small><strong>Receipt {invoice.display_number ?? invoice.invoice_number}</strong></div>
+              <p>{invoiceItems.map((item) => `${item.quantity}× ${item.name}`).join(", ") || "Order details syncing"}</p>
+              <dl><div><dt>Items</dt><dd>{quantity}</dd></div><div><dt>Total</dt><dd>{formatMenuPrice(invoice.total_price)}</dd></div><div><dt>Payment</dt><dd>{paymentLabel(canonicalPaymentStatus(invoice.status))}</dd></div></dl>
+              <time>{invoice.created_at ? new Date(invoice.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}{invoice.paid_at ? ` · Completed ${new Date(invoice.paid_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</time>
+            </section>;
+          })}
+          {servedFeedbackOrder ? (
         <section className="public-feedback-card" aria-label="Meal feedback">
           {feedbackSubmitted ? (
             <div className="feedback-thank-you" role="status">
@@ -950,7 +964,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               <div className="feedback-card-heading">
                 <div>
                   <span className="feedback-eyebrow">Order served</span>
-                  <h2>Before you leave, how was your meal?</h2>
+                  <h2>â­ Rate Your Experience</h2>
                   <p>
                     Order {servedFeedbackOrder.orderLabel} · Receipt{" "}
                     {servedFeedbackOrder.invoiceNumber}
@@ -1042,13 +1056,13 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
                   className="feedback-later"
                   onClick={() => dismissFeedback(servedFeedbackOrder.orderId)}
                 >
-                  Maybe Later
+                  Skip
                 </button>
               </div>
             </>
           )}
         </section>
-          ) : null}
+          ) : null}</>}
         />
       )}
       {modernNavigation.page === "home" ? (
@@ -1120,7 +1134,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       <PublicPaymentPopup
         open={paymentPopupOpen}
         businessName={restaurant.name}
-        total={(activeSession?.total_price ?? 0) + cart.displaySubtotal}
+        total={cart.displaySubtotal}
         methods={paymentRuntime?.methods ?? []}
         selectedMethod={checkout.paymentMethod}
         submitting={submitting}
@@ -1131,6 +1145,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
         onRetry={() => { setSubmitError(undefined); setPaymentRetry((value) => value + 1); }}
         onSelect={checkout.setPaymentMethod}
         onBack={() => { setPaymentPopupOpen(false); setPaymentSuccess(undefined); }}
+        onViewOrders={() => { setPaymentPopupOpen(false); setPaymentSuccess(undefined); modernNavigation.navigate("orders"); }}
         onConfirm={(proof) => void submitOrder(proof)}
       />
       {cart.itemCount > 0 ? (

@@ -25,8 +25,9 @@ Deno.serve(async (request) => {
     });
     if (sessionError || !session || !Array.isArray(session.invoices) || !session.invoices.some((invoice: { id?: string }) => invoice.id === invoiceId)) return json({ error: "Payment session could not be verified." }, 403);
 
-    const { data: invoice, error: invoiceError } = await client.from("order_invoices").select("id,restaurant_id,status").eq("id", invoiceId).single();
-    if (invoiceError || !invoice || !["pending", "paid"].includes(invoice.status)) return json({ error: "Invoice is not available for payment evidence." }, 409);
+    const { data: invoice, error: invoiceError } = await client.from("order_invoices").select("id,restaurant_id,status,payment_status,payment_recorded_at").eq("id", invoiceId).single();
+    if (invoiceError || !invoice || !["pending", "paid", "verified"].includes(invoice.status)) return json({ error: "Invoice is not available for payment evidence." }, 409);
+    if (["held", "paid"].includes(invoice.payment_status)) return json({ submitted: true, alreadySubmitted: true, submittedAt: invoice.payment_recorded_at, verificationStatus: invoice.payment_status === "paid" ? "paid" : "submitted" });
     let screenshotPath: string | null = null;
     if (screenshot instanceof File && screenshot.size > 0) {
       if (screenshot.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(screenshot.type)) return json({ error: "Screenshot must be JPG, PNG or WebP and under 5 MB." }, 400);
@@ -35,8 +36,9 @@ Deno.serve(async (request) => {
       const { error: uploadError } = await client.storage.from("payment-screenshots").upload(screenshotPath, screenshot, { contentType: screenshot.type, upsert: false });
       if (uploadError) return json({ error: "Payment screenshot could not be stored." }, 500);
     }
-    const { error: updateError } = await client.from("order_invoices").update({ reference_number: referenceNumber, screenshot_url: screenshotPath }).eq("id", invoice.id).eq("restaurant_id", invoice.restaurant_id);
+    const submittedAt = new Date().toISOString();
+    const { error: updateError } = await client.from("order_invoices").update({ reference_number: referenceNumber, screenshot_url: screenshotPath, payment_recorded_at: submittedAt, payment_status: "held", updated_at: submittedAt }).eq("id", invoice.id).eq("restaurant_id", invoice.restaurant_id).eq("payment_status", "pending");
     if (updateError) { if (screenshotPath) await client.storage.from("payment-screenshots").remove([screenshotPath]); return json({ error: "Payment evidence could not be submitted." }, 500); }
-    return json({ submitted: true });
+    return json({ submitted: true, alreadySubmitted: false, submittedAt, verificationStatus: "submitted" });
   } catch { return json({ error: "Payment evidence could not be submitted." }, 500); }
 });

@@ -349,7 +349,7 @@ export async function submitPublicPaymentProof(input: {
   if (input.screenshot) form.set("screenshot", input.screenshot);
   const { data, error } = await supabase.functions.invoke("submit-public-payment-proof", { body: form });
   if (error) throw new Error(error.message);
-  return data as { submitted: boolean };
+  return data as { submitted: boolean; alreadySubmitted?: boolean; submittedAt?: string | null; verificationStatus?: "submitted" | "paid" };
 }
 
 export async function uploadPublicOrderFeedbackPhoto({

@@ -546,6 +546,20 @@
 .modern-visit-summary strong { color: var(--modern-ink); font-size: 18px; }
 .modern-visit-summary > span { padding: 7px 10px; border-radius: 999px; color: #92512e; background: #ffe9dc; font-size: 11px; font-weight: 900; white-space: nowrap; }
 
+.modern-kitchen-progress { display: grid; gap: 14px; padding: 18px; border: 1px solid #e4ebe7; border-radius: 20px; background: #fff; box-shadow: 0 8px 24px rgba(25, 71, 51, .05); }
+.modern-kitchen-progress > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.modern-kitchen-progress small { color: #167a4f; font-size: 11px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.modern-kitchen-progress strong { color: #766f69; font-size: 12px; }
+.modern-kitchen-progress ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.modern-kitchen-progress li { position: relative; display: grid; gap: 7px; justify-items: center; color: #8d918e; font-size: 10px; font-weight: 800; text-align: center; }
+.modern-kitchen-progress li::before { position: absolute; top: 6px; right: 50%; left: -50%; height: 2px; background: #dde3df; content: ""; }
+.modern-kitchen-progress li:first-child::before { display: none; }
+.modern-kitchen-progress li span { position: relative; z-index: 1; width: 14px; height: 14px; border: 3px solid #fff; border-radius: 50%; background: #cbd2ce; box-shadow: 0 0 0 1px #cbd2ce; }
+.modern-kitchen-progress li.done, .modern-kitchen-progress li.active { color: #126d46; }
+.modern-kitchen-progress li.done::before, .modern-kitchen-progress li.active::before { background: #32aa72; }
+.modern-kitchen-progress li.done span, .modern-kitchen-progress li.active span { background: #20a466; box-shadow: 0 0 0 1px #20a466; }
+.modern-kitchen-progress li.active span { box-shadow: 0 0 0 1px #20a466, 0 0 0 5px rgba(32, 164, 102, .13); }
+
 .modern-orders-section,
 .modern-previous-orders { min-width: 0; }
 .modern-orders-section-heading {
@@ -627,6 +641,17 @@
   text-align: center;
   font-size: 13px;
 }
+
+.modern-order-history-card { display: grid; gap: 12px; padding: 16px; border-top: 1px solid #eee9e5; }
+.modern-order-history-card:first-child { border-top: 0; }
+.modern-order-history-card > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modern-order-history-card small { color: #167a4f; font-size: 10px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.modern-order-history-card p, .modern-order-history-card time { margin: 0; color: #716760; font-size: 12px; line-height: 1.5; }
+.modern-order-history-card dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 12px; border-radius: 13px; background: #f8f7f6; }
+.modern-order-history-card dl > div { display: grid; gap: 3px; padding-inline: 8px; border-left: 1px solid #e5e0dc; }
+.modern-order-history-card dl > div:first-child { border-left: 0; }
+.modern-order-history-card dt { color: #8a817b; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.modern-order-history-card dd { min-width: 0; margin: 0; overflow: hidden; color: var(--modern-ink); font-size: 12px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
 
 .modern-orders-empty {
   display: grid;

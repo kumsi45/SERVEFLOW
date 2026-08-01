@@ -37,6 +37,7 @@ type Props = {
   open: boolean; businessName: string; total: number; methods: PaymentMethodRuntime[];
   selectedMethod: PublicQrPaymentMethod | ""; submitting: boolean; error?: string;
   persistenceKey: string; successMessage?: string; loading?: boolean; onRetry: () => void;
+  onViewOrders?: () => void;
   onSelect: (method: PublicQrPaymentMethod) => void; onBack: () => void;
   onConfirm: (proof: PublicPaymentProof) => void;
 };
@@ -47,7 +48,7 @@ const methodMeta: Record<string, { icon: string; detail: string }> = {
   bank_transfer: { icon: "BT", detail: "Direct Deposit" }, credit_card: { icon: "CC", detail: "Card payment" },
 };
 
-export function PublicPaymentPopup({ open, businessName, total, methods, selectedMethod, submitting, error, persistenceKey, successMessage, loading, onRetry, onSelect, onBack, onConfirm }: Props) {
+export function PublicPaymentPopup({ open, businessName, total, methods, selectedMethod, submitting, error, persistenceKey, successMessage, loading, onRetry, onSelect, onBack, onViewOrders, onConfirm }: Props) {
   const [proofOpen, setProofOpen] = useState(() => { try { return window.localStorage.getItem(`${persistenceKey}:proof`) === "open"; } catch { return false; } });
   const [referenceNumber, setReferenceNumber] = useState(() => { try { return window.localStorage.getItem(`${persistenceKey}:reference`) ?? ""; } catch { return ""; } });
   const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -74,7 +75,7 @@ export function PublicPaymentPopup({ open, businessName, total, methods, selecte
     <section className="public-payment-sheet" role="dialog" aria-modal="true" aria-labelledby="public-payment-title">
       <div className="public-payment-handle" aria-hidden="true" />
       <header><h2 id="public-payment-title">Payment Method</h2><button type="button" aria-label="Close payment methods" onClick={onBack}>×</button></header>
-      {successMessage ? <div className="public-payment-success" role="status"><span>✓</span><strong>Payment submitted</strong><p>{successMessage}</p><button type="button" onClick={onBack}>View Order</button></div> : <div className="public-payment-methods">
+      {successMessage ? <div className="public-payment-success" role="status"><span>✓</span><strong>Your Order Has Been Sent</strong><p>{successMessage}</p><div className="public-payment-success-actions"><button type="button" onClick={onViewOrders ?? onBack}>View Orders</button><button type="button" className="secondary" onClick={onBack}>Back To Menu</button></div></div> : <div className="public-payment-methods">
         {loading ? <div className="public-payment-empty" role="status"><strong>Loading payment methods…</strong><span>Please wait a moment.</span></div> : error && methods.length === 0 ? <div className="public-payment-empty" role="alert"><strong>Payment methods could not be loaded.</strong><button type="button" onClick={onRetry}>Try Again</button></div> : methods.length === 0 ? <div className="public-payment-empty"><strong>No payment method is currently available.</strong><span>Please contact {businessName}.</span></div> : methods.map((method) => {
           const active = method.displayName === selectedMethod;
           const details = method.accounts[0];
@@ -93,8 +94,8 @@ export function PublicPaymentPopup({ open, businessName, total, methods, selecte
                   <button type="button" disabled={!copyValue} onClick={() => void copyPaymentValue(copyValue).then((copied) => setCopyStatus(copied ? "copied" : "failed"))}>{copyStatus === "copied" ? "Copied" : details?.accountNumber ? "Copy Account Number" : "Copy Number"}</button>
                   <button type="button" className="primary" onClick={() => setProofOpen(true)}>I Have Paid</button>
                 </div> : <div className="public-payment-proof">
-                  <strong>Confirm your payment</strong><p>Add one payment reference or screenshot. Both are optional for now.</p>
-                  <label><span>Transaction Reference Number</span><input value={referenceNumber} maxLength={120} onChange={(event) => setReferenceNumber(event.target.value)} placeholder="Enter reference number" /></label>
+                  <strong>Confirm your payment</strong><p>A transaction reference is preferred. The screenshot is optional.</p>
+                  <label><span>Transaction Reference Number <small>(Optional)</small></span><input value={referenceNumber} maxLength={120} onChange={(event) => setReferenceNumber(event.target.value)} placeholder="Enter reference number" /></label>
                   <span className="public-payment-or">OR</span>
                   <label className="public-payment-file"><span>Upload Payment Screenshot</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setScreenshot(event.target.files?.[0] ?? null)} /><small>{screenshot?.name || "JPG, PNG or WebP"}</small></label>
                   <div className="public-payment-actions"><button type="button" onClick={() => setProofOpen(false)}>Cancel</button><button type="button" className="primary" disabled={submitting} onClick={() => onConfirm({ referenceNumber: referenceNumber.trim(), screenshot })}>{submitting ? "Submitting…" : "Confirm Payment"}</button></div>

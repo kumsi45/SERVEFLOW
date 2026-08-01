@@ -79,8 +79,9 @@ describe("Phase 9.2.1 navigation and business boundaries", () => {
   it("keeps order presentation off Home and cart presentation off Orders", () => {
     expect(qrPage).toContain('modernNavigation.page === "home" ? (');
     expect(qrPage).toContain("<ModernOrdersView");
-    expect(qrPage).toContain("activeOrder={trackingOrderId ? (");
-    expect(qrPage).toContain("previousOrder={servedFeedbackOrder ? (");
+    expect(qrPage).toContain("activeOrder={isTrackingActive ? (");
+    expect(qrPage).toContain("previousOrder={<>");
+    expect(qrPage).toContain("{servedFeedbackOrder ? (");
     expect(qrPage).toContain('modernNavigation.navigate("orders")');
     expect(qrPage).toContain('modernNavigation.navigate("home")');
   });

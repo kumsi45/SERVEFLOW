@@ -75,8 +75,6 @@ export function PublicQrCheckoutPanel({
     !submitting &&
     !tableNumberValidationMessage;
 
-  const existingSubtotal = activeSession?.total_price ?? 0;
-  const grandTotal = existingSubtotal + displaySubtotal;
   const isContinuingOrder = Boolean(activeSession);
   const activeOrderLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
   void paymentMethod;
@@ -161,28 +159,7 @@ export function PublicQrCheckoutPanel({
       {/* Order summary */}
       <div className="public-checkout-summary" aria-label="Order summary">
         <h3>{isContinuingOrder ? "Current order" : "Order summary"}</h3>
-        {activeSession ? (
-          <>
-            <div className="public-checkout-lines readonly">
-              {activeSession.items.map((item) => (
-                <div className="public-checkout-line existing" key={item.id}>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <span>
-                      {item.quantity} x {formatMenuPrice(item.unit_price)}
-                    </span>
-                  </div>
-                  <strong>{formatMenuPrice(item.line_total)}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="public-checkout-total subtle">
-              <span>Current subtotal</span>
-              <strong>{formatMenuPrice(existingSubtotal)}</strong>
-            </div>
-          </>
-        ) : null}
-        {activeSession ? <h3>New items</h3> : null}
+        {activeSession ? <p className="public-checkout-session-note" style={{ margin: 0, padding: "12px 14px", borderRadius: 12, color: "#176b48", background: "#edf8f2", fontSize: 13, lineHeight: 1.5 }}>Previous paid orders stay closed. This checkout includes only your new items.</p> : null}
         <div className="public-checkout-lines">
           {items.map((item) => (
             <div className="public-checkout-line" key={item.menuItemId}>
@@ -201,8 +178,8 @@ export function PublicQrCheckoutPanel({
           <strong>15-20 min</strong>
         </div>
         <div className="public-checkout-total">
-          <span>{isContinuingOrder ? "Grand total" : "Subtotal"}</span>
-          <strong>{formatMenuPrice(isContinuingOrder ? grandTotal : displaySubtotal)}</strong>
+          <span>New order total</span>
+          <strong>{formatMenuPrice(displaySubtotal)}</strong>
         </div>
       </div>
 

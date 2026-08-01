@@ -6150,6 +6150,7 @@ function normalizeReportData(value: unknown): OwnerReportData {
       comment: row.comment ? String(row.comment) : null,
       photo_url: row.photo_url ? String(row.photo_url) : null,
       created_at: String(row.created_at),
+      item_names: Array.isArray(row.item_names) ? row.item_names.map(String) : [],
     })),
     daily_bill_counts: (data.daily_bill_counts ?? []).map((row) => ({
       date: String(row.date),
@@ -6187,6 +6188,7 @@ type OwnerFeedbackReportRow = {
   comment: string | null;
   photo_url: string | null;
   created_at: string;
+  item_names: string[];
 };
 
 type OwnerReportOrderRow = {
@@ -6324,6 +6326,7 @@ async function loadOwnerFeedbackReportRows(
     ...new Set(feedback.map((row) => row.order_id).filter(Boolean)),
   ];
   const orderCustomerById = new Map<string, string | null>();
+  const itemNamesByOrderId = new Map<string, string[]>();
 
   if (orderIds.length > 0) {
     const { data: orderRows, error: orderError } = await supabase
@@ -6342,6 +6345,18 @@ async function loadOwnerFeedbackReportRows(
     }[]) {
       orderCustomerById.set(order.id, order.customer_name);
     }
+
+    const { data: itemRows, error: itemError } = await supabase
+      .from("order_items")
+      .select("order_id,menu_item_id,menu_items(name)")
+      .eq("restaurant_id", restaurantId)
+      .in("order_id", orderIds);
+    if (itemError) throw new Error(`Could not load feedback items: ${itemError.message}`);
+    for (const item of (itemRows ?? []) as unknown as Array<{ order_id: string; menu_items: { name?: string } | Array<{ name?: string }> | null }>) {
+      const menu = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
+      const name = menu?.name?.trim();
+      if (name) itemNamesByOrderId.set(item.order_id, [...(itemNamesByOrderId.get(item.order_id) ?? []), name]);
+    }
   }
 
   return feedback.map((row) => ({
@@ -6354,6 +6369,7 @@ async function loadOwnerFeedbackReportRows(
     comment: row.comment,
     photo_url: row.photo_url,
     created_at: row.created_at,
+    item_names: [...new Set(itemNamesByOrderId.get(row.order_id) ?? [])],
   }));
 }
 
@@ -6966,6 +6982,8 @@ function ReportsPage({
   const [modules, setModules] = useState<
     Record<string, Record<string, unknown>>
   >({});
+  const [feedback, setFeedback] = useState<OwnerFeedbackReportRow[]>([]);
+  const [feedbackSearch, setFeedbackSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [reportError, setReportError] = useState<string | null>(null);
   const selectedRange = useMemo(() => {
@@ -7025,7 +7043,8 @@ function ReportsPage({
           ["ai", "get_owner_ai_business_insights"],
           ["audit", "get_owner_audit_module_report"],
         ] as const;
-        const results = await Promise.all(
+        const [results, feedbackRows] = await Promise.all([
+          Promise.all(
           calls.map(async ([key, rpc]) => {
             const { data, error } = await supabase.rpc(rpc, args);
             if (error) throw new Error(`${key}: ${error.message}`);
@@ -7035,9 +7054,13 @@ function ReportsPage({
                 ? (data as Record<string, unknown>)
                 : {},
             ] as const;
-          }),
-        );
-        if (mounted) setModules(Object.fromEntries(results));
+          })),
+          loadOwnerFeedbackReportRows(restaurantId, selectedRange.rangeStart, selectedRange.rangeEnd),
+        ]);
+        if (mounted) {
+          setModules(Object.fromEntries(results));
+          setFeedback(feedbackRows);
+        }
       } catch (error) {
         if (mounted)
           setReportError(
@@ -7051,7 +7074,7 @@ function ReportsPage({
       mounted = false;
     };
   }, [restaurantId, selectedRange]);
-  const exportRows = REPORT_MODULES.flatMap(
+  const exportRows = [...REPORT_MODULES.flatMap(
     ([title, moduleKey, payloadKey]) => {
       const value = modules[moduleKey]?.[payloadKey];
       const rows = Array.isArray(value)
@@ -7065,7 +7088,12 @@ function ReportsPage({
         ]),
       );
     },
-  );
+  ), ...feedback.flatMap((row) => [
+    ["Customer Feedback", "Rating", `${row.rating}/5`],
+    ["Customer Feedback", "Customer", row.customer_name ?? "Guest"],
+    ["Customer Feedback", "Items", row.item_names.join(", ")],
+    ["Customer Feedback", "Comment", row.comment ?? ""],
+  ])];
   const csv = () =>
     exportRowsAsCsv(
       `serveflow-reports-${range}.csv`,
@@ -7082,6 +7110,23 @@ function ReportsPage({
   const insights = Array.isArray(modules.ai?.insights)
     ? (modules.ai.insights as Record<string, unknown>[])
     : [];
+  const visibleFeedback = feedback.filter((row) => {
+    const query = feedbackSearch.trim().toLowerCase();
+    return !query || [row.customer_name, row.comment, row.table_number, ...row.item_names].some((value) => String(value ?? "").toLowerCase().includes(query));
+  });
+  const averageFeedback = feedback.length ? feedback.reduce((sum, row) => sum + row.rating, 0) / feedback.length : 0;
+  const feedbackItems = [...feedback.reduce((map, row) => {
+    row.item_names.forEach((name) => {
+      const current = map.get(name) ?? { name, total: 0, reviews: 0 };
+      current.total += row.rating;
+      current.reviews += 1;
+      map.set(name, current);
+    });
+    return map;
+  }, new Map<string, { name: string; total: number; reviews: number }>()).values()].map((item) => ({ ...item, average: item.total / item.reviews }));
+  const highestRated = [...feedbackItems].sort((a, b) => b.average - a.average || b.reviews - a.reviews)[0];
+  const lowestRated = [...feedbackItems].sort((a, b) => a.average - b.average || b.reviews - a.reviews)[0];
+  const mostReviewed = [...feedbackItems].sort((a, b) => b.reviews - a.reviews || b.average - a.average)[0];
   return (
     <div className="od-page od-print-area od-reports-center">
       <div className="od-page-header">
@@ -7199,6 +7244,20 @@ function ReportsPage({
               rows={modules.customers?.rows}
             />
           </div>
+          <section className="od-card od-feedback-report">
+            <div className="od-card-header">
+              <div><div className="od-card-title">Customer Feedback</div><div className="od-card-subtitle">Verified served-order ratings for the selected date range.</div></div>
+              <label className="od-report-search"><span className="sr-only">Search feedback</span><input value={feedbackSearch} onChange={(event) => setFeedbackSearch(event.target.value)} placeholder="Search reviews, customers or items" /></label>
+            </div>
+            <div className="od-kpi-grid analytics">
+              <div className="od-kpi-card"><div className="od-kpi-label">Average Rating</div><div className="od-kpi-value">{averageFeedback.toFixed(1)}/5</div></div>
+              <div className="od-kpi-card"><div className="od-kpi-label">Overall Rating</div><div className="od-kpi-value">{feedback.length} reviews</div></div>
+              <div className="od-kpi-card"><div className="od-kpi-label">Highest Rated Item</div><div className="od-kpi-value">{highestRated ? `${highestRated.name} · ${highestRated.average.toFixed(1)}` : "—"}</div></div>
+              <div className="od-kpi-card"><div className="od-kpi-label">Lowest Rated Item</div><div className="od-kpi-value">{lowestRated ? `${lowestRated.name} · ${lowestRated.average.toFixed(1)}` : "—"}</div></div>
+              <div className="od-kpi-card"><div className="od-kpi-label">Most Reviewed Item</div><div className="od-kpi-value">{mostReviewed ? `${mostReviewed.name} · ${mostReviewed.reviews}` : "—"}</div></div>
+            </div>
+            <ReportTable title="Recent Reviews" subtitle="One review per completed order. Item ratings are attributed from that order's experience rating." headers={["Date", "Customer", "Items", "Rating", "Comment"]} rows={visibleFeedback.map((row) => ({ Date: fmtDateTime(row.created_at), Customer: row.customer_name ?? "Guest", Items: row.item_names.join(", ") || "—", Rating: `${row.rating}/5`, Comment: row.comment ?? "—" }))} />
+          </section>
           <div className="od-report-center-grid">
             {REPORT_MODULES.map(([title, moduleKey, payloadKey]) => (
               <ModuleExportSection

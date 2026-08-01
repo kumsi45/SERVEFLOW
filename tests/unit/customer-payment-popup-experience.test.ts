@@ -27,7 +27,7 @@ describe("Phase 11.3A customer payment popup", () => {
     expect(popup).toContain('role="alert"');
     expect(popup).toContain("Loading payment methods");
     expect(popup).toContain("Try Again");
-    expect(popup).toContain("Payment submitted");
+    expect(popup).toContain("Your Order Has Been Sent");
     expect(page).toContain("submittingRef.current");
     expect(page).toContain("submitPublicPaymentProof");
   });

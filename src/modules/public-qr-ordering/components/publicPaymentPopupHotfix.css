@@ -10,7 +10,10 @@
 .public-payment-success > span { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: #ddf7e8; color: #078443; font-size: 30px; font-weight: 900; }
 .public-payment-success > strong { color: #13271c; font-size: 22px; }
 .public-payment-success > p { max-width: 360px; margin: 0; color: #64776d; font-size: 13px; line-height: 1.6; }
-.public-payment-success > button { min-width: 180px; min-height: 48px; border: 0; border-radius: 12px; background: #07813e; color: #fff; font: inherit; font-weight: 850; }
+.public-payment-success-actions { display: grid; width: min(100%, 360px); grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.public-payment-success-actions button { min-height: 48px; border: 0; border-radius: 12px; background: #07813e; color: #fff; font: inherit; font-weight: 850; cursor: pointer; }
+.public-payment-success-actions button.secondary { border: 1px solid #cbd9d1; color: #28523d; background: #fff; }
+@media (max-width: 420px) { .public-payment-success-actions { grid-template-columns: 1fr; } }
 .public-payment-future, .public-payment-cancel { min-height: 44px; border: 1px solid #d3ded8; border-radius: 11px; background: #fff; color: #385044; font: inherit; font-size: 12px; font-weight: 800; }
 .public-payment-future:disabled { color: #84938b; background: #f3f5f4; }
 .public-payment-copy-status { margin: 0; padding: 9px 11px; border-radius: 10px; background: #edf8f2; color: #176d49; font-size: 11px; text-align: center; }
