@@ -8,6 +8,8 @@ const corsHeaders = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DRAFT_BUCKET = "menu-item-image-drafts";
 const PRODUCTION_BUCKET = "menu-photos";
+const SMART_LIBRARY_BUCKET = "smart-menu-images";
+const DURABLE_BUCKETS = new Set([DRAFT_BUCKET, PRODUCTION_BUCKET, SMART_LIBRARY_BUCKET]);
 
 function response(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -19,10 +21,17 @@ function env(name: string) {
   return value;
 }
 
-function publicObjectPath(url: string) {
-  const marker = `/storage/v1/object/public/${DRAFT_BUCKET}/`;
+function publicObject(url: string) {
+  const marker = "/storage/v1/object/public/";
   const index = url.indexOf(marker);
-  return index < 0 ? null : decodeURIComponent(url.slice(index + marker.length).split("?")[0]);
+  if (index < 0) return null;
+  const [bucket, ...pathParts] = url.slice(index + marker.length).split("?")[0].split("/");
+  if (!DURABLE_BUCKETS.has(bucket) || !pathParts.length) return null;
+  try {
+    return { bucket, path: pathParts.map((part) => decodeURIComponent(part)).join("/") };
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (request) => {
@@ -60,12 +69,16 @@ Deno.serve(async (request) => {
       if (item.deleted || item.hidden || item.rejected || !item.approved) continue;
       const imageDraft = item.imageDraft as { selectedVersionId?: string; versions?: Array<Record<string, unknown>> } | undefined;
       const selected = imageDraft?.versions?.find((version) => version.id === imageDraft.selectedVersionId);
-      if (!selected || !["Approved", "Owner Upload"].includes(String(selected.status))) continue;
+      if (!selected || !["approved", "owner upload"].includes(String(selected.status).toLocaleLowerCase())) continue;
       const sourceUrl = typeof selected.imageUrl === "string" ? selected.imageUrl : "";
-      const sourcePath = publicObjectPath(sourceUrl);
-      if (!sourcePath) throw new Error(`Approved image for ${String(item.id)} is not a durable Review Studio asset.`);
-      const { data: source, error: downloadError } = await service.storage.from(DRAFT_BUCKET).download(sourcePath);
+      const sourceObject = publicObject(sourceUrl);
+      if (!sourceObject) throw new Error(`Approved image for ${String(item.id)} is temporary or unavailable.`);
+      const { data: source, error: downloadError } = await service.storage.from(sourceObject.bucket).download(sourceObject.path);
       if (downloadError || !source) throw new Error(downloadError?.message || "Approved image could not be loaded.");
+      if (sourceObject.bucket !== DRAFT_BUCKET) {
+        publishedImages[String(item.id)] = sourceUrl;
+        continue;
+      }
       const targetPath = `${payload.restaurantId}/ai-published/${payload.draftId}/${String(item.id)}/${String(selected.id)}.webp`;
       const { error: uploadError } = await service.storage.from(PRODUCTION_BUCKET).upload(targetPath, source, { contentType: source.type || "image/webp", upsert: false });
       if (uploadError && !uploadError.message.toLowerCase().includes("already exists")) throw new Error(uploadError.message);

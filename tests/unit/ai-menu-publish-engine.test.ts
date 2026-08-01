@@ -9,6 +9,7 @@ const restoreMigration = readFileSync("supabase/migrations/194_phase9_8_6_publis
 const publishStabilityMigration = readFileSync("supabase/migrations/195_production_publish_variable_conflict_fix.sql", "utf8");
 const edge = readFileSync("supabase/functions/menu-publish/index.ts", "utf8");
 const setup = readFileSync("src/modules/setup-wizard/pages/RestaurantSetupWizardPage.tsx", "utf8");
+const ownerAsset = readFileSync("src/modules/setup-wizard/services/ownerImageAsset.ts", "utf8");
 
 describe("Phase 9.8.6 AI menu publish engine", () => {
   it("reuses the production theme and food renderers for preview", () => {
@@ -34,11 +35,23 @@ describe("Phase 9.8.6 AI menu publish engine", () => {
     expect(edge).not.toContain("structured_result");
   });
 
-  it("copies only approved durable images to production storage", () => {
-    expect(edge).toContain('["Approved", "Owner Upload"]');
+  it("publishes approved assets without coupling validation to their source bucket", () => {
+    expect(edge).toContain('["approved", "owner upload"]');
     expect(edge).toContain('const PRODUCTION_BUCKET = "menu-photos"');
-    expect(edge).toContain("Approved image for");
+    expect(edge).toContain('const SMART_LIBRARY_BUCKET = "smart-menu-images"');
+    expect(edge).toContain("DURABLE_BUCKETS");
+    expect(edge).toContain("temporary or unavailable");
+    expect(edge).toContain("sourceObject.bucket !== DRAFT_BUCKET");
     expect(edge).toContain("await cleanup.storage.from(PRODUCTION_BUCKET).remove(uploaded)");
+  });
+
+  it("optimizes new owner uploads into immutable responsive WebP assets", () => {
+    expect(ownerAsset).toContain("[320, 512, 1024, 2048]");
+    expect(ownerAsset).toContain('imageOrientation: "from-image"');
+    expect(ownerAsset).toContain('"image/webp"');
+    expect(studio).toContain('cacheControl: "31536000, immutable"');
+    expect(studio).toContain('providerKey: "owner-upload"');
+    expect(studio).not.toContain('from("menu-photos").upload(path, entry.file');
   });
 
   it("locks and validates the exact Review Studio revision transactionally", () => {

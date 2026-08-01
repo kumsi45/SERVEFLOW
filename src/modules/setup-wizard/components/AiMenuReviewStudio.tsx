@@ -63,6 +63,7 @@ import { readReviewStudioSession, writeReviewStudioSession } from "../services/r
 import { clearAddItemWorkspacePhoto, listQueuedReviewPhotos, queueReviewPhoto, readAddItemWorkspacePhoto, removeQueuedReviewPhoto, saveAddItemWorkspacePhoto, type QueuedReviewPhoto } from "../services/reviewPhotoUploadQueue";
 import { loadMenuPreviewRestaurant, loadMenuPublishHistory, persistMenuPreviewTheme, publishMenuDraft, restoreMenuPublishVersion, type MenuPreviewRestaurant, type MenuPublishHistoryEntry, type MenuPublishSummary } from "../services/menuPublishService";
 import { draftFingerprint, draftManager, saveStateLabel, workflowErrorMessage } from "../services/draftManager";
+import { prepareOwnerImageAsset } from "../services/ownerImageAsset";
 
 type AiMenuReviewStudioProps = {
   restaurantId: string;
@@ -1062,19 +1063,24 @@ export const AiMenuReviewStudio = memo(function AiMenuReviewStudio({
 
   async function uploadQueuedPhoto(entry: QueuedReviewPhoto) {
     if (!navigator.onLine || !reviewStatesRef.current[entry.extractionId]) return;
-    const extension = entry.fileName.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase() || "jpg";
-    const path = `${restaurantId}/review-drafts/${entry.extractionId}/${entry.itemId}/${entry.id}.${extension}`;
-    const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, entry.file, {
-      cacheControl: "31536000", upsert: false, contentType: entry.contentType,
-    });
-    if (uploadError && !uploadError.message.toLocaleLowerCase().includes("already exists")) throw new Error(uploadError.message);
-    const publicUrl = createSmartImagePublicUrl("menu-photos", path);
+    const file = new File([entry.file], entry.fileName, { type: entry.contentType });
+    const variants = await prepareOwnerImageAsset(file);
+    const versionNumber = Math.max(0, ...reviewStatesRef.current[entry.extractionId].items.find((item) => item.id === entry.itemId)?.imageDraft.versions.map((candidate) => candidate.version) ?? [0]) + 1;
+    const uploaded = await Promise.all(variants.map(async (variant) => {
+      const path = `${restaurantId}/serveflow-assets/${entry.extractionId}/${entry.itemId}/${entry.id}/v${String(versionNumber).padStart(3, "0")}/${entry.id}-v${String(versionNumber).padStart(3, "0")}-${variant.width}w.webp`;
+      const { error: uploadError } = await supabase.storage.from("menu-photos").upload(path, variant.blob, { cacheControl: "31536000, immutable", upsert: false, contentType: "image/webp" });
+      if (uploadError && !uploadError.message.toLocaleLowerCase().includes("already exists")) throw new Error(uploadError.message);
+      return { ...variant, path, publicUrl: createSmartImagePublicUrl("menu-photos", path) };
+    }));
+    const master = uploaded.find((variant) => variant.width === 2048) ?? uploaded[uploaded.length - 1];
+    const thumbnail = uploaded.find((variant) => variant.width === 320) ?? uploaded[0];
     changeState(entry.extractionId, (current) => ({
       ...current,
       items: current.items.map((item) => {
         if (item.id !== entry.itemId) return item;
-        const version = createImageVersion(Math.max(0, ...item.imageDraft.versions.map((candidate) => candidate.version)) + 1, "owner", publicUrl, publicUrl, "Owner uploaded image.");
-        return { ...item, imageDraft: { ...item.imageDraft, status: "Owner Upload", selectedVersionId: version.id, versions: [...item.imageDraft.versions.filter((candidate) => !candidate.imageUrl?.startsWith("blob:")), version], generationProgress: 1, errorMessage: null } };
+        const versions = uploaded.map((variant) => ({ ...createImageVersion(versionNumber, "owner", variant.publicUrl, thumbnail.publicUrl, "Owner uploaded ServeFlow image asset."), id: variant.id, storagePath: variant.path, mimeType: "image/webp", width: variant.width, height: variant.height, byteSize: variant.blob.size, checksumSha256: variant.checksumSha256, providerKey: "owner-upload", providerAssetId: entry.id, providerMetadata: { assetId: entry.id, immutable: true, responsiveWidths: [320, 512, 1024, 2048] } }));
+        const selected = versions.find((version) => version.width === master.width) ?? versions[versions.length - 1];
+        return { ...item, imageDraft: { ...item.imageDraft, status: "Owner Upload", selectedVersionId: selected.id, versions: [...item.imageDraft.versions.filter((candidate) => !candidate.imageUrl?.startsWith("blob:")), ...versions], generationProgress: 1, errorMessage: null } };
       }),
     }));
     await removeQueuedReviewPhoto(entry.id);
