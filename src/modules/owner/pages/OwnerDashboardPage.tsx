@@ -27,6 +27,7 @@ import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
 import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { OwnerAiAdvisor } from "../components/ai/OwnerAiAdvisor";
+import { PrintingPaymentConfigurationCenter } from "../components/settings/PrintingPaymentConfigurationCenter";
 import {
   searchActiveDirectInventoryItems,
   searchActiveMenuRecipes,
@@ -260,6 +261,7 @@ type RestaurantConfig = {
   date_format: string;
   time_format: string;
   menu_theme: MenuTheme;
+  setup_status: JsonRecord;
 };
 
 type RestaurantTable = {
@@ -496,6 +498,7 @@ function buildRestaurantConfig(
       typeof row.date_format === "string" ? row.date_format : "medium",
     time_format: typeof row.time_format === "string" ? row.time_format : "24h",
     menu_theme: resolveMenuTheme(row.menu_theme),
+    setup_status: toJsonRecord(row.setup_status),
   };
 }
 
@@ -737,7 +740,7 @@ export function OwnerDashboardPage({
           supabase
             .from("restaurants")
             .select(
-              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme",
+              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme,setup_status",
             )
             .eq("id", restaurantId)
             .maybeSingle(),
@@ -1501,7 +1504,7 @@ export function OwnerDashboardPage({
       supabase
         .from("restaurants")
         .select(
-          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme",
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme,setup_status",
         )
         .eq("id", restaurantId)
         .maybeSingle(),
@@ -1835,6 +1838,7 @@ export function OwnerDashboardPage({
             menuItems={menuItems}
             kitchenStations={kitchenStations}
             staff={staff}
+            onNavigate={(target) => setNav(target as NavId)}
             onSettingsChanged={refreshRestaurantConfig}
           />
         )}
@@ -1974,7 +1978,7 @@ function ExecutiveOverviewV10({ data, now, ownerName, onNavigate }: {
 
     {data.loading ? <div className="od-v10-skeleton-grid" aria-label="Loading dashboard">{Array.from({ length: 10 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div> : <>
       <section className="od-v10-health" aria-labelledby="business-health-title">
-        <header><div><h2 id="business-health-title">Business health</h2></div><span className="od-live-indicator">Live now</span></header>
+        <header><div><h2 id="business-health-title">Today's operations</h2></div><span className="od-live-indicator">Live now</span></header>
         <div className="od-v10-health-grid"><article className="od-v10-health-item od-v10-revenue-kpi"><span>Today's revenue</span><div><section><small>Cash</small><strong>{fmtMoney(cashRevenue)}</strong></section><section><small>Digital</small><strong>{fmtMoney(digitalRevenue)}</strong></section><section className="total"><small>Total</small><strong>{fmtMoney(totalRevenue)}</strong></section></div></article>{health.map(([name, value, detail, tone]) => <button key={name} type="button" className={`od-v10-health-item ${tone}`} onClick={() => name === "Inventory alerts" && onNavigate("inventory")} disabled={name !== "Inventory alerts"}><span>{name}</span><strong>{value}</strong><small>{detail}</small></button>)}</div>
       </section>
 
@@ -8880,6 +8884,7 @@ function SettingsPage({
   menuItems,
   kitchenStations,
   staff,
+  onNavigate,
   onSettingsChanged,
 }: {
   restaurantId: string;
@@ -8889,6 +8894,7 @@ function SettingsPage({
   menuItems: OdMenuItem[];
   kitchenStations: OdKitchenStation[];
   staff: OdStaff[];
+  onNavigate: (target: string) => void;
   onSettingsChanged: () => Promise<void>;
 }) {
   const [form, setForm] = useState<SettingsFormState>(() =>
@@ -8903,6 +8909,7 @@ function SettingsPage({
   const [qrCodes, setQrCodes] = useState<Record<number, string>>({});
   const [appUrl, setAppUrl] = useState("");
   const [appUrlWorking, setAppUrlWorking] = useState(false);
+  const [settingsWorkspace, setSettingsWorkspace] = useState<"business" | "printing-payments">("business");
   const activeTables = useMemo(
     () => tables.filter((table) => table.active),
     [tables],
@@ -9264,7 +9271,30 @@ function SettingsPage({
         </div>
       )}
 
-      <form className="od-config-center" onSubmit={handleSave}>
+      <nav className="od-settings-workspaces" aria-label="Business settings areas">
+        <button type="button" className={settingsWorkspace === "business" ? "active" : ""} onClick={() => setSettingsWorkspace("business")}><span>B</span><div><strong>Business Settings</strong><small>Profile, hours and notifications</small></div></button>
+        <button type="button" className={settingsWorkspace === "printing-payments" ? "active" : ""} onClick={() => setSettingsWorkspace("printing-payments")}><span>P</span><div><strong>Printing &amp; Payments</strong><small>Devices, kitchen output and customer payments</small></div></button>
+      </nav>
+
+      {settingsWorkspace === "printing-payments" ? <PrintingPaymentConfigurationCenter
+        restaurantId={restaurantId}
+        businessName={form.name || fallbackRestaurantName}
+        currencySymbol={form.currencySymbol}
+        stations={kitchenStations}
+        health={{
+          profileComplete: Boolean(form.name && form.businessType && form.address),
+          menuPublished: jsonBool(config?.setup_status ?? {}, "completed", false),
+          qrReady: form.acceptsQrOrders && activeTables.length > 0,
+          inventoryReady: false,
+          staffReady: staff.some((member) => member.active && isOperationalStaff(member)),
+          logoReady: Boolean(form.logoUrl),
+          hoursReady: Boolean(form.opensAt && form.closesAt),
+        }}
+        onNavigate={onNavigate}
+        onOpenBusiness={() => setSettingsWorkspace("business")}
+      /> : null}
+
+      <form className={`od-config-center ${settingsWorkspace !== "business" ? "workspace-hidden" : ""}`} onSubmit={handleSave}>
         <aside className="od-health-card" aria-labelledby="system-health-title">
           <div className="od-health-score"><span>{settingsHealthChecks.filter(([, ready]) => ready).length}/{settingsHealthChecks.length}</span><small>systems ready</small></div>
           <div className="od-health-copy"><span className="od-config-eyebrow">System health</span><h2 id="system-health-title">Your business readiness</h2><p>See what is ready and jump directly to anything that still needs attention.</p></div>
@@ -9273,7 +9303,7 @@ function SettingsPage({
           </div>
         </aside>
 
-        <div className="od-config-toolbar"><div><strong>Configuration</strong><span>Four focused sections</span></div><div><button className="od-btn-ghost" type="button" onClick={handleCancel} disabled={working}>Discard</button><button className="od-btn-primary" type="submit" disabled={working}>{working ? "Saving…" : "Save changes"}</button></div></div>
+        <div className="od-config-toolbar"><div><strong>Business essentials</strong><span>Profile and operational notifications</span></div><div><button className="od-btn-ghost" type="button" onClick={handleCancel} disabled={working}>Discard</button><button className="od-btn-primary" type="submit" disabled={working}>{working ? "Saving…" : "Save changes"}</button></div></div>
 
         <div className="od-config-sections">
           <details className="od-config-section" id="business-profile" open>

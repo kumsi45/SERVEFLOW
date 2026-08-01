@@ -36,6 +36,7 @@ import { usePublicQrCart } from "../../public-qr-ordering/hooks/usePublicQrCart"
 import { usePublicQrCheckoutState } from "../../public-qr-ordering/hooks/usePublicQrCheckoutState";
 import {
   fetchPublicQrOrderSession,
+  fetchPublicPaymentRuntime,
   submitPublicOrderFeedback,
   submitPublicQrOrder,
   uploadPublicOrderFeedbackPhoto,
@@ -57,6 +58,7 @@ import type {
 import type { MenuItem } from "../types";
 import { publishedMenuImageInput } from "../../../core/presentation/menuItemImage";
 import { useSmartImagePrefetch } from "../../../core/presentation/useSmartImagePrefetch";
+import type { PublicPaymentRuntime } from "../../../core/printing-payment/runtime";
 
 type QRMenuPageProps = {
   restaurantSlug: string;
@@ -129,6 +131,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   const checkout = usePublicQrCheckoutState(restaurantSlug);
   const cart = usePublicQrCart(restaurantSlug, checkout.sessionKey);
   const [submitError, setSubmitError] = useState<string>();
+  const [paymentRuntime, setPaymentRuntime] = useState<PublicPaymentRuntime | null>(null);
   const [submittedOrder, setSubmittedOrder] = useState<
     SubmittedPublicQrOrder | undefined
   >(() => {
@@ -211,6 +214,23 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
     return items.filter((item) => activeCategoryId === "all" || nearbyCategoryIds.has(item.category_id)).slice(0, 8).map(publishedMenuImageInput);
   }, [activeCategoryId, categories, items]);
   useSmartImagePrefetch(nearbyImageInputs, "card");
+
+  useEffect(() => {
+    let active = true;
+    void fetchPublicPaymentRuntime(restaurantSlug)
+      .then((runtime) => {
+        if (!active) return;
+        setPaymentRuntime(runtime);
+        const defaultMethod = runtime.methods.find((method) => method.isDefault) ?? runtime.methods[0];
+        if (!checkout.paymentMethod && defaultMethod && isPaymentMethod(defaultMethod.displayName)) {
+          checkout.setPaymentMethod(defaultMethod.displayName);
+        }
+      })
+      .catch((runtimeError) => {
+        if (active) setSubmitError(runtimeError instanceof Error ? runtimeError.message : "Payment configuration is unavailable.");
+      });
+    return () => { active = false; };
+  }, [restaurantSlug]);
 
   useEffect(() => {
     const previousHtmlLanguage = document.documentElement.lang;
@@ -1006,6 +1026,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               displaySubtotal={cart.displaySubtotal}
               items={cart.items}
               paymentMethod={checkout.paymentMethod}
+              enabledPaymentMethods={paymentRuntime?.methods ?? []}
               restaurantName={restaurant.name}
               submitting={submitting}
               submitError={submitError}

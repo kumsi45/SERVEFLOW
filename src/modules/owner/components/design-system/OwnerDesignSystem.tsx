@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TableHTMLAttributes } from "react";
+import { useEffect, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TableHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import "./ownerDesignSystem.css";
 
 export function SfCard({ children, className = "", ...props }: HTMLAttributes<HTMLElement>) {
@@ -54,8 +55,16 @@ export function SfErrorState({ title = "Something went wrong", description, retr
 }
 
 export function SfDialog({ open, title, children, onClose }: { open: boolean; title: string; children: ReactNode; onClose: () => void }) {
-  if (!open) return null;
-  return <div className="sf-overlay" role="presentation"><button className="sf-overlay-dismiss" aria-label="Close dialog" onClick={onClose} /><section className="sf-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-dialog-title"><header><h2 id="sf-dialog-title">{title}</h2><button aria-label="Close dialog" onClick={onClose}>×</button></header>{children}</section></div>;
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", closeOnEscape); };
+  }, [onClose, open]);
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(<div className="sf-overlay" role="presentation"><button type="button" className="sf-overlay-dismiss" aria-label="Close dialog" onClick={onClose} /><section className="sf-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-dialog-title"><header><h2 id="sf-dialog-title">{title}</h2><button type="button" aria-label="Close dialog" onClick={onClose}>×</button></header>{children}</section></div>, document.body);
 }
 
 export function SfSidePanel({ open, title, eyebrow, children, onClose, className = "" }: { open: boolean; title: string; eyebrow?: string; children: ReactNode; onClose: () => void; className?: string }) {

@@ -5,6 +5,7 @@ import {
   type PublicQrOrderSession,
 } from "../types";
 import { formatMenuPrice } from "../../qr-menu/components/menuPresentation";
+import type { PaymentMethodRuntime } from "../../../core/printing-payment/runtime";
 
 type PublicQrCheckoutPanelProps = {
   customerName: string;
@@ -12,6 +13,7 @@ type PublicQrCheckoutPanelProps = {
   activeSession?: PublicQrOrderSession | null;
   items: PublicQrCartItem[];
   paymentMethod: PublicQrPaymentMethod | "";
+  enabledPaymentMethods?: PaymentMethodRuntime[];
   submitting: boolean;
   submitError?: string;
   restaurantName?: string;
@@ -62,6 +64,7 @@ export function PublicQrCheckoutPanel({
   activeSession,
   items,
   paymentMethod,
+  enabledPaymentMethods,
   submitting,
   submitError,
   restaurantName,
@@ -86,6 +89,11 @@ export function PublicQrCheckoutPanel({
   const grandTotal = existingSubtotal + displaySubtotal;
   const isContinuingOrder = Boolean(activeSession);
   const activeOrderLabel = activeSession?.display_number ?? activeSession?.dining_session_display_number ?? "Current order";
+  const visibleMethods = enabledPaymentMethods
+    ? enabledPaymentMethods.map((method) => method.displayName as PublicQrPaymentMethod)
+    : PUBLIC_QR_PAYMENT_METHODS;
+  const selectedConfiguration = enabledPaymentMethods?.find((method) => method.displayName === paymentMethod);
+  const selectedAccount = selectedConfiguration?.accounts[0];
 
   return (
     <section className="public-checkout-panel open" aria-label="Checkout">
@@ -174,7 +182,7 @@ export function PublicQrCheckoutPanel({
           }
         >
           <option value="">Select payment method</option>
-          {PUBLIC_QR_PAYMENT_METHODS.map((method) => (
+          {visibleMethods.map((method) => (
             <option value={method} key={method}>
               {method}
             </option>
@@ -186,6 +194,22 @@ export function PublicQrCheckoutPanel({
           </p>
         ) : null}
       </label>
+
+      {selectedAccount ? (
+        <section className="public-checkout-summary" aria-label="Payment instructions">
+          <h3>{selectedAccount.businessName || restaurantName || "Payment details"}</h3>
+          {selectedAccount.accountName ? <p><strong>Account name:</strong> {selectedAccount.accountName}</p> : null}
+          {selectedAccount.accountNumber ? <p><strong>Account number:</strong> {selectedAccount.accountNumber}</p> : null}
+          {selectedAccount.phoneNumber ? <p><strong>Phone:</strong> {selectedAccount.phoneNumber}</p> : null}
+          {selectedAccount.referenceFormat ? <p><strong>Reference:</strong> {selectedAccount.referenceFormat}</p> : null}
+          {selectedAccount.instructions ? <p>{selectedAccount.instructions}</p> : null}
+          {selectedAccount.qrImageUrl ? <img src={selectedAccount.qrImageUrl} alt={`${selectedConfiguration?.displayName ?? "Payment"} QR code`} width="192" height="192" /> : null}
+          <div className="public-cart-actions">
+            {selectedAccount.accountNumber ? <button type="button" onClick={() => void navigator.clipboard?.writeText(selectedAccount.accountNumber ?? "")}>Copy Account Number</button> : null}
+            {selectedAccount.qrImageUrl ? <a href={selectedAccount.qrImageUrl} download>Download QR</a> : null}
+          </div>
+        </section>
+      ) : null}
 
       {/* Order summary */}
       <div className="public-checkout-summary" aria-label="Order summary">

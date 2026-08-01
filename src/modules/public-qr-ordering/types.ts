@@ -83,7 +83,7 @@ export const PUBLIC_QR_PAYMENT_METHODS = [
   "Telebirr",
   "CBE Birr",
   "Mobile Banking",
-  "Chapa",
+  "Bank Transfer",
   "Card",
 ] as const;
 

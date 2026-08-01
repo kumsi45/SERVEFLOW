@@ -9,6 +9,7 @@ import type {
   PublicQrSessionItem,
   SubmittedPublicQrOrder,
 } from "../types";
+import type { PublicPaymentRuntime } from "../../../core/printing-payment/runtime";
 
 type SubmitPublicQrOrderInput = {
   restaurantSlug: string;
@@ -52,6 +53,34 @@ function isSubmittedPublicQrOrder(value: unknown): value is SubmittedPublicQrOrd
 
 function toRpcPaymentMethod(method: PublicQrPaymentMethod) {
   return method === "Card" ? "Credit/Debit Card" : method;
+}
+
+function normalizePublicPaymentRuntime(value: unknown): PublicPaymentRuntime {
+  if (!value || typeof value !== "object") throw new Error("Payment configuration is unavailable.");
+  const payload = value as Record<string, unknown>;
+  return {
+    restaurantId: String(payload.restaurant_id ?? ""),
+    businessName: String(payload.business_name ?? ""),
+    paymentPolicy: payload.payment_policy === "kitchen_before_payment" || payload.payment_policy === "mixed" ? payload.payment_policy : "pay_before_kitchen",
+    methods: (Array.isArray(payload.methods) ? payload.methods : []).flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const method = entry as Record<string, unknown>;
+      const code = String(method.code ?? "");
+      const displayName = code === "credit_card" ? "Card" : String(method.display_name ?? "");
+      return [{ code, displayName, isDefault: Boolean(method.is_default), accounts: (Array.isArray(method.accounts) ? method.accounts : []).flatMap((accountEntry) => {
+        if (!accountEntry || typeof accountEntry !== "object") return [];
+        const account = accountEntry as Record<string, unknown>;
+        const nullable = (key: string) => typeof account[key] === "string" ? account[key] as string : null;
+        return [{ provider: String(account.provider ?? ""), businessName: nullable("business_name"), accountName: nullable("account_name"), accountNumber: nullable("account_number"), phoneNumber: nullable("phone_number"), referenceFormat: nullable("reference_format"), qrImageUrl: nullable("qr_image_url"), instructions: nullable("instructions") }];
+      }) }];
+    }),
+  };
+}
+
+export async function fetchPublicPaymentRuntime(restaurantSlug: string): Promise<PublicPaymentRuntime> {
+  const { data, error } = await supabase.rpc("get_public_payment_runtime", { target_restaurant_slug: restaurantSlug });
+  if (error) throw new Error(error.message);
+  return normalizePublicPaymentRuntime(data);
 }
 
 function fromRpcPaymentMethod(method: unknown): PublicQrPaymentMethod | null | undefined {
@@ -224,6 +253,12 @@ export async function submitPublicQrOrder({
   paymentMethod,
   items,
 }: SubmitPublicQrOrderInput): Promise<SubmittedPublicQrOrder> {
+  const { error: methodError } = await supabase.rpc("assert_public_payment_method_enabled", {
+    target_restaurant_slug: restaurantSlug,
+    selected_payment_method: toRpcPaymentMethod(paymentMethod),
+  });
+  if (methodError) throw new Error(methodError.message);
+
   const requestedItems = items.map((item) => ({
     menu_item_id: item.menuItemId,
     quantity: item.quantity,
