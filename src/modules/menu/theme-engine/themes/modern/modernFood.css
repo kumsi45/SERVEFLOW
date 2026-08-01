@@ -562,6 +562,33 @@
 
 .modern-orders-section,
 .modern-previous-orders { min-width: 0; }
+.modern-feedback-prompt { position: fixed; z-index: 120; inset: 0; display: grid; align-items: end; padding: 16px 14px max(20px, env(safe-area-inset-bottom)); overflow-y: auto; }
+.modern-feedback-backdrop { position: fixed; z-index: -1; inset: 0; background: rgba(18, 28, 23, .64); backdrop-filter: blur(7px); }
+.modern-feedback-prompt > .public-feedback-card { width: min(100%, 560px); max-height: min(84dvh, 760px); margin: auto; overflow-y: auto; border-radius: 24px; background: #fff; box-shadow: 0 24px 70px rgba(12, 31, 21, .28); }
+.modern-feedback-prompt .public-feedback-card { gap: 20px; padding: 24px; border: 1px solid rgba(20, 91, 61, .12); color: #12251c; background: linear-gradient(180deg, #fff 0%, #fbfdfc 100%); }
+.modern-feedback-prompt .public-feedback-card::before { display: none; }
+.modern-feedback-prompt .feedback-card-heading { gap: 18px; }
+.modern-feedback-prompt .feedback-eyebrow { color: #168154; font-size: 11px; letter-spacing: .09em; }
+.modern-feedback-prompt .feedback-card-heading h2 { margin-top: 5px; color: #10261b; font-size: clamp(23px, 6vw, 30px); letter-spacing: -.035em; line-height: 1.12; }
+.modern-feedback-prompt .feedback-card-heading p { color: #728078; font-size: 12px; }
+.modern-feedback-prompt .feedback-card-heading > strong { padding: 7px 10px; border-radius: 999px; color: #146c48; background: #e9f7f0; font-size: 13px; }
+.modern-feedback-prompt .feedback-stars { justify-content: center; gap: 9px; padding: 18px; border-radius: 18px; background: #f4f8f6; }
+.modern-feedback-prompt .feedback-stars button { width: 48px; height: 48px; border: 1px solid #dfe8e3; color: #aab5af; background: #fff; font-size: 0; box-shadow: 0 5px 14px rgba(20, 56, 39, .05); }
+.modern-feedback-prompt .feedback-stars button::before { content: "\2605"; font-size: 24px; }
+.modern-feedback-prompt .feedback-stars button.active { border-color: #f1c85c; color: #6b4c00; background: linear-gradient(135deg, #ffe89b, #f7c955); box-shadow: 0 8px 20px rgba(211, 161, 30, .18); }
+.modern-feedback-prompt .feedback-chip-list { gap: 8px; }
+.modern-feedback-prompt .feedback-chip-list button { min-height: 42px; padding-inline: 14px; border-color: #dce6e0; color: #4e6257; background: #fff; font-size: 12px; }
+.modern-feedback-prompt .feedback-chip-list button.selected { border-color: #168154; color: #0f6541; background: #e8f7ef; }
+.modern-feedback-prompt .feedback-text-field span { color: #42564b; }
+.modern-feedback-prompt .feedback-text-field textarea { min-height: 104px; border: 1px solid #d8e3dd; border-radius: 14px; color: #17261f; background: #fff; }
+.modern-feedback-prompt .feedback-text-field textarea::placeholder { color: #98a69f; }
+.modern-feedback-prompt .feedback-actions { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.modern-feedback-prompt .feedback-submit { min-height: 50px; border-radius: 14px; color: #fff; background: #11784d; box-shadow: 0 10px 24px rgba(17, 120, 77, .19); }
+.modern-feedback-prompt .feedback-later { min-width: 86px; min-height: 50px; border: 1px solid #d8e2dc; border-radius: 14px; color: #52645a; background: #fff; }
+.modern-feedback-prompt .feedback-thank-you strong { color: #133023; font-size: 22px; }
+.modern-feedback-prompt .feedback-thank-you p { color: #718078; }
+@media (max-width: 420px) { .modern-feedback-prompt .public-feedback-card { padding: 20px 16px; } .modern-feedback-prompt .feedback-stars { gap: 5px; padding: 14px 8px; } .modern-feedback-prompt .feedback-stars button { width: 44px; height: 44px; } .modern-feedback-prompt .feedback-actions { grid-template-columns: 1fr; } }
+@media (min-width: 681px) { .modern-feedback-prompt { align-items: center; } }
 .modern-orders-section-heading {
   display: flex;
   align-items: end;

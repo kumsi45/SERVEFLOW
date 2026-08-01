@@ -178,15 +178,58 @@ export function subscribeCustomerTrackingEvents(
   stateListener?: StateListener,
   client: SupabaseClient = supabase,
 ) {
-  const channel = client.channel(`customer-order:${browserSessionToken}`);
-  channel.on("broadcast", { event: "order_changed" }, message => {
-    const body = (message.payload ?? {}) as Record<string, unknown>;
-    const record = (body.new ?? body.record ?? {}) as Record<string, unknown>;
-    const previous = (body.old ?? {}) as Record<string, unknown>;
-    if ((record.restaurant_id ?? previous.restaurant_id) === restaurantId) listener(record);
-  });
-  channel.subscribe(status => stateListener?.(realtimeStateFromStatus(status)));
-  return () => { void client.removeChannel(channel); };
+  if (!browserSessionToken.trim()) {
+    stateListener?.("reconnecting");
+    return () => undefined;
+  }
+
+  let channel: RealtimeChannel | null = null;
+  let disposed = false;
+  let reconnectTimer: number | undefined;
+
+  const connect = () => {
+    if (disposed || channel) return;
+    const next = client.channel(`customer-order:${browserSessionToken}`, { config: { private: false } });
+    next.on("broadcast", { event: "order_changed" }, message => {
+      const body = (message.payload ?? {}) as Record<string, unknown>;
+      const record = (body.new ?? body.record ?? {}) as Record<string, unknown>;
+      const previous = (body.old ?? {}) as Record<string, unknown>;
+      if ((record.restaurant_id ?? previous.restaurant_id) === restaurantId) listener(record);
+    });
+    channel = next;
+    next.subscribe(status => {
+      const state = realtimeStateFromStatus(status);
+      stateListener?.(state);
+      if (state !== "reconnecting" || disposed) return;
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = window.setTimeout(() => {
+        const failed = channel;
+        channel = null;
+        if (failed) void client.removeChannel(failed).finally(connect);
+        else connect();
+      }, 500);
+    });
+  };
+  const recover = () => {
+    if (disposed || !navigator.onLine) return;
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = window.setTimeout(() => {
+      if (channel) void client.removeChannel(channel).finally(() => { channel = null; connect(); });
+      else connect();
+    }, 150);
+  };
+  const recoverOnWake = () => { if (document.visibilityState === "visible") recover(); };
+
+  connect();
+  window.addEventListener("online", recover);
+  document.addEventListener("visibilitychange", recoverOnWake);
+  return () => {
+    disposed = true;
+    window.clearTimeout(reconnectTimer);
+    window.removeEventListener("online", recover);
+    document.removeEventListener("visibilitychange", recoverOnWake);
+    if (channel) void client.removeChannel(channel);
+  };
 }
 
 type CompatiblePayload = { eventType: "INSERT" | "UPDATE" | "DELETE"; new: Record<string, unknown>; old: Record<string, unknown> };

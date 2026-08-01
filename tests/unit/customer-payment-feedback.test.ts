@@ -7,6 +7,7 @@ const popup = read("src/modules/public-qr-ordering/components/PublicPaymentPopup
 const page = read("src/modules/qr-menu/pages/QRMenuPage.tsx");
 const proof = read("supabase/functions/submit-public-payment-proof/index.ts");
 const feedbackMigration = read("supabase/migrations/067_public_order_feedback.sql");
+const servedFeedbackFix = read("supabase/migrations/215_phase11_3d_feedback_served_lifecycle_fix.sql");
 const reports = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
 
 describe("Phase 11.3C payment confirmation and feedback", () => {
@@ -36,9 +37,15 @@ describe("Phase 11.3C payment confirmation and feedback", () => {
     expect(feedbackMigration).toContain("orders.status::text = 'completed'");
     expect(feedbackMigration).toContain("unique (restaurant_id, order_id)");
     expect(feedbackMigration).toContain("on conflict (restaurant_id, order_id) do nothing");
+    expect(servedFeedbackFix).toContain("orders.operational_status in ('served', 'closed')");
+    expect(servedFeedbackFix).toContain("orders.browser_session_token = normalized_browser_token");
+    expect(page).toContain("sessionKey: checkout.browserSessionToken");
     expect(page).toContain("Rate Your Experience");
     expect(page).toContain("Submit Feedback");
     expect(page).toContain("Skip");
+    expect(page).toContain('["completed", "served", "closed"].includes(activeSession.status)');
+    expect(page).toContain('modernNavigation.navigate("orders")');
+    expect(page).toContain("feedbackPrompt={servedFeedbackOrder ? (");
     expect(reports).toContain("Customer Feedback");
     expect(reports).toContain("Highest Rated Item");
     expect(reports).toContain("Lowest Rated Item");

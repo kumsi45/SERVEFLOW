@@ -349,6 +349,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       // Scan analytics must never block public ordering.
     });
   }, [
+    checkout.browserSessionToken,
     checkout.qrToken,
     checkout.tableNumber,
     checkout.tableNumberFromQr,
@@ -422,7 +423,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             restaurantId: restaurant.id,
             tableNumber: checkout.tableNumber,
             qrToken: checkout.qrToken,
-            sessionKey: checkout.sessionKey,
+            sessionKey: checkout.browserSessionToken,
             invoiceNumber: latestInvoice?.invoice_number ?? 1,
             total: latestInvoice?.total_price ?? activeSession.total_price,
             items: latestInvoice
@@ -437,6 +438,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           setFeedbackPhotoFile(null);
           setFeedbackError(null);
           setFeedbackSubmitted(false);
+          modernNavigation.navigate("orders");
         }
       }
       refresh();
@@ -455,6 +457,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       unsubscribe();
     };
   }, [
+    checkout.browserSessionToken,
     checkout.qrToken,
     checkout.sessionKey,
     checkout.tableNumber,
@@ -623,7 +626,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
   useEffect(() => {
     if (
       !activeSession ||
-      activeSession.status !== "completed" ||
+      !["completed", "served", "closed"].includes(activeSession.status) ||
       !restaurant?.id ||
       !checkout.tableNumber ||
       !checkout.qrToken
@@ -658,7 +661,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
       restaurantId: restaurant.id,
       tableNumber: checkout.tableNumber,
       qrToken: checkout.qrToken,
-      sessionKey: checkout.sessionKey,
+      sessionKey: checkout.browserSessionToken,
       invoiceNumber: latestInvoice?.invoice_number ?? 1,
       total: latestInvoice?.total_price ?? activeSession.total_price,
       items: latestInvoice
@@ -667,8 +670,10 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           )
         : activeSession.items,
     });
+    modernNavigation.navigate("orders");
   }, [
     activeSession,
+    checkout.browserSessionToken,
     checkout.qrToken,
     checkout.sessionKey,
     checkout.tableNumber,
@@ -951,7 +956,8 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               <time>{invoice.created_at ? new Date(invoice.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}{invoice.paid_at ? ` · Completed ${new Date(invoice.paid_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</time>
             </section>;
           })}
-          {servedFeedbackOrder ? (
+          </>}
+          feedbackPrompt={servedFeedbackOrder ? (
         <section className="public-feedback-card" aria-label="Meal feedback">
           {feedbackSubmitted ? (
             <div className="feedback-thank-you" role="status">
@@ -964,7 +970,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
               <div className="feedback-card-heading">
                 <div>
                   <span className="feedback-eyebrow">Order served</span>
-                  <h2>â­ Rate Your Experience</h2>
+                  <h2>Rate Your Experience</h2>
                   <p>
                     Order {servedFeedbackOrder.orderLabel} · Receipt{" "}
                     {servedFeedbackOrder.invoiceNumber}
@@ -1062,7 +1068,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
             </>
           )}
         </section>
-          ) : null}</>}
+          ) : null}
         />
       )}
       {modernNavigation.page === "home" ? (
