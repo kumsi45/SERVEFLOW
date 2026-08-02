@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const migration = read("supabase/migrations/222_phase12_2a_cashier_workflow_finalization.sql");
+const optionalReceiptMigration = read("supabase/migrations/223_phase13_4d_optional_receipt_settlement.sql");
 const cashier = read("src/modules/cashier/pages/CashierDashboardPage.tsx");
 const manager = read("src/modules/manager/services/managerDashboardService.ts");
 const managerPage = read("src/modules/manager/pages/ManagerOperationsCenterPage.tsx");
@@ -17,9 +18,12 @@ describe("Phase 12.2A cashier workflow finalization", () => {
     expect(migration).toContain("orders_one_open_dining_session_per_table");
   });
 
-  it("makes receipt-backed invoice close a cashier-only release", () => {
+  it("keeps invoice close cashier-only while making receipt printing optional", () => {
     expect(migration).toContain("Only an active cashier may close an invoice and release its table.");
-    expect(migration).toContain("Every paid invoice requires a printed receipt before settlement.");
+    expect(optionalReceiptMigration).toContain("Only an active cashier may close an invoice and release its table.");
+    expect(optionalReceiptMigration).not.toContain("Every paid invoice requires a printed receipt before settlement.");
+    expect(optionalReceiptMigration).toContain("close_dining_session_phase122a_base");
+    expect(optionalReceiptMigration).toContain("receipt printing is optional");
     expect(cashier).toContain("mark_cashier_session_receipts_printed");
     expect(cashier).toContain("cashier_close_invoice_and_release_table");
     expect(migration).toContain("revoke execute on function public.close_waiter_table");

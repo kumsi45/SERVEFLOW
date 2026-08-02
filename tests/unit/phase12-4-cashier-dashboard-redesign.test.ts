@@ -12,7 +12,7 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
     for (const label of ["ServeFlow", "Shift Duration", "Terminal", "Notifications", "Close Shift", "Sign Out", "Ctrl K"]) {
       expect(ui).toContain(label);
     }
-    expect(ui).toContain("Search service location, customer, invoice, order or phone");
+    expect(ui).toContain("Search table, customer, invoice or phone...");
     expect(page).toContain("handleWorkspaceSearch");
     expect(page).toContain('event.key.toLowerCase() === "k"');
     expect(styles).toContain("--cd-header-height: 70px");
@@ -38,29 +38,27 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
     expect(page).not.toContain('name="help"');
   });
 
-  it("renders the five compact summaries and five instant queues", () => {
+  it("renders the five compact summaries and four cashier-priority queues", () => {
     for (const label of [
-      "Active Orders", "Awaiting Collection", "Cash Collected Today",
-      "Digital Collected Today", "Total Collected Today", "Payment Due",
-      "Paid", "Bill Requested", "Receipt Pending", "Completed",
+      "Active Orders", "Awaiting Collection", "Cash Collected",
+      "Digital Collected", "Total Collected", "Payment Due",
+      "Bill Requested", "Receipt Pending", "Completed",
     ]) expect(page).toContain(label);
-    expect(styles).toContain("grid-template-columns: repeat(5, minmax(0, 1fr))");
+    expect(styles).toContain("grid-template-columns: 1fr 1.08fr 1.2fr .9fr");
   });
 
-  it("uses one table header and dense browser-virtualized order rows", () => {
-    for (const label of ["Service Location", "Ordered Items", "Payment", "Total", "Waiting", "Status"]) {
-      expect(page).toContain(`<span>${label}</span>`);
-    }
-    expect(page).toContain("getOrderItemPreview(allItems)");
-    expect(page).toContain("itemPreview.hiddenCount");
-    expect(page).toContain('queueTab === "pending" ? "Verify" : "Review"');
+  it("uses dense browser-virtualized order rows without a redundant table header", () => {
+    expect(page).not.toContain('className="cd-operational-table-header"');
+    expect(page).toContain("summarizeOperationalItems(allItems)");
+    expect(page).toContain("itemSummary.hiddenDistinctCount");
+    expect(page).toContain("currentQueue.action");
     expect(styles).toContain("content-visibility: auto");
-    expect(styles).toContain("contain-intrinsic-size: 62px");
+    expect(styles).toContain("contain-intrinsic-size: 68px");
     expect(styles).toContain("overflow-y: auto");
   });
 
   it("keeps service-location switching above an independent checkout", () => {
-    expect(page).toContain("Service Locations");
+    expect(page).toContain('id="table-switch-title">Tables</h2>');
     expect(page).toContain("tables.slice(0, 4)");
     expect(page).toContain("tables.slice(4)");
     expect(page).toContain('aria-pressed={selectedTable === key}');

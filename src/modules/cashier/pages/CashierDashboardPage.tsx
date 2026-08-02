@@ -1,4 +1,11 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { supabase } from "../../../core/database";
 import { formatCurrency } from "../../../core/format/currency";
 import { SmartImage } from "../../../core/presentation/SmartImage";
@@ -22,10 +29,20 @@ import type {
 } from "../types";
 import { loadCashierWorkflowFoundation, type CashierWorkflowFoundation } from "../cashierWorkflow";
 import {
+  buildOperationalQueueView,
+  OPERATIONAL_QUEUE_TABS,
+  summarizeOperationalItems,
+  type OperationalQueueTab,
+} from "../operationalWorkspace";
+import {
   CashierMetricCard,
   CashierTopBar,
   CashierIcon,
 } from "../components/CashierDashboardUi";
+import {
+  CashierToastViewport,
+  useCashierToasts,
+} from "../components/CashierToastSystem";
 import "../styles/cashierDashboard.css";
 
 function fmtOrderLabel(order: Pick<CashierOrder, "displayNumber" | "id">) {
@@ -61,6 +78,48 @@ function fmtTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+function compactTableCode(value?: string | number | null) {
+  const table = String(value ?? "").trim();
+  if (!table) return null;
+  const numericTable = table.match(
+    /^(?:(?:service\s+location|table)\s*)?t?\s*[-:]?\s*0*(\d+)$/i,
+  );
+  return numericTable ? `T${Number(numericTable[1])}` : table;
+}
+
+function orderTableCode(
+  order: Pick<CashierOrder, "tableNumber" | "invoiceSource">,
+) {
+  return (
+    compactTableCode(order.tableNumber) ??
+    (order.invoiceSource === "public_qr" ? "Direct order" : "—")
+  );
+}
+
+function relativeEventTime(
+  event: "Requested" | "Paid" | "Completed",
+  iso: string,
+) {
+  const timestamp = new Date(iso);
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp.getTime()) / 60000),
+  );
+  if (elapsedMinutes < 1) return `${event} now`;
+  if (elapsedMinutes < 60) return `${event} ${elapsedMinutes} min ago`;
+
+  const now = new Date();
+  const isToday = timestamp.toDateString() === now.toDateString();
+  if (isToday) return `${event} at ${fmtTime(iso)}`;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (timestamp.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${fmtTime(iso)}`;
+  }
+  return `${event} ${fmtDateTime(iso)}`;
 }
 
 function durationFrom(startIso: string | null, now: Date) {
@@ -342,6 +401,13 @@ type ShiftActivity = {
 };
 
 type QueueTab = "pending" | "paid" | "preparing" | "ready" | "completed";
+const QUEUE_PRESENTATION = {
+  pending: { title: "Payment Due Queue", icon: "due", action: "Verify Payment", empty: "No payments waiting." },
+  preparing: { title: "Bill Requested Queue", icon: "bill", action: "Open Checkout", empty: "No bill requests right now." },
+  ready: { title: "Receipt Pending Queue", icon: "print", action: "Print Receipt", empty: "No receipts waiting to print." },
+  paid: { title: "Paid Queue", icon: "paid", action: "Review", empty: "No paid orders are waiting for review." },
+  completed: { title: "Completed Queue", icon: "completed", action: "View", empty: "No completed transactions yet." },
+} as const;
 type ReconcileStep = 1 | 2 | 3 | 4 | 5;
 type BillHistory = {
   dining_session_id: string;
@@ -836,12 +902,6 @@ function paymentScreenshotPath(
   return `${restaurantId}/payments/${invoiceId}/${safeStorageFileName(file)}`;
 }
 
-function getOrderItemPreview(items: CashierOrderItem[]) {
-  const visible = items.slice(0, 3);
-  const hiddenCount = Math.max(0, items.length - visible.length);
-  return { visible, hiddenCount };
-}
-
 function isContinuableOrder(order: CashierOrder) {
   return order.diningSessionStatus === "open";
 }
@@ -884,6 +944,21 @@ function isVerifiablePayment(order: CashierOrder) {
 
 function isActiveOrder(order: CashierOrder) {
   return order.diningSessionStatus === "open";
+}
+
+function compareDiningSessionsNewestFirst(
+  left: DiningSessionSummary,
+  right: DiningSessionSummary,
+) {
+  const latestDifference =
+    new Date(right.latestAt).getTime() - new Date(left.latestAt).getTime();
+  if (latestDifference !== 0) return latestDifference;
+
+  const createdDifference =
+    new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  if (createdDifference !== 0) return createdDifference;
+
+  return right.diningSessionId.localeCompare(left.diningSessionId);
 }
 
 function buildDiningSessionSummaries(sessionOrders: CashierOrder[]) {
@@ -934,10 +1009,7 @@ function buildDiningSessionSummaries(sessionOrders: CashierOrder[]) {
       current.customerName = order.customerName;
     sessions.set(diningSessionId, current);
   }
-  return [...sessions.values()].sort(
-    (left, right) =>
-      new Date(right.latestAt).getTime() - new Date(left.latestAt).getTime(),
-  );
+  return [...sessions.values()].sort(compareDiningSessionsNewestFirst);
 }
 
 function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
@@ -1049,7 +1121,7 @@ function OrderDrawer({
         <div className="cd-drawer-header">
           <span className="cd-workspace-label">Checkout Workspace</span>
           <div className="cd-checkout-identity">
-            <div className="cd-drawer-title">{order.tableNumber || "Direct"}</div>
+            <div className="cd-drawer-title">{orderTableCode(order)}</div>
             <span className={`cd-checkout-status-badge ${order.invoiceStatus || "pending"}`}>{paymentLabel(order.invoiceStatus || "pending")}</span>
             <div className="cd-checkout-assignee"><span>{assignedLabel}</span><strong>{assignedName}</strong></div>
           </div>
@@ -1326,7 +1398,7 @@ function CheckoutReceiptPreview({ model }: { model: FinalDiningBillModel }) {
         {model.restaurant.phone ? <p>{model.restaurant.phone}</p> : null}
       </header>
       <div className="cd-receipt-meta">
-        <span>Table {model.bill.tableNumber ?? "-"}</span>
+        <span>{compactTableCode(model.bill.tableNumber) ?? "—"}</span>
         <span>{new Date(model.bill.printedAt).toLocaleDateString()}</span>
         <span>Cashier: {model.bill.cashierName ?? "Cashier"}</span>
         <span>
@@ -1456,7 +1528,11 @@ export function CashierDashboardPage({
   const [actualCash, setActualCash] = useState("");
   const [varianceReason, setVarianceReason] = useState("");
   const [workingShift, setWorkingShift] = useState(false);
-  const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
+  const {
+    controller: toastController,
+    pushToast,
+    visible: toasts,
+  } = useCashierToasts();
   const [realtimeState, setRealtimeState] =
     useState<RealtimeConnectionState>("connecting");
   const [billFormat, setBillFormat] = useState<FinalBillFormat>(() => {
@@ -1607,11 +1683,14 @@ export function CashierDashboardPage({
     } catch (uploadError) {
       setPaymentScreenshotUrl("");
       setPaymentScreenshotPreviewUrl(null);
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Payment screenshot upload failed.",
-      );
+      pushToast({
+        type: "error",
+        title: "Payment proof upload failed",
+        description:
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Check the image and try again.",
+      });
     }
   }
 
@@ -1703,15 +1782,30 @@ export function CashierDashboardPage({
     const pendingPaymentIds = new Set(
       dueSessions.map((session) => session.diningSessionId),
     );
-    const newPendingPaymentCount = dueSessions.filter(
+    const newPendingSessions = dueSessions.filter(
       (session) =>
         !knownPendingPaymentIdsRef.current.has(session.diningSessionId),
-    ).length;
+    );
 
-    if (dashboardHydratedRef.current && newPendingPaymentCount > 0) {
-      setRealtimeNotice(
-        `${newPendingPaymentCount} dining session${newPendingPaymentCount === 1 ? "" : "s"} with payment due.`,
+    if (dashboardHydratedRef.current && newPendingSessions.length > 0) {
+      const newest = newPendingSessions[0];
+      const total = newest.batches.reduce(
+        (sum, batch) => sum + batch.totalPrice,
+        0,
       );
+      pushToast({
+        type: "information",
+        title:
+          newPendingSessions.length === 1
+            ? "New order received"
+            : `${newPendingSessions.length} new orders received`,
+        description:
+          newPendingSessions.length === 1
+            ? `${compactTableCode(newest.tableNumber) ?? "Direct order"} · ${newest.itemCount} ${newest.itemCount === 1 ? "item" : "items"} · ${formatCurrency(total, restaurant)}`
+            : "Payment Due queue updated",
+        durationMs: 6_000,
+        dedupeKey: `new-order:${newPendingSessions.map((session) => `${session.diningSessionId}:${session.latestAt}`).join("|")}`,
+      });
       setQueueTab("pending");
       playNotificationTone("cashier");
     }
@@ -1792,12 +1886,13 @@ export function CashierDashboardPage({
         window.clearTimeout(realtimeRefreshTimerRef.current);
       realtimeRefreshTimerRef.current = window.setTimeout(() => {
         realtimeRefreshTimerRef.current = null;
-        void loadDashboard().catch((loadError) =>
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Realtime refresh failed.",
-          ),
+        void loadDashboard().catch(() =>
+          pushToast({
+            type: "error",
+            title: "Network sync failed",
+            description: "Live updates could not refresh. Check the connection and try again.",
+            dedupeKey: "cashier-realtime-refresh-failed",
+          }),
         );
       }, 120);
     };
@@ -1812,7 +1907,7 @@ export function CashierDashboardPage({
       realtimeRefreshTimerRef.current = null;
       unsubscribe();
     };
-  }, [restaurantId]);
+  }, [pushToast, restaurantId]);
 
   async function handleApprove(order: CashierOrder) {
     try {
@@ -1839,14 +1934,22 @@ export function CashierDashboardPage({
       setOwnerDuplicateOverride(false);
       setDuplicateReferenceNotice(null);
       setPaymentNote("");
-      setRealtimeNotice(`Payment collected for table ${order.tableNumber ?? ""}.`);
+      pushToast({
+        type: "success",
+        title: "Payment verified",
+        description: `${fmtInvoiceLabel(order)} · ${fmtMoney(order.totalPrice)}`,
+        dedupeKey: `payment-verified:${diningSessionId}`,
+      });
       await loadDashboard();
     } catch (approveError) {
-      setError(
-        approveError instanceof Error
-          ? approveError.message
-          : "Payment collection failed.",
-      );
+      pushToast({
+        type: "error",
+        title: "Payment verification failed",
+        description:
+          approveError instanceof Error
+            ? approveError.message
+            : "Review the payment details and try again.",
+      });
     } finally {
       setApprovingId(null);
     }
@@ -1865,13 +1968,22 @@ export function CashierDashboardPage({
       });
       if (rpcError) throw new Error(rpcError.message);
       setPaymentNote("");
+      pushToast({
+        type: "warning",
+        title: "Payment rejected",
+        description: fmtInvoiceLabel(order),
+        dedupeKey: `payment-rejected:${order.invoiceId}`,
+      });
       await loadDashboard();
     } catch (rejectError) {
-      setError(
-        rejectError instanceof Error
-          ? rejectError.message
-          : "Payment rejection failed.",
-      );
+      pushToast({
+        type: "error",
+        title: "Payment rejection failed",
+        description:
+          rejectError instanceof Error
+            ? rejectError.message
+            : "Review the payment and try again.",
+      });
     } finally {
       setApprovingId(null);
     }
@@ -1893,13 +2005,22 @@ export function CashierDashboardPage({
       );
       if (rpcError) throw new Error(rpcError.message);
       setPaymentNote("");
+      pushToast({
+        type: "information",
+        title: "Payment retry requested",
+        description: fmtInvoiceLabel(order),
+        dedupeKey: `payment-retry:${order.invoiceId}`,
+      });
       await loadDashboard();
     } catch (retryError) {
-      setError(
-        retryError instanceof Error
-          ? retryError.message
-          : "Payment retry request failed.",
-      );
+      pushToast({
+        type: "error",
+        title: "Payment retry failed",
+        description:
+          retryError instanceof Error
+            ? retryError.message
+            : "Try the request again.",
+      });
     } finally {
       setApprovingId(null);
     }
@@ -2012,6 +2133,7 @@ export function CashierDashboardPage({
     try {
       setSubmittingOrder(true);
       setError(null);
+      let submittedOrderId = "";
       const payload = cartItems.map((item) => ({
         menu_item_id: item.menuItemId,
         quantity: item.quantity,
@@ -2034,6 +2156,7 @@ export function CashierDashboardPage({
         );
         if (rpcError) throw new Error(rpcError.message);
         const updated = normalizeSubmittedOrder(data as CashierOrderPayload);
+        submittedOrderId = updated.id;
         setOrders((previous) =>
           previous.map((order) =>
             order.id === activeOrder.id
@@ -2053,20 +2176,30 @@ export function CashierDashboardPage({
         );
         if (rpcError) throw new Error(rpcError.message);
         const created = normalizeSubmittedOrder(data as SubmittedCashierOrder);
+        submittedOrderId = created.id;
         setOrders((previous) => [created, ...previous]);
       }
 
+      pushToast({
+        type: "success",
+        title: mode === "append" ? "Order updated" : "Order created",
+        description: compactTableCode(selectedTable) ?? "Direct order",
+        dedupeKey: `${mode === "append" ? "order-updated" : "order-created"}:${submittedOrderId}`,
+      });
       setCartItems([]);
       setSelectedTable("");
       setSelectedPaymentMethod(PAYMENT_METHODS[0]);
       setContinuationChoice(null);
       await loadDashboard();
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Could not submit order.",
-      );
+      pushToast({
+        type: "error",
+        title: "Order submission failed",
+        description:
+          submitError instanceof Error
+            ? submitError.message
+            : "Review the order and try again.",
+      });
     } finally {
       setSubmittingOrder(false);
     }
@@ -2075,11 +2208,19 @@ export function CashierDashboardPage({
   function handleSubmitPosOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedTable) {
-      setError("Select a table before submitting the order.");
+      pushToast({
+        type: "warning",
+        title: "Table required",
+        description: "Select a table before submitting the order.",
+      });
       return;
     }
     if (cartItems.length === 0) {
-      setError("Add at least one menu item before submitting the order.");
+      pushToast({
+        type: "warning",
+        title: "Order is empty",
+        description: "Add at least one menu item before submitting the order.",
+      });
       return;
     }
     const activeOrder = orders.find(
@@ -2124,16 +2265,22 @@ export function CashierDashboardPage({
         },
       );
       if (receiptStateError) throw new Error(receiptStateError.message);
-      setRealtimeNotice(
-        `Receipt printed successfully · Copy ${billModel.bill.printCount}.`,
-      );
+      pushToast({
+        type: "success",
+        title: "Receipt printed",
+        description: `${billModel.bill.receiptNumber || billModel.bill.billNumber} · Copy ${billModel.bill.printCount}`,
+        dedupeKey: `receipt-printed:${billModel.bill.id}:${billModel.bill.printCount}`,
+      });
       await loadDashboard();
     } catch (billError) {
-      setError(
-        billError instanceof Error
-          ? billError.message
-          : "Could not print final bill.",
-      );
+      pushToast({
+        type: "error",
+        title: "Receipt printing failed",
+        description:
+          billError instanceof Error
+            ? billError.message
+            : "Check the printer connection and try again.",
+      });
     } finally {
       setBillWorkingSessionId(null);
     }
@@ -2144,7 +2291,7 @@ export function CashierDashboardPage({
   ) {
     if (
       !window.confirm(
-        `Close the invoice for ${session.tableNumber ?? "this service location"}? Confirm the location is ready for its next service.`,
+        `Close the invoice for ${compactTableCode(session.tableNumber) ?? "this table"}? Receipt printing is optional. Confirm the table is ready for its next service.`,
       )
     )
       return;
@@ -2156,9 +2303,12 @@ export function CashierDashboardPage({
         confirmed: true,
       });
       if (rpcError) throw new Error(rpcError.message);
-      setRealtimeNotice(
-        `${session.tableNumber ?? "Service location"} closed successfully.`,
-      );
+      pushToast({
+        type: "success",
+        title: "Order completed",
+        description: `${compactTableCode(session.tableNumber) ?? "Table"} · Invoice closed`,
+        dedupeKey: `order-completed:${session.diningSessionId}`,
+      });
       setCheckoutSession(null);
       await loadDashboard();
     } catch (closeError) {
@@ -2197,29 +2347,6 @@ export function CashierDashboardPage({
     () => buildDiningSessionSummaries(completedOrders),
     [completedOrders],
   );
-  const paidDiningSessions = useMemo(
-    () =>
-      activeDiningSessions.filter((session) =>
-        session.batches.some((order) => order.invoiceStatus === "paid"),
-      ),
-    [activeDiningSessions],
-  );
-  const preparingDiningSessions = useMemo(
-    () =>
-      activeDiningSessions.filter((session) =>
-        session.batches.some((order) =>
-          ["accepted", "preparing"].includes(order.status),
-        ),
-      ),
-    [activeDiningSessions],
-  );
-  const readyDiningSessions = useMemo(
-    () =>
-      activeDiningSessions.filter((session) =>
-        session.batches.some((order) => ["ready", "served"].includes(order.status)),
-      ),
-    [activeDiningSessions],
-  );
   const billRequestedInvoiceIds = useMemo(
     () => new Set((workflow?.bill_requested_queue ?? []).map((row) => row.invoice_id)),
     [workflow],
@@ -2236,14 +2363,6 @@ export function CashierDashboardPage({
     () => activeDiningSessions.filter((session) => session.batches.some((order) => order.invoiceId && receiptPendingInvoiceIds.has(order.invoiceId))),
     [activeDiningSessions, receiptPendingInvoiceIds],
   );
-  const queueSessions =
-    queueTab === "paid"
-      ? paidDiningSessions
-      : queueTab === "preparing"
-        ? billRequestedSessions
-        : queueTab === "ready"
-          ? receiptPendingSessions
-          : completedDiningSessions;
   const openSessionOrders = useMemo(
     () => orders.filter(isContinuableOrder),
     [orders],
@@ -2321,19 +2440,43 @@ export function CashierDashboardPage({
   const selectedServiceLocation = tables.find(
     (table) => String(table.table_number) === selectedTable,
   ) ?? null;
-  const queueOrders = paymentDueSessions;
-  const operationalQueue = (queueTab === "pending" ? queueOrders : queueSessions)
-    .filter((session) => {
-      const order = queueTab === "pending" ? paymentDueOrder(session) : session.batches[0];
-      if (!order) return false;
-      const query = workspaceSearch.trim().toLowerCase();
-      if (!query) return true;
-      return session.batches.some((batch) => [
-        batch.tableNumber, batch.customerName, batch.customerPhone, batch.waiterName,
-        batch.invoiceDisplayNumber, batch.displayNumber, batch.invoiceNumber?.toString(),
-      ].some((candidate) => candidate?.toLowerCase().includes(query)));
-    })
-    .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+  const visibleQueueTab: OperationalQueueTab =
+    queueTab === "paid" ? "completed" : queueTab;
+  const operationalQueueView = useMemo(() => {
+    const query = workspaceSearch.trim().toLowerCase();
+    return buildOperationalQueueView(
+      {
+        pending: paymentDueSessions,
+        preparing: billRequestedSessions,
+        ready: receiptPendingSessions,
+        completed: completedDiningSessions,
+      },
+      {
+        matches: (session) =>
+          !query ||
+          session.batches.some((batch) =>
+            [
+              batch.tableNumber,
+              batch.customerName,
+              batch.customerPhone,
+              batch.waiterName,
+              batch.invoiceDisplayNumber,
+              batch.displayNumber,
+              batch.invoiceNumber?.toString(),
+            ].some((candidate) => candidate?.toLowerCase().includes(query)),
+          ),
+        compare: compareDiningSessionsNewestFirst,
+      },
+    );
+  }, [
+    billRequestedSessions,
+    completedDiningSessions,
+    paymentDueSessions,
+    receiptPendingSessions,
+    workspaceSearch,
+  ]);
+  const operationalQueue = operationalQueueView.rows[visibleQueueTab];
+  const currentQueue = QUEUE_PRESENTATION[visibleQueueTab];
   const expectedCash = activeShift?.expected_cash ?? 0;
   const actualCashNumber = Number(actualCash || 0);
   const variance = actualCash === "" ? 0 : actualCashNumber - expectedCash;
@@ -2379,6 +2522,33 @@ export function CashierDashboardPage({
     if (match) setDrawerOrder(match);
   }
 
+  function handleQueueTabKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    currentTab: OperationalQueueTab,
+  ) {
+    const currentIndex = OPERATIONAL_QUEUE_TABS.indexOf(currentTab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % OPERATIONAL_QUEUE_TABS.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex =
+        (currentIndex - 1 + OPERATIONAL_QUEUE_TABS.length) %
+        OPERATIONAL_QUEUE_TABS.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = OPERATIONAL_QUEUE_TABS.length - 1;
+    }
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = OPERATIONAL_QUEUE_TABS[nextIndex];
+    setQueueTab(nextTab);
+    event.currentTarget.parentElement
+      ?.querySelector<HTMLButtonElement>(`[data-queue-tab="${nextTab}"]`)
+      ?.focus();
+  }
+
   const visibleCashierActivity = activity
     .filter((entry) => [
       "payment_submitted", "payment_verified", "receipt_printed", "invoice_closed",
@@ -2397,18 +2567,23 @@ export function CashierDashboardPage({
         shiftDuration={activeShift ? durationFrom(activeShift.opened_at, now) : "00:00"}
         date={dateStr}
         time={timeStr}
-        hasNotification={Boolean(realtimeNotice)}
+        hasNotification={toasts.length > 0}
         reconnecting={realtimeState !== "connected"}
-        onNotifications={() => setRealtimeNotice(null)}
+        onNotifications={() =>
+          document
+            .querySelector<HTMLElement>(".cd-toast:not(.exiting)")
+            ?.focus()
+        }
         onShiftAction={() => activeShift ? setReconcileOpen(true) : setOpenShiftModal(true)}
         onSignOut={handleSignOut}
         searchValue={workspaceSearch}
         onSearchChange={handleWorkspaceSearch}
       />
+      <CashierToastViewport toasts={toasts} controller={toastController} />
       <aside className="cd-pos-nav" aria-label="Cashier navigation">
         <nav className="cd-pos-nav-primary">
           <button className="active" type="button" onClick={() => setPosEntryOpen(true)}><CashierIcon name="order" /><span><strong>New Order</strong></span></button>
-          <button type="button" onClick={() => setRealtimeNotice("Cancellation requests are read-only until an authorized workflow is available.")}><CashierIcon name="cancel" /><span><strong>Cancellation Requests</strong></span>{pendingCancellationCount > 0 ? <b className="cd-nav-badge">{pendingCancellationCount}</b> : null}</button>
+          <button type="button" onClick={() => pushToast({ type: "warning", title: "Cancellation requests", description: "Requests remain read-only until an authorized workflow is available.", dedupeKey: "cashier-cancellation-requests-read-only" })}><CashierIcon name="cancel" /><span><strong>Cancellation Requests</strong></span>{pendingCancellationCount > 0 ? <b className="cd-nav-badge">{pendingCancellationCount}</b> : null}</button>
         </nav>
         <section className={`cd-nav-activity${activityCollapsed ? " collapsed" : ""}`}>
           <button className="cd-nav-section-toggle" type="button" aria-expanded={!activityCollapsed} onClick={() => setActivityCollapsed((current) => !current)}><span>Live Activity</span><b>{activityCollapsed ? "+" : "−"}</b></button>
@@ -2420,15 +2595,15 @@ export function CashierDashboardPage({
         </section>
       </aside>
       <main className="cd-body">
-        {realtimeNotice ? (
-          <div className="cd-realtime-notice" role="status">
-            <strong>{realtimeNotice}</strong>
-            <button type="button" onClick={() => setRealtimeNotice(null)}>
-              Dismiss
-            </button>
-          </div>
+        {error ? (
+          <section className="cd-persistent-alerts" aria-label="Operational alerts">
+            <div className="cd-persistent-alert" role="alert">
+              <CashierIcon name="cancel" />
+              <span><strong>Action required</strong><span>{error}</span></span>
+              <button type="button" aria-label="Dismiss operational alert" onClick={() => setError(null)}>×</button>
+            </div>
+          </section>
         ) : null}
-        {error && <div className="cd-error-banner">{error}</div>}
 
         {loading ? (
           <div className="cd-kpi-grid">
@@ -2491,309 +2666,186 @@ export function CashierDashboardPage({
               )}
             </section>
 
-            <section className="cd-kpi-grid">
+            <section className="cd-kpi-grid" aria-label="Operational summary">
               <CashierMetricCard
                 label="Active Orders"
                 value={`${activeDiningSessions.length}`}
-                icon="active"
+                detail="Open now"
               />
               <CashierMetricCard
                 label="Awaiting Collection"
                 value={`${awaitingCollection.length}`}
+                detail="Needs collection"
                 tone="warning"
-                icon="collection"
               />
               <CashierMetricCard
-                label="Cash Collected Today"
+                label="Cash Collected"
                 value={fmtMoney(cashCollectedToday)}
-                icon="cash"
+                detail="Current shift"
               />
               <CashierMetricCard
-                label="Digital Collected Today"
+                label="Digital Collected"
                 value={fmtMoney(digitalCollectedToday)}
-                icon="digital"
+                detail="Current shift"
               />
               <CashierMetricCard
-                label="Total Collected Today"
+                label="Total Collected"
                 value={fmtMoney(cashCollectedToday + digitalCollectedToday)}
+                detail="Cash + digital"
                 tone="success"
-                icon="paid"
               />
             </section>
 
             <section className="cd-main-grid">
               <div className="cd-card">
-                <div className="cd-workspace-label">Operational Workspace</div>
                 <div className="cd-card-header">
                   <div className="cd-tabs" role="tablist" aria-label="Order queue status">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={queueTab === "pending"}
-                      className={`cd-tab${queueTab === "pending" ? " active" : ""}`}
-                      onClick={() => setQueueTab("pending")}
-                    >
-                      <CashierIcon name="due" /> Payment Due <span className="cd-tab-badge">{workflow?.payment_submitted_queue.length ?? paymentDueSessions.length}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={queueTab === "paid"}
-                      className={`cd-tab${queueTab === "paid" ? " active" : ""}`}
-                      onClick={() => setQueueTab("paid")}
-                    >
-                      <CashierIcon name="paid" /> Paid <span className="cd-tab-badge">{paidDiningSessions.length}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={queueTab === "preparing"}
-                      className={`cd-tab${queueTab === "preparing" ? " active" : ""}`}
-                      onClick={() => setQueueTab("preparing")}
-                    >
-                      <CashierIcon name="bill" /> Bill Requested <span className="cd-tab-badge">{billRequestedSessions.length}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={queueTab === "ready"}
-                      className={`cd-tab${queueTab === "ready" ? " active" : ""}`}
-                      onClick={() => setQueueTab("ready")}
-                    >
-                      <CashierIcon name="completed" /> Receipt Pending <span className="cd-tab-badge">{receiptPendingSessions.length}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={queueTab === "completed"}
-                      className={`cd-tab${queueTab === "completed" ? " active" : ""}`}
-                      onClick={() => setQueueTab("completed")}
-                    >
-                      <CashierIcon name="completed" /> Completed{" "}
-                      <span className="cd-tab-badge">
-                        {completedDiningSessions.length}
-                      </span>
-                    </button>
+                    {([
+                      ["pending", "due", "Payment Due", operationalQueueView.counts.pending],
+                      ["preparing", "bill", "Bill Requested", operationalQueueView.counts.preparing],
+                      ["ready", "print", "Receipt Pending", operationalQueueView.counts.ready],
+                      ["completed", "completed", "Completed", operationalQueueView.counts.completed],
+                    ] as const).map(([tab, icon, label, count]) => (
+                      <button
+                        key={tab}
+                        id={`cashier-queue-tab-${tab}`}
+                        type="button"
+                        role="tab"
+                        data-queue-tab={tab}
+                        aria-selected={visibleQueueTab === tab}
+                        aria-controls="cashier-operational-queue"
+                        tabIndex={visibleQueueTab === tab ? 0 : -1}
+                        className={`cd-tab queue-${tab}${visibleQueueTab === tab ? " active" : ""}`}
+                        onClick={() => setQueueTab(tab)}
+                        onKeyDown={(event) => handleQueueTabKeyDown(event, tab)}
+                      >
+                        <CashierIcon name={icon} />
+                        <span className="cd-tab-label">{label}</span>
+                        <span
+                          className="cd-tab-badge"
+                          aria-label={`${count} ${label.toLowerCase()} ${count === 1 ? "order" : "orders"}`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="cd-order-list">
-                  <div className="cd-operational-table-header" role="row">
-                    <span>Service Location</span>
-                    <span>Ordered Items</span>
-                    <span>Payment</span>
-                    <span>Total</span>
-                    <span>Waiting</span>
-                    <span>Status</span>
-                    <span className="sr-only">Action</span>
-                  </div>
-                  <div className="cd-operational-rows">
+                  <div
+                    id="cashier-operational-queue"
+                    className="cd-operational-rows"
+                    role="tabpanel"
+                    aria-labelledby={`cashier-queue-tab-${visibleQueueTab}`}
+                  >
                     {operationalQueue.length === 0 ? (
-                      <div className="cd-queue-empty" role="status"><CashierIcon name="completed" /><strong>No orders in this queue.</strong></div>
+                      <div className={`cd-queue-empty queue-${visibleQueueTab}`} role="status">
+                        <CashierIcon name={currentQueue.icon} />
+                        <strong>{currentQueue.empty}</strong>
+                      </div>
                     ) : operationalQueue.map((session) => {
-                      const order = queueTab === "pending" ? paymentDueOrder(session) : session.batches[0];
+                      const order = visibleQueueTab === "pending" ? paymentDueOrder(session) : session.batches[0];
                       if (!order) return null;
                       const total = session.batches.reduce((sum, batch) => sum + batch.totalPrice, 0);
                       const minutesWaiting = Math.max(0, Math.floor((now.getTime() - new Date(session.createdAt).getTime()) / 60000));
                       const allItems = session.batches.flatMap((batch) => batch.items);
-                      const itemPreview = getOrderItemPreview(allItems);
-                      const itemSummary = itemPreview.visible.map((item) => `${item.quantity}× ${item.name}`).join(", ");
-                      const method = order.invoiceSource === "public_qr" ? "QR" : order.paymentMethod || "Digital";
+                      const itemSummary = summarizeOperationalItems(allItems);
+                      const itemCountLabel = `${itemSummary.totalQuantity} ${itemSummary.totalQuantity === 1 ? "item" : "items"}`;
+                      const fullItemLabel = itemSummary.fullSummary || "No item details";
+                      const workflowQueue = visibleQueueTab === "pending"
+                        ? workflow?.payment_submitted_queue
+                        : visibleQueueTab === "preparing"
+                          ? workflow?.bill_requested_queue
+                          : visibleQueueTab === "ready"
+                            ? workflow?.receipt_pending_queue
+                            : null;
+                      const queueWorkflowEntry = workflowQueue?.find((entry) =>
+                        session.batches.some((batch) => batch.invoiceId === entry.invoice_id),
+                      );
+                      const method = order.paymentMethod?.trim() || queueWorkflowEntry?.payment_method?.trim() || "Not recorded";
                       const paymentIcon = method === "Cash" ? "cash" : method === "Card" ? "card" : "digital";
-                      const status = queueTab === "pending" ? "Pending Payment" : queueTab === "paid" ? "Paid" : queueTab === "preparing" ? "Bill Requested" : queueTab === "ready" ? "Receipt Pending" : "Completed";
+                      const billRequestedAt = asRecord(queueWorkflowEntry).bill_requested_at;
+                      const requestedAt = typeof billRequestedAt === "string" ? billRequestedAt : null;
+                      const paidAt = order.invoicePaidAt ?? order.paymentVerifiedAt ?? queueWorkflowEntry?.submitted_at ?? null;
+                      const isSelected = drawerOrder?.diningSessionId === session.diningSessionId;
+                      const isUrgent = visibleQueueTab === "pending" && minutesWaiting > 5;
+                      const openOrder = () => {
+                        setDrawerOrder(order);
+                        if (order.tableNumber) setSelectedTable(order.tableNumber);
+                      };
+                      const paymentMethod = (
+                        <span className={`cd-method-badge ${method.toLowerCase().replace(/\s+/g, "-")}`} title={method} aria-label={`Payment method: ${method}`}>
+                          {method !== "Not recorded" ? <CashierIcon name={paymentIcon} /> : null}<span>{method}</span>
+                        </span>
+                      );
+                      const action = (
+                        <button
+                          type="button"
+                          className={`cd-row-action${visibleQueueTab === "completed" ? " secondary" : ""}`}
+                          onClick={(event) => { event.stopPropagation(); openOrder(); }}
+                        >
+                          {currentQueue.action}
+                        </button>
+                      );
+                      const itemDetails = (
+                        <div
+                          className="cd-row-items"
+                          role="group"
+                          title={`${itemCountLabel}: ${fullItemLabel}`}
+                          aria-label={`${itemCountLabel}. ${fullItemLabel}`}
+                        >
+                          <strong>{itemCountLabel}</strong>
+                          <div className="cd-row-items-detail" aria-hidden="true">
+                            <span className="cd-row-items-preview">
+                              {itemSummary.previewText || "No item details"}
+                            </span>
+                            {itemSummary.hiddenDistinctCount > 0 ? (
+                              <span className="cd-row-items-more">
+                                +{itemSummary.hiddenDistinctCount} more
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                      const location = (
+                        <div className="cd-row-location">
+                          <strong>{orderTableCode(order)}</strong>
+                          <span className="cd-row-reference">{fmtInvoiceLabel(order)}</span>
+                        </div>
+                      );
+                      const time = visibleQueueTab === "pending" ? (
+                        <div className={`cd-row-wait ${minutesWaiting > 10 ? "critical" : minutesWaiting > 5 ? "warning" : "fresh"}`}>
+                          <strong>{minutesWaiting < 1 ? "Now" : minutesWaiting > 20 ? "Over 20 min" : `${minutesWaiting} min`}</strong>
+                        </div>
+                      ) : visibleQueueTab === "preparing" ? (
+                        <div className="cd-row-event-time">
+                          <strong>{requestedAt ? relativeEventTime("Requested", requestedAt) : "Time unavailable"}</strong>
+                        </div>
+                      ) : visibleQueueTab === "ready" ? (
+                        <div className="cd-row-event-time">
+                          <strong>{paidAt ? relativeEventTime("Paid", paidAt) : "Time unavailable"}</strong>
+                        </div>
+                      ) : (
+                        <div className="cd-row-event-time">
+                          <strong>{relativeEventTime("Completed", order.paymentVerifiedAt ?? session.latestAt)}</strong>
+                        </div>
+                      );
                       return (
-                        <article key={session.diningSessionId} className={`cd-operational-row${minutesWaiting >= 10 ? " urgent" : ""}`} onClick={() => { setDrawerOrder(order); if (order.tableNumber) setSelectedTable(order.tableNumber); }}>
-                          <div className="cd-row-location"><strong>{order.tableNumber || "Direct"}</strong></div>
-                          <div className="cd-row-items"><span>{itemSummary || "No items"}{itemPreview.hiddenCount > 0 ? `, +${itemPreview.hiddenCount} more` : ""}</span></div>
-                          <div className="cd-row-method"><span className={`cd-method-badge ${method.toLowerCase().replace(/\s+/g, "-")}`} title={method} aria-label={`Payment method: ${method}`}><CashierIcon name={paymentIcon} /></span></div>
+                        <article
+                          key={session.diningSessionId}
+                          className={`cd-operational-row queue-${visibleQueueTab}${isUrgent ? " urgent" : ""}${isSelected ? " selected" : ""}`}
+                          onClick={openOrder}
+                        >
+                          {location}
+                          {itemDetails}
+                          <div className="cd-row-method">{paymentMethod}</div>
                           <div className="cd-row-amount"><strong>{fmtMoney(total)}</strong></div>
-                          <div className="cd-row-wait"><strong>{minutesWaiting < 1 ? "Now" : `${minutesWaiting} min`}</strong></div>
-                          <span className={`cd-row-status ${queueTab}`}>{status}</span>
-                          <button type="button" className="cd-row-action" onClick={(event) => { event.stopPropagation(); setDrawerOrder(order); if (order.tableNumber) setSelectedTable(order.tableNumber); }}>{queueTab === "pending" ? "Verify" : "Review"}</button>
+                          {time}
+                          {action}
                         </article>
                       );
                     })}
                   </div>
-                  {queueTab === "pending" && queueOrders.length === 0 ? (
-                    <div className="cd-empty">
-                      <div className="cd-empty-title">
-                        No dining sessions with payment due
-                      </div>
-                      <div className="cd-empty-sub">
-                        Realtime orders will appear here.
-                      </div>
-                    </div>
-                  ) : null}
-                  {queueTab === "pending"
-                    ? queueOrders.map((session) => {
-                        const order = paymentDueOrder(session);
-                        const runningBill = session.batches.reduce(
-                          (sum, batch) => sum + batch.totalPrice,
-                          0,
-                        );
-                        return (
-                          <article
-                            key={session.diningSessionId}
-                            className="cd-order-card pending_payment"
-                            onClick={() => setDrawerOrder(order)}
-                          >
-                            <div className="cd-order-table-tile">
-                              <span>Location</span><strong>{order.tableNumber || "-"}</strong>
-                            </div>
-                            <div className="cd-order-card-main">
-                              <div className="cd-order-card-title">
-                                <strong>
-                                  {fmtSessionLabel(session)}
-                                </strong>
-                                <span
-                                  className={`cd-badge ${order.invoiceStatus}`}
-                                >
-                                  PAYMENT DUE
-                                </span>
-                                <span className="cd-badge cbe">
-                                  Kitchen: {operationalLabel(order.status)}
-                                </span>
-                              </div>
-                              <div className="cd-order-card-meta cd-order-card-summary">
-                                <span>{durationFrom(session.createdAt, now)} elapsed</span>
-                                <span>{session.batches.length} order batch{session.batches.length === 1 ? "" : "es"}</span>
-                                <span>{session.itemCount} item{session.itemCount === 1 ? "" : "s"}</span>
-                                <strong>{fmtMoney(runningBill)}</strong>
-                              </div>
-                            </div>
-                            <div
-                              className="cd-order-card-actions"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <button
-                                className="cd-view-btn"
-                                onClick={() => setDrawerOrder(order)}
-                              >
-                                View
-                              </button>
-                              <button
-                                className="cd-approve-btn"
-                                disabled={approvingId === session.diningSessionId}
-                                onClick={() => setDrawerOrder(order)}
-                              >
-                                {approvingId === session.diningSessionId
-                                  ? "..."
-                                  : "Collect Payment"}
-                              </button>
-                            </div>
-                          </article>
-                        );
-                      })
-                    : null}
-                  {queueTab !== "pending" &&
-                  queueSessions.length === 0 ? (
-                    <div className="cd-empty">
-                      <div className="cd-empty-title">
-                        No dining sessions in this queue
-                      </div>
-                      <div className="cd-empty-sub">
-                        Dining sessions move here by session status.
-                      </div>
-                    </div>
-                  ) : null}
-                  {queueTab !== "pending"
-                    ? queueSessions.map((session) => {
-                        const firstBatch = session.batches[0];
-                        const sessionTotal = session.batches.reduce(
-                          (sum, batch) => sum + batch.totalPrice,
-                          0,
-                        );
-                        return (
-                          <article
-                            key={session.diningSessionId}
-                            className={`cd-order-card ${queueTab === "completed" ? "completed" : "pending_payment"}`}
-                            onClick={() =>
-                              firstBatch && setDrawerOrder(firstBatch)
-                            }
-                          >
-                            <div className="cd-order-table-tile">
-                              <span>Location</span><strong>{session.tableNumber || "-"}</strong>
-                            </div>
-                            <div className="cd-order-card-main">
-                              <div className="cd-order-card-title">
-                                <strong>{fmtSessionLabel(session)}</strong>
-                                <span
-                                  className={`cd-badge ${session.diningSessionStatus === "open" ? "pending" : "paid"}`}
-                                >
-                                  {diningSessionLabel(
-                                    session.diningSessionStatus ?? "open",
-                                  )}
-                                </span>
-                              </div>
-                              <div className="cd-order-card-meta">
-                                {timeAgo(session.latestAt)} ·{" "}
-                                {session.batches.length} batch
-                                {session.batches.length === 1
-                                  ? ""
-                                  : "es"} · {session.itemCount} item
-                                {session.itemCount === 1 ? "" : "s"} ·{" "}
-                                {fmtMoney(sessionTotal)}
-                              </div>
-                              <div className="cd-session-batch-list">
-                                {session.batches.map((batch) => {
-                                  const preview = getOrderItemPreview(
-                                    batch.items,
-                                  );
-                                  return (
-                                    <div
-                                      className="cd-session-batch"
-                                      key={batch.invoiceId ?? batch.id}
-                                    >
-                                      <div>
-                                        <strong>
-                                          {fmtOrderLabel(batch)} ·{" "}
-                                          {fmtInvoiceLabel(batch)}
-                                        </strong>
-                                        <span>
-                                          Created by: {creatorLabel(batch)} ·{" "}
-                                          {preview.visible
-                                            .map(
-                                              (item) =>
-                                                `${item.name} x${item.quantity}`,
-                                            )
-                                            .join(", ") || "No items"}
-                                          {preview.hiddenCount > 0
-                                            ? `, +${preview.hiddenCount} more`
-                                            : ""}
-                                        </span>
-                                      </div>
-                                      <div className="cd-session-batch-status">
-                                        <span
-                                          className={`cd-badge ${batch.invoiceStatus}`}
-                                        >
-                                          Payment:{" "}
-                                          {paymentLabel(
-                                            batch.invoiceStatus || "pending",
-                                          )}
-                                        </span>
-                                        <span className="cd-badge cbe">
-                                          Order:{" "}
-                                          {operationalLabel(batch.status)}
-                                        </span>
-                                        <button
-                                          className="cd-view-btn"
-                                          type="button"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            setDrawerOrder(batch);
-                                          }}
-                                        >
-                                          View
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </article>
-                        );
-                      })
-                    : null}
                 </div>
               </div>
 
@@ -2838,7 +2890,7 @@ export function CashierDashboardPage({
                           key={table.id}
                           className={`cd-table-cell ${awaitingPayment ? "pay" : ready ? "ready" : occupied ? "occupied" : "available"}`}
                           onClick={() => openTable(table.table_number)}
-                          aria-label={`Table ${table.table_number}: ${awaitingPayment ? "payment due" : ready ? "ready" : occupied ? "occupied" : "available"}`}
+                          aria-label={`${compactTableCode(table.table_number)}: ${awaitingPayment ? "payment due" : ready ? "ready" : occupied ? "occupied" : "available"}`}
                         >
                           <strong>{table.table_number}</strong>
                           <span>{awaitingPayment ? "Payment Due" : ready ? "Ready" : occupied ? "Occupied" : "Available"}</span>
@@ -2892,7 +2944,7 @@ export function CashierDashboardPage({
                               <div className="cd-final-bill-session-top">
                                 <div>
                                   <strong>
-                                    Table {session.tableNumber ?? "-"}
+                                    {compactTableCode(session.tableNumber) ?? "—"}
                                   </strong>
                                   <span>{customerTypeLabel(session)}</span>
                                 </div>
@@ -3110,7 +3162,7 @@ export function CashierDashboardPage({
                               key={table.id}
                               value={String(table.table_number)}
                             >
-                              {table.label || `Table ${table.table_number}`}
+                              {compactTableCode(table.table_number)}
                               {occupiedTableNumbers.has(
                                 String(table.table_number),
                               )
@@ -3150,7 +3202,7 @@ export function CashierDashboardPage({
                     {selectedTableActiveOrder && (
                       <div className="cd-pos-active-note">
                         Active order {fmtOrderLabel(selectedTableActiveOrder)}{" "}
-                        found for Table {selectedTable}. Submitting will ask
+                        found for {compactTableCode(selectedTable)}. Submitting will ask
                         whether to add to it or create a new order.
                       </div>
                     )}
@@ -3336,33 +3388,33 @@ export function CashierDashboardPage({
         )}
       </main>
 
-      <aside className="cd-right-panel" aria-label="Service location and checkout workspace">
-        <section className="cd-location-switch" aria-labelledby="service-location-switch-title">
+      <aside className="cd-right-panel" aria-label="Tables and checkout workspace">
+        <section className="cd-location-switch" aria-labelledby="table-switch-title">
           <div className="cd-location-switch-header">
             <div>
               <span>Quick Switch</span>
-              <h2 id="service-location-switch-title">Service Locations</h2>
+              <h2 id="table-switch-title">Tables</h2>
             </div>
             <span>{tables.length} active</span>
           </div>
-          <div className="cd-location-featured" aria-label="Primary service locations">
+          <div className="cd-location-featured" aria-label="Primary tables">
             {tables.slice(0, 4).map((table) => {
               const key = String(table.table_number);
               const status = awaitingPaymentTableNumbers.has(key) ? "payment-due" : readyTableNumbers.has(key) ? "ready" : occupiedTableNumbers.has(key) ? "occupied" : "available";
               return (
                 <button type="button" key={table.id} className={`cd-location-tile featured ${status}${selectedTable === key ? " selected" : ""}`} aria-pressed={selectedTable === key} onClick={() => openTable(table.table_number)}>
-                  <i aria-hidden="true" /><strong>{table.label || `Service Location ${key}`}</strong><small>ID {key}</small>
+                  <i aria-hidden="true" /><strong>{compactTableCode(key)}</strong>
                 </button>
               );
             })}
           </div>
-          <div className="cd-location-grid" aria-label="More service locations">
+          <div className="cd-location-grid" aria-label="More tables">
             {tables.slice(4).map((table) => {
               const key = String(table.table_number);
               const status = awaitingPaymentTableNumbers.has(key) ? "payment-due" : readyTableNumbers.has(key) ? "ready" : occupiedTableNumbers.has(key) ? "occupied" : "available";
               return (
                 <button type="button" key={table.id} className={`cd-location-tile ${status}${selectedTable === key ? " selected" : ""}`} aria-pressed={selectedTable === key} onClick={() => openTable(table.table_number)}>
-                  <i aria-hidden="true" /><strong>{table.label || `Location ${key}`}</strong><small>ID {key}</small>
+                  <i aria-hidden="true" /><strong>{compactTableCode(key)}</strong>
                 </button>
               );
             })}
@@ -3390,7 +3442,15 @@ export function CashierDashboardPage({
           }
           onPrintBill={() => {
             const session = activeDiningSessions.find((candidate) => candidate.diningSessionId === (drawerOrder.diningSessionId ?? drawerOrder.id));
-            if (session) setCheckoutSession(session);
+            if (session) {
+              setCheckoutSession(session);
+              pushToast({
+                type: "information",
+                title: "Bill ready for review",
+                description: compactTableCode(session.tableNumber) ?? "Current order",
+                dedupeKey: `bill-review:${session.diningSessionId}`,
+              });
+            }
           }}
           onPrintReceipt={drawerOrder.invoiceStatus === "paid" ? () => {
             const session = activeDiningSessions.find((candidate) => candidate.diningSessionId === (drawerOrder.diningSessionId ?? drawerOrder.id));
@@ -3427,9 +3487,9 @@ export function CashierDashboardPage({
         <section className="cd-drawer cd-workspace-empty" aria-label="Current checkout workspace">
           <span className="cd-workspace-label">Checkout Workspace</span>
           <div>
-            <span className="cd-empty-location">{selectedServiceLocation?.label || (selectedTable ? `Service Location ${selectedTable}` : "No service location selected")}</span>
+            <span className="cd-empty-location">{compactTableCode(selectedServiceLocation?.table_number ?? selectedTable) ?? "No table selected"}</span>
             <strong>No checkout selected</strong>
-            <p>Select a live queue item or search by service location, customer, invoice, phone, or order number.</p>
+            <p>Select a live queue item or search by table, customer, invoice, phone, or order number.</p>
           </div>
         </section>
       )}
@@ -3441,14 +3501,14 @@ export function CashierDashboardPage({
             className="cd-checkout-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label={`Checkout Table ${checkoutSession.tableNumber ?? ""}`}
+            aria-label={`Checkout ${compactTableCode(checkoutSession.tableNumber) ?? "order"}`}
           >
             <header className="cd-checkout-header">
               <button type="button" onClick={() => setCheckoutSession(null)}>
                 ← Back
               </button>
               <div>
-                <strong>Table {checkoutSession.tableNumber ?? "-"}</strong>
+                <strong>{compactTableCode(checkoutSession.tableNumber) ?? "—"}</strong>
                 <span>✓ Ready for Checkout</span>
               </div>
               <button
@@ -3619,7 +3679,7 @@ export function CashierDashboardPage({
             <div className="cd-modal-header">
               <div>
                 <h2>
-                  Active order found for Table {continuationChoice.tableNumber}
+                  Active order found for {compactTableCode(continuationChoice.tableNumber)}
                 </h2>
                 <p>
                   {fmtOrderLabel(continuationChoice.activeOrder)} is{" "}
