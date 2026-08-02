@@ -138,15 +138,10 @@ export function CashierTopBar({
           <CashierIcon name="clock" />
           <span>Shift Duration<strong>{shiftDuration}</strong></span>
         </div>
-        <div className="cd-terminal-info" aria-label="Terminal status">
-          <CashierIcon name="terminal" />
-          <span>Terminal</span><strong>Cashier POS</strong><i>Online</i>
-        </div>
         <button type="button" className="cd-icon-btn" aria-label={hasNotification ? "View new notifications" : "Notifications"} onClick={onNotifications}>
           <CashierIcon name="bell" />
           {hasNotification ? <span className="cd-notif-dot" /> : null}
         </button>
-        <div className="cd-cashier-avatar" aria-hidden="true">{cashierName.charAt(0).toUpperCase()}</div>
         <div className="cd-header-cashier">
           <strong>{cashierName}</strong>
           <span>Cashier · {shiftActive ? "Active shift" : "Shift closed"}</span>

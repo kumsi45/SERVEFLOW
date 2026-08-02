@@ -5,11 +5,16 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const styles = read("src/modules/cashier/styles/cashierDashboard.css");
 const page = read("src/modules/cashier/pages/CashierDashboardPage.tsx");
-const phaseStyles = styles.slice(styles.indexOf("Phase 13.4C"));
-const finalStyles = styles.slice(styles.indexOf("Phase 13.4D"));
+const nextPhaseStart = styles.indexOf("Phase 13.5");
+const phaseStyles = styles.slice(styles.indexOf("Phase 13.4C"), nextPhaseStart);
+const finalStyles = styles.slice(styles.indexOf("Phase 13.4D"), nextPhaseStart);
 const tabsMarkup = page.slice(
   page.indexOf('className="cd-tabs"'),
   page.indexOf('className="cd-order-list"'),
+);
+const operationalRowsMarkup = page.slice(
+  page.indexOf('id="cashier-operational-queue"'),
+  page.indexOf('<aside className="cd-side-stack"'),
 );
 
 describe("Phase 13.4C simplified cashier operational workspace", () => {
@@ -53,16 +58,40 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
   });
 
   it("uses compact four-column tabs without horizontal scrolling", () => {
-    expect(finalStyles).toContain("grid-template-columns: minmax(0, .95fr) minmax(0, 1.06fr) minmax(0, 1.14fr) minmax(0, .85fr)");
-    expect(finalStyles).toContain("height: 46px");
-    expect(finalStyles).toContain("gap: 8px");
+    expect(finalStyles).toContain("grid-template-columns: minmax(0, .95fr) minmax(0, 1.08fr) minmax(0, 1.2fr) minmax(0, .88fr)");
+    expect(finalStyles).toContain("height: 44px");
+    expect(finalStyles).toContain("gap: 6px");
     expect(finalStyles).toContain("overflow: hidden");
-    expect(finalStyles).toContain("font-size: 14px");
+    expect(finalStyles).toContain("font: 600 12px/16px Inter, ui-sans-serif, system-ui, sans-serif");
     expect(finalStyles).toContain("container-name: cashier-operational-workspace");
     expect(finalStyles).toContain("@container cashier-operational-workspace (max-width: 900px)");
     for (const color of ["#d97706", "#2563eb", "#9333ea", "#64748b"]) {
       expect(phaseStyles).toContain(color);
     }
+  });
+
+  it("keeps every queue color visible before the cashier selects it", () => {
+    for (const color of [
+      "#b45309", "#fff7ed", "#fed7aa",
+      "#1d4ed8", "#eff6ff", "#bfdbfe",
+      "#7e22ce", "#faf5ff", "#e9d5ff",
+      "#475569", "#f8fafc", "#e2e8f0",
+    ]) {
+      expect(finalStyles.toLowerCase()).toContain(color);
+    }
+    expect(finalStyles).toContain("background: var(--cd-queue-soft)");
+    expect(finalStyles).toContain("color: var(--cd-queue-accent)");
+    expect(finalStyles).toContain("background: var(--cd-queue-badge)");
+    expect(finalStyles).toContain("border: 1px solid var(--cd-queue-border)");
+  });
+
+  it("gives the four queue controls generous segmented-control spacing", () => {
+    expect(finalStyles).toContain("padding: 10px 12px");
+    expect(finalStyles).toContain("padding: 4px");
+    expect(finalStyles).toContain("border-radius: 12px");
+    expect(finalStyles).toContain("padding: 0 6px");
+    expect(finalStyles).not.toContain(".cd-tabs { grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(finalStyles).toContain("@container cashier-operational-workspace (max-width: 640px)");
   });
 
   it("keeps search in the top header and every queue in deterministic newest-first order", () => {
@@ -95,7 +124,7 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).not.toContain("cd-row-status");
     expect(page).toContain("orderTableCode(order)");
     expect(page).toContain("return numericTable ? `T${Number(numericTable[1])}` : table;");
-    expect(page).not.toContain("Service Location");
+    expect(operationalRowsMarkup).not.toContain("Service Location");
     expect(finalStyles).toContain("grid-template-columns: minmax(82px, .78fr) minmax(150px, 1.7fr)");
   });
 
@@ -105,7 +134,7 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain('className="cd-row-items-more"');
     expect(page).toContain("itemSummary.hiddenDistinctCount");
     expect(page).toContain('aria-label={`${itemCountLabel}. ${fullItemLabel}`}');
-    expect(finalStyles).toContain("text-overflow: ellipsis");
+    expect(finalStyles).toContain("text-overflow: clip");
     expect(finalStyles).toContain("flex: 0 0 auto");
   });
 

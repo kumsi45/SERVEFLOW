@@ -19,10 +19,13 @@ describe("Phase 13.2 cashier hospitality POS header", () => {
     expect(phaseStyles).not.toContain(".cd-drawer");
   });
 
-  it("keeps all six header zones and their existing handlers", () => {
-    for (const value of ["ServeFlow", "Search", "Shift Duration", "Terminal", "Notifications", "Sign Out"]) {
+  it("keeps the brand, centered search, actions, and existing handlers", () => {
+    for (const value of ["ServeFlow", "Search", "Shift Duration", "Notifications", "Sign Out"]) {
       expect(ui).toContain(value);
     }
+    expect(ui).not.toContain("Terminal");
+    expect(ui).not.toContain('className="cd-terminal-info"');
+    expect(ui).not.toContain('className="cd-cashier-avatar"');
     expect(ui).toContain("onSearchChange(event.target.value)");
     expect(ui).toContain("onClick={onNotifications}");
     expect(ui).toContain("onClick={onShiftAction}");
@@ -31,24 +34,28 @@ describe("Phase 13.2 cashier hospitality POS header", () => {
 
   it("uses a calm single-row 76px POS header", () => {
     expect(phaseStyles).toContain("--cd-header-height: 76px");
-    expect(phaseStyles).toContain("flex-wrap: nowrap");
+    expect(phaseStyles).toContain("position: fixed");
+    expect(phaseStyles).toContain("grid-template-columns: minmax(0, 1fr) minmax(360px, 760px) minmax(0, 1fr)");
+    expect(phaseStyles).toContain("justify-content: center");
     expect(phaseStyles).toContain("padding: 12px 24px");
     expect(phaseStyles).toContain("border-bottom: 1px solid #e4e9e6");
   });
 
   it("makes search the flexible visual center", () => {
     expect(ui).toContain("Search table, customer, invoice or phone...");
-    expect(phaseStyles).toContain("flex: 1 1 680px");
+    expect(phaseStyles).toContain("width: 100%");
+    expect(phaseStyles).toContain("flex: 0 1 auto");
     expect(phaseStyles).toContain("min-height: 52px");
     expect(phaseStyles).toContain("border-radius: 16px");
     expect(phaseStyles).toContain('content: "Ctrl + K"');
     expect(phaseStyles).toContain("font-size: 16px");
   });
 
-  it("uses compact shift, terminal, notification, and user controls", () => {
-    for (const icon of ['name="clock"', 'name="terminal"', 'name="bell"', 'name="door"', 'name="logout"']) {
+  it("uses compact shift, notification, and user controls", () => {
+    for (const icon of ['name="clock"', 'name="bell"', 'name="door"', 'name="logout"']) {
       expect(ui).toContain(icon);
     }
+    expect(ui).not.toContain('name="terminal"');
     expect(phaseStyles).toContain("min-width: 118px");
     expect(phaseStyles).toContain("width: 48px");
     expect(phaseStyles).toContain("border: 1px solid #e9aaa4");

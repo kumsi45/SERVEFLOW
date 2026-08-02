@@ -9,9 +9,11 @@ const styles = read("src/modules/cashier/styles/cashierDashboard.css");
 
 describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
   it("keeps the compact cashier header complete and searchable", () => {
-    for (const label of ["ServeFlow", "Shift Duration", "Terminal", "Notifications", "Close Shift", "Sign Out", "Ctrl K"]) {
+    for (const label of ["ServeFlow", "Shift Duration", "Notifications", "Close Shift", "Sign Out", "Ctrl K"]) {
       expect(ui).toContain(label);
     }
+    expect(ui).not.toContain("Terminal");
+    expect(ui).not.toContain('className="cd-cashier-avatar"');
     expect(ui).toContain("Search table, customer, invoice or phone...");
     expect(page).toContain("handleWorkspaceSearch");
     expect(page).toContain('event.key.toLowerCase() === "k"');
@@ -58,10 +60,9 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
   });
 
   it("keeps service-location switching above an independent checkout", () => {
-    expect(page).toContain('id="table-switch-title">Tables</h2>');
-    expect(page).toContain("tables.slice(0, 4)");
-    expect(page).toContain("tables.slice(4)");
-    expect(page).toContain('aria-pressed={selectedTable === key}');
+    expect(page).toContain("ServiceLocationQuickSwitch");
+    expect(page).toContain("locations={serviceLocationCards}");
+    expect(page).toContain("onSelect={(location) => openTable(location.tableNumber)}");
     expect(page).toContain('aria-label="Current checkout workspace"');
     expect(styles).toContain("grid-template-rows: minmax(190px, 28%) minmax(0, 72%)");
   });

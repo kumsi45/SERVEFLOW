@@ -68,10 +68,14 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       const minimumTabGap = Math.min(
         ...tabs.slice(1).map((tab, index) => tab.left - tabs[index].right),
       );
+      const tabStyles = [...document.querySelectorAll<HTMLElement>(".cd-tab")]
+        .map((tab) => getComputedStyle(tab));
       return {
         tabsOverflow: select(".cd-tabs").scrollWidth > select(".cd-tabs").clientWidth,
         tabLabelClipped: [...document.querySelectorAll<HTMLElement>(".cd-tab-label")]
           .some((label) => label.scrollWidth > label.clientWidth),
+        tabContentOverflow: [...document.querySelectorAll<HTMLElement>(".cd-tab")]
+          .map((tab) => tab.scrollWidth - tab.clientWidth),
         listOverflow: select(".cd-order-list").scrollWidth > select(".cd-order-list").clientWidth,
         rowOverflow: select(".cd-operational-row").scrollWidth > select(".cd-operational-row").clientWidth,
         amountClipped: amount.scrollWidth > amount.clientWidth,
@@ -80,11 +84,18 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
         rowHeight: row.height,
         moreVisible: more.width > 0 && more.right <= action.left,
         minimumTabGap,
+        distinctTabBackgrounds: new Set(tabStyles.map((style) => style.backgroundColor)).size,
+        distinctTabColors: new Set(tabStyles.map((style) => style.color)).size,
+        inactiveTabsColored: tabStyles.slice(1).every(
+          (style) => style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.color !== "rgb(107, 114, 128)",
+        ),
+        tabHeight: tabs[0].height,
       };
     });
-    expect(geometry).toEqual({
+    expect(geometry).toMatchObject({
       tabsOverflow: false,
       tabLabelClipped: false,
+      tabContentOverflow: [0, 0, 0, 0],
       listOverflow: false,
       rowOverflow: false,
       amountClipped: false,
@@ -92,8 +103,12 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       actionClipped: false,
       rowHeight: 76,
       moreVisible: true,
-      minimumTabGap: 8,
+      distinctTabBackgrounds: 4,
+      distinctTabColors: 4,
+      inactiveTabsColored: true,
+      tabHeight: 44,
     });
+    expect(geometry.minimumTabGap).toBeGreaterThanOrEqual(5);
   }
 
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -106,11 +121,15 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
     const row = select(".cd-operational-row");
     const action = select(".cd-row-action");
     const amount = select(".cd-row-amount strong");
+    const tabs = select(".cd-tabs");
     return {
       rowOverflow: row.scrollWidth > row.clientWidth,
       actionClipped: action.scrollWidth > action.clientWidth,
       amountClipped: amount.scrollWidth > amount.clientWidth,
       actionInsideRow: action.getBoundingClientRect().right <= row.getBoundingClientRect().right,
+      tabContentClipped: [...document.querySelectorAll<HTMLElement>(".cd-tab")]
+        .some((tab) => tab.scrollWidth > tab.clientWidth),
+      tabColumns: getComputedStyle(tabs).gridTemplateColumns.split(" ").length,
     };
   });
   expect(constrained).toEqual({
@@ -118,6 +137,8 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
     actionClipped: false,
     amountClipped: false,
     actionInsideRow: true,
+    tabContentClipped: false,
+    tabColumns: 4,
   });
 });
 
