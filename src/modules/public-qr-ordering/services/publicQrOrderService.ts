@@ -292,6 +292,21 @@ export async function callWaiterFromSmartQr(input: {
   return data as { requested: boolean; request_id: string; requested_at: string };
 }
 
+export async function requestCustomerFinalBill(input: {
+  restaurantSlug: string; tableNumber: string; qrToken: string;
+  browserSessionToken: string; orderId: string;
+}) {
+  const { data, error } = await supabase.rpc("request_customer_final_bill", {
+    target_restaurant_slug: input.restaurantSlug,
+    table_number: input.tableNumber,
+    qr_token: input.qrToken,
+    browser_session_token: input.browserSessionToken,
+    target_order_id: input.orderId,
+  });
+  if (error) throw new Error(error.message);
+  return data as { requested: true; order_id: string; restaurant_id: string; table_id: string; requested_at: string };
+}
+
 export async function submitPublicQrOrder({
   restaurantSlug,
   tableNumber,

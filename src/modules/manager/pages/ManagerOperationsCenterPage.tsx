@@ -105,11 +105,16 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   async function releaseTable(orderId: string, tableLabel: string) {
     if (!window.confirm(`Release ${tableLabel}? Confirm payment is complete and the customer has left.`)) return;
+    const reason = window.prompt("Emergency release reason (required):")?.trim();
+    if (!reason) {
+      setError("An emergency release reason is required.");
+      return;
+    }
     try {
       setReleasingOrderId(orderId);
       setNotice(null);
       setError(null);
-      await releaseManagerDiningSession(orderId);
+      await releaseManagerDiningSession(orderId, reason);
       setNotice(`${tableLabel} released successfully.`);
       await refresh();
     } catch (actionError) {

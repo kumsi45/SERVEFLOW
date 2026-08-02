@@ -722,10 +722,11 @@ export async function fetchManagerDashboardSnapshot(
   };
 }
 
-export async function releaseManagerDiningSession(orderId: string) {
-  const { error } = await supabase.rpc("close_dining_session", {
+export async function releaseManagerDiningSession(orderId: string, reason: string) {
+  const { error } = await supabase.rpc("manager_emergency_release_table", {
     target_order_id: orderId,
-    close_reason: "table_released_by_manager",
+    confirmed: true,
+    override_reason: reason,
   });
   if (error) throw new Error(error.message);
 }
