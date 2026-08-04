@@ -415,12 +415,6 @@ const QUEUE_PRESENTATION = {
   completed: { title: "Completed Queue", icon: "completed", action: "View", empty: "No completed transactions yet." },
 } as const;
 type ReconcileStep = 1 | 2 | 3 | 4 | 5;
-type BillHistory = {
-  dining_session_id: string;
-  print_count: number;
-  printed_at: string;
-};
-
 const PAYMENT_METHODS = [
   "Cash",
   "Telebirr",
@@ -439,7 +433,6 @@ const ACTIVE_ORDER_STATUSES: CashierOrder["status"][] = [
   "served",
 ];
 const PAYMENT_SCREENSHOT_BUCKET = "payment-screenshots";
-const PAYMENT_SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
 
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? "")
@@ -895,19 +888,6 @@ function normalizeSubmittedOrder(row: SubmittedCashierOrder): CashierOrder {
   };
 }
 
-function safeStorageFileName(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  return `${Date.now()}-${crypto.randomUUID()}.${extension.replace(/[^a-z0-9]/g, "") || "jpg"}`;
-}
-
-function paymentScreenshotPath(
-  restaurantId: string,
-  invoiceId: string,
-  file: File,
-) {
-  return `${restaurantId}/payments/${invoiceId}/${safeStorageFileName(file)}`;
-}
-
 function isContinuableOrder(order: CashierOrder) {
   return order.diningSessionStatus === "open";
 }
@@ -1106,22 +1086,7 @@ const CHECKOUT_STATUS_LABEL: Record<CheckoutWorkspaceStatus, string> = {
   completed: "Completed",
 };
 
-function CheckoutWorkspaceSkeleton() {
-  return (
-    <section
-      className="cd-drawer cd-checkout-loading"
-      aria-label="Checkout workspace loading"
-      aria-busy="true"
-    >
-      <span className="sr-only">Loading checkout workspace</span>
-      <div className="cd-checkout-skeleton-header"><i /><i /></div>
-      <div className="cd-checkout-skeleton-body"><i /><i /><i /><i /></div>
-      <div className="cd-checkout-skeleton-action" />
-    </section>
-  );
-}
-
-function OrderDrawer({
+function CheckoutSlideOverDrawer({
   order,
   checkoutStatus,
   onClose,
@@ -1130,19 +1095,14 @@ function OrderDrawer({
   onRetry,
   onPrintBill,
   onPrintReceipt,
-  onCloseInvoice,
   approving,
   paymentReference,
   paymentTransactionId,
-  paymentScreenshotUrl,
   paymentScreenshotPreviewUrl,
   duplicateReferenceNotice,
   ownerDuplicateOverride,
   collectionPaymentMethod,
   paymentNote,
-  onPaymentReferenceChange,
-  onPaymentTransactionIdChange,
-  onPaymentScreenshotFileChange,
   onOwnerDuplicateOverrideChange,
   onCollectionPaymentMethodChange,
   onPaymentNoteChange,
@@ -1156,44 +1116,79 @@ function OrderDrawer({
   onRetry?: () => void;
   onPrintBill?: () => void;
   onPrintReceipt?: () => void;
-  onCloseInvoice?: () => void;
   approving: boolean;
   paymentReference: string;
   paymentTransactionId: string;
-  paymentScreenshotUrl: string;
   paymentScreenshotPreviewUrl: string | null;
   duplicateReferenceNotice: string | null;
   ownerDuplicateOverride: boolean;
   collectionPaymentMethod: string;
   paymentNote: string;
-  onPaymentReferenceChange: (value: string) => void;
-  onPaymentTransactionIdChange: (value: string) => void;
-  onPaymentScreenshotFileChange: (file: File | null) => void;
   onOwnerDuplicateOverrideChange: (value: boolean) => void;
   onCollectionPaymentMethodChange: (value: string) => void;
   onPaymentNoteChange: (value: string) => void;
   formatMoney: (value: number) => string;
 }) {
+  const drawerRef = useRef<HTMLElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const screenshotTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [screenshotPreviewOpen, setScreenshotPreviewOpen] = useState(false);
+  const [screenshotFitMode, setScreenshotFitMode] = useState<"fit" | "zoom">(
+    "fit",
+  );
   const isPending =
     order.invoiceStatus === "pending" || order.invoiceStatus === "held";
   const isRejected = order.invoiceStatus === "cancelled";
   const isVerified = order.invoiceStatus === "paid";
+  const isPaymentDue = checkoutStatus === "payment-due";
+  const showPaymentEvidence =
+    checkoutStatus === "payment-due" ||
+    checkoutStatus === "receipt-pending" ||
+    checkoutStatus === "completed";
+  const showPaymentSelector = isPaymentDue;
   const isDigital = collectionPaymentMethod !== "Cash";
   const isCustomerQr =
     order.invoiceSource === "public_qr" || order.orderSource === "public_qr";
-  const orderedByLabel = isCustomerQr
-    ? "Ordered by customer"
+  const orderSourceLabel = isCustomerQr
+    ? "Customer"
     : order.waiterName || order.invoiceSource === "waiter"
-      ? "Ordered by waiter"
-      : "Ordered by cashier";
-  const orderedByName = isCustomerQr
-    ? order.customerName || "QR order"
+      ? "Waiter"
+      : "Cashier";
+  const orderSourceName = isCustomerQr
+    ? order.customerName || "QR Customer"
     : order.waiterName ||
       order.invoiceCreatorName ||
       order.customerName ||
-      "Guest";
+      "Cashier";
+  const orderSourceIcon = isCustomerQr
+    ? "Phone"
+    : orderSourceLabel === "Waiter"
+      ? "Person"
+      : "Screen";
   const statusLabel = CHECKOUT_STATUS_LABEL[checkoutStatus];
-  const recordedPaymentMethod = order.paymentMethod?.trim() || "Not recorded";
+  const availablePaymentMethods = [
+    "Cash",
+    "Telebirr",
+    "CBE Birr",
+    "Chapa",
+    "Card",
+    "Bank Transfer",
+  ];
+  const displayReference =
+    paymentReference.trim() || order.referenceNumber?.trim() || "";
+  const displayTransaction =
+    paymentTransactionId.trim() || order.transactionId?.trim() || "";
+  const screenshotFileName = order.screenshotUrl
+    ? order.screenshotUrl.split("/").pop() || "Payment screenshot"
+    : "Payment screenshot";
+  const screenshotUploadedAt =
+    order.invoicePaidAt ||
+    order.paymentVerifiedAt ||
+    order.invoiceVerifiedAt ||
+    order.createdAt;
+  const totalParts = formatMoney(order.totalPrice).match(/^([^\d-]*)(.*)$/u);
+  const totalCurrency = totalParts?.[1]?.trim() || "ETB";
+  const totalAmount = totalParts?.[2]?.trim() || formatMoney(order.totalPrice);
   const primaryAction =
     checkoutStatus === "payment-due"
       ? {
@@ -1204,194 +1199,309 @@ function OrderDrawer({
       : checkoutStatus === "bill-requested"
         ? { label: "Print Bill", onClick: onPrintBill, icon: "bill" as const }
         : checkoutStatus === "completed"
-          ? { label: "View Receipt", onClick: onPrintBill, icon: "print" as const }
-          : { label: "Print Receipt", onClick: onPrintReceipt, icon: "print" as const };
-  const secondaryActions: Array<{
-    label: string;
-    onClick: (() => void) | undefined;
-    danger?: boolean;
-  }> = checkoutStatus === "payment-due"
-    ? [
-        { label: "Reject Payment", onClick: onReject, danger: true },
-        { label: "Request Retry", onClick: onRetry },
-      ]
-    : checkoutStatus === "bill-requested"
-      ? [
-          { label: "Verify Payment", onClick: onApprove },
-          { label: "Reject Payment", onClick: onReject, danger: true },
-        ]
-      : checkoutStatus === "completed"
-        ? [{ label: "Reprint Receipt", onClick: onPrintReceipt }]
-        : [{ label: "Close Invoice", onClick: onCloseInvoice }];
-  const supportedSecondaryActions = secondaryActions
-    .filter((action) => Boolean(action.onClick))
-    .slice(0, 2);
+          ? {
+              label: "View Receipt",
+              onClick: onPrintBill,
+              icon: "print" as const,
+            }
+          : {
+              label: "Print Receipt",
+              onClick: onPrintReceipt,
+              icon: "print" as const,
+            };
+  const secondaryActionLabel = checkoutStatus === "payment-due" ? "Cancel" : "Close";
+
+  function closeScreenshotPreview() {
+    setScreenshotPreviewOpen(false);
+    window.setTimeout(() => screenshotTriggerRef.current?.focus(), 0);
+  }
+
+  useEffect(() => {
+    drawerRef.current
+      ?.querySelector<HTMLElement>(
+        "button:not(:disabled), [href], textarea:not(:disabled), [tabindex]:not([tabindex='-1'])",
+      )
+      ?.focus();
+  }, [order.id]);
+
+  function trapFocus(
+    event: ReactKeyboardEvent<HTMLElement>,
+    container: HTMLElement | null,
+    close: () => void,
+  ) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key !== "Tab" || !container) return;
+    const focusable = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "button:not(:disabled), [href], textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex='-1'])",
+      ),
+    ).filter((element) => element.offsetParent !== null);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   return (
     <>
       <section
-        className="cd-drawer"
-        role="complementary"
-        aria-label="Current checkout workspace"
+        ref={drawerRef}
+        className={`cd-drawer cd-checkout-slide-over status-${checkoutStatus}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cashier-checkout-drawer-title"
+        onKeyDown={(event) =>
+          trapFocus(event, drawerRef.current, () => {
+            if (screenshotPreviewOpen) {
+              closeScreenshotPreview();
+              return;
+            }
+            onClose();
+          })
+        }
       >
         <header className="cd-drawer-header">
+          <div className="cd-checkout-topline">
+            <span>Checkout</span>
+            <button
+              type="button"
+              className="cd-drawer-close"
+              onClick={onClose}
+              aria-label="Close checkout"
+            >
+              &times;
+            </button>
+          </div>
           <div className="cd-checkout-heading">
-            <span className="cd-workspace-label">Checkout Workspace</span>
-            <h2 className="cd-drawer-title">{checkoutServiceLocationLabel(order)}</h2>
+            <h2 className="cd-drawer-title" id="cashier-checkout-drawer-title">
+              {checkoutServiceLocationLabel(order)}
+            </h2>
             <div
               className="cd-checkout-assignee"
-              aria-label={
-                order.waiterName
-                  ? `Assigned Waiter: ${orderedByName}`
-                  : `${orderedByLabel}: ${orderedByName}`
-              }
+              aria-label={`${orderSourceLabel}: ${orderSourceName}`}
             >
-              <span>{orderedByLabel}</span>
+              <span aria-hidden="true">{orderSourceIcon}</span>
+              <span>{orderSourceLabel}</span>
               <i aria-hidden="true">•</i>
-              <strong>{orderedByName}</strong>
+              <strong>{orderSourceName}</strong>
             </div>
           </div>
           <span
             className={`cd-checkout-status-badge ${checkoutStatus}`}
-            aria-label={`Payment status: ${statusLabel}`}
+            aria-label={`Current queue status: ${statusLabel}`}
           >
             <i aria-hidden="true" />
             {statusLabel}
           </span>
-          <button
-            type="button"
-            className="cd-drawer-close"
-            onClick={onClose}
-            aria-label="Close checkout workspace"
-          >
-            &times;
-          </button>
         </header>
         <div className="cd-drawer-body">
-          <section
-            className="cd-checkout-payment-section"
-            aria-labelledby="checkout-payment-method-title"
-          >
-            <div>
-              <span
-                className="cd-drawer-section-title"
-                id="checkout-payment-method-title"
-              >
-                Payment Method
-              </span>
-              <small>
-                {isCustomerQr
-                  ? "Customer-selected method"
-                  : "Select the method used for collection"}
-              </small>
-            </div>
-            {isPending && !isCustomerQr ? (
-              <select
-                aria-label="Dining session payment method"
-                value={collectionPaymentMethod}
-                onChange={(event) =>
-                  onCollectionPaymentMethodChange(event.target.value)
-                }
-              >
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>{method}</option>
-                ))}
-              </select>
-            ) : (
-              <strong>{recordedPaymentMethod}</strong>
-            )}
+          <section className="cd-checkout-meta" aria-label="Transaction information">
+            <span>{fmtInvoiceLabel(order)}</span>
+            <span>Created {fmtTime(order.createdAt)}</span>
+            <span>
+              {order.invoicePaidAt
+                ? `Paid ${fmtTime(order.invoicePaidAt)}`
+                : order.invoiceVerifiedAt
+                  ? `Verified ${fmtTime(order.invoiceVerifiedAt)}`
+                  : statusLabel}
+            </span>
           </section>
-          {isPending || isRejected ? (
-            <div className="cd-payment-verification-box">
-              <div className="cd-drawer-section-title">Payment Details</div>
-              <div className="cd-payment-fields">
-                {isDigital ? (
-                  <>
-                    <label>
-                      <span>Reference Number</span>
-                      <input
-                        value={paymentReference}
-                        onChange={(event) =>
-                          onPaymentReferenceChange(event.target.value)
-                        }
-                        maxLength={120}
-                      />
-                    </label>
-                    <label>
-                      <span>Transaction ID</span>
-                      <input
-                        value={paymentTransactionId}
-                        onChange={(event) =>
-                          onPaymentTransactionIdChange(event.target.value)
-                        }
-                        maxLength={120}
-                      />
-                    </label>
-                    <label className="wide">
-                      <span>Payment Screenshot</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) =>
-                          onPaymentScreenshotFileChange(
-                            event.target.files?.[0] ?? null,
-                          )
-                        }
-                      />
-                    </label>
-                    {paymentScreenshotPreviewUrl ? (
-                      <a
-                        className="cd-payment-preview"
-                        href={paymentScreenshotPreviewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img
-                          src={paymentScreenshotPreviewUrl}
-                          alt="Payment screenshot preview"
-                        />
-                      </a>
-                    ) : paymentScreenshotUrl ? (
-                      <div className="cd-empty-sub wide">
-                        Stored payment evidence is ready for review.
-                      </div>
-                    ) : null}
-                    {duplicateReferenceNotice ? (
-                      <div className="cd-payment-duplicate wide">
-                        <span>{duplicateReferenceNotice}</span>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={ownerDuplicateOverride}
-                            onChange={(event) =>
-                              onOwnerDuplicateOverrideChange(
-                                event.target.checked,
-                              )
-                            }
-                          />
-                          Owner override duplicate reference
-                        </label>
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="cd-cash-confirmation">
-                    Cash requires cashier confirmation before kitchen release.
-                  </div>
-                )}
-                <label className="wide">
-                  <span>Cashier Note</span>
-                  <textarea
-                    value={paymentNote}
-                    onChange={(event) =>
-                      onPaymentNoteChange(event.target.value)
-                    }
-                    maxLength={500}
-                    placeholder="Reason for reject or retry, optional for approval"
-                  />
-                </label>
+          <div className="cd-checkout-scroll-region">
+            <section
+              className="cd-checkout-items-panel"
+              aria-labelledby="checkout-items-title"
+            >
+              <div
+                className="cd-drawer-section-title"
+                id="checkout-items-title"
+              >
+                Order Items <span>{order.items.length}</span>
               </div>
+              <div className="cd-drawer-items">
+                {order.items.length === 0 ? (
+                  <div className="cd-empty-sub">No item data available.</div>
+                ) : (
+                  order.items.map((item) => (
+                    <div key={item.id} className="cd-drawer-item">
+                      <div className="cd-drawer-item-name">
+                        {item.name} <span>x{item.quantity}</span>
+                        {item.notes ? (
+                          <div className="cd-drawer-item-modifiers">
+                            {item.notes}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="cd-drawer-item-price">
+                        {formatMoney(item.price * item.quantity)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+          <section className="cd-drawer-total" aria-label="Bill summary">
+            <span className="cd-bill-summary-label">Bill Summary</span>
+            <div className="cd-checkout-breakdown">
+              <span>Subtotal</span>
+              <strong>{formatMoney(order.subtotal ?? order.totalPrice)}</strong>
+              <span>VAT</span>
+              <strong>{formatMoney(order.vatAmount ?? 0)}</strong>
+              <span>Service Charge</span>
+              <strong>{formatMoney(order.serviceChargeAmount ?? 0)}</strong>
+              <span>Discount</span>
+              <strong>- {formatMoney(Math.abs(order.discountAmount ?? 0))}</strong>
             </div>
+            <span className="cd-drawer-total-label" aria-label="Grand Total">
+              Total
+            </span>
+            <span className="cd-drawer-total-value">
+              <span>{totalCurrency}</span>
+              <strong>{totalAmount}</strong>
+            </span>
+          </section>
+          {showPaymentSelector || showPaymentEvidence ? (
+            <section
+              className="cd-payment-verification-box"
+              aria-labelledby="checkout-payment-verification-title"
+            >
+              <div
+                className="cd-drawer-section-title"
+                id="checkout-payment-verification-title"
+              >
+                {isPaymentDue ? "Payment Verification" : "Payment Evidence"}
+              </div>
+              {showPaymentSelector ? (
+                <div
+                  className="cd-payment-method-grid"
+                  role="radiogroup"
+                  aria-label="Payment Method"
+                >
+                  {availablePaymentMethods.map((method) => {
+                    const selected = collectionPaymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        className={selected ? "selected" : ""}
+                        onClick={() => onCollectionPaymentMethodChange(method)}
+                      >
+                        <span>{method}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="cd-readonly-payment-method">
+                  <span>Payment Method</span>
+                  <strong>{order.paymentMethod?.trim() || collectionPaymentMethod}</strong>
+                </div>
+              )}
+              {isDigital && showPaymentEvidence ? (
+                <div className="cd-digital-payment-details">
+                <div>
+                  <span>Reference Number</span>
+                  <strong>{displayReference || "Not provided"}</strong>
+                </div>
+                {displayTransaction ? (
+                  <div>
+                    <span>Transaction ID</span>
+                    <strong>{displayTransaction}</strong>
+                  </div>
+                ) : null}
+                <div className="cd-payment-evidence-card">
+                  <div>
+                    <span>Payment Method</span>
+                    <strong>{collectionPaymentMethod}</strong>
+                  </div>
+                  <div>
+                    <span>Reference</span>
+                    <strong>{displayReference || "Not provided"}</strong>
+                  </div>
+                  <div>
+                    <span>Screenshot</span>
+                    <strong>
+                      {paymentScreenshotPreviewUrl ? "Uploaded" : "Not provided"}
+                    </strong>
+                  </div>
+                  {paymentScreenshotPreviewUrl ? (
+                    <div className="cd-payment-screenshot-row">
+                      <img src={paymentScreenshotPreviewUrl} alt="" />
+                      <div>
+                        <strong>{screenshotFileName}</strong>
+                        <span>{fmtDateTime(screenshotUploadedAt)}</span>
+                      </div>
+                      <button
+                        ref={screenshotTriggerRef}
+                        type="button"
+                        onClick={() => {
+                          setScreenshotFitMode("fit");
+                          setScreenshotPreviewOpen(true);
+                        }}
+                      >
+                        View Screenshot
+                      </button>
+                    </div>
+                  ) : (
+                    <p>Screenshot not provided</p>
+                  )}
+                </div>
+                {duplicateReferenceNotice ? (
+                  <div className="cd-payment-duplicate">
+                    <span>{duplicateReferenceNotice}</span>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={ownerDuplicateOverride}
+                        onChange={(event) =>
+                          onOwnerDuplicateOverrideChange(event.target.checked)
+                        }
+                      />
+                      Owner override duplicate reference
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+              ) : (
+                <div className="cd-cash-review-note">
+                  Cash selected. No reference or screenshot fields are shown for
+                  cash payments.
+                </div>
+              )}
+              {isPaymentDue && (isPending || isRejected) ? (
+                <>
+                  <label className="cd-payment-note-field">
+                    <span>Cashier Note</span>
+                    <textarea
+                      value={paymentNote}
+                      onChange={(event) => onPaymentNoteChange(event.target.value)}
+                      maxLength={500}
+                      placeholder="Reason for reject or retry, optional for approval"
+                    />
+                  </label>
+                  <div className="cd-payment-review-actions" aria-label="Payment review actions">
+                    <button type="button" className="danger" onClick={onReject} disabled={!onReject || approving}>
+                      Reject Payment
+                    </button>
+                    <button type="button" onClick={onRetry} disabled={!onRetry || approving}>
+                      Request Retry
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </section>
           ) : null}
           {isVerified ? (
             <div className="cd-payment-history-strip">
@@ -1416,155 +1526,72 @@ function OrderDrawer({
           {order.orderNote ? (
             <div className="cd-pos-active-note">{order.orderNote}</div>
           ) : null}
-          <div className="cd-checkout-items-panel">
-            <div className="cd-drawer-section-title">Order Items <span>{order.items.length}</span></div>
-            <div className="cd-drawer-items">
-              {order.items.length === 0 ? (
-                <div className="cd-empty-sub">No item data available.</div>
-              ) : (
-                order.items.map((item) => (
-                  <div key={item.id} className="cd-drawer-item">
-                    <div className="cd-drawer-item-quantity">{item.quantity}×</div>
-                    <div>
-                      <div className="cd-drawer-item-name">{item.name}</div>
-                      {item.notes ? <div className="cd-drawer-item-modifiers">{item.notes}</div> : null}
-                    </div>
-                    <div className="cd-drawer-item-price">
-                      {formatMoney(item.price * item.quantity)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <section className="cd-drawer-total" aria-label="Bill summary">
-            <span className="cd-bill-summary-label">Bill Summary</span>
-            <div className="cd-checkout-breakdown">
-              <span>Subtotal</span><strong>{formatMoney(order.subtotal ?? order.totalPrice)}</strong>
-              <span>VAT</span><strong>{formatMoney(order.vatAmount ?? 0)}</strong>
-              <span>Service Charge</span><strong>{formatMoney(order.serviceChargeAmount ?? 0)}</strong>
-              <span>Discount</span><strong>- {formatMoney(Math.abs(order.discountAmount ?? 0))}</strong>
-            </div>
-            <span className="cd-drawer-total-label" aria-label="Grand Total">Total</span>
-            <span className="cd-drawer-total-value">
-              {formatMoney(order.totalPrice)}
-            </span>
-          </section>
         </div>
         <footer className="cd-drawer-footer">
+          <div className="cd-drawer-footer-total" aria-label="Checkout total">
+            <span>Total</span>
+            <strong>{formatMoney(order.totalPrice)}</strong>
+          </div>
           <button
             type="button"
-            className="cd-checkout-primary-action"
+            className={`cd-checkout-primary-action${checkoutStatus === "completed" ? " neutral" : ""}`}
             onClick={primaryAction.onClick}
             disabled={!primaryAction.onClick || approving}
           >
             <CashierIcon name={primaryAction.icon} />
             {primaryAction.label}
           </button>
-          {supportedSecondaryActions.length > 0 ? (
-            <div className="cd-checkout-secondary-actions">
-              {supportedSecondaryActions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  className={action.danger ? "danger" : ""}
-                  onClick={action.onClick}
-                  disabled={approving}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <button
+            type="button"
+            className="cd-checkout-secondary-action"
+            onClick={onClose}
+            disabled={approving}
+          >
+            {secondaryActionLabel}
+          </button>
         </footer>
       </section>
-    </>
-  );
-}
-
-function CheckoutReceiptPreview({ model }: { model: FinalDiningBillModel }) {
-  const paid = model.payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const printed = model.bill.printCount > 0;
-  return (
-    <section className="cd-checkout-receipt" aria-label="Receipt preview">
-      <header>
-        {model.restaurant.logoUrl ? (
-          <img src={model.restaurant.logoUrl} alt="" />
-        ) : (
-          <span>{model.restaurant.name.charAt(0)}</span>
-        )}
-        <h2>{model.restaurant.name}</h2>
-        {model.restaurant.address ? <p>{model.restaurant.address}</p> : null}
-        {model.restaurant.phone ? <p>{model.restaurant.phone}</p> : null}
-      </header>
-      <div className="cd-receipt-meta">
-        <span>{compactTableCode(model.bill.tableNumber) ?? "—"}</span>
-        <span>{new Date(model.bill.printedAt).toLocaleDateString()}</span>
-        <span>Cashier: {model.bill.cashierName ?? "Cashier"}</span>
-        <span>
-          {new Date(model.bill.printedAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
-      </div>
-      <div className="cd-receipt-lines">
-        <div className="heading">
-          <span>Item</span>
-          <span>Qty</span>
-          <span>Unit</span>
-          <span>Total</span>
-        </div>
-        {model.items.map((item, index) => (
-          <div key={`${item.name}-${index}`}>
-            <span>{item.name}</span>
-            <span>{item.quantity}</span>
-            <span>{fmtBillMoney(item.unitPrice)}</span>
-            <strong>{fmtBillMoney(item.total)}</strong>
+      {screenshotPreviewOpen && paymentScreenshotPreviewUrl ? (
+        <div
+          className="cd-screenshot-preview"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Payment screenshot preview"
+          ref={previewRef}
+          onKeyDown={(event) =>
+            trapFocus(event, previewRef.current, () =>
+              closeScreenshotPreview(),
+            )
+          }
+        >
+          <header>
+            <strong>Payment Screenshot</strong>
+            <div>
+              <button
+                type="button"
+                onClick={() =>
+                  setScreenshotFitMode((current) =>
+                    current === "fit" ? "zoom" : "fit",
+                  )
+                }
+              >
+                {screenshotFitMode === "fit" ? "Zoom" : "Fit to screen"}
+              </button>
+              <button
+                type="button"
+                onClick={closeScreenshotPreview}
+                aria-label="Close screenshot preview"
+              >
+                Close
+              </button>
+            </div>
+          </header>
+          <div className={`cd-screenshot-stage ${screenshotFitMode}`}>
+            <img src={paymentScreenshotPreviewUrl} alt="Payment screenshot" />
           </div>
-        ))}
-      </div>
-      <div className="cd-receipt-totals">
-        <div>
-          <span>Subtotal</span>
-          <strong>{fmtBillMoney(model.totals.subtotal)}</strong>
         </div>
-        <div>
-          <span>VAT ({Math.round(model.totals.vatRate * 100)}%)</span>
-          <strong>{fmtBillMoney(model.totals.vatAmount)}</strong>
-        </div>
-        <div>
-          <span>Service Charge</span>
-          <strong>{fmtBillMoney(model.totals.serviceChargeAmount)}</strong>
-        </div>
-        <div>
-          <span>Discount</span>
-          <strong>
-            - {fmtBillMoney(Math.abs(model.totals.discountAmount))}
-          </strong>
-        </div>
-        <div className="grand">
-          <span>TOTAL</span>
-          <strong>{fmtBillMoney(model.totals.grandTotal)}</strong>
-        </div>
-      </div>
-      <div className="cd-receipt-payment">
-        <small>Payment Method</small>
-        <strong>
-          {model.payments.map((payment) => payment.method).join(" + ") ||
-            "Paid"}
-        </strong>
-        <span>Paid {fmtBillMoney(paid || model.totals.grandTotal)}</span>
-      </div>
-      <footer>
-        <strong>Thank you for dining with us!</strong>
-        <span>
-          {printed
-            ? `Printed · Copy ${model.bill.printCount}`
-            : "Review copy · Not yet printed"}
-        </span>
-      </footer>
-    </section>
+      ) : null}
+    </>
   );
 }
 
@@ -1612,7 +1639,6 @@ export function CashierDashboardPage({
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentTransactionId, setPaymentTransactionId] = useState("");
-  const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState("");
   const [paymentScreenshotPreviewUrl, setPaymentScreenshotPreviewUrl] =
     useState<string | null>(null);
   const [ownerDuplicateOverride, setOwnerDuplicateOverride] = useState(false);
@@ -1646,29 +1672,63 @@ export function CashierDashboardPage({
   const [billWorkingSessionId, setBillWorkingSessionId] = useState<
     string | null
   >(null);
-  const [lastPrintedBill, setLastPrintedBill] =
-    useState<FinalDiningBillModel | null>(null);
-  const [checkoutSession, setCheckoutSession] =
-    useState<DiningSessionSummary | null>(null);
-  const [advancedPrinterOptions, setAdvancedPrinterOptions] = useState(false);
-  const [billHistory, setBillHistory] = useState<Map<string, BillHistory>>(
-    new Map(),
-  );
   const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
   const knownPendingPaymentIdsRef = useRef<Set<string>>(new Set());
   const dashboardHydratedRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const checkoutOpenerRef = useRef<HTMLElement | null>(null);
+
+  function hasUnsavedCheckoutChanges() {
+    if (!drawerOrder) return false;
+    const recordedMethod = drawerOrder.paymentMethod || "Cash";
+    return (
+      collectionPaymentMethod !== recordedMethod ||
+      ownerDuplicateOverride ||
+      paymentNote.trim().length > 0
+    );
+  }
+
+  function confirmDiscardCheckoutChanges() {
+    return (
+      !hasUnsavedCheckoutChanges() ||
+      window.confirm(
+        "Discard checkout changes?\n\nKeep Editing to return to the checkout, or discard changes to continue.",
+      )
+    );
+  }
+
+  function closeCheckoutDrawer() {
+    if (!confirmDiscardCheckoutChanges()) return;
+    setDrawerOrder(null);
+    setPaymentNote("");
+    window.setTimeout(() => checkoutOpenerRef.current?.focus(), 0);
+  }
+
+  function openCheckoutDrawer(order: CashierOrder | null) {
+    if (!order) {
+      closeCheckoutDrawer();
+      return;
+    }
+    if (drawerOrder && drawerOrder.id !== order.id && !confirmDiscardCheckoutChanges())
+      return;
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement)
+      checkoutOpenerRef.current = activeElement;
+    setDrawerOrder(order);
+    if (order.tableNumber) setSelectedTable(order.tableNumber);
+  }
+
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         document.querySelector<HTMLInputElement>(".cd-header-search input")?.focus();
       }
-      if (event.key === "Escape" && drawerOrder) setDrawerOrder(null);
+      if (event.key === "Escape" && drawerOrder) closeCheckoutDrawer();
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, [drawerOrder]);
+  }, [drawerOrder, collectionPaymentMethod, ownerDuplicateOverride, paymentNote]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1680,7 +1740,6 @@ export function CashierDashboardPage({
   useEffect(() => {
     setPaymentReference(drawerOrder?.referenceNumber ?? "");
     setPaymentTransactionId(drawerOrder?.transactionId ?? "");
-    setPaymentScreenshotUrl(drawerOrder?.screenshotUrl ?? "");
     setCollectionPaymentMethod(drawerOrder?.paymentMethod || "Cash");
     setOwnerDuplicateOverride(false);
     setDuplicateReferenceNotice(null);
@@ -1747,53 +1806,6 @@ export function CashierDashboardPage({
     await checkDuplicateReference(paymentReference, value);
   }
 
-  async function handlePaymentScreenshotFileChange(file: File | null) {
-    try {
-      setError(null);
-      setPaymentScreenshotPreviewUrl(null);
-      setPaymentScreenshotUrl("");
-      if (!file) return;
-      if (!file.type.startsWith("image/"))
-        throw new Error("Payment screenshot must be an image file.");
-      if (file.size > PAYMENT_SCREENSHOT_MAX_BYTES)
-        throw new Error("Payment screenshot must be 5 MB or smaller.");
-      const paymentTargetId = drawerOrder?.diningSessionId ?? drawerOrder?.id;
-      if (!paymentTargetId)
-        throw new Error("Dining session is missing for this payment.");
-
-      const path = paymentScreenshotPath(
-        restaurantId,
-        paymentTargetId,
-        file,
-      );
-      const { error: uploadError } = await supabase.storage
-        .from(PAYMENT_SCREENSHOT_BUCKET)
-        .upload(path, file, {
-          cacheControl: "0",
-          upsert: false,
-          contentType: file.type,
-        });
-      if (uploadError) throw new Error(uploadError.message);
-      const { data, error: signedUrlError } = await supabase.storage
-        .from(PAYMENT_SCREENSHOT_BUCKET)
-        .createSignedUrl(path, 60 * 10);
-      if (signedUrlError) throw new Error(signedUrlError.message);
-      setPaymentScreenshotUrl(path);
-      setPaymentScreenshotPreviewUrl(data.signedUrl);
-    } catch (uploadError) {
-      setPaymentScreenshotUrl("");
-      setPaymentScreenshotPreviewUrl(null);
-      pushToast({
-        type: "error",
-        title: "Payment proof upload failed",
-        description:
-          uploadError instanceof Error
-            ? uploadError.message
-            : "Check the image and try again.",
-      });
-    }
-  }
-
   async function loadDashboard() {
     const [
       { data: staffData },
@@ -1803,7 +1815,6 @@ export function CashierDashboardPage({
       { data: menuRows, error: menuError },
       { data: shiftSummary, error: shiftError },
       { data: activityRows },
-      { data: billRows },
       workflowState,
     ] = await Promise.all([
       supabase
@@ -1845,10 +1856,6 @@ export function CashierDashboardPage({
         .eq("restaurant_id", restaurantId)
         .order("created_at", { ascending: false })
         .limit(30),
-      supabase
-        .from("dining_session_bills")
-        .select("dining_session_id,print_count,printed_at")
-        .eq("restaurant_id", restaurantId),
       loadCashierWorkflowFoundation(restaurantId),
     ]);
 
@@ -1945,14 +1952,6 @@ export function CashierDashboardPage({
         amount: row.amount === null ? null : Number(row.amount),
       })) as ShiftActivity[],
     );
-    setBillHistory(
-      new Map(
-        ((billRows ?? []) as BillHistory[]).map((bill) => [
-          bill.dining_session_id,
-          bill,
-        ]),
-      ),
-    );
     setWorkflow(workflowState);
   }
 
@@ -2021,7 +2020,7 @@ export function CashierDashboardPage({
           selected_payment_method: collectionPaymentMethod,
           payment_reference_number: paymentReference || null,
           payment_transaction_id: paymentTransactionId || null,
-          payment_screenshot_url: paymentScreenshotUrl || null,
+          payment_screenshot_url: order.screenshotUrl || null,
           owner_duplicate_override: ownerDuplicateOverride,
         },
       );
@@ -2029,7 +2028,6 @@ export function CashierDashboardPage({
       setDrawerOrder(null);
       setPaymentReference("");
       setPaymentTransactionId("");
-      setPaymentScreenshotUrl("");
       setPaymentScreenshotPreviewUrl(null);
       setOwnerDuplicateOverride(false);
       setDuplicateReferenceNotice(null);
@@ -2355,7 +2353,6 @@ export function CashierDashboardPage({
       );
       if (rpcError) throw new Error(rpcError.message);
       const billModel = normalizeFinalBillPayload(data);
-      setLastPrintedBill(billModel);
       printFinalBill(billModel);
       const { error: receiptStateError } = await supabase.rpc(
         "mark_cashier_session_receipts_printed",
@@ -2409,7 +2406,7 @@ export function CashierDashboardPage({
         description: `${compactTableCode(session.tableNumber) ?? "Table"} · Invoice closed`,
         dedupeKey: `order-completed:${session.diningSessionId}`,
       });
-      setCheckoutSession(null);
+      setDrawerOrder(null);
       await loadDashboard();
     } catch (closeError) {
       setError(
@@ -2573,23 +2570,6 @@ export function CashierDashboardPage({
       ) ?? null,
     [orders, selectedTable],
   );
-  const openDiningSessions = activeDiningSessions;
-  const checkoutBillModel = useMemo(() => {
-    if (!checkoutSession) return null;
-    if (
-      lastPrintedBill?.bill.diningSessionId === checkoutSession.diningSessionId
-    )
-      return lastPrintedBill;
-    return buildFinalBillReviewModel(
-      checkoutSession,
-      restaurant,
-      cashierName || "Cashier",
-      billFormat,
-    );
-  }, [billFormat, cashierName, checkoutSession, lastPrintedBill, restaurant]);
-  const checkoutPrintHistory = checkoutSession
-    ? (billHistory.get(checkoutSession.diningSessionId) ?? null)
-    : null;
   const filteredMenuItems = useMemo(() => {
     const search = menuSearch.trim().toLowerCase();
     return menuItems.filter((item) => {
@@ -2671,15 +2651,15 @@ export function CashierDashboardPage({
     const session = activeDiningSessions.find(
       (candidate) => candidate.tableNumber === String(tableNumber),
     );
-    if (!session) {
-      setDrawerOrder(null);
-      return;
-    }
-    setDrawerOrder(
-      session.pendingCount > 0
-        ? paymentDueOrder(session)
-        : session.batches[0] ?? null,
-    );
+    if (!session) return;
+    const actionableOrder = session.pendingCount > 0
+      ? paymentDueOrder(session)
+      : session.batches.find((batch) =>
+          batch.invoiceId &&
+          (billRequestedInvoiceIds.has(batch.invoiceId) ||
+            receiptPendingInvoiceIds.has(batch.invoiceId)),
+        ) ?? null;
+    if (actionableOrder) openCheckoutDrawer(actionableOrder);
   }
 
   function handleWorkspaceSearch(value: string) {
@@ -2694,7 +2674,7 @@ export function CashierDashboardPage({
         order.displayNumber, order.invoiceNumber?.toString()]
         .some((candidate) => candidate?.toLowerCase().includes(query)),
     );
-    if (match) setDrawerOrder(match);
+    if (match) openCheckoutDrawer(match);
   }
 
   function handleQueueTabKeyDown(
@@ -2846,6 +2826,7 @@ export function CashierDashboardPage({
                 label="Active Orders"
                 value={`${activeDiningSessions.length}`}
                 detail="Open now"
+                tone="info"
               />
               <CashierMetricCard
                 label="Awaiting Collection"
@@ -2945,8 +2926,7 @@ export function CashierDashboardPage({
                       const isSelected = drawerOrder?.diningSessionId === session.diningSessionId;
                       const isUrgent = visibleQueueTab === "pending" && minutesWaiting > 5;
                       const openOrder = () => {
-                        setDrawerOrder(order);
-                        if (order.tableNumber) setSelectedTable(order.tableNumber);
+                        openCheckoutDrawer(order);
                       };
                       const paymentMethod = (
                         <span className={`cd-method-badge ${method.toLowerCase().replace(/\s+/g, "-")}`} title={method} aria-label={`Payment method: ${method}`}>
@@ -3036,7 +3016,7 @@ export function CashierDashboardPage({
                     <button className="primary" type="button" onClick={() => setPosEntryOpen(true)}>＋ New Order</button>
                     <button type="button" onClick={() => setPosEntryOpen(true)}>▦ Scan QR</button>
                     <button type="button" onClick={() => setQueueTab("pending")}>⌕ Search Order</button>
-                    <button type="button" onClick={() => document.getElementById("cashier-checkout")?.scrollIntoView({ behavior: "smooth" })}>▤ Reprint Receipt</button>
+                    <button type="button" onClick={() => setQueueTab("ready")}>▤ Reprint Receipt</button>
                     <button type="button" onClick={() => setQueueTab("paid")}>↩ Refund</button>
                     <button className="danger" type="button" onClick={() => activeShift ? setReconcileOpen(true) : setOpenShiftModal(true)}>{activeShift ? "Close Shift" : "Open Shift"}</button>
                   </div>
@@ -3074,126 +3054,6 @@ export function CashierDashboardPage({
                     })}
                   </div>
                 </div>
-
-                <div className="cd-card" id="cashier-checkout">
-                  <div className="cd-card-header">
-                    <div>
-                      <div className="cd-card-title">Checkout</div>
-                      <div className="cd-card-subtitle">
-                        Review the customer bill, print when needed, then
-                        release the table manually.
-                      </div>
-                    </div>
-                  </div>
-                  <div className="cd-final-bill-panel">
-                    {openDiningSessions.length === 0 ? (
-                      <div className="cd-empty compact">
-                        <div className="cd-empty-title">
-                          No tables awaiting checkout
-                        </div>
-                        <div className="cd-empty-sub">
-                          Eligible tables appear after all payments and kitchen
-                          items are complete.
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="cd-final-bill-session-list">
-                        {openDiningSessions.map((session) => {
-                          const reasons = [
-                            session.pendingCount > 0
-                              ? `${session.pendingCount} payment batch${session.pendingCount === 1 ? "" : "es"} pending`
-                              : null,
-                            session.incompleteItemCount > 0
-                              ? `${session.incompleteItemCount} kitchen item${session.incompleteItemCount === 1 ? "" : "s"} incomplete`
-                              : null,
-                            session.verifiedTotal <= 0
-                              ? "No paid payment batches"
-                              : null,
-                          ].filter(Boolean);
-                          const canPrint = reasons.length === 0;
-                          return (
-                            <article
-                              className="cd-final-bill-session"
-                              key={session.diningSessionId}
-                            >
-                              <div className="cd-final-bill-session-top">
-                                <div>
-                                  <strong>
-                                    {compactTableCode(session.tableNumber) ?? "—"}
-                                  </strong>
-                                  <span>{customerTypeLabel(session)}</span>
-                                </div>
-                                <span
-                                  className={`cd-checkout-status ${canPrint ? "ready" : "blocked"}`}
-                                >
-                                  {canPrint
-                                    ? "✓ Ready for Checkout"
-                                    : "Not Yet Eligible"}
-                                </span>
-                              </div>
-                              <div className="cd-checkout-card-summary">
-                                <div>
-                                  <small>Opened</small>
-                                  <strong>{fmtTime(session.createdAt)}</strong>
-                                </div>
-                                <div>
-                                  <small>Last Order</small>
-                                  <strong>{fmtTime(session.latestAt)}</strong>
-                                </div>
-                                <div>
-                                  <small>Items</small>
-                                  <strong>{session.itemCount}</strong>
-                                </div>
-                                <div>
-                                  <small>Invoices</small>
-                                  <strong>{session.batches.length}</strong>
-                                </div>
-                              </div>
-                              <div className="cd-checkout-paid">
-                                <small>Paid Amount</small>
-                                <strong>
-                                  {fmtMoney(session.verifiedTotal)}
-                                </strong>
-                                <span>
-                                  {[
-                                    ...new Set(
-                                      session.batches
-                                        .filter(
-                                          (batch) =>
-                                            batch.invoiceStatus === "paid",
-                                        )
-                                        .map(
-                                          (batch) =>
-                                            batch.paymentMethod || "Other",
-                                        ),
-                                    ),
-                                  ].join(" + ")}
-                                </span>
-                              </div>
-                              {reasons.length > 0 ? (
-                                <div className="cd-final-bill-warning">
-                                  {reasons.join(". ")}
-                                </div>
-                              ) : null}
-                              <button
-                                type="button"
-                                className="cd-review-bill-btn"
-                                disabled={!canPrint}
-                                onClick={() => {
-                                  setCheckoutSession(session);
-                                  setAdvancedPrinterOptions(false);
-                                }}
-                              >
-                                Review Bill
-                              </button>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 <div className="cd-card">
                   <div className="cd-card-header">
                     <div>
@@ -3563,25 +3423,24 @@ export function CashierDashboardPage({
         )}
       </main>
 
-      <aside className="cd-right-panel" aria-label="Service locations and checkout workspace">
+      <aside className="cd-right-panel" aria-label="Service locations">
         <ServiceLocationQuickSwitch
           locations={serviceLocationCards}
           selectedKey={selectedTable}
           loading={loading}
           onSelect={(location) => openTable(location.tableNumber)}
         />
+      </aside>
 
-      {loading ? (
-        <CheckoutWorkspaceSkeleton />
-      ) : drawerOrder ? (
-        <OrderDrawer
+      {!loading && drawerOrder ? (
+        <CheckoutSlideOverDrawer
           order={drawerOrder}
           checkoutStatus={resolveCheckoutWorkspaceStatus(
             drawerOrder,
             billRequestedInvoiceIds,
             receiptPendingInvoiceIds,
           )}
-          onClose={() => setDrawerOrder(null)}
+          onClose={closeCheckoutDrawer}
           onApprove={
             isVerifiablePayment(drawerOrder)
               ? () => handleApprove(drawerOrder)
@@ -3599,242 +3458,42 @@ export function CashierDashboardPage({
           }
           onPrintBill={
             drawerDiningSession
-              ? () => {
-                  setCheckoutSession(drawerDiningSession);
+              ? () =>
+                  void handlePrintFinalBill(drawerDiningSession).then(() => {
                   pushToast({
-                    type: "information",
-                    title: "Bill ready for review",
+                    type: "success",
+                    title: "Bill sent to printer",
                     description:
                       compactTableCode(drawerDiningSession.tableNumber) ??
                       "Current order",
-                    dedupeKey: `bill-review:${drawerDiningSession.diningSessionId}`,
+                    dedupeKey: `bill-printed:${drawerDiningSession.diningSessionId}`,
                   });
-                }
+                  window.setTimeout(() => setDrawerOrder(null), 1000);
+                })
               : undefined
           }
           onPrintReceipt={
             drawerOrder.invoiceStatus === "paid" && drawerDiningSession
-              ? () => void handlePrintFinalBill(drawerDiningSession)
-              : undefined
-          }
-          onCloseInvoice={
-            drawerOrder.invoiceStatus === "paid" && drawerDiningSession
-              ? () => void handleCloseDiningSessionFromBill(drawerDiningSession)
+              ? () =>
+                  void handlePrintFinalBill(drawerDiningSession).then(() => {
+                    window.setTimeout(() => setDrawerOrder(null), 1000);
+                  })
               : undefined
           }
           approving={approvingId === (drawerOrder.diningSessionId ?? drawerOrder.id)}
           paymentReference={paymentReference}
           paymentTransactionId={paymentTransactionId}
-          paymentScreenshotUrl={paymentScreenshotUrl}
           paymentScreenshotPreviewUrl={paymentScreenshotPreviewUrl}
           duplicateReferenceNotice={duplicateReferenceNotice}
           ownerDuplicateOverride={ownerDuplicateOverride}
           collectionPaymentMethod={collectionPaymentMethod}
           paymentNote={paymentNote}
-          onPaymentReferenceChange={(value) =>
-            void handlePaymentReferenceChange(value)
-          }
-          onPaymentTransactionIdChange={(value) =>
-            void handlePaymentTransactionIdChange(value)
-          }
-          onPaymentScreenshotFileChange={(file) =>
-            void handlePaymentScreenshotFileChange(file)
-          }
           onOwnerDuplicateOverrideChange={setOwnerDuplicateOverride}
           onCollectionPaymentMethodChange={setCollectionPaymentMethod}
           onPaymentNoteChange={setPaymentNote}
           formatMoney={fmtMoney}
         />
-      ) : (
-        <section className="cd-drawer cd-workspace-empty" aria-label="Current checkout workspace">
-          <span className="cd-workspace-label">Checkout Workspace</span>
-          <div className="cd-checkout-empty-content">
-            <span className="cd-checkout-empty-illustration" aria-hidden="true">
-              <CashierIcon name="bill" />
-            </span>
-            <strong>No checkout selected</strong>
-            <p>Select a service location to begin checkout.</p>
-            <button type="button" disabled>
-              Begin Checkout
-            </button>
-          </div>
-        </section>
-      )}
-      </aside>
-
-      {checkoutSession && checkoutBillModel && (
-        <div className="cd-checkout-overlay">
-          <section
-            className="cd-checkout-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Checkout ${compactTableCode(checkoutSession.tableNumber) ?? "order"}`}
-          >
-            <header className="cd-checkout-header">
-              <button type="button" onClick={() => setCheckoutSession(null)}>
-                ← Back
-              </button>
-              <div>
-                <strong>{compactTableCode(checkoutSession.tableNumber) ?? "—"}</strong>
-                <span>✓ Ready for Checkout</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCheckoutSession(null)}
-                aria-label="Close checkout"
-              >
-                ×
-              </button>
-            </header>
-            <div className="cd-checkout-layout">
-              <aside className="cd-checkout-summary">
-                <h2>Table Summary</h2>
-                <dl>
-                  <div>
-                    <dt>Table</dt>
-                    <dd>{checkoutSession.tableNumber ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>Customer Type</dt>
-                    <dd>{customerTypeLabel(checkoutSession)}</dd>
-                  </div>
-                  <div>
-                    <dt>Opened</dt>
-                    <dd>{fmtTime(checkoutSession.createdAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Last Order</dt>
-                    <dd>{fmtTime(checkoutSession.latestAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Total Items</dt>
-                    <dd>{checkoutSession.itemCount}</dd>
-                  </div>
-                  <div>
-                    <dt>Invoices</dt>
-                    <dd>{checkoutSession.batches.length}</dd>
-                  </div>
-                </dl>
-                <div className="cd-checkout-payment">
-                  <small>Payment Status</small>
-                  <strong>{fmtMoney(checkoutSession.verifiedTotal)}</strong>
-                  <span>
-                    Paid via{" "}
-                    {checkoutBillModel.payments
-                      .map((payment) => payment.method)
-                      .join(" + ") || "recorded payment"}
-                  </span>
-                </div>
-                <p>
-                  All payments and kitchen items have been cleared. Printing is
-                  optional; release the table only after the customer leaves.
-                </p>
-              </aside>
-              <div className="cd-checkout-preview-wrap">
-                <div className="cd-preview-label">Receipt Preview</div>
-                <CheckoutReceiptPreview model={checkoutBillModel} />
-              </div>
-              <aside className="cd-print-controls">
-                <h2>
-                  {checkoutPrintHistory || checkoutBillModel.bill.printCount > 0
-                    ? "Receipt Printed"
-                    : "Ready to Print"}
-                </h2>
-                {checkoutPrintHistory ||
-                checkoutBillModel.bill.printCount > 0 ? (
-                  <div className="cd-print-history">
-                    <span>Printed</span>
-                    <strong>
-                      {checkoutPrintHistory?.print_count ??
-                        checkoutBillModel.bill.printCount}{" "}
-                      {(checkoutPrintHistory?.print_count ??
-                        checkoutBillModel.bill.printCount) === 1
-                        ? "copy"
-                        : "copies"}
-                    </strong>
-                    <small>
-                      Last printed{" "}
-                      {fmtDateTime(
-                        checkoutPrintHistory?.printed_at ??
-                          checkoutBillModel.bill.printedAt,
-                      )}
-                    </small>
-                  </div>
-                ) : (
-                  <p>Review the bill carefully before printing.</p>
-                )}
-                <button
-                  type="button"
-                  className="cd-advanced-print"
-                  onClick={() => setAdvancedPrinterOptions((open) => !open)}
-                >
-                  Advanced Printer Options{" "}
-                  <span>{advancedPrinterOptions ? "⌃" : "⌄"}</span>
-                </button>
-                {advancedPrinterOptions ? (
-                  <div className="cd-bill-format-toggle">
-                    {(
-                      ["80mm", "58mm", "a4", "browser"] as FinalBillFormat[]
-                    ).map((format) => (
-                      <button
-                        key={format}
-                        type="button"
-                        className={billFormat === format ? "active" : ""}
-                        onClick={() => setBillFormat(format)}
-                      >
-                        {format === "a4"
-                          ? "A4"
-                          : format === "browser"
-                            ? "Browser"
-                            : `${format} Thermal`}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="cd-printer-current">
-                    Printer:{" "}
-                    {billFormat === "a4"
-                      ? "A4"
-                      : billFormat === "browser"
-                        ? "Browser"
-                        : `${billFormat} Thermal`}
-                  </div>
-                )}
-              </aside>
-            </div>
-            <footer className="cd-checkout-actions">
-              <button
-                type="button"
-                className="cd-release-table-btn"
-                onClick={() =>
-                  void handleCloseDiningSessionFromBill(checkoutSession)
-                }
-                disabled={closingSessionId === checkoutSession.diningSessionId}
-              >
-                {closingSessionId === checkoutSession.diningSessionId
-                  ? "Releasing…"
-                  : "Release Table"}
-              </button>
-              <button
-                type="button"
-                className="cd-print-receipt-btn"
-                onClick={() => void handlePrintFinalBill(checkoutSession)}
-                disabled={
-                  billWorkingSessionId === checkoutSession.diningSessionId
-                }
-              >
-                {billWorkingSessionId === checkoutSession.diningSessionId
-                  ? "Preparing Receipt…"
-                  : checkoutPrintHistory ||
-                      checkoutBillModel.bill.printCount > 0
-                    ? "Reprint Receipt"
-                    : "Print Receipt"}
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
-
+      ) : null}
       {continuationChoice && (
         <div className="cd-modal-overlay">
           <div

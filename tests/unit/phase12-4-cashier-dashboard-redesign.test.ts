@@ -59,23 +59,27 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
     expect(styles).toContain("overflow-y: auto");
   });
 
-  it("keeps service-location switching above an independent checkout", () => {
+  it("keeps service-location switching as the only permanent right-column content", () => {
     expect(page).toContain("ServiceLocationQuickSwitch");
     expect(page).toContain("locations={serviceLocationCards}");
     expect(page).toContain("onSelect={(location) => openTable(location.tableNumber)}");
-    expect(page).toContain('aria-label="Current checkout workspace"');
-    expect(styles).toContain("grid-template-rows: minmax(190px, 28%) minmax(0, 72%)");
+    expect(page).toContain('<aside className="cd-right-panel" aria-label="Service locations">');
+    expect(page).toContain("!loading && drawerOrder ? (");
+    expect(page).toContain("<CheckoutSlideOverDrawer");
+    expect(page).not.toContain('aria-label="Current checkout workspace"');
   });
 
   it("keeps checkout identity, item modifiers, totals, and actions visible", () => {
     for (const label of [
-      "Assigned Waiter", "Customer", "Order Items", "Subtotal", "VAT",
-      "Service Charge", "Discount", "Grand Total", "Verify Payment",
-      "Print Bill", "Print Receipt", "Reject Payment", "Close Invoice",
+      "Waiter", "Customer", "Cashier", "Order Items", "Subtotal", "VAT",
+      "Service Charge", "Discount", "Total", "Verify Payment",
+      "Print Bill", "Print Receipt", "Reject Payment", "View Receipt",
     ]) expect(page).toContain(label);
     expect(page).toContain("item.notes");
-    expect(styles).toContain(".cd-drawer-items { min-height: 0; flex: 1 1 auto; overflow-y: auto");
-    expect(styles).toContain(".cd-drawer-footer { position: relative");
+    expect(styles).toContain(".cd-checkout-slide-over");
+    expect(styles).toContain("position: fixed");
+    expect(styles).toContain("width: clamp(500px, 42vw, 680px)");
+    expect(styles).toContain(".cd-checkout-slide-over .cd-drawer-footer");
   });
 
   it("supports keyboard focus, reduced motion, tablet three-panel layout, and small-mobile stacking", () => {

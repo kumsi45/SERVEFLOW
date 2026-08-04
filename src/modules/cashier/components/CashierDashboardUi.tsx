@@ -65,7 +65,7 @@ export function CashierMetricCard({
   label: string;
   value: string;
   detail?: string;
-  tone?: "default" | "warning" | "success";
+  tone?: "default" | "warning" | "success" | "info";
   onClick?: () => void;
   icon?: CashierIconName;
 }) {
