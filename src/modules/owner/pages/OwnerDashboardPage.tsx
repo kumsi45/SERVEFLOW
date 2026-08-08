@@ -6,6 +6,7 @@ import {
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import { ResilientImage } from "../../../core/presentation/ResilientImage";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { SmartImage } from "../../../core/presentation/SmartImage";
 import { createSmartImagePublicUrl, resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
@@ -620,9 +621,9 @@ function OwnerUtilityPanel({ panel, onClose }: { panel: OwnerUtilityPanelKind; o
   const helpTopics = ["Getting Started", "Orders", "Menu", "Kitchen", "Inventory", "Finance", "Printing", "Frequently Asked Questions", "Video Tutorials", "Contact Support"];
   return <div className="od-utility-layer"><button type="button" className="od-assistant-backdrop" aria-label="Close panel" onClick={onClose} /><aside className={`od-utility-panel ${panel}`} aria-label={title}><header><div><span className="od-v10-eyebrow">ServeFlow support</span><h2>{title}</h2></div><button type="button" aria-label="Close panel" onClick={onClose}>×</button></header>
     {panel === "help" ? <div className="od-help-center"><label><span aria-hidden="true">⌕</span><input type="search" placeholder="Search help articles" aria-label="Search Help Center" /></label><div className="od-help-grid">{helpTopics.map((topic, index) => <button type="button" key={topic}><span>{["↗", "▣", "◇", "♨", "▦", "$", "▤", "?", "▶", "◌"][index]}</span><strong>{topic}</strong><small>{index === 9 ? "Talk with the ServeFlow team" : "Guides and practical answers"}</small></button>)}</div></div> : null}
-    {panel === "about" ? <div className="od-about-page"><div className="od-about-brand"><div className="od-brand-icon">S</div><div><h3>ServeFlow</h3><p>Hospitality Business Management Platform</p></div><span>v1.0.0</span></div><dl><div><dt>Developed & Maintained by</dt><dd>KumsiTech</dd></div><div><dt>Founder & Lead Architect</dt><dd>Abdulhayi Alo</dd></div></dl><section><span className="od-v10-eyebrow">Our mission</span><p>ServeFlow helps cafés, restaurants, hotels, bars, lounges, bakeries, fast-food businesses, and other hospitality businesses manage daily operations through QR ordering, POS, Kitchen Display System, Inventory, Finance, Reporting, and AI-powered business intelligence.</p></section><section><span className="od-v10-eyebrow">Platform features</span><div className="od-about-features">{["QR Ordering", "Cashier", "Kitchen", "Waiter", "Inventory", "Finance", "Reports", "AI Business Advisor"].map((feature) => <span key={feature}>✓ {feature}</span>)}</div></section><nav aria-label="ServeFlow information"><button type="button">Official Website</button><button type="button">Privacy Policy</button><button type="button">Terms of Service</button><button type="button">Release Notes</button><button type="button">System Status</button><button type="button">Contact Support</button></nav></div> : null}
+    {panel === "about" ? <div className="od-about-page"><div className="od-about-brand"><div><ServeFlowBrand variant="compact" /><p>Hospitality Business Management Platform</p></div><span>v1.0.0</span></div><dl><div><dt>Developed & Maintained by</dt><dd>KumsiTech</dd></div><div><dt>Founder & Lead Architect</dt><dd>Abdulhayi Alo</dd></div></dl><section><span className="od-v10-eyebrow">Our mission</span><p>ServeFlow helps cafés, restaurants, hotels, bars, lounges, bakeries, fast-food businesses, and other hospitality businesses manage daily operations through QR ordering, POS, Kitchen Display System, Inventory, Finance, Reporting, and AI-powered business intelligence.</p></section><section><span className="od-v10-eyebrow">Platform features</span><div className="od-about-features">{["QR Ordering", "Cashier", "Kitchen", "Waiter", "Inventory", "Finance", "Reports", "AI Business Advisor"].map((feature) => <span key={feature}>✓ {feature}</span>)}</div></section><nav aria-label="ServeFlow information"><button type="button">Official Website</button><button type="button">Privacy Policy</button><button type="button">Terms of Service</button><button type="button">Release Notes</button><button type="button">System Status</button><button type="button">Contact Support</button></nav></div> : null}
     {panel === "feedback" ? <form className="od-feedback-page" onSubmit={(event) => event.preventDefault()}><p>Help us make ServeFlow better for every hospitality business.</p><fieldset><legend>What would you like to share?</legend><div><button type="button"><span>!</span><strong>Report Bug</strong></button><button type="button"><span>+</span><strong>Suggest Feature</strong></button><button type="button"><span>★</span><strong>Rate Experience</strong></button></div></fieldset><label>Tell us more<textarea rows={6} placeholder="Describe your experience or suggestion…" /></label><button type="submit" className="od-btn-primary">Send Feedback</button><small>Feedback submission will be enabled in a future release.</small></form> : null}
-    {panel === "notifications" || panel === "subscription" ? <div className="od-utility-content"><div className="od-brand-icon">S</div><p>{panel === "notifications" ? "Your business notifications will appear here." : "Manage your ServeFlow plan and billing from this dedicated account area."}</p><span>More account tools coming soon</span></div> : null}
+    {panel === "notifications" || panel === "subscription" ? <div className="od-utility-content"><ServeFlowBrand variant="icon-only" /><p>{panel === "notifications" ? "Your business notifications will appear here." : "Manage your ServeFlow plan and billing from this dedicated account area."}</p><span>More account tools coming soon</span></div> : null}
   </aside></div>;
 }
 
@@ -1685,11 +1686,7 @@ export function OwnerDashboardPage({
 
       <aside className={`od-sidebar${sidebarCollapsed ? " collapsed" : ""}`}>
         <div className="od-sidebar-brand">
-          <div className="od-brand-icon">S</div>
-          <div className="od-sidebar-copy">
-            <div className="od-brand-text">ServeFlow</div>
-            <div className="od-brand-sub">Business OS</div>
-          </div>
+          <ServeFlowBrand variant={sidebarCollapsed ? "icon-only" : "compact"} />
           <button type="button" className="od-sidebar-collapse" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed((value) => !value)}>{sidebarCollapsed ? "›" : "‹"}</button>
         </div>
 

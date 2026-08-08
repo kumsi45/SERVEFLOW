@@ -31,15 +31,6 @@
   padding: 28px 24px 24px;
 }
 
-.ml-sidebar-brand strong {
-  display: block;
-  color: #0b67d1;
-  font-size: 32px;
-  font-weight: 950;
-  letter-spacing: -1.2px;
-}
-
-.ml-sidebar-brand span,
 .ml-sidebar-profile small,
 .ml-shift-card small,
 .ml-clock span {
@@ -723,9 +714,6 @@
   }
   .ml-sidebar-brand {
     padding: 22px 18px 16px;
-  }
-  .ml-sidebar-brand strong {
-    font-size: 27px;
   }
   .ml-sidebar-nav {
     padding: 6px 14px;

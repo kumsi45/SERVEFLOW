@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 
 export type CashierIconName =
   | "order"
@@ -117,11 +118,7 @@ export function CashierTopBar({
     <header className="cd-header">
       {reconnecting ? <div role="status" className="cd-realtime-state">Realtime reconnecting...</div> : null}
       <div className="cd-header-left">
-        <div className="cd-logo" aria-hidden="true">S</div>
-        <div className="cd-header-info">
-          <div className="cd-brand-name">ServeFlow</div>
-          <div className="cd-restaurant-name">{restaurantName}</div>
-        </div>
+        <ServeFlowBrand variant="full" tenantName={restaurantName} />
       </div>
       <label className="cd-header-search">
         <span className="cd-search-icon"><CashierIcon name="search" /></span>

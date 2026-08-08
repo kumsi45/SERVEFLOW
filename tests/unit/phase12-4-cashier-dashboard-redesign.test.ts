@@ -73,12 +73,12 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
     for (const label of [
       "Waiter", "Customer", "Cashier", "Order Items", "Subtotal", "VAT",
       "Service Charge", "Discount", "Total", "Verify Payment",
-      "Print Bill", "Print Receipt", "Reject Payment", "View Receipt",
+      "Print Bill", "Print Receipt", "Reject Payment", "Close",
     ]) expect(page).toContain(label);
     expect(page).toContain("item.notes");
     expect(styles).toContain(".cd-checkout-slide-over");
     expect(styles).toContain("position: fixed");
-    expect(styles).toContain("width: clamp(500px, 42vw, 680px)");
+    expect(styles).toContain("width: clamp(520px, 42vw, 620px)");
     expect(styles).toContain(".cd-checkout-slide-over .cd-drawer-footer");
   });
 

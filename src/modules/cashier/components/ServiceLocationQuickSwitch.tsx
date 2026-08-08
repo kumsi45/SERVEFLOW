@@ -75,12 +75,14 @@ export function ServiceLocationQuickSwitch({
   selectedKey,
   loading,
   onSelect,
+  configurationHref = "/owner/qr",
 }: {
   title?: string | null;
   locations: ServiceLocationCardModel[];
   selectedKey: string;
   loading: boolean;
   onSelect: (location: ServiceLocationCardModel) => void;
+  configurationHref?: string;
 }) {
   const panelTitle = resolveServiceLocationPanelTitle(title);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,8 @@ export function ServiceLocationQuickSwitch({
         <div className="cd-location-empty" role="status">
           <strong>No service locations configured</strong>
           <span>Add tables, rooms, counters, or service areas from business settings.</span>
+          <a href={configurationHref}>Open service location settings</a>
+          <small>Owner access is required.</small>
         </div>
       ) : (
         <div
@@ -178,9 +182,10 @@ export function ServiceLocationQuickSwitch({
                 onClick={() => onSelect(location)}
                 onKeyDown={(event) => handleLocationKeyDown(event, index)}
               >
-                <strong title={location.name}>
+                <strong title={location.name}>{location.name}</strong>
+                <span className="cd-location-number">
                   {serviceLocationTableLabel(location.tableNumber)}
-                </strong>
+                </span>
                 <span className="cd-location-status">
                   <i aria-hidden="true" />
                   <span>{COMPACT_STATUS_LABELS[location.status]}</span>

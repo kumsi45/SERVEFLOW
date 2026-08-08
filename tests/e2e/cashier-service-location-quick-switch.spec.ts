@@ -8,7 +8,7 @@ const styles = readFileSync(
 );
 
 test("service-location quick switch remains readable and internally scrollable", async ({ page }) => {
-  const cards = Array.from({ length: 90 }, (_, index) => {
+  const cards = Array.from({ length: 126 }, (_, index) => {
     const number = index + 1;
     const status = number === 1
       ? "payment-due"
@@ -40,7 +40,7 @@ test("service-location quick switch remains readable and internally scrollable",
   }).join("");
 
   await page.setContent(`
-    <style>${styles}html,body{margin:0}.cd-root{height:100vh!important;min-height:0!important}.cd-right-panel{height:calc(100vh - 70px)!important}.cd-location-switch{height:100%!important;grid-template-rows:minmax(0,1fr)!important}.cd-location-grid{height:100%!important;max-height:100%!important}</style>
+    <style>${styles}html,body{margin:0}.cd-root{height:100vh!important;min-height:0!important}.cd-right-panel{height:calc(100vh - 70px)!important}.cd-location-switch{height:100%!important;grid-template-rows:minmax(0,1fr)!important}.cd-location-grid{height:100%!important;max-height:100%!important;align-self:stretch!important;overflow-y:auto!important}</style>
     <div class="cd-root">
       <header class="cd-header"></header>
       <aside class="cd-pos-nav"></aside>

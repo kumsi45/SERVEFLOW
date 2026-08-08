@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../../../core/database";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
 import { PurchaseHistoryPage } from "../../purchasing/pages/PurchaseHistoryPage";
@@ -1532,8 +1533,7 @@ export function InventoryDashboardPage({
 
       <aside className="ia-sidebar" aria-label="Inventory navigation">
         <div className="ia-brand">
-          <strong>ServeFlow</strong>
-          <span>Inventory Administration</span>
+          <ServeFlowBrand variant="compact" />
         </div>
         <nav className="ia-sidebar-nav">
           <button className={!utilityView && section === "dashboard" ? "active" : ""} type="button" aria-current={!utilityView && section === "dashboard" ? "page" : undefined} onClick={() => navigate("dashboard")}>

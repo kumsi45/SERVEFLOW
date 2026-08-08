@@ -43,6 +43,13 @@ function drawerFixture(status: string, action: string) {
         </div>
       </section>`
     : "";
+  const workflow = status === "bill-requested"
+    ? `<section class="cd-checkout-workflow-card mode-bill"><div class="cd-drawer-section-title">Bill Request</div><dl class="cd-workflow-detail-list"><div><dt>Requested by</dt><dd>Waiter · Abdi</dd></div><div><dt>Requested</dt><dd>5 min ago</dd></div></dl></section>`
+    : status === "receipt-pending"
+      ? `<section class="cd-checkout-workflow-card mode-receipt"><div class="cd-drawer-section-title">Payment Details</div><dl class="cd-workflow-detail-list"><div><dt>Payment Method</dt><dd>Telebirr</dd></div><div><dt>Verified By</dt><dd>Cashier Hana</dd></div></dl></section>`
+      : status === "completed"
+        ? `<section class="cd-checkout-workflow-card mode-completed"><div class="cd-drawer-section-title">Transaction Details</div><dl class="cd-workflow-detail-list"><div><dt>Payment Method</dt><dd>Cash</dd></div><div><dt>Receipt</dt><dd>Printed</dd></div></dl></section>`
+        : "";
   return `
     <section class="cd-drawer cd-checkout-slide-over status-${status}" role="dialog" aria-modal="true" aria-labelledby="cashier-checkout-drawer-title">
       <header class="cd-drawer-header">
@@ -58,6 +65,17 @@ function drawerFixture(status: string, action: string) {
       </header>
       <div class="cd-drawer-body">
         <section class="cd-checkout-meta" aria-label="Transaction information"><span>Inv 42</span><span>Created 12:03 PM</span><span>${action}</span></section>
+        <section class="cd-order-information" aria-labelledby="checkout-order-info-title">
+          <div class="cd-drawer-section-title" id="checkout-order-info-title">Order Information</div>
+          <dl>
+            <div><dt>Table</dt><dd>T9</dd></div>
+            <div><dt>Source</dt><dd>Waiter <span>•</span> Waiter Abdi</dd></div>
+            <div><dt>Items</dt><dd class="cd-order-info-items"><span>Coffee ×1</span><span>Pizza ×1</span><span>Burger ×2</span></dd></div>
+            <div><dt>Payment Method</dt><dd>${status === "payment-due" ? "Payment Method Not Selected" : "Telebirr"}</dd></div>
+            <div><dt>Amount</dt><dd>ETB 632.50</dd></div>
+            <div><dt>Waiting</dt><dd>24 min</dd></div>
+          </dl>
+        </section>
         <div class="cd-checkout-scroll-region">
           <section class="cd-checkout-items-panel" aria-labelledby="checkout-items-title">
             <div class="cd-drawer-section-title" id="checkout-items-title">Order Items <span>32</span></div>
@@ -76,11 +94,14 @@ function drawerFixture(status: string, action: string) {
           <span class="cd-drawer-total-value"><span>ETB</span><strong>632.50</strong></span>
         </section>
         ${evidence}
+        ${workflow}
       </div>
       <footer class="cd-drawer-footer">
-        <div class="cd-drawer-footer-total" aria-label="Checkout total"><span>Total</span><strong>ETB 632.50</strong></div>
-        <button class="cd-checkout-primary-action">${action === "Completed" ? "View Receipt" : action === "Bill Requested" ? "Print Bill" : action === "Receipt Pending" ? "Print Receipt" : "Verify Payment"}</button>
-        <button class="cd-checkout-secondary-action">${status === "payment-due" ? "Cancel" : "Close"}</button>
+        ${status === "completed" ? "" : `<div class="cd-drawer-footer-total" aria-label="Checkout total"><span>Total</span><strong>ETB 632.50</strong></div>`}
+        <div class="cd-checkout-footer-actions">
+          <button class="cd-checkout-secondary-action">${status === "payment-due" ? "Cancel" : "Close"}</button>
+          <button class="cd-checkout-primary-action">${status === "payment-due" ? "Verify Payment" : status === "bill-requested" ? "Print Bill" : status === "receipt-pending" ? "Print Receipt" : "Reprint Receipt"}</button>
+        </div>
       </footer>
     </section>
   `;
@@ -129,7 +150,8 @@ test("checkout slide-over is fixed, single, scrollable, and mode aware", async (
     const header = document.querySelector<HTMLElement>(".cd-drawer-header")!.getBoundingClientRect();
     const footer = document.querySelector<HTMLElement>(".cd-drawer-footer")!.getBoundingClientRect();
     const close = document.querySelector<HTMLElement>(".cd-drawer-close")!.getBoundingClientRect();
-    const items = document.querySelector<HTMLElement>(".cd-drawer-items")!;
+    const primary = document.querySelector<HTMLElement>(".cd-checkout-primary-action")!.getBoundingClientRect();
+    const secondary = document.querySelector<HTMLElement>(".cd-checkout-secondary-action")!.getBoundingClientRect();
     body.scrollTop = 400;
     return {
       drawerCount: document.querySelectorAll(".cd-checkout-slide-over").length,
@@ -139,38 +161,85 @@ test("checkout slide-over is fixed, single, scrollable, and mode aware", async (
       closeTarget: close.width >= 44 && close.height >= 44,
       headerVisible: header.top >= 0 && header.height > 0,
       footerVisible: footer.bottom <= window.innerHeight && footer.height > 0,
+      footerActionsAligned: Math.abs(primary.top - secondary.top) <= 1,
       onePrimary: document.querySelectorAll(".cd-checkout-primary-action").length,
-      oneSecondary: document.querySelectorAll(".cd-checkout-secondary-action").length,
-      bodyScrolls: items.scrollHeight > items.clientHeight,
+      secondaryActions: document.querySelectorAll(".cd-checkout-secondary-action").length,
+      actionRows: document.querySelectorAll(".cd-checkout-footer-actions").length,
+      orderInfoVisible: document.querySelector<HTMLElement>(".cd-order-information")!.getBoundingClientRect().height > 0,
+      orderItemsRendered: document.querySelectorAll(".cd-drawer-item").length === 32,
+      paymentSelectorRendered: document.querySelectorAll('.cd-payment-method-grid[role="radiogroup"]').length === 1,
+      methodText: document.querySelector<HTMLElement>(".cd-order-information dd:nth-of-type(4)")?.textContent,
+      bodyScrolls: body.scrollHeight > body.clientHeight,
       pageOverflow: document.documentElement.scrollWidth > window.innerWidth,
       drawerOverflow: drawer.scrollWidth > drawer.clientWidth,
     };
   });
-  expect(open).toEqual({
+  expect(open).toMatchObject({
     drawerCount: 1,
     rootWidth: 1366,
-    drawerLeft: 792,
     drawerRight: 1366,
     closeTarget: true,
     headerVisible: true,
     footerVisible: true,
+    footerActionsAligned: true,
     onePrimary: 1,
-    oneSecondary: 1,
+    secondaryActions: 1,
+    actionRows: 1,
+    orderInfoVisible: true,
+    orderItemsRendered: true,
+    paymentSelectorRendered: true,
     bodyScrolls: true,
     pageOverflow: false,
     drawerOverflow: false,
   });
+  expect(open.drawerLeft).toBeGreaterThanOrEqual(790);
+  expect(open.drawerLeft).toBeLessThanOrEqual(792);
 
-  for (const [status, label, primary] of [
+  for (const [status, label, primaryLabel] of [
     ["bill-requested", "Bill Requested", "Print Bill"],
     ["receipt-pending", "Receipt Pending", "Print Receipt"],
-    ["completed", "Completed", "View Receipt"],
+    ["completed", "Completed", "Reprint Receipt"],
   ] as const) {
     await page.locator(".cd-checkout-slide-over").evaluate((node, html) => {
       node.outerHTML = html;
     }, drawerFixture(status, label));
     await expect(page.locator(".cd-checkout-status-badge")).toHaveText(label);
-    await expect(page.locator(".cd-checkout-primary-action")).toHaveText(primary);
+    await expect(page.locator(".cd-checkout-primary-action")).toHaveText(primaryLabel);
+    await expect(page.locator(".cd-checkout-secondary-action")).toHaveCount(1);
+    await expect(page.locator(".cd-checkout-footer-actions")).toHaveCount(1);
+  }
+});
+
+test("checkout slide-over stays within requested desktop widths", async ({ page }) => {
+  await page.setContent(`
+    <style>${styles}html,body{margin:0}.cd-checkout-slide-over{animation:none!important}</style>
+    ${drawerFixture("payment-due", "Payment Due")}
+  `);
+
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const geometry = await page.locator(".cd-checkout-slide-over").evaluate((drawer) => {
+      const rect = drawer.getBoundingClientRect();
+      const footer = document.querySelector<HTMLElement>(".cd-drawer-footer")!.getBoundingClientRect();
+      document.documentElement.scrollTop = 40;
+      return {
+        width: Math.round(rect.width),
+        right: Math.round(rect.right),
+        footerVisible: footer.bottom <= window.innerHeight && footer.height > 0,
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth,
+        drawerOverflow: (drawer as HTMLElement).scrollWidth > (drawer as HTMLElement).clientWidth,
+      };
+    });
+    expect(geometry.width).toBeGreaterThanOrEqual(520);
+    expect(geometry.width).toBeLessThanOrEqual(620);
+    expect(geometry.right).toBe(viewport.width);
+    expect(geometry.footerVisible).toBe(true);
+    expect(geometry.pageOverflow).toBe(false);
+    expect(geometry.drawerOverflow).toBe(false);
   }
 });
 

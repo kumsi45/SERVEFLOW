@@ -4,8 +4,7 @@
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\user\\ServeFlow\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "tests/e2e/cashier-checkout-workspace.spec.ts",
-      "tests/e2e/cashier-service-location-quick-switch.spec.ts"
+      "tests/e2e/cashier-checkout-workspace.spec.ts"
     ],
     "configFile": "C:\\Users\\user\\ServeFlow\\playwright.config.ts",
     "rootDir": "C:/Users/user/ServeFlow/tests/e2e",
@@ -19,7 +18,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 4
+      "actualWorkers": 2
     },
     "preserveOutput": "always",
     "projects": [
@@ -28,7 +27,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 4
+          "actualWorkers": 2
         },
         "id": "desktop-chromium",
         "name": "desktop-chromium",
@@ -44,7 +43,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 4
+          "actualWorkers": 2
         },
         "id": "mobile-chromium",
         "name": "mobile-chromium",
@@ -102,7 +101,7 @@
       "specs": [
         {
           "title": "checkout slide-over is fixed, single, scrollable, and mode aware",
-          "ok": false,
+          "ok": true,
           "tags": [],
           "tests": [
             {
@@ -115,68 +114,57 @@
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 1592,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts:149:16",
-                    "location": {
-                      "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                      "column": 16,
-                      "line": 149
-                    },
-                    "snippet": "\u001b[0m \u001b[90m 147 |\u001b[39m     }\u001b[33m;\u001b[39m\n \u001b[90m 148 |\u001b[39m   })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 149 |\u001b[39m   expect(open)\u001b[33m.\u001b[39mtoEqual({\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 150 |\u001b[39m     drawerCount\u001b[33m:\u001b[39m \u001b[35m1\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 151 |\u001b[39m     rootWidth\u001b[33m:\u001b[39m \u001b[35m1366\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 152 |\u001b[39m     drawerLeft\u001b[33m:\u001b[39m \u001b[35m792\u001b[39m\u001b[33m,\u001b[39m\u001b[0m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                        "column": 16,
-                        "line": 149
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m\n\n  147 |     };\n  148 |   });\n> 149 |   expect(open).toEqual({\n      |                ^\n  150 |     drawerCount: 1,\n  151 |     rootWidth: 1366,\n  152 |     drawerLeft: 792,\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts:149:16"
-                    }
-                  ],
+                  "status": "passed",
+                  "duration": 5002,
+                  "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-03T17:11:44.160Z",
+                  "startTime": "2026-08-08T07:01:37.086Z",
                   "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-desktop-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "video",
-                      "contentType": "video/webm",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-desktop-chromium\\video.webm"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-desktop-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-desktop-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                    "column": 16,
-                    "line": 149
-                  }
+                  "attachments": []
                 }
               ],
-              "status": "unexpected"
+              "status": "expected"
             }
           ],
           "id": "af45bb8de9f4b4fc5937-41a1a4a57df54bc03bcc",
           "file": "cashier-checkout-workspace.spec.ts",
-          "line": 89,
+          "line": 100,
+          "column": 1
+        },
+        {
+          "title": "checkout slide-over stays within requested desktop widths",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 897,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-08T07:01:54.478Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "af45bb8de9f4b4fc5937-bb5b4299f0ef5ca3b930",
+          "file": "cashier-checkout-workspace.spec.ts",
+          "line": 192,
           "column": 1
         },
         {
@@ -192,15 +180,15 @@
               "projectName": "desktop-chromium",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1308,
+                  "duration": 796,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-03T17:11:48.255Z",
+                  "startTime": "2026-08-08T07:01:55.398Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -210,12 +198,12 @@
           ],
           "id": "af45bb8de9f4b4fc5937-dc8ac6997ea63d39e84a",
           "file": "cashier-checkout-workspace.spec.ts",
-          "line": 177,
+          "line": 225,
           "column": 1
         },
         {
           "title": "checkout slide-over is fixed, single, scrollable, and mode aware",
-          "ok": false,
+          "ok": true,
           "tags": [],
           "tests": [
             {
@@ -226,70 +214,59 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
-                  "parallelIndex": 2,
-                  "status": "failed",
-                  "duration": 2389,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts:149:16",
-                    "location": {
-                      "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                      "column": 16,
-                      "line": 149
-                    },
-                    "snippet": "\u001b[0m \u001b[90m 147 |\u001b[39m     }\u001b[33m;\u001b[39m\n \u001b[90m 148 |\u001b[39m   })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 149 |\u001b[39m   expect(open)\u001b[33m.\u001b[39mtoEqual({\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 150 |\u001b[39m     drawerCount\u001b[33m:\u001b[39m \u001b[35m1\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 151 |\u001b[39m     rootWidth\u001b[33m:\u001b[39m \u001b[35m1366\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 152 |\u001b[39m     drawerLeft\u001b[33m:\u001b[39m \u001b[35m792\u001b[39m\u001b[33m,\u001b[39m\u001b[0m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                        "column": 16,
-                        "line": 149
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,10 +1,10 @@\u001b[39m\n\u001b[2m  Object {\u001b[22m\n\u001b[2m    \"bodyScrolls\": true,\u001b[22m\n\u001b[2m    \"closeTarget\": true,\u001b[22m\n\u001b[2m    \"drawerCount\": 1,\u001b[22m\n\u001b[32m-   \"drawerLeft\": 792,\u001b[39m\n\u001b[31m+   \"drawerLeft\": 791,\u001b[39m\n\u001b[2m    \"drawerOverflow\": false,\u001b[22m\n\u001b[2m    \"drawerRight\": 1366,\u001b[22m\n\u001b[2m    \"footerVisible\": true,\u001b[22m\n\u001b[2m    \"headerVisible\": true,\u001b[22m\n\u001b[2m    \"onePrimary\": 1,\u001b[22m\n\n  147 |     };\n  148 |   });\n> 149 |   expect(open).toEqual({\n      |                ^\n  150 |     drawerCount: 1,\n  151 |     rootWidth: 1366,\n  152 |     drawerLeft: 792,\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts:149:16"
-                    }
-                  ],
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5409,
+                  "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-03T17:11:44.187Z",
+                  "startTime": "2026-08-08T07:01:37.099Z",
                   "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-mobile-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "video",
-                      "contentType": "video/webm",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-mobile-chromium\\video.webm"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-mobile-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-checkout-workspace-6c10e-e-scrollable-and-mode-aware-mobile-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-checkout-workspace.spec.ts",
-                    "column": 16,
-                    "line": 149
-                  }
+                  "attachments": []
                 }
               ],
-              "status": "unexpected"
+              "status": "expected"
             }
           ],
           "id": "af45bb8de9f4b4fc5937-a7dec151a788e0cad149",
           "file": "cashier-checkout-workspace.spec.ts",
-          "line": 89,
+          "line": 100,
+          "column": 1
+        },
+        {
+          "title": "checkout slide-over stays within requested desktop widths",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1315,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-08T07:01:54.886Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "af45bb8de9f4b4fc5937-3d1728b7fe4dbde9b197",
+          "file": "cashier-checkout-workspace.spec.ts",
+          "line": 192,
           "column": 1
         },
         {
@@ -305,15 +282,15 @@
               "projectName": "mobile-chromium",
               "results": [
                 {
-                  "workerIndex": 5,
+                  "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 1377,
+                  "duration": 1054,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-03T17:11:48.317Z",
+                  "startTime": "2026-08-08T07:01:56.231Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -323,173 +300,7 @@
           ],
           "id": "af45bb8de9f4b4fc5937-f2c76d267326c3106b70",
           "file": "cashier-checkout-workspace.spec.ts",
-          "line": 177,
-          "column": 1
-        }
-      ]
-    },
-    {
-      "title": "cashier-service-location-quick-switch.spec.ts",
-      "file": "cashier-service-location-quick-switch.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [
-        {
-          "title": "service-location quick switch remains readable and internally scrollable",
-          "ok": false,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "desktop-chromium",
-              "projectName": "desktop-chromium",
-              "results": [
-                {
-                  "workerIndex": 1,
-                  "parallelIndex": 1,
-                  "status": "failed",
-                  "duration": 2011,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts:97:43",
-                    "location": {
-                      "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                      "column": 43,
-                      "line": 97
-                    },
-                    "snippet": "\u001b[0m \u001b[90m  95 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m  96 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mhorizontalOverflow)\u001b[33m.\u001b[39mtoBe(\u001b[36mfalse\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  97 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mverticallyScrollable)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  98 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mcolumns)\u001b[33m.\u001b[39mtoBe(viewport\u001b[33m.\u001b[39mcolumns)\u001b[33m;\u001b[39m\n \u001b[90m  99 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mtouchHeight)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m56\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 100 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mcardsInsidePanel)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                        "column": 43,
-                        "line": 97
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n   95 |     });\n   96 |     expect(geometry.horizontalOverflow).toBe(false);\n>  97 |     expect(geometry.verticallyScrollable).toBe(true);\n      |                                           ^\n   98 |     expect(geometry.columns).toBe(viewport.columns);\n   99 |     expect(geometry.touchHeight).toBeGreaterThanOrEqual(56);\n  100 |     expect(geometry.cardsInsidePanel).toBe(true);\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts:97:43"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-03T17:11:44.155Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-desktop-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "video",
-                      "contentType": "video/webm",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-desktop-chromium\\video.webm"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-desktop-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-desktop-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                    "column": 43,
-                    "line": 97
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "2f34fa60277fe76eaba2-68259bb97a56a0e506d9",
-          "file": "cashier-service-location-quick-switch.spec.ts",
-          "line": 10,
-          "column": 1
-        },
-        {
-          "title": "service-location quick switch remains readable and internally scrollable",
-          "ok": false,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "mobile-chromium",
-              "projectName": "mobile-chromium",
-              "results": [
-                {
-                  "workerIndex": 3,
-                  "parallelIndex": 3,
-                  "status": "failed",
-                  "duration": 2567,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts:97:43",
-                    "location": {
-                      "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                      "column": 43,
-                      "line": 97
-                    },
-                    "snippet": "\u001b[0m \u001b[90m  95 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m  96 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mhorizontalOverflow)\u001b[33m.\u001b[39mtoBe(\u001b[36mfalse\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  97 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mverticallyScrollable)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  98 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mcolumns)\u001b[33m.\u001b[39mtoBe(viewport\u001b[33m.\u001b[39mcolumns)\u001b[33m;\u001b[39m\n \u001b[90m  99 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mtouchHeight)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m56\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 100 |\u001b[39m     expect(geometry\u001b[33m.\u001b[39mcardsInsidePanel)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                        "column": 43,
-                        "line": 97
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n   95 |     });\n   96 |     expect(geometry.horizontalOverflow).toBe(false);\n>  97 |     expect(geometry.verticallyScrollable).toBe(true);\n      |                                           ^\n   98 |     expect(geometry.columns).toBe(viewport.columns);\n   99 |     expect(geometry.touchHeight).toBeGreaterThanOrEqual(56);\n  100 |     expect(geometry.cardsInsidePanel).toBe(true);\n    at C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts:97:43"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-03T17:11:44.156Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-mobile-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "video",
-                      "contentType": "video/webm",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-mobile-chromium\\video.webm"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-mobile-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\user\\ServeFlow\\test-results\\artifacts\\cashier-service-location-q-32541-e-and-internally-scrollable-mobile-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\user\\ServeFlow\\tests\\e2e\\cashier-service-location-quick-switch.spec.ts",
-                    "column": 43,
-                    "line": 97
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "2f34fa60277fe76eaba2-1fb6b52c672084e43d03",
-          "file": "cashier-service-location-quick-switch.spec.ts",
-          "line": 10,
+          "line": 225,
           "column": 1
         }
       ]
@@ -497,11 +308,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-03T17:11:41.881Z",
-    "duration": 8496.836,
-    "expected": 2,
+    "startTime": "2026-08-08T07:01:33.677Z",
+    "duration": 24082.293,
+    "expected": 6,
     "skipped": 0,
-    "unexpected": 4,
+    "unexpected": 0,
     "flaky": 0
   }
 }

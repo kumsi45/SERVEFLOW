@@ -118,7 +118,7 @@ describe("Phase 13.4E cashier toast presentation", () => {
       "New order received",
       "Payment verified",
       "Payment verification failed",
-      "Bill ready for review",
+      "Bill sent to printer",
       "Receipt printed",
       "Receipt printing failed",
       "Order completed",

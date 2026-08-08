@@ -63,9 +63,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  container-type: inline-size;
 }
 
-.od-brand-icon,
 .od-restaurant-avatar,
 .od-profile-avatar {
   background: linear-gradient(135deg, var(--od-primary), #0891b2);
@@ -75,9 +75,6 @@
   font-weight: 900;
 }
 
-.od-brand-icon { width: 36px; height: 36px; border-radius: 9px; }
-.od-brand-text { font-size: 15px; font-weight: 850; }
-.od-brand-sub { font-size: 10px; color: var(--od-muted); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 .od-nav {
   flex: 1;
@@ -2128,6 +2125,9 @@
 @media(min-width:761px) and (max-width:1080px){.od-sidebar{width:76px;flex-basis:76px}.od-sidebar .od-sidebar-copy,.od-sidebar .od-nav-section-label,.od-sidebar .od-nav-label,.od-sidebar .od-sidebar-utility b,.od-sidebar .od-restaurant-badge>div:last-child{display:none}.od-sidebar .od-sidebar-collapse{display:none}.od-sidebar .od-nav-item,.od-sidebar .od-sidebar-utility button,.od-sidebar .od-restaurant-badge{justify-content:center}.od-sidebar .od-nav-divider{margin-inline:6px}}
 @media(max-width:760px){.od-global-ai{right:15px;bottom:78px;width:54px;height:54px;padding:7px}.od-global-ai>span:last-child{display:none}.od-mobile-menu-nav button{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px}.od-mobile-bottom-nav button{min-height:52px}.od-assistant-panel,.od-utility-panel{top:auto;bottom:0;height:min(88dvh,760px);border-radius:24px 24px 0 0;animation:od-panel-up .24s ease both}.od-assistant-panel>header,.od-utility-panel>header{border-radius:24px 24px 0 0}}@keyframes od-panel-up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
 @media(prefers-color-scheme:dark){.od-root[data-theme="dark"] .od-sidebar,.od-root[data-theme="dark"] .od-assistant-panel,.od-root[data-theme="dark"] .od-utility-panel{background:#122019;color:#eef7f2}}
+
+.od-about-brand { grid-template-columns: minmax(0, 1fr) auto; }
+.od-about-brand > div:first-child { min-width: 0; }
 
 /* Phase 10A.1 mobile navigation and owner information surfaces */
 .od-help-center,.od-about-page,.od-feedback-page{flex:1;overflow-y:auto;padding:20px}.od-help-center>label{height:52px;display:flex;align-items:center;gap:10px;padding:0 15px;border:1px solid #dfe7e2;border-radius:14px;background:#fff}.od-help-center>label span{color:#607168;font-size:20px}.od-help-center input{width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:14px}.od-help-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}.od-help-grid button{min-height:108px;display:grid;align-content:center;justify-items:start;gap:7px;padding:15px;border:1px solid #e2e9e5;border-radius:15px;background:#fff;color:#193128;text-align:left}.od-help-grid button:hover{border-color:#9cc8b2;background:#f7fbf9}.od-help-grid button>span{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e8f5ee;color:#176b47;font-weight:900}.od-help-grid strong{font-size:12px}.od-help-grid small{color:#728078;font-size:9px}.od-about-page{display:grid;align-content:start;gap:20px}.od-about-brand{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:12px;padding:18px;border:1px solid #dfe8e3;border-radius:17px;background:linear-gradient(135deg,#fff,#eef8f2)}.od-about-brand .od-brand-icon{width:48px;height:48px;border-radius:13px}.od-about-brand h3{font-size:20px}.od-about-brand p{margin-top:4px;color:#64766d;font-size:10px}.od-about-brand>span{padding:5px 8px;border-radius:999px;background:#dff3e7;color:#176b47;font-size:9px;font-weight:900}.od-about-page dl{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0}.od-about-page dl>div{padding:14px;border:1px solid #e2e9e5;border-radius:13px;background:#fff}.od-about-page dt{color:#76867e;font-size:9px;font-weight:800;text-transform:uppercase}.od-about-page dd{margin:7px 0 0;color:#193128;font-size:12px;font-weight:850}.od-about-page section{display:grid;gap:10px}.od-about-page section>p{color:#5f7068;font-size:12px;line-height:1.65}.od-about-features{display:grid;grid-template-columns:1fr 1fr;gap:8px}.od-about-features span{padding:10px;border-radius:10px;background:#edf7f1;color:#245a42;font-size:11px;font-weight:750}.od-about-page nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.od-about-page nav button{min-height:42px;border:1px solid #dfe7e2;border-radius:11px;background:#fff;color:#375147;font-size:10px;font-weight:800}.od-feedback-page{display:grid;align-content:start;gap:20px}.od-feedback-page>p{color:#62736b;font-size:13px;line-height:1.6}.od-feedback-page fieldset{margin:0;padding:0;border:0}.od-feedback-page legend{margin-bottom:10px;font-size:12px;font-weight:850}.od-feedback-page fieldset>div{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.od-feedback-page fieldset button{min-height:94px;display:grid;place-items:center;align-content:center;gap:8px;border:1px solid #dfe7e2;border-radius:14px;background:#fff;color:#28493b}.od-feedback-page fieldset button span{font-size:20px}.od-feedback-page fieldset button strong{font-size:10px}.od-feedback-page label{display:grid;gap:8px;font-size:12px;font-weight:850}.od-feedback-page textarea{resize:vertical;padding:13px;border:1px solid #dbe5df;border-radius:13px;font:inherit;font-size:13px;outline:0}.od-feedback-page textarea:focus{border-color:#2d8a62;box-shadow:0 0 0 3px rgba(45,138,98,.1)}.od-feedback-page>small{color:#829089;font-size:9px;text-align:center}

@@ -35,13 +35,11 @@
   background: #fff;
 }
 
-.ia-brand strong,
 .ia-user strong {
   display: block;
   font-size: 16px;
 }
 
-.ia-brand span,
 .ia-user span,
 .ia-header span,
 .ia-header small,

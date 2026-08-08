@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import "../styles/managerLayout.css";
 
@@ -67,8 +68,7 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
     <main className="ml-shell">
       <aside className={`ml-sidebar ${sidebarOpen ? "is-open" : ""}`} aria-label="Manager navigation">
         <div className="ml-sidebar-brand">
-          <strong>ServeFlow</strong>
-          <span>Manager operations</span>
+          <ServeFlowBrand variant="compact" />
         </div>
         <nav className="ml-sidebar-nav">
           {MANAGER_NAV.map((item) => (

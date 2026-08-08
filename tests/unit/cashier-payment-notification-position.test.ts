@@ -13,10 +13,10 @@ describe("cashier payment notification position", () => {
     expect(css).toContain("width: min(620px, calc(100vw - 40px))");
   });
 
-  it("preserves status semantics and the existing dismiss action", () => {
-    expect(page).toContain('className="cd-realtime-notice" role="status"');
-    expect(page).toContain("setRealtimeNotice(null)");
-    expect(page).toContain("Dismiss");
+  it("uses the current accessible toast viewport instead of the retired banner", () => {
+    expect(page).toContain("<CashierToastViewport");
+    expect(page).not.toContain('className="cd-realtime-notice" role="status"');
+    expect(page).not.toContain("setRealtimeNotice(null)");
   });
 
   it("has mobile and reduced-motion handling", () => {

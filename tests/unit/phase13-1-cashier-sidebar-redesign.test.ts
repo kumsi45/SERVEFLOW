@@ -19,10 +19,11 @@ describe("Phase 13.1 cashier hospitality POS sidebar", () => {
     expect(styles).toContain(".cd-pos-nav {");
   });
 
-  it("uses branded terminal identity and an eight-pixel spacing system", () => {
-    expect(styles).toContain("Cashier Terminal");
+  it("starts with Primary Actions and does not reserve space for duplicate branding", () => {
+    expect(styles).not.toContain("Cashier Terminal");
+    expect(styles).not.toContain(".cd-pos-nav::before");
+    expect(styles).toContain('content: "Primary Actions"');
     expect(styles).toContain("padding: 24px");
-    expect(styles).toContain("margin-bottom: 20px");
     expect(styles).toContain("gap: 8px");
   });
 
