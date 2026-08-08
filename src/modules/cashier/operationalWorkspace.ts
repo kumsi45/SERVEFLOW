@@ -69,7 +69,7 @@ export function summarizeOperationalItems(
   );
   const fullSummary = allItems
     .map((item) => `${item.name} ×${item.quantity}`)
-    .join(", ");
+    .join(" • ");
   const previewItems = allItems.slice(0, Math.max(0, previewLimit));
 
   return {
@@ -77,7 +77,7 @@ export function summarizeOperationalItems(
     distinctItemCount: allItems.length,
     previewText: previewItems
       .map((item) => `${item.name} ×${item.quantity}`)
-      .join(", "),
+      .join(" • "),
     hiddenDistinctCount: Math.max(0, allItems.length - previewItems.length),
     fullSummary,
   };

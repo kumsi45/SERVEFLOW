@@ -17,7 +17,10 @@ test("cashier keeps one unclipped header brand and starts the sidebar with Prima
             <span class="sf-brand-copy"><span class="sf-brand-name">ServeFlow</span><span class="sf-brand-tenant">Grand Royal</span></span>
           </div>
         </div>
-        <label class="cd-header-search"><input aria-label="Search" placeholder="Search table, customer, invoice or phone..."><kbd>Ctrl K</kbd></label>
+        <div class="cd-header-center">
+          <label class="cd-header-search"><input aria-label="Search" placeholder="Search table, customer, invoice or phone..."><kbd>Ctrl K</kbd></label>
+          <div class="cd-header-shift-time"><span>Shift Duration<strong>2h 14m</strong></span></div>
+        </div>
         <div class="cd-header-right"><button class="cd-icon-btn">N</button><button class="cd-signout-btn">Sign Out</button></div>
       </header>
       <aside class="cd-pos-nav"><div class="cd-pos-nav-primary"><button><strong>New Order</strong></button><button><strong>Cancellation Requests</strong></button></div><section class="cd-activity"><h2>Today's Activity</h2></section></aside>
@@ -35,6 +38,7 @@ test("cashier keeps one unclipped header brand and starts the sidebar with Prima
       const brand = rect(".sf-brand");
       const tenant = rect(".sf-brand-tenant");
       const search = rect(".cd-header-search");
+      const duration = rect(".cd-header-shift-time");
       const sidebar = rect(".cd-pos-nav");
       const primary = rect(".cd-pos-nav-primary");
       return {
@@ -42,6 +46,8 @@ test("cashier keeps one unclipped header brand and starts the sidebar with Prima
         brandClipped: brand.left < header.left || brand.right > header.right || brand.top < header.top || brand.bottom > header.bottom,
         tenantVisible: tenant.width > 0 && tenant.height > 0,
         searchOverlap: search.left < brand.right,
+        durationVisible: duration.width > 0 && duration.height > 0,
+        durationBesideSearch: duration.left >= search.right && Math.abs(duration.top - search.top) <= 4,
         sidebarTopGap: primary.top - sidebar.top,
         primaryLabel: getComputedStyle(document.querySelector(".cd-pos-nav-primary")!, "::before").content,
         horizontalOverflow: document.documentElement.scrollWidth > viewportWidth,
@@ -52,6 +58,8 @@ test("cashier keeps one unclipped header brand and starts the sidebar with Prima
     expect(geometry.brandClipped).toBe(false);
     expect(geometry.tenantVisible).toBe(true);
     expect(geometry.searchOverlap).toBe(false);
+    expect(geometry.durationVisible).toBe(true);
+    expect(geometry.durationBesideSearch).toBe(true);
     expect(geometry.sidebarTopGap).toBeGreaterThanOrEqual(24);
     expect(geometry.sidebarTopGap).toBeLessThanOrEqual(32);
     expect(geometry.primaryLabel).toContain("Primary Actions");

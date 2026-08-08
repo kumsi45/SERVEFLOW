@@ -120,21 +120,23 @@ export function CashierTopBar({
       <div className="cd-header-left">
         <ServeFlowBrand variant="full" tenantName={restaurantName} />
       </div>
-      <label className="cd-header-search">
-        <span className="cd-search-icon"><CashierIcon name="search" /></span>
-        <input
-          value={searchValue}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search table, customer, invoice or phone..."
-          aria-label="Search by table, customer, invoice, order number, or phone number"
-        />
-        <kbd>Ctrl K</kbd>
-      </label>
-      <div className="cd-header-right">
+      <div className="cd-header-center">
+        <label className="cd-header-search">
+          <span className="cd-search-icon"><CashierIcon name="search" /></span>
+          <input
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search table, customer, invoice or phone..."
+            aria-label="Search by table, customer, invoice, order number, or phone number"
+          />
+          <kbd>Ctrl K</kbd>
+        </label>
         <div className="cd-header-shift-time">
           <CashierIcon name="clock" />
           <span>Shift Duration<strong>{shiftDuration}</strong></span>
         </div>
+      </div>
+      <div className="cd-header-right">
         <button type="button" className="cd-icon-btn" aria-label={hasNotification ? "View new notifications" : "Notifications"} onClick={onNotifications}>
           <CashierIcon name="bell" />
           {hasNotification ? <span className="cd-notif-dot" /> : null}

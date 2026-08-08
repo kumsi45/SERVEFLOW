@@ -3724,13 +3724,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
   .cd-header-left { min-width: 0; flex: 0 0 auto; justify-self: start; gap: 12px; }
 
+  .cd-header-center {
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
   .cd-header-search {
-    width: 100%;
+    width: auto;
     max-width: none;
-    min-width: 280px;
+    min-width: 0;
     min-height: 52px;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     gap: 12px;
     padding: 0 12px 0 16px;
     border: 1px solid transparent;
@@ -3768,6 +3775,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .cd-header-shift-time {
     min-width: 118px;
     min-height: 48px;
+    flex: 0 0 auto;
     display: grid;
     grid-template-columns: 20px auto;
     grid-template-rows: auto auto;
@@ -4793,6 +4801,200 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .cd-row-event-time strong,
   .cd-row-wait strong,
   .cd-row-action { font-size: 10px; }
+}
+
+/* Operational workspace row — readable seven-column hospitality POS scan line. */
+@media (min-width: 1024px) {
+  .cd-operational-rows {
+    gap: 15px;
+    padding: 10px;
+    background: #f8faf8;
+  }
+
+  .cd-operational-row {
+    width: 100%;
+    min-width: 0;
+    height: 76px;
+    min-height: 76px;
+    grid-template-columns: 48px 150px minmax(0, 1fr) 100px 120px 70px 130px;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .025);
+    contain-intrinsic-size: 76px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cd-operational-row::before {
+    top: 14px;
+    bottom: 14px;
+    border-radius: 0 999px 999px 0;
+  }
+
+  .cd-operational-row > div {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .cd-row-location strong {
+    overflow: hidden;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-row-source span {
+    overflow: hidden;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-row-items {
+    display: flex !important;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .cd-row-items-detail {
+    width: 100%;
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 6px !important;
+    overflow: hidden;
+  }
+
+  .cd-row-items-preview {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-row-items-more {
+    flex: 0 0 auto;
+    overflow: visible !important;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+
+  .cd-row-method { justify-content: flex-start; }
+  .cd-row-payment-value {
+    overflow: hidden;
+    color: #4b5563;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cd-row-payment-value.payment-due { color: #d97706; }
+  .queue-ready .cd-row-payment-value { color: #7e22ce; }
+  .queue-paid .cd-row-payment-value { color: #15803d; }
+  .queue-completed .cd-row-payment-value { color: #64748b; }
+
+  .cd-row-amount { justify-content: flex-end; text-align: right; }
+  .cd-row-amount strong {
+    overflow: hidden;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    line-height: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-row-wait strong {
+    overflow: hidden;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-row-action {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+    overflow: hidden;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@container cashier-operational-workspace (max-width: 900px) {
+  .cd-operational-row {
+    grid-template-columns: 30px 105px minmax(0, 1fr) 62px 92px 38px 96px;
+    gap: 1px;
+    padding: 12px 2px;
+  }
+  .cd-row-source span { font-size: 11px; }
+  .cd-row-items-preview { font-size: 11px; }
+  .cd-row-items-more { font-size: 10px; }
+  .cd-row-payment-value { font-size: 10px; }
+  .cd-row-amount strong { font-size: 14px; }
+  .cd-row-wait strong { font-size: 10px; }
+  .cd-row-action { padding-inline: 2px; font-size: 10px; }
+}
+
+@container cashier-operational-workspace (max-width: 700px) {
+  .cd-operational-row {
+    grid-template-columns: 26px 96px minmax(0, 1fr) 62px 92px 38px 96px;
+    gap: 1px;
+    padding: 12px 2px;
+  }
+  .cd-row-source span { font-size: 11px; }
+  .cd-row-payment-value { font-size: 10px; }
+  .cd-row-wait strong { font-size: 10px; }
+  .cd-row-items-preview { font-size: 11px; }
+  .cd-row-items-more { font-size: 10px; }
+  .cd-row-amount strong { font-size: 14px; }
+  .cd-row-action { padding-inline: 2px; font-size: 10px; }
+}
+
+@container cashier-operational-workspace (max-width: 600px) {
+  .cd-operational-row {
+    grid-template-columns: 30px 96px minmax(0, 1fr) 62px 92px 38px 112px;
+    gap: 1px;
+    padding-inline: 2px;
+  }
+  .cd-row-source span { font-size: 11px; }
+  .cd-row-items-preview { font-size: 11px; }
+  .cd-row-items-more { font-size: 10px; }
+  .cd-row-payment-value { font-size: 10px; }
+  .cd-row-amount strong { font-size: 14px; }
+  .cd-row-wait strong { font-size: 10px; }
+  .cd-row-action { padding-inline: 2px; font-size: 10px; }
 }
 
 /* Phase 13.4E — compact non-blocking cashier toasts. */
@@ -6175,20 +6377,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cd-location-tile,
 .cd-location-tile.featured {
   min-height: 64px;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto;
   gap: 1px;
   padding-block: 6px;
-}
-.cd-location-number {
-  width: 100%;
-  overflow: hidden;
-  color: #6b7280;
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 10px;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .cd-location-empty a {
   justify-self: center;
@@ -6384,4 +6575,161 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .cd-checkout-slide-over .cd-drawer-body { padding-inline: 18px; }
   .cd-checkout-footer-actions { grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); gap: 10px; }
   .cd-checkout-slide-over .cd-drawer-footer button { min-height: 50px; padding-inline: 10px; }
+}
+
+/* Compact single-screen checkout composition. */
+.cd-checkout-slide-over .cd-drawer-header {
+  min-height: 106px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.cd-checkout-heading { min-width: 0; display: grid; align-content: start; gap: 2px; }
+.cd-checkout-label { color: #111827; font-size: 13px; font-weight: 650; line-height: 17px; }
+.cd-checkout-slide-over .cd-drawer-title {
+  overflow: hidden;
+  font-size: 27px;
+  line-height: 31px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-checkout-slide-over .cd-checkout-assignee { min-width: 0; gap: 6px; font-size: 12px; line-height: 17px; }
+.cd-checkout-slide-over .cd-checkout-assignee strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-checkout-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.cd-checkout-slide-over .cd-checkout-status-badge { min-height: 30px; padding: 0 10px; font-size: 11px; white-space: nowrap; }
+.cd-checkout-slide-over .cd-drawer-close { width: 38px; height: 38px; flex: 0 0 38px; font-size: 21px; }
+
+.cd-checkout-slide-over .cd-drawer-body {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-content: initial;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.cd-checkout-order-summary,
+.cd-payment-method-panel {
+  min-width: 0;
+  padding: 8px 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+}
+.cd-checkout-order-summary { min-height: 0; display: block; overflow: visible; }
+.cd-checkout-item-count {
+  min-height: 18px;
+  margin-bottom: 2px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: right;
+}
+.cd-checkout-slide-over .cd-drawer-items {
+  min-height: auto;
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+.cd-checkout-slide-over .cd-drawer-item {
+  min-height: 26px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 3px 0;
+}
+.cd-checkout-slide-over .cd-drawer-item-name { min-width: 0; font-size: 12px; line-height: 16px; }
+.cd-checkout-slide-over .cd-drawer-item-name > span {
+  display: inline;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-checkout-slide-over .cd-drawer-item-name > strong { font-size: 11px; }
+.cd-checkout-slide-over .cd-drawer-item-modifiers { margin-top: 1px; font-size: 10px; line-height: 13px; }
+.cd-checkout-slide-over .cd-drawer-item-price { font-size: 12px; line-height: 16px; }
+.cd-checkout-hidden-items {
+  width: auto;
+  min-height: 28px;
+  margin: 2px 0 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: #166534;
+  font: 700 11px/16px Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.cd-checkout-hidden-items:hover { color: #14532d; text-decoration: underline; text-underline-offset: 2px; }
+.cd-checkout-order-summary .cd-checkout-breakdown {
+  margin-top: 3px;
+  padding: 5px 0 0;
+  border-top: 1px solid #e5e7eb;
+  gap: 3px 12px;
+  font-size: 11px;
+  line-height: 15px;
+}
+.cd-checkout-order-summary .cd-checkout-breakdown strong { font-size: 12px; }
+.cd-checkout-order-summary .cd-checkout-total-row {
+  margin-top: 2px;
+  padding-top: 5px;
+  border-top: 1px solid #d1d5db;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 20px;
+}
+
+.cd-payment-method-panel { display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: center; gap: 6px 10px; }
+.cd-payment-method-panel > label { color: #111827; font-size: 13px; font-weight: 700; }
+.cd-payment-method-panel > select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 34px 0 11px;
+  border: 1px solid #cfd8d3;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  font: 600 13px/18px Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.cd-payment-method-panel > select:focus-visible { outline: 3px solid rgba(21, 128, 61, .18); outline-offset: 1px; border-color: #15803d; }
+.cd-payment-method-panel > select:disabled { background: #f8faf9; color: #374151; opacity: 1; }
+.cd-payment-method-panel .cd-payment-method-error,
+.cd-payment-method-panel .cd-payment-evidence-card,
+.cd-payment-method-panel .cd-payment-duplicate { grid-column: 1 / -1; }
+.cd-payment-method-panel .cd-payment-method-error { padding: 8px 10px; font-size: 11px; }
+.cd-payment-method-panel .cd-payment-evidence-card { gap: 5px 12px; padding: 8px 10px; border-radius: 10px; }
+.cd-payment-method-panel .cd-payment-evidence-heading { font-size: 11px; }
+.cd-payment-method-panel .cd-payment-evidence-card > div:not(.cd-payment-evidence-heading):not(.cd-payment-screenshot-row) { font-size: 11px; }
+.cd-payment-method-panel .cd-payment-evidence-card em {
+  margin-left: 4px;
+  color: #6b7280;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+.cd-payment-method-panel .cd-payment-evidence-card strong.missing { color: #b45309; }
+.cd-payment-method-panel .cd-payment-screenshot-row { min-height: 38px; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 7px; }
+.cd-payment-method-panel .cd-payment-screenshot-row img { width: 34px; height: 34px; }
+.cd-payment-method-panel .cd-payment-screenshot-row button { min-height: 32px; padding-inline: 9px; font-size: 11px; }
+.cd-checkout-slide-over .cd-pos-active-note { padding: 7px 10px; font-size: 11px; line-height: 15px; }
+
+.cd-checkout-slide-over .cd-drawer-footer { gap: 0; padding: 10px 16px max(12px, env(safe-area-inset-bottom)); }
+.cd-checkout-footer-actions { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 10px; }
+.cd-checkout-slide-over .cd-drawer-footer button { min-height: 44px; height: 44px; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .cd-checkout-slide-over .cd-drawer-header { min-height: 100px; padding: 10px 12px; }
+  .cd-checkout-slide-over .cd-drawer-body { gap: 8px; padding: 8px 12px; }
+  .cd-checkout-slide-over .cd-drawer-footer { padding-inline: 12px; }
+  .cd-payment-method-panel { grid-template-columns: 110px minmax(0, 1fr); padding-inline: 11px; }
+  .cd-checkout-slide-over .cd-drawer-footer button { min-height: 44px; height: 44px; }
 }

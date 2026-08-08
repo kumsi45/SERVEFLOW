@@ -9,6 +9,9 @@ const migration = read(
 const nullableOrderMethodMigration = read(
   "supabase/migrations/225_nullable_order_payment_method.sql",
 );
+const settledReleaseMigration = read(
+  "supabase/migrations/226_settled_service_location_auto_release.sql",
+);
 const cashier = read("src/modules/cashier/pages/CashierDashboardPage.tsx");
 
 describe("cashier waiter payment and automatic service-location release", () => {
@@ -23,9 +26,9 @@ describe("cashier waiter payment and automatic service-location release", () => 
   });
 
   it("shows Not Selected and requires an enabled tenant payment method", () => {
-    expect(cashier).toContain("<strong>Not Selected</strong>");
-    expect(cashier).toContain("onClick: displayPaymentMethod ? onApprove : undefined");
-    expect(cashier).toContain("disabled: !displayPaymentMethod || !onApprove || approving || Boolean(paymentMethodIssue)");
+    expect(cashier).toContain('{showPaymentSelector ? "Not Selected" : "Not recorded"}');
+    expect(cashier).toContain("onClick: displayPaymentMethod && !requiresCustomerReference ? onApprove : undefined");
+    expect(cashier).toContain('isDigital && orderSourceLabel !== "Waiter" && !displayReference');
     expect(cashier).toContain("No checkout payment methods are enabled for this business.");
     expect(cashier).toContain('throw new Error("Select the payment method before verifying.")');
     expect(cashier).toContain('supabase.rpc("get_cashier_checkout_payment_methods"');
@@ -59,6 +62,19 @@ describe("cashier waiter payment and automatic service-location release", () => 
     expect(migration).toContain("'active_items'");
     expect(cashier).toContain("other open order(s) remain");
     expect(cashier).toContain("active item(s) remain");
+  });
+
+  it("releases after the final prerequisite whether payment or service finishes last", () => {
+    expect(settledReleaseMigration).toContain("try_auto_release_settled_service_location");
+    expect(settledReleaseMigration).toContain("auto_release_service_location_after_item_terminal_trigger");
+    expect(settledReleaseMigration).toContain("items_terminal_after_payment_auto_release");
+    expect(settledReleaseMigration).toContain("cashier_payment_verified_auto_release");
+    expect(settledReleaseMigration).toContain("coalesce(target_session.dining_session_status, ''open'') = ''open''");
+    expect(settledReleaseMigration).toContain("not in ('completed', 'served', 'delivered')");
+    expect(settledReleaseMigration).toContain("other_orders.table_released_at is null");
+    expect(settledReleaseMigration).toContain("settled_service_location_backfill");
+    expect(cashier).toContain("Release Table");
+    expect(cashier).toContain("handleCloseDiningSessionFromBill(drawerDiningSession)");
   });
 
   it("keeps bill and receipt printing separate from release authority", () => {

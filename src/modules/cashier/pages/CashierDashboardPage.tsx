@@ -413,7 +413,7 @@ type ShiftActivity = {
 type QueueTab = "pending" | "paid" | "preparing" | "ready" | "completed";
 const QUEUE_PRESENTATION = {
   pending: { title: "Payment Due Queue", icon: "due", action: "Verify Payment", empty: "No payments waiting." },
-  preparing: { title: "Bill Requested Queue", icon: "bill", action: "Open Checkout", empty: "No bill requests right now." },
+  preparing: { title: "Bill Requested Queue", icon: "bill", action: "Print Bill", empty: "No bill requests right now." },
   ready: { title: "Receipt Pending Queue", icon: "print", action: "Print Receipt", empty: "No receipts waiting to print." },
   paid: { title: "Paid Queue", icon: "paid", action: "Review", empty: "No paid orders are waiting for review." },
   completed: { title: "Completed Queue", icon: "completed", action: "View", empty: "No completed transactions yet." },
@@ -1130,48 +1130,28 @@ function checkoutOrderSource(order: CashierOrder) {
   return { label: "Customer", name: order.customerName || null };
 }
 
-function checkoutTransactionMetadata(
-  order: CashierOrder,
-  checkoutStatus: CheckoutWorkspaceStatus,
-  workflowEntry?: CashierWorkflowRow | null,
-) {
-  const parts: string[] = [];
-  if (order.invoiceDisplayNumber || order.invoiceNumber) {
-    parts.push(`Invoice ${order.invoiceDisplayNumber ?? `#${order.invoiceNumber}`}`);
-  }
-  if (order.displayNumber) parts.push(`Order ${order.displayNumber}`);
-
-  const requestedAt = asRecord(workflowEntry).bill_requested_at;
-  const completedAt = asRecord(workflowEntry).completed_at;
-  if (checkoutStatus === "bill-requested" && typeof requestedAt === "string") {
-    parts.push(relativeEventTime("Requested", requestedAt));
-  } else if (checkoutStatus === "receipt-pending") {
-    const paidAt = order.invoicePaidAt || order.paymentVerifiedAt || workflowEntry?.submitted_at;
-    if (paidAt) parts.push(relativeEventTime("Paid", paidAt));
-  } else if (checkoutStatus === "completed" && typeof completedAt === "string") {
-    parts.push(`Completed ${fmtTime(completedAt)}`);
-  } else {
-    parts.push(`Created ${fmtTime(order.createdAt)}`);
-    if (checkoutStatus === "payment-due") {
-      parts.push(`Waiting ${durationFrom(order.createdAt, new Date()).replace("m", " min")}`);
-    }
-  }
-  if (order.invoiceVerifiedAt && checkoutStatus === "completed") {
-    parts.push(`Verified ${fmtTime(order.invoiceVerifiedAt)}`);
-  }
-  return parts;
+function compactElapsedLabel(iso: string, now: Date) {
+  const minutes = Math.max(
+    0,
+    Math.floor((now.getTime() - new Date(iso).getTime()) / 60000),
+  );
+  if (minutes < 1) return "Now";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) return `${hours} hr${remainingMinutes ? ` ${remainingMinutes} min` : ""}`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return `${days} d${remainingHours ? ` ${remainingHours} hr` : ""}`;
 }
 
 function CheckoutSlideOverDrawer({
   order,
   checkoutStatus,
-  workflowEntry,
   serviceLocationName,
-  serviceLocationNumber,
   onClose,
+  onReleaseTable,
   onApprove,
-  onReject,
-  onRetry,
   onPrintBill,
   onPrintReceipt,
   approving,
@@ -1179,25 +1159,18 @@ function CheckoutSlideOverDrawer({
   paymentTransactionId,
   paymentScreenshotPreviewUrl,
   duplicateReferenceNotice,
-  ownerDuplicateOverride,
   collectionPaymentMethod,
   availablePaymentMethods,
   paymentMethodConfigurationError,
-  paymentNote,
-  onOwnerDuplicateOverrideChange,
   onCollectionPaymentMethodChange,
-  onPaymentNoteChange,
   formatMoney,
 }: {
   order: CashierOrder;
   checkoutStatus: CheckoutWorkspaceStatus;
-  workflowEntry?: CashierWorkflowRow | null;
   serviceLocationName: string;
-  serviceLocationNumber: string | null;
   onClose: () => void;
+  onReleaseTable?: () => void;
   onApprove?: () => void;
-  onReject?: () => void;
-  onRetry?: () => void;
   onPrintBill?: () => void;
   onPrintReceipt?: () => void;
   approving: boolean;
@@ -1205,30 +1178,24 @@ function CheckoutSlideOverDrawer({
   paymentTransactionId: string;
   paymentScreenshotPreviewUrl: string | null;
   duplicateReferenceNotice: string | null;
-  ownerDuplicateOverride: boolean;
   collectionPaymentMethod: string;
   availablePaymentMethods: CheckoutPaymentMethod[];
   paymentMethodConfigurationError: string | null;
-  paymentNote: string;
-  onOwnerDuplicateOverrideChange: (value: boolean) => void;
   onCollectionPaymentMethodChange: (value: string) => void;
-  onPaymentNoteChange: (value: string) => void;
   formatMoney: (value: number) => string;
 }) {
   const drawerRef = useRef<HTMLElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const screenshotTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [screenshotPreviewOpen, setScreenshotPreviewOpen] = useState(false);
+  const [showAllCheckoutItems, setShowAllCheckoutItems] = useState(false);
   const [screenshotFitMode, setScreenshotFitMode] = useState<"fit" | "zoom">(
     "fit",
   );
   const [screenshotZoom, setScreenshotZoom] = useState(1);
-  const [itemsExpanded, setItemsExpanded] = useState(false);
   const isPending =
     order.invoiceStatus === "pending" || order.invoiceStatus === "held";
-  const isRejected = order.invoiceStatus === "cancelled";
   const isPaymentDue = checkoutStatus === "payment-due";
-  const requiresPayment = isPending && checkoutStatus === "payment-due";
   const showPaymentSelector = checkoutStatus === "payment-due" && isPending;
   const displayPaymentMethod =
     collectionPaymentMethod.trim() || order.paymentMethod?.trim() || "";
@@ -1256,6 +1223,8 @@ function CheckoutSlideOverDrawer({
     : CHECKOUT_STATUS_LABEL[checkoutStatus];
   const displayReference =
     paymentReference.trim() || order.referenceNumber?.trim() || "";
+  const requiresCustomerReference =
+    isDigital && orderSourceLabel !== "Waiter" && !displayReference;
   const displayTransaction =
     paymentTransactionId.trim() || order.transactionId?.trim() || "";
   const screenshotFileName = order.screenshotUrl
@@ -1266,14 +1235,14 @@ function CheckoutSlideOverDrawer({
     order.paymentVerifiedAt ||
     order.invoiceVerifiedAt ||
     order.createdAt;
-  const totalParts = formatMoney(order.totalPrice).match(/^([^\d-]*)(.*)$/u);
-  const totalCurrency = totalParts?.[1]?.trim() || "ETB";
-  const totalAmount = totalParts?.[2]?.trim() || formatMoney(order.totalPrice);
-  const visibleItems = itemsExpanded ? order.items : order.items.slice(0, 6);
-  const hiddenItemCount = Math.max(0, order.items.length - visibleItems.length);
-  const requestedAt = asRecord(workflowEntry).bill_requested_at;
-  const completedAt = asRecord(workflowEntry).completed_at;
-  const receiptStatus = workflowEntry?.receipt_status ?? null;
+  const checkoutItemLimit = 7;
+  const visibleItems = showAllCheckoutItems
+    ? order.items
+    : order.items.slice(0, checkoutItemLimit);
+  const hiddenItemCount = Math.max(0, order.items.length - checkoutItemLimit);
+  const paymentVerified = order.invoiceStatus === "paid" || Boolean(
+    order.invoicePaidAt || order.paymentVerifiedAt || order.invoiceVerifiedAt,
+  );
 
   function closeScreenshotPreview() {
     setScreenshotPreviewOpen(false);
@@ -1281,10 +1250,10 @@ function CheckoutSlideOverDrawer({
   }
 
   useEffect(() => {
-    setItemsExpanded(false);
+    setShowAllCheckoutItems(false);
     drawerRef.current
       ?.querySelector<HTMLElement>(
-        "button:not(:disabled), [href], textarea:not(:disabled), [tabindex]:not([tabindex='-1'])",
+        "button:not(:disabled), [href], select:not(:disabled), [tabindex]:not([tabindex='-1'])",
       )
       ?.focus();
   }, [order.id]);
@@ -1302,7 +1271,7 @@ function CheckoutSlideOverDrawer({
     if (event.key !== "Tab" || !container) return;
     const focusable = Array.from(
       container.querySelectorAll<HTMLElement>(
-        "button:not(:disabled), [href], textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex='-1'])",
+        "button:not(:disabled), [href], select:not(:disabled), textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex='-1'])",
       ),
     ).filter((element) => element.offsetParent !== null);
     if (focusable.length === 0) return;
@@ -1320,13 +1289,17 @@ function CheckoutSlideOverDrawer({
   const paymentEvidenceCard = isDigital ? (
     <div className="cd-payment-evidence-card" aria-label="Customer payment evidence">
       <div className="cd-payment-evidence-heading">Payment Evidence</div>
-      <div><span>Payment Method</span><strong>{displayPaymentMethod}</strong></div>
-      <div><span>Reference Number</span><strong>{displayReference || "Not provided"}</strong></div>
+      <div>
+        <span>Reference Number {orderSourceLabel !== "Waiter" ? <em>Required</em> : null}</span>
+        <strong className={requiresCustomerReference ? "missing" : undefined}>
+          {displayReference || (requiresCustomerReference ? "Required" : "Not provided")}
+        </strong>
+      </div>
       {displayTransaction ? (
         <div><span>Transaction ID</span><strong>{displayTransaction}</strong></div>
       ) : null}
       <div>
-        <span>Screenshot</span>
+        <span>Screenshot <em>Optional</em></span>
         <strong>{paymentScreenshotPreviewUrl ? "Uploaded" : "Not provided"}</strong>
       </div>
       {paymentScreenshotPreviewUrl ? (
@@ -1350,7 +1323,7 @@ function CheckoutSlideOverDrawer({
   ) : null;
 
   const primaryAction = checkoutStatus === "payment-due"
-    ? { label: approving ? "Verifying..." : "Verify Payment", onClick: displayPaymentMethod ? onApprove : undefined, disabled: !displayPaymentMethod || !onApprove || approving || Boolean(paymentMethodIssue), icon: "paid" as const }
+    ? { label: approving ? "Verifying..." : "Verify Payment", onClick: displayPaymentMethod && !requiresCustomerReference ? onApprove : undefined, disabled: !displayPaymentMethod || requiresCustomerReference || !onApprove || approving || Boolean(paymentMethodIssue), icon: "paid" as const }
     : checkoutStatus === "bill-requested"
       ? { label: "Print Bill", onClick: onPrintBill, disabled: !onPrintBill || approving, icon: "bill" as const }
       : checkoutStatus === "receipt-pending" || checkoutStatus === "paid"
@@ -1376,317 +1349,82 @@ function CheckoutSlideOverDrawer({
         }
       >
         <header className="cd-drawer-header">
-          <div className="cd-checkout-topline">
-            <span>Checkout</span>
-            <button
-              type="button"
-              className="cd-drawer-close"
-              onClick={onClose}
-              aria-label="Close checkout"
-            >
-              &times;
-            </button>
-          </div>
           <div className="cd-checkout-heading">
-            <h2 className="cd-drawer-title" id="cashier-checkout-drawer-title">
-              {serviceLocationName}
-            </h2>
-            {serviceLocationNumber ? (
-              <span className="cd-checkout-location-number">
-                Service Location {serviceLocationNumber}
-              </span>
-            ) : null}
-            <div
-              className="cd-checkout-assignee"
-              aria-label={orderSourceName ? `${orderSourceLabel}: ${orderSourceName}` : orderSourceLabel}
-            >
+            <span className="cd-checkout-label">Checkout</span>
+            <h2 className="cd-drawer-title" id="cashier-checkout-drawer-title">{serviceLocationName}</h2>
+            <div className="cd-checkout-assignee" aria-label={orderSourceName ? `${orderSourceLabel}: ${orderSourceName}` : orderSourceLabel}>
               <span>{orderSourceLabel}</span>
               {orderSourceName ? <><i aria-hidden="true">•</i><strong>{orderSourceName}</strong></> : null}
             </div>
           </div>
-          <span
-            className={`cd-checkout-status-badge ${checkoutStatus}`}
-            aria-label={`Current queue status: ${statusLabel}`}
-          >
-            <i aria-hidden="true" />
-            {statusLabel}
-          </span>
+          <div className="cd-checkout-header-actions">
+            {statusLabel !== "Paid" ? (
+              <span className={`cd-checkout-status-badge ${checkoutStatus}`} aria-label={`Current queue status: ${statusLabel}`}>
+                <i aria-hidden="true" />{statusLabel}
+              </span>
+            ) : null}
+            <button type="button" className="cd-drawer-close" onClick={onClose} aria-label="Close checkout">&times;</button>
+          </div>
         </header>
         <div className="cd-drawer-body">
-          <section className="cd-checkout-meta" aria-label="Transaction information">
-            {checkoutTransactionMetadata(order, checkoutStatus, workflowEntry).map((part) => (
-              <span key={part}>{part}</span>
-            ))}
-          </section>
-          <div className="cd-checkout-scroll-region">
-            <section
-              className="cd-checkout-items-panel"
-              aria-labelledby="checkout-items-title"
-            >
-              <div
-                className="cd-drawer-section-title"
-                id="checkout-items-title"
-              >
-                <span>Order Items</span><small>{order.items.length} items</small>
-              </div>
-              <div className="cd-drawer-items">
-                {order.items.length === 0 ? (
-                  <div className="cd-empty-sub">No item data available.</div>
-                ) : (
-                  visibleItems.map((item) => (
-                    <div key={item.id} className="cd-drawer-item">
-                      <div className="cd-drawer-item-name">
-                        <span>{item.name}</span> <strong>×{item.quantity}</strong>
-                        {item.notes ? (
-                          <div className="cd-drawer-item-modifiers">
-                            {item.notes}
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="cd-drawer-item-price">
-                        {formatMoney(item.price * item.quantity)}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {order.items.length > 6 ? (
-                <button
-                  type="button"
-                  className="cd-checkout-items-toggle"
-                  aria-expanded={itemsExpanded}
-                  onClick={() => setItemsExpanded((current) => !current)}
-                >
-                  {itemsExpanded ? "Show fewer items" : `Show ${hiddenItemCount} more items`}
-                </button>
-              ) : null}
-            </section>
-          </div>
-          <section className="cd-drawer-total" aria-label="Bill summary">
-            <span className="cd-bill-summary-label">Bill Summary</span>
-            <div className="cd-checkout-breakdown">
-              <span>Subtotal</span>
-              <strong>{formatMoney(order.subtotal ?? order.totalPrice)}</strong>
-              {(order.vatAmount ?? 0) > 0 ? (
-                <><span>VAT</span><strong>{formatMoney(order.vatAmount ?? 0)}</strong></>
-              ) : null}
-              {(order.serviceChargeAmount ?? 0) > 0 ? (
-                <><span>Service Charge</span><strong>{formatMoney(order.serviceChargeAmount ?? 0)}</strong></>
-              ) : null}
-              {(order.discountAmount ?? 0) !== 0 ? (
-                <><span>Discount</span><strong>- {formatMoney(Math.abs(order.discountAmount ?? 0))}</strong></>
-              ) : null}
+          <section className="cd-checkout-order-summary" aria-label="Items and bill summary">
+            <div className="cd-checkout-item-count">{order.items.length} items</div>
+            <div className="cd-drawer-items">
+              {order.items.length === 0 ? <div className="cd-empty-sub">No item data available.</div> : visibleItems.map((item) => (
+                <div key={item.id} className="cd-drawer-item">
+                  <div className="cd-drawer-item-name">
+                    <span>{item.name}</span><strong>×{item.quantity}</strong>
+                    {item.notes ? <div className="cd-drawer-item-modifiers">{item.notes}</div> : null}
+                  </div>
+                  <div className="cd-drawer-item-price">{formatMoney(item.price * item.quantity)}</div>
+                </div>
+              ))}
             </div>
-            <span className="cd-drawer-total-label" aria-label="Grand Total">
-              Total
-            </span>
-            <span className="cd-drawer-total-value">
-              <span>{totalCurrency}</span>
-              <strong>{totalAmount}</strong>
-            </span>
-          </section>
-          {checkoutStatus === "payment-due" ? (
-            <section
-              className="cd-payment-verification-box"
-              aria-labelledby="checkout-payment-verification-title"
-            >
-              <div
-                className="cd-drawer-section-title"
-                id="checkout-payment-verification-title"
+            {hiddenItemCount > 0 ? (
+              <button
+                type="button"
+                className="cd-checkout-hidden-items"
+                aria-expanded={showAllCheckoutItems}
+                onClick={() => setShowAllCheckoutItems((current) => !current)}
               >
-                {requiresPayment ? "Payment Verification" : "Payment Evidence"}
-              </div>
-              {showPaymentSelector ? (
-                <>
-                <div
-                  className="cd-payment-method-grid"
-                  role="radiogroup"
-                  aria-label="Payment Method"
-                >
-                  {selectablePaymentMethods.map((method) => {
-                    const selected = collectionPaymentMethod === method.value;
-                    return (
-                      <button
-                        key={method.method_code}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        className={selected ? "selected" : ""}
-                        onClick={() => onCollectionPaymentMethodChange(method.value)}
-                      >
-                        <span>{method.display_name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {!displayPaymentMethod ? (
-                  <div className="cd-payment-method-empty">
-                    <span>Payment Method</span>
-                    <strong>Not Selected</strong>
-                    {selectablePaymentMethods.length === 0 ? (
-                      <small>No payment methods are enabled for this business.</small>
-                    ) : null}
-                  </div>
-                ) : null}
-                {paymentMethodIssue ? (
-                  <div className="cd-payment-method-error" role="alert">
-                    <strong>Payment methods unavailable</strong>
-                    <span>{paymentMethodIssue}</span>
-                  </div>
-                ) : null}
-                </>
-              ) : (
-                <div className="cd-readonly-payment-method">
-                  <span>Payment Method</span>
-                  <strong>{displayPaymentMethod || "Not recorded"}</strong>
-                </div>
-              )}
-              {isDigital ? (
-                <div className="cd-digital-payment-details">
-                <div>
-                  <span>Reference Number</span>
-                  <strong>{displayReference || "Not provided"}</strong>
-                </div>
-                {displayTransaction ? (
-                  <div>
-                    <span>Transaction ID</span>
-                    <strong>{displayTransaction}</strong>
-                  </div>
-                ) : null}
-                <div className="cd-payment-evidence-card">
-                  <div className="cd-payment-evidence-heading">Payment Evidence</div>
-                  <div>
-                    <span>Payment Method</span>
-                    <strong>{displayPaymentMethod}</strong>
-                  </div>
-                  <div>
-                    <span>Reference</span>
-                    <strong>{displayReference || "Not provided"}</strong>
-                  </div>
-                  <div>
-                    <span>Screenshot</span>
-                    <strong>
-                      {paymentScreenshotPreviewUrl ? "Uploaded" : "Not provided"}
-                    </strong>
-                  </div>
-                  {paymentScreenshotPreviewUrl ? (
-                    <div className="cd-payment-screenshot-row">
-                      <img src={paymentScreenshotPreviewUrl} alt="" />
-                      <div>
-                        <strong>{screenshotFileName}</strong>
-                        <span>{fmtDateTime(screenshotUploadedAt)}</span>
-                      </div>
-                      <button
-                        ref={screenshotTriggerRef}
-                        type="button"
-                        onClick={() => {
-                          setScreenshotFitMode("fit");
-                          setScreenshotPreviewOpen(true);
-                        }}
-                      >
-                        View Screenshot
-                      </button>
-                    </div>
-                  ) : !requiresPayment ? (
-                    <p>Screenshot not provided</p>
-                  ) : null}
-                </div>
-                {duplicateReferenceNotice ? (
-                  <div className="cd-payment-duplicate">
-                    <span>{duplicateReferenceNotice}</span>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={ownerDuplicateOverride}
-                        onChange={(event) =>
-                          onOwnerDuplicateOverrideChange(event.target.checked)
-                        }
-                      />
-                      Owner override duplicate reference
-                    </label>
-                  </div>
-                ) : null}
-              </div>
-              ) : null}
-              {requiresPayment && (isPending || isRejected) ? (
-                <>
-                  <label className="cd-payment-note-field">
-                    <span>Cashier Note</span>
-                    <textarea
-                      value={paymentNote}
-                      onChange={(event) => onPaymentNoteChange(event.target.value)}
-                      maxLength={500}
-                      placeholder="Reason for reject or retry, optional for approval"
-                    />
-                  </label>
-                  <div className="cd-payment-review-actions" aria-label="Payment review actions">
-                    <button type="button" className="danger" onClick={onReject} disabled={!onReject || approving}>
-                      Reject Payment
-                    </button>
-                    <button type="button" onClick={onRetry} disabled={!onRetry || approving}>
-                      Request Retry
-                    </button>
-                  </div>
-                </>
-              ) : null}
-            </section>
-          ) : null}
-          {checkoutStatus === "bill-requested" ? (
-            <section className="cd-checkout-workflow-card mode-bill" aria-labelledby="checkout-workflow-title">
-              <div className="cd-drawer-section-title" id="checkout-workflow-title">Bill Request</div>
-              <dl className="cd-workflow-detail-list">
-                <div><dt>Requested by</dt><dd>{orderSourceLabel}{orderSourceName ? ` · ${orderSourceName}` : ""}</dd></div>
-                {typeof requestedAt === "string" ? <div><dt>Requested</dt><dd>{relativeEventTime("Requested", requestedAt).replace(/^Requested /, "")}</dd></div> : null}
-                {displayPaymentMethod ? <div><dt>Payment Method</dt><dd>{displayPaymentMethod}</dd></div> : null}
-              </dl>
-              {paymentEvidenceCard}
-            </section>
-          ) : null}
-          {checkoutStatus === "receipt-pending" || checkoutStatus === "paid" ? (
-            <section className="cd-checkout-workflow-card mode-receipt" aria-labelledby="checkout-workflow-title">
-              <div className="cd-drawer-section-title" id="checkout-workflow-title">Payment Details</div>
-              {paymentEvidenceCard || (
-                <dl className="cd-workflow-detail-list">
-                  <div><dt>Payment Method</dt><dd>{displayPaymentMethod || "Not recorded"}</dd></div>
-                  <div><dt>Reference Number</dt><dd>{displayReference || "Not provided"}</dd></div>
-                </dl>
-              )}
-              <dl className="cd-workflow-detail-list">
-                {order.invoiceVerifiedByName ? <div><dt>Verified By</dt><dd>{order.invoiceVerifiedByName}</dd></div> : null}
-                {order.invoiceVerifiedAt ? <div><dt>Verified</dt><dd>{relativeEventTime("Paid", order.invoiceVerifiedAt).replace(/^Paid /, "")}</dd></div> : null}
-              </dl>
-            </section>
-          ) : null}
-          {checkoutStatus === "completed" ? (
-            <section className="cd-checkout-workflow-card mode-completed" aria-labelledby="checkout-workflow-title">
-              <div className="cd-drawer-section-title" id="checkout-workflow-title">Transaction Details</div>
-              <dl className="cd-workflow-detail-list">
-                <div><dt>Payment Method</dt><dd>{displayPaymentMethod || "Not recorded"}</dd></div>
-                <div><dt>Reference Number</dt><dd>{displayReference || "Not provided"}</dd></div>
-                {order.invoiceVerifiedByName ? <div><dt>Verified By</dt><dd>{order.invoiceVerifiedByName}</dd></div> : null}
-                {typeof completedAt === "string" ? <div><dt>Completed</dt><dd>{fmtTime(completedAt)}</dd></div> : null}
-                {receiptStatus ? <div><dt>Receipt</dt><dd>{diningSessionLabel(receiptStatus)}</dd></div> : null}
-              </dl>
-              {paymentEvidenceCard}
-            </section>
-          ) : null}
-          {order.orderNote ? (
-            <div className="cd-pos-active-note">{order.orderNote}</div>
-          ) : null}
+                {showAllCheckoutItems ? "Show fewer items" : `Show ${hiddenItemCount} more items`}
+              </button>
+            ) : null}
+            <div className="cd-checkout-breakdown" aria-label="Charges">
+              <span>Subtotal</span><strong>{formatMoney(order.subtotal ?? order.totalPrice)}</strong>
+              {(order.vatAmount ?? 0) > 0 ? <><span>VAT</span><strong>{formatMoney(order.vatAmount ?? 0)}</strong></> : null}
+              {(order.serviceChargeAmount ?? 0) > 0 ? <><span>Service Charge</span><strong>{formatMoney(order.serviceChargeAmount ?? 0)}</strong></> : null}
+              {(order.discountAmount ?? 0) !== 0 ? <><span>Discount</span><strong>- {formatMoney(Math.abs(order.discountAmount ?? 0))}</strong></> : null}
+              <span className="cd-checkout-total-row">Total</span><strong className="cd-checkout-total-row">{formatMoney(order.totalPrice)}</strong>
+            </div>
+          </section>
+
+          <section className="cd-payment-method-panel" aria-labelledby="checkout-payment-method-title">
+            <label htmlFor="cashier-checkout-payment-method" id="checkout-payment-method-title">Payment Method</label>
+            <select
+              id="cashier-checkout-payment-method"
+              value={displayPaymentMethod}
+              disabled={!showPaymentSelector || approving || Boolean(paymentMethodIssue)}
+              onChange={(event) => onCollectionPaymentMethodChange(event.target.value)}
+            >
+              <option value="">{showPaymentSelector ? "Not Selected" : "Not recorded"}</option>
+              {selectablePaymentMethods.map((method) => <option key={method.method_code} value={method.value}>{method.display_name}</option>)}
+            </select>
+            {paymentMethodIssue ? <div className="cd-payment-method-error" role="alert"><strong>Payment methods unavailable</strong><span>{paymentMethodIssue}</span></div> : null}
+            {paymentEvidenceCard}
+            {duplicateReferenceNotice ? <div className="cd-payment-duplicate"><span>{duplicateReferenceNotice}</span></div> : null}
+          </section>
+          {order.orderNote ? <div className="cd-pos-active-note">{order.orderNote}</div> : null}
         </div>
         <footer className="cd-drawer-footer">
-          {checkoutStatus !== "completed" ? (
-            <div className="cd-drawer-footer-total" aria-label="Checkout total">
-              <span>Total</span><strong>{formatMoney(order.totalPrice)}</strong>
-            </div>
-          ) : null}
           <div className="cd-checkout-footer-actions">
             <button
               type="button"
               className="cd-checkout-secondary-action"
-              onClick={onClose}
+              onClick={onReleaseTable}
+              disabled={!onReleaseTable || !paymentVerified || approving}
             >
-              {checkoutStatus === "payment-due" ? "Cancel" : "Close"}
+              Release Table
             </button>
             <button
               type="button"
@@ -2897,14 +2635,6 @@ export function CashierDashboardPage({
         receiptPendingInvoiceIds,
       )
     : null;
-  const drawerWorkflowEntry = drawerOrder?.invoiceId
-    ? [
-        ...(workflow?.bill_requested_queue ?? []),
-        ...(workflow?.receipt_pending_queue ?? []),
-        ...(workflow?.invoice_settlement_queue ?? []),
-        ...(workflow?.payment_submitted_queue ?? []),
-      ].find((entry) => entry.invoice_id === drawerOrder.invoiceId) ?? null
-    : null;
   const visibleQueueTab: OperationalQueueTab =
     queueTab === "paid" ? "completed" : queueTab;
   const operationalQueueView = useMemo(() => {
@@ -3229,18 +2959,40 @@ export function CashierDashboardPage({
                         session.batches.some((batch) => batch.invoiceId === entry.invoice_id),
                       );
                       const method = order.paymentMethod?.trim() || queueWorkflowEntry?.payment_method?.trim() || "Not Selected";
-                      const paymentIcon = method === "Cash" ? "cash" : method === "Card" ? "card" : "digital";
                       const billRequestedAt = asRecord(queueWorkflowEntry).bill_requested_at;
                       const requestedAt = typeof billRequestedAt === "string" ? billRequestedAt : null;
                       const paidAt = order.invoicePaidAt ?? order.paymentVerifiedAt ?? queueWorkflowEntry?.submitted_at ?? null;
+                      const paymentVerified = order.invoiceStatus === "paid" || Boolean(order.invoicePaidAt || order.paymentVerifiedAt);
+                      const source = checkoutOrderSource(order);
+                      const paymentState = visibleQueueTab === "preparing"
+                        ? "Bill Requested"
+                        : visibleQueueTab === "pending" && source.label === "Waiter" && !paymentVerified
+                          ? "Payment Due"
+                          : method !== "Not Selected"
+                          ? method
+                          : paymentVerified || visibleQueueTab === "ready" || visibleQueueTab === "completed"
+                            ? "Paid"
+                            : "Payment Due";
+                      const sourceText = source.name ? `${source.label} • ${source.name}` : source.label;
+                      const elapsedFrom = visibleQueueTab === "pending"
+                        ? session.createdAt
+                        : visibleQueueTab === "preparing"
+                          ? requestedAt ?? session.createdAt
+                          : visibleQueueTab === "ready"
+                            ? paidAt ?? session.latestAt
+                            : order.paymentVerifiedAt ?? session.latestAt;
                       const isSelected = drawerOrder?.diningSessionId === session.diningSessionId;
                       const isUrgent = visibleQueueTab === "pending" && minutesWaiting > 5;
                       const openOrder = () => {
                         openCheckoutDrawer(order);
                       };
                       const paymentMethod = (
-                        <span className={`cd-method-badge ${method.toLowerCase().replace(/\s+/g, "-")}`} title={method} aria-label={`Payment method: ${method}`}>
-                          {method !== "Not Selected" ? <CashierIcon name={paymentIcon} /> : null}<span>{method}</span>
+                        <span
+                          className={`cd-row-payment-value ${paymentState.toLowerCase().replace(/\s+/g, "-")}`}
+                          title={paymentState}
+                          aria-label={`Payment: ${paymentState}`}
+                        >
+                          {paymentState}
                         </span>
                       );
                       const action = (
@@ -3259,7 +3011,6 @@ export function CashierDashboardPage({
                           title={`${itemCountLabel}: ${fullItemLabel}`}
                           aria-label={`${itemCountLabel}. ${fullItemLabel}`}
                         >
-                          <strong>{itemCountLabel}</strong>
                           <div className="cd-row-items-detail" aria-hidden="true">
                             <span className="cd-row-items-preview">
                               {itemSummary.previewText || "No item details"}
@@ -3273,26 +3024,13 @@ export function CashierDashboardPage({
                         </div>
                       );
                       const location = (
-                        <div className="cd-row-location">
+                        <div className="cd-row-location" title={`${orderTableCode(order)} • ${fmtInvoiceLabel(order)}`}>
                           <strong>{orderTableCode(order)}</strong>
-                          <span className="cd-row-reference">{fmtInvoiceLabel(order)}</span>
                         </div>
                       );
-                      const time = visibleQueueTab === "pending" ? (
+                      const time = (
                         <div className={`cd-row-wait ${minutesWaiting > 10 ? "critical" : minutesWaiting > 5 ? "warning" : "fresh"}`}>
-                          <strong>{minutesWaiting < 1 ? "Now" : minutesWaiting > 20 ? "Over 20 min" : `${minutesWaiting} min`}</strong>
-                        </div>
-                      ) : visibleQueueTab === "preparing" ? (
-                        <div className="cd-row-event-time">
-                          <strong>{requestedAt ? relativeEventTime("Requested", requestedAt) : "Time unavailable"}</strong>
-                        </div>
-                      ) : visibleQueueTab === "ready" ? (
-                        <div className="cd-row-event-time">
-                          <strong>{paidAt ? relativeEventTime("Paid", paidAt) : "Time unavailable"}</strong>
-                        </div>
-                      ) : (
-                        <div className="cd-row-event-time">
-                          <strong>{relativeEventTime("Completed", order.paymentVerifiedAt ?? session.latestAt)}</strong>
+                          <strong>{compactElapsedLabel(elapsedFrom, now)}</strong>
                         </div>
                       );
                       return (
@@ -3302,6 +3040,7 @@ export function CashierDashboardPage({
                           onClick={openOrder}
                         >
                           {location}
+                          <div className="cd-row-source" title={sourceText}><span>{sourceText}</span></div>
                           {itemDetails}
                           <div className="cd-row-method">{paymentMethod}</div>
                           <div className="cd-row-amount"><strong>{fmtMoney(total)}</strong></div>
@@ -3746,23 +3485,16 @@ export function CashierDashboardPage({
         <CheckoutSlideOverDrawer
           order={drawerOrder}
           checkoutStatus={drawerCheckoutStatus ?? "payment-due"}
-          workflowEntry={drawerWorkflowEntry}
           serviceLocationName={drawerServiceLocationName}
-          serviceLocationNumber={drawerOrder.tableNumber}
           onClose={closeCheckoutDrawer}
+          onReleaseTable={
+            drawerDiningSession
+              ? () => void handleCloseDiningSessionFromBill(drawerDiningSession)
+              : undefined
+          }
           onApprove={
             isVerifiablePayment(drawerOrder)
               ? () => handleApprove(drawerOrder)
-              : undefined
-          }
-          onReject={
-            drawerOrder.invoiceId && isVerifiablePayment(drawerOrder)
-              ? () => handleRejectPayment(drawerOrder)
-              : undefined
-          }
-          onRetry={
-            drawerOrder.invoiceId && drawerOrder.invoiceStatus === "pending"
-              ? () => handleRequestRetry(drawerOrder)
               : undefined
           }
           onPrintBill={
@@ -3783,14 +3515,10 @@ export function CashierDashboardPage({
           paymentTransactionId={paymentTransactionId}
           paymentScreenshotPreviewUrl={paymentScreenshotPreviewUrl}
           duplicateReferenceNotice={duplicateReferenceNotice}
-          ownerDuplicateOverride={ownerDuplicateOverride}
           collectionPaymentMethod={collectionPaymentMethod}
           availablePaymentMethods={checkoutPaymentMethods}
           paymentMethodConfigurationError={paymentMethodConfigurationError}
-          paymentNote={paymentNote}
-          onOwnerDuplicateOverrideChange={setOwnerDuplicateOverride}
           onCollectionPaymentMethodChange={setCollectionPaymentMethod}
-          onPaymentNoteChange={setPaymentNote}
           formatMoney={fmtMoney}
         />
       ) : null}

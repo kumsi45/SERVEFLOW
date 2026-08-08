@@ -33,7 +33,8 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
     expect(drawerMarkup.match(/cd-checkout-primary-action/g)).toHaveLength(1);
     expect(drawerMarkup.match(/cd-checkout-secondary-action/g)).toHaveLength(1);
     expect(drawerMarkup).toContain('className="cd-checkout-footer-actions"');
-    expect(drawerMarkup).not.toContain("Close/Release Table");
+    expect(drawerMarkup).toContain("Release Table");
+    expect(page).toContain("handleCloseDiningSessionFromBill(drawerDiningSession)");
     expect(drawerMarkup).toContain("Print Bill");
     expect(drawerMarkup).toContain("Print Receipt");
     expect(drawerMarkup).toContain('checkoutStatus === "completed"');
@@ -49,14 +50,12 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
       "Verify Payment",
       "Print Bill",
       "Print Receipt",
-      "Close",
+      "Release Table",
     ]) {
       expect(page).toContain(label);
     }
     for (const handler of [
       "handleApprove(drawerOrder)",
-      "handleRejectPayment(drawerOrder)",
-      "handleRequestRetry(drawerOrder)",
       "handlePrintFinalBill(drawerDiningSession)",
     ]) {
       expect(page).toContain(handler);
@@ -67,7 +66,6 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
 
   it("keeps customer payment evidence read-only and removes cashier upload controls", () => {
     for (const label of [
-      "Payment Verification",
       "Payment Evidence",
       "Reference Number",
       "Transaction ID",
@@ -94,21 +92,26 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
     expect(drawerMarkup).not.toContain("cd-cash-review-note");
   });
 
-  it("renders transaction metadata, six-item disclosure, 30+ item support, and clean source labels", () => {
+  it("uses a compact combined order and charges panel without duplicate metadata", () => {
     expect(page).toContain("function checkoutOrderSource");
-    expect(page).toContain("function checkoutTransactionMetadata");
+    expect(page).not.toContain("function checkoutTransactionMetadata");
     expect(drawerMarkup).toContain("checkoutOrderSource(order)");
-    expect(drawerMarkup).toContain("checkoutTransactionMetadata(order, checkoutStatus, workflowEntry)");
+    expect(drawerMarkup).not.toContain("cd-checkout-meta");
+    expect(drawerMarkup).not.toContain("Service Location");
     expect(drawerMarkup).not.toContain("Order Information");
     expect(drawerMarkup).not.toContain("cd-order-information");
     expect(drawerMarkup).not.toContain("cd-order-info-items");
-    expect(drawerMarkup).toContain("Order Items");
+    expect(drawerMarkup).toContain('aria-label="Items and bill summary"');
+    expect(drawerMarkup).not.toContain("Order &amp; Charges");
     expect(drawerMarkup).toContain("visibleItems.map");
-    expect(drawerMarkup).toContain("order.items.slice(0, 6)");
-    expect(drawerMarkup).toContain("Show fewer items");
+    expect(drawerMarkup).toContain("const checkoutItemLimit = 7");
+    expect(drawerMarkup).toContain("order.items.slice(0, checkoutItemLimit)");
     expect(drawerMarkup).toContain("hiddenItemCount");
-    expect(drawerMarkup).toContain("itemsExpanded");
-    expect(drawerMarkup).toContain("aria-expanded={itemsExpanded}");
+    expect(drawerMarkup).toContain("showAllCheckoutItems");
+    expect(drawerMarkup).toContain('aria-expanded={showAllCheckoutItems}');
+    expect(drawerMarkup).toContain("Show fewer items");
+    expect(drawerMarkup).toContain("more items");
+    expect(drawerMarkup.match(/<span className="cd-checkout-total-row">Total<\/span>/g)).toHaveLength(1);
     expect(drawerMarkup).not.toContain("orderSourceIcon");
     expect(drawerMarkup).not.toContain("{orderSourceIcon}");
   });
@@ -120,19 +123,24 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
     expect(page).toContain("new Set(dueMethods).size === 1");
     expect(page).toContain("paymentMethod: authoritativeMethod");
     expect(drawerMarkup).toContain("availablePaymentMethods");
-    expect(drawerMarkup).toContain("onClick: displayPaymentMethod ? onApprove : undefined");
+    expect(drawerMarkup).toContain("onClick: displayPaymentMethod && !requiresCustomerReference ? onApprove : undefined");
     expect(drawerMarkup).toContain("Boolean(paymentMethodIssue)");
+    expect(drawerMarkup).toContain('orderSourceLabel !== "Waiter" ? <em>Required</em> : null');
+    expect(drawerMarkup).toContain("Screenshot <em>Optional</em>");
   });
 
-  it("renders queue-specific workflow content without editable controls outside Payment Due", () => {
+  it("uses one payment-method dropdown and context-specific footer action", () => {
     expect(drawerMarkup).toContain('checkoutStatus === "payment-due"');
     expect(drawerMarkup).toContain('checkoutStatus === "bill-requested"');
     expect(drawerMarkup).toContain('checkoutStatus === "receipt-pending"');
     expect(drawerMarkup).toContain('checkoutStatus === "completed"');
-    for (const label of ["Payment Verification", "Bill Request", "Requested by", "Payment Details", "Verified By", "Transaction Details", "Receipt"]) {
-      expect(drawerMarkup).toContain(label);
+    expect(drawerMarkup).toContain("Payment Method");
+    expect(drawerMarkup).toContain("<select");
+    for (const removed of ["Payment Verification", "Bill Request", "Payment Details", "Transaction Details", "Cashier Note", "Reject Payment", "Request Retry"]) {
+      expect(drawerMarkup).not.toContain(removed);
     }
     expect(drawerMarkup).toContain('showPaymentSelector = checkoutStatus === "payment-due"');
+    expect(drawerMarkup).toContain("disabled={!showPaymentSelector || approving || Boolean(paymentMethodIssue)}");
   });
 
   it("keeps the drawer open after verification when refreshed receipt action remains", () => {
@@ -159,7 +167,10 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
     expect(styles).toContain("width: clamp(520px, 42vw, 620px)");
     expect(styles).toContain("height: calc(100dvh - 72px)");
     expect(styles).toContain("grid-template-rows: auto minmax(0, 1fr) auto");
+    expect(styles).toContain("/* Compact single-screen checkout composition. */");
     expect(styles).toContain("overflow-y: auto");
+    expect(styles).toContain("overscroll-behavior: contain");
+    expect(styles).toContain("overflow: hidden;");
     expect(styles).toContain(".cd-checkout-footer-actions");
     expect(styles).toContain("grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr)");
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");

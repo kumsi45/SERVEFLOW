@@ -7,7 +7,6 @@ import {
   formatServiceLocationName,
   resolveServiceLocationPanelTitle,
   ServiceLocationQuickSwitch,
-  serviceLocationTableLabel,
   serviceLocationStatusLabel,
   type ServiceLocationCardModel,
 } from "../../src/modules/cashier/components/ServiceLocationQuickSwitch";
@@ -33,7 +32,6 @@ describe("Phase 13.5 cashier service-location quick switch", () => {
   it("uses the generic fallback title and honors an existing configured label", () => {
     expect(resolveServiceLocationPanelTitle()).toBe("Service Locations");
     expect(resolveServiceLocationPanelTitle("Rooms")).toBe("Rooms");
-    expect(serviceLocationTableLabel(9)).toBe("Table 9");
   });
 
   it("uses configured location names without exposing internal IDs or inventing abbreviations", () => {
@@ -106,6 +104,6 @@ describe("Phase 13.5 cashier service-location quick switch", () => {
     expect(component).not.toContain('className="cd-location-switch-header"');
     expect(component).not.toContain(">Quick Switch<");
     expect(component).not.toContain("locations.length} active");
-    expect(component).toContain("serviceLocationTableLabel(location.tableNumber)");
+    expect(component).not.toContain("cd-location-number");
   });
 });

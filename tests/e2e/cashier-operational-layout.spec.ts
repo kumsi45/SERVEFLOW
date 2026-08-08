@@ -27,18 +27,32 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
             <div class="cd-order-list">
               <div class="cd-operational-rows">
                 <article class="cd-operational-row queue-pending">
-                  <div class="cd-row-location"><strong>T12</strong><span class="cd-row-reference">Invoice #194</span></div>
+                  <div class="cd-row-location"><strong>T12</strong></div>
+                  <div class="cd-row-source"><span>Waiter • Abdi</span></div>
                   <div class="cd-row-items" aria-label="20 items. Coffee ×1, Burger ×2, Pizza ×1, and 17 more items">
-                    <strong>20 items</strong>
                     <div class="cd-row-items-detail" aria-hidden="true">
-                      <span class="cd-row-items-preview">An intentionally very long coffee menu item ×1, Burger ×2, Pizza ×1</span>
+                      <span class="cd-row-items-preview">An intentionally very long coffee menu item ×1 • Burger ×2 • Pizza ×1</span>
                       <span class="cd-row-items-more">+17 more</span>
                     </div>
                   </div>
-                  <div class="cd-row-method"><span class="cd-method-badge cash"><span>Cash</span></span></div>
+                  <div class="cd-row-method"><span class="cd-row-payment-value payment-due">Payment Due</span></div>
                   <div class="cd-row-amount"><strong>ETB 2,587.50</strong></div>
                   <div class="cd-row-wait fresh"><strong>2 min</strong></div>
                   <button class="cd-row-action">Verify Payment</button>
+                </article>
+                <article class="cd-operational-row queue-ready normal-order">
+                  <div class="cd-row-location"><strong>T5</strong></div>
+                  <div class="cd-row-source"><span>Waiter • Abdi</span></div>
+                  <div class="cd-row-items" aria-label="7 items. Coffee ×1, Pizza ×1, Tea ×1, and 4 more items">
+                    <div class="cd-row-items-detail" aria-hidden="true">
+                      <span class="cd-row-items-preview">Coffee ×1 • Pizza ×1 • Tea ×1</span>
+                      <span class="cd-row-items-more">+4 more</span>
+                    </div>
+                  </div>
+                  <div class="cd-row-method"><span class="cd-row-payment-value">Cash</span></div>
+                  <div class="cd-row-amount"><strong>ETB 230.00</strong></div>
+                  <div class="cd-row-wait warning"><strong>24 min</strong></div>
+                  <button class="cd-row-action">Print Receipt</button>
                 </article>
               </div>
             </div>
@@ -70,6 +84,8 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       );
       const tabStyles = [...document.querySelectorAll<HTMLElement>(".cd-tab")]
         .map((tab) => getComputedStyle(tab));
+      const rowStyles = getComputedStyle(select(".cd-operational-row"));
+      const singleLineSelectors = [".cd-row-location strong", ".cd-row-source span", ".cd-row-items-preview", ".cd-row-payment-value", ".cd-row-amount strong", ".cd-row-wait strong", ".cd-row-action"];
       return {
         tabsOverflow: select(".cd-tabs").scrollWidth > select(".cd-tabs").clientWidth,
         tabLabelClipped: [...document.querySelectorAll<HTMLElement>(".cd-tab-label")]
@@ -79,6 +95,17 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
         listOverflow: select(".cd-order-list").scrollWidth > select(".cd-order-list").clientWidth,
         rowOverflow: select(".cd-operational-row").scrollWidth > select(".cd-operational-row").clientWidth,
         amountClipped: amount.scrollWidth > amount.clientWidth,
+        sourceClipped: select(".cd-row-source span").scrollWidth > select(".cd-row-source span").clientWidth,
+        stateClipped: select(".cd-row-payment-value").scrollWidth > select(".cd-row-payment-value").clientWidth,
+        waitingClipped: select(".cd-row-wait strong").scrollWidth > select(".cd-row-wait strong").clientWidth,
+        normalItemsClipped: select(".normal-order .cd-row-items-preview").scrollWidth > select(".normal-order .cd-row-items-preview").clientWidth,
+        normalItemsClientWidth: select(".normal-order .cd-row-items-preview").clientWidth,
+        normalItemsScrollWidth: select(".normal-order .cd-row-items-preview").scrollWidth,
+        rowClientWidth: select(".normal-order").clientWidth,
+        rowGridTemplate: getComputedStyle(select(".normal-order")).gridTemplateColumns,
+        normalItemsFontSize: getComputedStyle(select(".normal-order .cd-row-items-preview")).fontSize,
+        normalSourceClipped: select(".normal-order .cd-row-source span").scrollWidth > select(".normal-order .cd-row-source span").clientWidth,
+        normalMoreVisible: select(".normal-order .cd-row-items-more").getBoundingClientRect().width > 0,
         actionContained: action.right <= body.right && action.left >= body.left,
         actionClipped: action.scrollWidth > action.clientWidth,
         rowHeight: row.height,
@@ -90,8 +117,15 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
           (style) => style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.color !== "rgb(107, 114, 128)",
         ),
         tabHeight: tabs[0].height,
+        rowColumns: rowStyles.gridTemplateColumns.split(" ").length,
+        allCellsSingleLine: singleLineSelectors.every((selector) => getComputedStyle(select(selector)).whiteSpace === "nowrap"),
+        itemEllipsis: getComputedStyle(select(".cd-row-items-preview")).textOverflow === "ellipsis",
       };
     });
+    expect(
+      geometry.normalItemsClipped,
+      `three-item preview must remain readable at ${viewport.width}px (${geometry.normalItemsClientWidth}/${geometry.normalItemsScrollWidth}; row ${geometry.rowClientWidth}; ${geometry.rowGridTemplate}; ${geometry.normalItemsFontSize})`,
+    ).toBe(false);
     expect(geometry).toMatchObject({
       tabsOverflow: false,
       tabLabelClipped: false,
@@ -99,6 +133,12 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       listOverflow: false,
       rowOverflow: false,
       amountClipped: false,
+      sourceClipped: false,
+      stateClipped: false,
+      waitingClipped: false,
+      normalItemsClipped: false,
+      normalSourceClipped: false,
+      normalMoreVisible: true,
       actionContained: true,
       actionClipped: false,
       rowHeight: 76,
@@ -107,6 +147,9 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       distinctTabColors: 4,
       inactiveTabsColored: true,
       tabHeight: 44,
+      rowColumns: 7,
+      allCellsSingleLine: true,
+      itemEllipsis: true,
     });
     expect(geometry.minimumTabGap).toBeGreaterThanOrEqual(5);
   }

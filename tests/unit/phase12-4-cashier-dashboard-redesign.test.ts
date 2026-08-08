@@ -71,9 +71,9 @@ describe("Phase 12.4 ServeFlow cashier POS master redesign", () => {
 
   it("keeps checkout identity, item modifiers, totals, and actions visible", () => {
     for (const label of [
-      "Waiter", "Customer", "Cashier", "Order Items", "Subtotal", "VAT",
+      "Waiter", "Customer", "Cashier", "Items and bill summary", "Subtotal", "VAT",
       "Service Charge", "Discount", "Total", "Verify Payment",
-      "Print Bill", "Print Receipt", "Reject Payment", "Close",
+      "Print Bill", "Print Receipt", "Release Table", "Payment Method",
     ]) expect(page).toContain(label);
     expect(page).toContain("item.notes");
     expect(styles).toContain(".cd-checkout-slide-over");

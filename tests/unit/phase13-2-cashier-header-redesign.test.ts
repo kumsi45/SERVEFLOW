@@ -30,6 +30,10 @@ describe("Phase 13.2 cashier hospitality POS header", () => {
     expect(ui).toContain("onClick={onNotifications}");
     expect(ui).toContain("onClick={onShiftAction}");
     expect(ui).toContain("onClick={onSignOut}");
+    expect(ui.match(/className="cd-header-shift-time"/g)).toHaveLength(1);
+    expect(ui.indexOf('className="cd-header-shift-time"')).toBeLessThan(
+      ui.indexOf('className="cd-header-right"'),
+    );
   });
 
   it("uses a calm single-row 76px POS header", () => {
@@ -44,7 +48,7 @@ describe("Phase 13.2 cashier hospitality POS header", () => {
   it("makes search the flexible visual center", () => {
     expect(ui).toContain("Search table, customer, invoice or phone...");
     expect(phaseStyles).toContain("width: 100%");
-    expect(phaseStyles).toContain("flex: 0 1 auto");
+    expect(phaseStyles).toContain("flex: 1 1 auto");
     expect(phaseStyles).toContain("min-height: 52px");
     expect(phaseStyles).toContain("border-radius: 16px");
     expect(phaseStyles).toContain('content: "Ctrl + K"');

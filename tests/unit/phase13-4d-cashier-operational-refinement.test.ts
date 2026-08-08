@@ -87,7 +87,7 @@ describe("Phase 13.4D cashier operational refinement", () => {
       { name: "Pizza", quantity: 1 },
     ]);
     expect(three.totalQuantity).toBe(6);
-    expect(three.previewText).toBe("Burger ×2, Coffee ×3, Pizza ×1");
+    expect(three.previewText).toBe("Burger ×2 • Coffee ×3 • Pizza ×1");
     expect(three.hiddenDistinctCount).toBe(0);
 
     const twenty = summarizeOperationalItems(
@@ -97,7 +97,7 @@ describe("Phase 13.4D cashier operational refinement", () => {
       })),
     );
     expect(twenty.totalQuantity).toBe(20);
-    expect(twenty.previewText).toBe("Item 1 ×1, Item 2 ×1, Item 3 ×1");
+    expect(twenty.previewText).toBe("Item 1 ×1 • Item 2 ×1 • Item 3 ×1");
     expect(twenty.hiddenDistinctCount).toBe(17);
     expect(twenty.fullSummary).toContain("Item 20 ×1");
   });
@@ -113,6 +113,6 @@ describe("Phase 13.4D cashier operational refinement", () => {
     expect(summary.totalQuantity).toBe(7);
     expect(summary.distinctItemCount).toBe(2);
     expect(summary.previewText).toContain(`${longName} ×5`);
-    expect(summary.fullSummary).toBe(`${longName} ×5, Coffee ×2`);
+    expect(summary.fullSummary).toBe(`${longName} ×5 • Coffee ×2`);
   });
 });

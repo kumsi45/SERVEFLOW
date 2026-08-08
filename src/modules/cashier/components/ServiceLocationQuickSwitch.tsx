@@ -65,10 +65,6 @@ export function serviceLocationStatusLabel(status: ServiceLocationStatus) {
   return STATUS_LABELS[status];
 }
 
-export function serviceLocationTableLabel(tableNumber: string | number) {
-  return `Table ${tableNumber}`;
-}
-
 export function ServiceLocationQuickSwitch({
   title,
   locations,
@@ -183,9 +179,6 @@ export function ServiceLocationQuickSwitch({
                 onKeyDown={(event) => handleLocationKeyDown(event, index)}
               >
                 <strong title={location.name}>{location.name}</strong>
-                <span className="cd-location-number">
-                  {serviceLocationTableLabel(location.tableNumber)}
-                </span>
                 <span className="cd-location-status">
                   <i aria-hidden="true" />
                   <span>{COMPACT_STATUS_LABELS[location.status]}</span>

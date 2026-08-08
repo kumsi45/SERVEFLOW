@@ -16,6 +16,10 @@ const operationalRowsMarkup = page.slice(
   page.indexOf('id="cashier-operational-queue"'),
   page.indexOf('<aside className="cd-side-stack"'),
 );
+const renderedRowMarkup = operationalRowsMarkup.slice(
+  operationalRowsMarkup.indexOf("<article"),
+  operationalRowsMarkup.indexOf("</article>") + "</article>".length,
+);
 
 describe("Phase 13.4C simplified cashier operational workspace", () => {
   it("keeps the correction isolated from the other cashier panels", () => {
@@ -115,17 +119,38 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).not.toContain('className="cd-queue-heading"');
   });
 
-  it("starts the queue rows immediately without a redundant column header or repeated statuses", () => {
+  it("uses the requested seven-column cashier scan order in every queue", () => {
     expect(page).not.toContain('className="cd-operational-table-header"');
     expect(phaseStyles).not.toContain(".cd-operational-table-header");
-    for (const rowClass of ["cd-row-location", "cd-row-items", "cd-row-method", "cd-row-amount", "cd-row-event-time", "cd-row-action"]) {
+    for (const rowClass of ["cd-row-location", "cd-row-source", "cd-row-items", "cd-row-method", "cd-row-amount", "cd-row-wait", "cd-row-action"]) {
       expect(page).toContain(rowClass);
     }
-    expect(page).not.toContain("cd-row-status");
+    expect(renderedRowMarkup).not.toContain("cd-row-status");
     expect(page).toContain("orderTableCode(order)");
     expect(page).toContain("return numericTable ? `T${Number(numericTable[1])}` : table;");
     expect(operationalRowsMarkup).not.toContain("Service Location");
-    expect(finalStyles).toContain("grid-template-columns: minmax(82px, .78fr) minmax(150px, 1.7fr)");
+    expect(finalStyles).toContain("grid-template-columns: 48px 150px minmax(0, 1fr) 100px 120px 70px 130px");
+    const orderedCells = ["{location}", "cd-row-source", "{itemDetails}", "cd-row-method", "cd-row-amount", "{time}", "{action}"];
+    orderedCells.reduce((previous, cell) => {
+      const position = renderedRowMarkup.indexOf(cell);
+      expect(position).toBeGreaterThan(previous);
+      return position;
+    }, -1);
+  });
+
+  it("uses queue-specific workflow/payment values and action labels without changing row handlers", () => {
+    for (const value of [
+      'action: "Verify Payment"',
+      'action: "Print Bill"',
+      'action: "Print Receipt"',
+      'action: "View"',
+    ]) {
+      expect(page).toContain(value);
+    }
+    expect(page).toContain('? "Bill Requested"');
+    expect(page).toContain('method !== "Not Selected"');
+    expect(operationalRowsMarkup).toContain("currentQueue.action");
+    expect(operationalRowsMarkup).toContain("event.stopPropagation(); openOrder()");
   });
 
   it("uses a quantity-aware compact item summary with accessible full details", () => {
@@ -134,18 +159,28 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain('className="cd-row-items-more"');
     expect(page).toContain("itemSummary.hiddenDistinctCount");
     expect(page).toContain('aria-label={`${itemCountLabel}. ${fullItemLabel}`}');
-    expect(finalStyles).toContain("text-overflow: clip");
+    expect(operationalRowsMarkup).not.toContain("<strong>{itemCountLabel}</strong>");
+    expect(finalStyles).toContain("text-overflow: ellipsis");
     expect(finalStyles).toContain("flex: 0 0 auto");
   });
 
-  it("uses queue-aware time labels and compact non-card rows", () => {
-    expect(page).toContain('requestedAt ? relativeEventTime("Requested", requestedAt) : "Time unavailable"');
-    expect(page).toContain('paidAt ? relativeEventTime("Paid", paidAt) : "Time unavailable"');
-    expect(page).toContain('relativeEventTime("Completed", order.paymentVerifiedAt ?? session.latestAt)');
-    expect(page).toContain('"Over 20 min"');
+  it("uses compact elapsed labels and premium white rows", () => {
+    expect(page).toContain("compactElapsedLabel(elapsedFrom, now)");
+    expect(page).toContain('if (minutes < 1) return "Now"');
+    expect(page).toContain('if (minutes < 60) return `${minutes} min`');
+    expect(page).toContain('if (hours < 24) return `${hours} hr${remainingMinutes ? ` ${remainingMinutes} min` : ""}`');
+    expect(page).toContain('return `${days} d${remainingHours ? ` ${remainingHours} hr` : ""}`');
     expect(finalStyles).toContain("height: 76px");
-    expect(finalStyles).toContain("border-radius: 0");
-    expect(finalStyles).toContain("border-bottom: 1px solid #e5e7eb");
+    expect(finalStyles).toContain("border-radius: 14px");
+    expect(finalStyles).toContain("background: #fff");
+  });
+
+  it("shows Payment Due until verification without fabricating Cash", () => {
+    expect(page).toContain('visibleQueueTab === "pending" && source.label === "Waiter" && !paymentVerified');
+    expect(page).toContain('? "Payment Due"');
+    expect(page).toContain('method !== "Not Selected"');
+    expect(operationalRowsMarkup).not.toContain("paymentIcon");
+    expect(finalStyles).toContain(".cd-row-payment-value.payment-due { color: #d97706; }");
   });
 
   it("keeps actions, focus behavior, and queue-specific empty states", () => {
