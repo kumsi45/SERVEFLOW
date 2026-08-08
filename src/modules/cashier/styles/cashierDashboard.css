@@ -4803,7 +4803,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .cd-row-action { font-size: 10px; }
 }
 
-/* Operational workspace row — readable seven-column hospitality POS scan line. */
+/* Operational workspace row — compact two-line hospitality POS scan line. */
 @media (min-width: 1024px) {
   .cd-operational-rows {
     gap: 15px;
@@ -4814,18 +4814,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .cd-operational-row {
     width: 100%;
     min-width: 0;
-    height: 76px;
-    min-height: 76px;
-    grid-template-columns: 48px 150px minmax(0, 1fr) 100px 120px 70px 130px;
+    height: 80px;
+    min-height: 80px;
+    grid-template-columns: 48px minmax(140px, 1fr) 100px 120px 70px 130px;
+    grid-template-rows: 30px 20px;
+    grid-template-areas:
+      "location source method amount wait action"
+      ". items items items items action";
     align-items: center;
-    gap: 8px;
-    padding: 12px 8px;
+    column-gap: 8px;
+    row-gap: 2px;
+    padding: 8px 10px;
     overflow: hidden;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     background: #fff;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .025);
-    contain-intrinsic-size: 76px;
+    contain-intrinsic-size: 80px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -4841,6 +4846,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     align-items: center;
     overflow: hidden;
   }
+
+  .cd-row-location { grid-area: location; }
+  .cd-row-source { grid-area: source; }
+  .cd-row-items { grid-area: items; }
+  .cd-row-method { grid-area: method; }
+  .cd-row-amount { grid-area: amount; }
+  .cd-row-wait { grid-area: wait; }
 
   .cd-row-location strong {
     overflow: hidden;
@@ -4937,6 +4949,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   }
 
   .cd-row-action {
+    grid-area: action;
+    align-self: center;
     width: 100%;
     min-width: 0;
     height: 40px;
@@ -4954,47 +4968,50 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 @container cashier-operational-workspace (max-width: 900px) {
   .cd-operational-row {
-    grid-template-columns: 30px 105px minmax(0, 1fr) 62px 92px 38px 96px;
-    gap: 1px;
-    padding: 12px 2px;
+    grid-template-columns: 36px minmax(105px, 1fr) 82px 104px 48px 104px;
+    column-gap: 4px;
+    row-gap: 2px;
+    padding: 8px 6px;
   }
-  .cd-row-source span { font-size: 11px; }
-  .cd-row-items-preview { font-size: 11px; }
-  .cd-row-items-more { font-size: 10px; }
-  .cd-row-payment-value { font-size: 10px; }
-  .cd-row-amount strong { font-size: 14px; }
-  .cd-row-wait strong { font-size: 10px; }
-  .cd-row-action { padding-inline: 2px; font-size: 10px; }
+  .cd-row-source span { font-size: 12px; }
+  .cd-row-items-preview { font-size: 12px; }
+  .cd-row-items-more { font-size: 11px; }
+  .cd-row-payment-value { font-size: 11px; }
+  .cd-row-amount strong { font-size: 15px; }
+  .cd-row-wait strong { font-size: 11px; }
+  .cd-row-action { padding-inline: 5px; font-size: 11px; }
 }
 
 @container cashier-operational-workspace (max-width: 700px) {
   .cd-operational-row {
-    grid-template-columns: 26px 96px minmax(0, 1fr) 62px 92px 38px 96px;
-    gap: 1px;
-    padding: 12px 2px;
+    grid-template-columns: 32px minmax(100px, 1fr) 74px 100px 44px 104px;
+    column-gap: 3px;
+    row-gap: 2px;
+    padding: 8px 4px;
   }
-  .cd-row-source span { font-size: 11px; }
-  .cd-row-payment-value { font-size: 10px; }
-  .cd-row-wait strong { font-size: 10px; }
-  .cd-row-items-preview { font-size: 11px; }
-  .cd-row-items-more { font-size: 10px; }
-  .cd-row-amount strong { font-size: 14px; }
-  .cd-row-action { padding-inline: 2px; font-size: 10px; }
+  .cd-row-source span { font-size: 12px; }
+  .cd-row-payment-value { font-size: 11px; }
+  .cd-row-wait strong { font-size: 11px; }
+  .cd-row-items-preview { font-size: 12px; }
+  .cd-row-items-more { font-size: 11px; }
+  .cd-row-amount strong { font-size: 15px; }
+  .cd-row-action { padding-inline: 4px; font-size: 11px; }
 }
 
 @container cashier-operational-workspace (max-width: 600px) {
   .cd-operational-row {
-    grid-template-columns: 30px 96px minmax(0, 1fr) 62px 92px 38px 112px;
-    gap: 1px;
-    padding-inline: 2px;
+    grid-template-columns: 30px minmax(90px, 1fr) 70px 96px 40px 116px;
+    column-gap: 2px;
+    row-gap: 2px;
+    padding-inline: 3px;
   }
-  .cd-row-source span { font-size: 11px; }
-  .cd-row-items-preview { font-size: 11px; }
-  .cd-row-items-more { font-size: 10px; }
+  .cd-row-source span { font-size: 12px; }
+  .cd-row-items-preview { font-size: 12px; }
+  .cd-row-items-more { font-size: 11px; }
   .cd-row-payment-value { font-size: 10px; }
   .cd-row-amount strong { font-size: 14px; }
   .cd-row-wait strong { font-size: 10px; }
-  .cd-row-action { padding-inline: 2px; font-size: 10px; }
+  .cd-row-action { padding-inline: 3px; font-size: 10px; }
 }
 
 /* Phase 13.4E — compact non-blocking cashier toasts. */
@@ -6614,6 +6631,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .cd-checkout-order-summary,
 .cd-payment-method-panel {
+  flex: 0 0 auto;
   min-width: 0;
   padding: 8px 11px;
   border: 1px solid #e5e7eb;

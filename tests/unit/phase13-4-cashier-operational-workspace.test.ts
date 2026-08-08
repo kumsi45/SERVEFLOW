@@ -119,7 +119,7 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).not.toContain('className="cd-queue-heading"');
   });
 
-  it("uses the requested seven-column cashier scan order in every queue", () => {
+  it("uses the requested two-line cashier scan order in every queue", () => {
     expect(page).not.toContain('className="cd-operational-table-header"');
     expect(phaseStyles).not.toContain(".cd-operational-table-header");
     for (const rowClass of ["cd-row-location", "cd-row-source", "cd-row-items", "cd-row-method", "cd-row-amount", "cd-row-wait", "cd-row-action"]) {
@@ -129,7 +129,9 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain("orderTableCode(order)");
     expect(page).toContain("return numericTable ? `T${Number(numericTable[1])}` : table;");
     expect(operationalRowsMarkup).not.toContain("Service Location");
-    expect(finalStyles).toContain("grid-template-columns: 48px 150px minmax(0, 1fr) 100px 120px 70px 130px");
+    expect(finalStyles).toContain("grid-template-columns: 48px minmax(140px, 1fr) 100px 120px 70px 130px");
+    expect(finalStyles).toContain('"location source method amount wait action"');
+    expect(finalStyles).toContain('". items items items items action"');
     const orderedCells = ["{location}", "cd-row-source", "{itemDetails}", "cd-row-method", "cd-row-amount", "{time}", "{action}"];
     orderedCells.reduce((previous, cell) => {
       const position = renderedRowMarkup.indexOf(cell);
@@ -170,7 +172,7 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain('if (minutes < 60) return `${minutes} min`');
     expect(page).toContain('if (hours < 24) return `${hours} hr${remainingMinutes ? ` ${remainingMinutes} min` : ""}`');
     expect(page).toContain('return `${days} d${remainingHours ? ` ${remainingHours} hr` : ""}`');
-    expect(finalStyles).toContain("height: 76px");
+    expect(finalStyles).toContain("height: 80px");
     expect(finalStyles).toContain("border-radius: 14px");
     expect(finalStyles).toContain("background: #fff");
   });

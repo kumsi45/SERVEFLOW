@@ -85,6 +85,8 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       const tabStyles = [...document.querySelectorAll<HTMLElement>(".cd-tab")]
         .map((tab) => getComputedStyle(tab));
       const rowStyles = getComputedStyle(select(".cd-operational-row"));
+      const itemsRect = select(".cd-row-items").getBoundingClientRect();
+      const sourceRect = select(".cd-row-source").getBoundingClientRect();
       const singleLineSelectors = [".cd-row-location strong", ".cd-row-source span", ".cd-row-items-preview", ".cd-row-payment-value", ".cd-row-amount strong", ".cd-row-wait strong", ".cd-row-action"];
       return {
         tabsOverflow: select(".cd-tabs").scrollWidth > select(".cd-tabs").clientWidth,
@@ -118,6 +120,8 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
         ),
         tabHeight: tabs[0].height,
         rowColumns: rowStyles.gridTemplateColumns.split(" ").length,
+        rowTracks: rowStyles.gridTemplateRows.split(" ").length,
+        itemsBelowTopRow: itemsRect.top >= sourceRect.bottom - 1,
         allCellsSingleLine: singleLineSelectors.every((selector) => getComputedStyle(select(selector)).whiteSpace === "nowrap"),
         itemEllipsis: getComputedStyle(select(".cd-row-items-preview")).textOverflow === "ellipsis",
       };
@@ -141,13 +145,15 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       normalMoreVisible: true,
       actionContained: true,
       actionClipped: false,
-      rowHeight: 76,
+      rowHeight: 80,
       moreVisible: true,
       distinctTabBackgrounds: 4,
       distinctTabColors: 4,
       inactiveTabsColored: true,
       tabHeight: 44,
-      rowColumns: 7,
+      rowColumns: 6,
+      rowTracks: 2,
+      itemsBelowTopRow: true,
       allCellsSingleLine: true,
       itemEllipsis: true,
     });

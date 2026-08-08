@@ -124,7 +124,7 @@ test("checkout is a fixed, compact, mode-aware single-screen drawer", async ({ p
     billSummaryVisible: true,
     billBeforePayment: true,
     selectors: 1,
-    bodyScrolls: false,
+    bodyScrolls: true,
     bodyOverflow: "auto",
     pageOverflow: false,
     drawerOverflow: false,
@@ -143,7 +143,7 @@ test("checkout is a fixed, compact, mode-aware single-screen drawer", async ({ p
   }
 });
 
-test("checkout remains visible without scrolling at supported desktop sizes", async ({ page }) => {
+test("checkout remains contained with one body scroll region at supported desktop sizes", async ({ page }) => {
   await page.setContent(`<style>${styles}html,body{margin:0}.cd-checkout-slide-over{animation:none!important}</style>${drawerFixture("payment-due", "Payment Due")}`);
   for (const viewport of [
     { width: 1366, height: 768 },
@@ -158,13 +158,14 @@ test("checkout remains visible without scrolling at supported desktop sizes", as
       return {
         width: Math.round(rect.width), right: Math.round(rect.right), footerVisible: footer.bottom <= window.innerHeight,
         bodyScrolls: body.scrollHeight > body.clientHeight,
+        bodyOverflow: getComputedStyle(body).overflowY,
         pageOverflow: document.documentElement.scrollWidth > window.innerWidth,
         drawerOverflow: (drawer as HTMLElement).scrollWidth > (drawer as HTMLElement).clientWidth,
       };
     });
     expect(geometry.width).toBeGreaterThanOrEqual(520);
     expect(geometry.width).toBeLessThanOrEqual(620);
-    expect(geometry).toMatchObject({ right: viewport.width, footerVisible: true, bodyScrolls: false, pageOverflow: false, drawerOverflow: false });
+    expect(geometry).toMatchObject({ right: viewport.width, footerVisible: true, bodyOverflow: "auto", pageOverflow: false, drawerOverflow: false });
   }
 });
 
