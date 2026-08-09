@@ -18,6 +18,7 @@ type OrderRow = {
   operational_status?: string;
   customer_name: string | null;
   table_number: string | null;
+  service_type?: string | null;
   total_price: number | string;
   created_at: string;
   preparation_started_at: string | null;
@@ -79,6 +80,21 @@ function isKitchenOrderStatus(value: unknown): value is KitchenOrderStatus {
   );
 }
 
+export function resolveKitchenOrderStatus(
+  operationalStatus: unknown,
+  rowStatus: unknown,
+  stationStatusOverride: KitchenOrderStatus | null = null,
+): KitchenOrderStatus {
+  return (
+    stationStatusOverride ??
+    (isKitchenOrderStatus(operationalStatus)
+      ? operationalStatus
+      : isKitchenOrderStatus(rowStatus)
+        ? rowStatus
+        : "accepted")
+  );
+}
+
 function isKitchenStationStatus(value: unknown): value is KitchenStationStatus {
   return (
     value === "accepted" ||
@@ -96,10 +112,13 @@ function isOrderRow(value: unknown): value is OrderRow {
   }
 
   const row = value as Partial<OrderRow>;
+  const operationalStatus = isKitchenOrderStatus(row.operational_status)
+    ? row.operational_status
+    : row.status;
 
   return Boolean(
     typeof row.id === "string" &&
-    isKitchenOrderStatus(row.operational_status) &&
+    isKitchenOrderStatus(operationalStatus) &&
     typeof row.created_at === "string" &&
     typeof row.total_price !== "undefined",
   );
@@ -135,12 +154,13 @@ function normalizeOrder(
   row: OrderRow,
   items: KitchenOrderItem[] = [],
   stationProgress: KitchenOrderStationProgress[] = [],
+  stationStatusOverride: KitchenOrderStatus | null = null,
 ): KitchenOrder {
-  const stationStatus = isKitchenOrderStatus(row.status)
-    ? row.status
-    : row.status === "paid"
-      ? "accepted"
-      : "accepted";
+  const stationStatus = resolveKitchenOrderStatus(
+    row.operational_status,
+    row.status,
+    stationStatusOverride,
+  );
   return {
     id: row.id,
     displayNumber: row.display_number ?? null,
@@ -149,6 +169,12 @@ function normalizeOrder(
     status: stationStatus as KitchenOrderStatus,
     customerName: row.customer_name,
     tableNumber: row.table_number,
+    serviceType:
+      row.service_type === "dine-in" ||
+      row.service_type === "takeaway" ||
+      row.service_type === "delivery"
+        ? row.service_type
+        : null,
     totalPrice: Number(row.total_price),
     createdAt: row.created_at,
     preparationStartedAt: row.preparation_started_at,
@@ -215,7 +241,8 @@ function normalizeRpcOrder(
         normalizeStationProgress(progress as StationProgressRow),
       )
     : [];
-  return normalizeOrder(row, items, stationProgress);
+  const stationStatus = isKitchenOrderStatus(row.status) ? row.status : null;
+  return normalizeOrder(row, items, stationProgress, stationStatus);
 }
 
 export async function fetchKitchenRestaurant(

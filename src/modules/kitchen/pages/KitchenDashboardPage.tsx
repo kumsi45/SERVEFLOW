@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getRestaurantEventStream } from "../../../core/realtime/restaurantEventService";
 import { formatCurrency } from "../../../core/format/currency";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import {
   playNotificationTone,
   type RealtimeConnectionState,
@@ -18,6 +19,12 @@ import {
   loadInventoryItems,
   type InventoryItem,
 } from "../services/inventoryRequestService";
+import {
+  filterKitchenWorkspaceOrders,
+  getKitchenOrderStationNames,
+  sortKitchenWorkspaceOrders,
+  type KitchenSortDirection,
+} from "../kitchenWorkspace";
 import type {
   KitchenDashboardContext,
   KitchenOrder,
@@ -135,6 +142,21 @@ function TimerLabel({ iso, _now }: { iso: string | null; _now: Date }) {
 // ─── Order Ticket ─────────────────────────────────────────────────────────────
 function kitchenTicketKey(order: KitchenOrder) {
   return `${order.id}:${order.kitchenBatchKey ?? "initial"}`;
+}
+
+type KitchenServiceType = "dine-in" | "takeaway" | "delivery";
+type KitchenServiceFilter = "all" | KitchenServiceType;
+type KitchenStateFilter = "all" | "accepted" | "preparing" | "ready";
+
+function kitchenServiceType(order: KitchenOrder): KitchenServiceType {
+  if (order.serviceType) return order.serviceType;
+  return order.tableNumber ? "dine-in" : "takeaway";
+}
+
+function kitchenServiceLabel(serviceType: KitchenServiceType) {
+  if (serviceType === "dine-in") return "Dine-in";
+  if (serviceType === "delivery") return "Delivery";
+  return "Takeaway";
 }
 
 function OrderTicket({
@@ -383,6 +405,149 @@ function KanbanCol({
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
+function KitchenOrderCard({
+  order,
+  actionId,
+  canAct,
+  onStart,
+  onReady,
+  onComplete,
+  showStation,
+}: {
+  order: KitchenOrder;
+  actionId: string | null;
+  canAct: boolean;
+  onStart: (order: KitchenOrder) => void;
+  onReady: (order: KitchenOrder) => void;
+  onComplete: (order: KitchenOrder) => void;
+  showStation: boolean;
+}) {
+  const ticketKey = kitchenTicketKey(order);
+  const isBusy = actionId === ticketKey;
+  const elapsed = elapsedMin(order.preparationStartedAt ?? order.createdAt);
+  const ageClass = elapsed >= 25 ? "urgent" : elapsed >= 15 ? "warning-age" : "";
+  const timerClass =
+    elapsed >= 25
+      ? "kd-timer-urgent"
+      : elapsed >= 15
+        ? "kd-timer-warning"
+        : "kd-timer-normal";
+  const serviceType = kitchenServiceType(order);
+  const stateLabel =
+    order.status === "accepted"
+      ? "New"
+      : order.status === "preparing"
+        ? "Preparing"
+        : "Ready";
+  const identifier = order.tableNumber
+    ? `Table ${order.tableNumber}`
+    : fmtTicket(order);
+  const stationNames = getKitchenOrderStationNames(order);
+  const originalItems = order.items.filter((item) => !item.appendedAt);
+  const appendedItems = order.items.filter((item) => item.appendedAt);
+  const latestAppendTime = appendedItems.reduce<string | null>(
+    (latest, item) =>
+      item.appendedAt && (!latest || item.appendedAt > latest)
+        ? item.appendedAt
+        : latest,
+    null,
+  );
+
+  const renderItem = (item: KitchenOrderItem, appended = false) => (
+    <div
+      key={item.id}
+      className={`kd-card-item${appended ? " appended" : ""}`}
+    >
+      <div className="kd-card-item-main">
+        <strong>{item.quantity}x</strong>
+        <span>{item.name}</span>
+      </div>
+      {item.notes ? (
+        <div className="kd-card-instruction">
+          <strong>Instruction:</strong> {item.notes}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const action =
+    order.status === "accepted"
+      ? {
+          label: isBusy ? "Starting..." : "Start Preparing",
+          run: () => onStart(order),
+        }
+      : order.status === "preparing"
+        ? {
+            label: isBusy ? "Marking..." : "Mark Ready",
+            run: () => onReady(order),
+          }
+        : {
+            label: isBusy ? "Completing..." : "Complete Station",
+            run: () => onComplete(order),
+          };
+
+  return (
+    <article className={`kd-order-card status-${order.status} ${ageClass}`.trim()}>
+      <header className="kd-card-header">
+        <div className="kd-card-title">
+          <h2>{identifier}</h2>
+          <span className={`kd-state-badge ${order.status}`}>{stateLabel}</span>
+        </div>
+        <span className={`kd-card-timer ${timerClass}`}>
+          {fmtElapsed(elapsed)}
+        </span>
+      </header>
+
+      <div className="kd-card-context">
+        <span className={`kd-service-badge ${serviceType}`}>
+          {kitchenServiceLabel(serviceType)}
+        </span>
+        <span className="kd-card-source">
+          {order.customerName || "Kitchen order"}
+          {!showStation && stationNames.length > 0
+            ? ` \u2022 ${stationNames.join(", ")}`
+            : ""}
+        </span>
+        <time dateTime={order.createdAt}>{fmtTime(order.createdAt)}</time>
+      </div>
+      {showStation ? (
+        <div className="kd-card-station">
+          Station: {stationNames.join(", ") || "Unassigned"}
+        </div>
+      ) : null}
+
+      <div className="kd-card-items">
+        {order.items.length === 0 ? (
+          <div className="kd-card-item-empty">No item data</div>
+        ) : (
+          originalItems.map((item) => renderItem(item))
+        )}
+        {appendedItems.length > 0 ? (
+          <div className="kd-card-appended">
+            <div className="kd-card-appended-label">
+              <strong>New items received</strong>
+              {latestAppendTime ? <span>{fmtTime(latestAppendTime)}</span> : null}
+            </div>
+            {appendedItems.map((item) => renderItem(item, true))}
+          </div>
+        ) : null}
+      </div>
+
+      <footer className="kd-card-action">
+        <button
+          type="button"
+          className={`kd-context-action ${order.status}`}
+          onClick={action.run}
+          disabled={!canAct || isBusy}
+          title={canAct ? undefined : "Select a station to update this order"}
+        >
+          {canAct ? action.label : "Select a station to continue"}
+        </button>
+      </footer>
+    </article>
+  );
+}
+
 type KitchenDashboardPageProps = {
   restaurantId: string;
   restaurant: KitchenRestaurant;
@@ -422,6 +587,13 @@ export function KitchenDashboardPage({
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [serviceFilter, setServiceFilter] =
+    useState<KitchenServiceFilter>("all");
+  const [stateFilter, setStateFilter] =
+    useState<KitchenStateFilter>("all");
+  const [sortDirection, setSortDirection] =
+    useState<KitchenSortDirection>("oldest");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [realtimeNotice, setRealtimeNotice] = useState<string | null>(null);
   const [realtimeState, setRealtimeState] =
     useState<RealtimeConnectionState>("connecting");
@@ -431,6 +603,32 @@ export function KitchenDashboardPage({
   const knownKitchenTicketKeysRef = useRef<Set<string>>(new Set());
   const kitchenRealtimeReadyRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const sortControlRef = useRef<HTMLDivElement | null>(null);
+  const sortTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const sortOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+
+    function closeWhenOutside(event: PointerEvent) {
+      if (!sortControlRef.current?.contains(event.target as Node)) {
+        setSortMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setSortMenuOpen(false);
+      sortTriggerRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", closeWhenOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeWhenOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [sortMenuOpen]);
 
   useEffect(() => {
     contextRef.current = dashboardContext;
@@ -472,7 +670,7 @@ export function KitchenDashboardPage({
 
     const selection = selectedStationRef.current;
     const includeAllStations = context.role === "owner" && selection === "all";
-    const stationId = includeAllStations ? null : selection;
+    const stationId = selection === "all" ? null : selection;
     const rows = await fetchStationKitchenOrders(
       restaurantId,
       stationId,
@@ -503,7 +701,7 @@ export function KitchenDashboardPage({
         skipNextStationLoadRef.current = true;
         const includeAllStations =
           context.role === "owner" && nextSelection === "all";
-        const stationId = includeAllStations ? null : nextSelection;
+        const stationId = nextSelection === "all" ? null : nextSelection;
         const rows = await fetchStationKitchenOrders(
           restaurantId,
           stationId,
@@ -538,7 +736,7 @@ export function KitchenDashboardPage({
         setError(null);
         const includeAllStations =
           context.role === "owner" && selectedStationId === "all";
-        const stationId = includeAllStations ? null : selectedStationId;
+        const stationId = selectedStationId === "all" ? null : selectedStationId;
         const rows = await fetchStationKitchenOrders(
           restaurantId,
           stationId,
@@ -587,14 +785,21 @@ export function KitchenDashboardPage({
   }, [dashboardContext, restaurantId, selectedStationId]);
 
   // ── actions ────────────────────────────────────────────────────────────────
+  function resolveActionStationId(order: KitchenOrder): string | null {
+    if (dashboardContext?.role !== "owner") return null;
+    if (selectedStationId !== "all") return selectedStationId;
+    return (
+      order.stationProgress[0]?.stationId ??
+      order.items.find((item) => item.kitchenStationId)?.kitchenStationId ??
+      null
+    );
+  }
+
   async function handleStart(order: KitchenOrder) {
     try {
       const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
-      const targetStationId =
-        dashboardContext?.role === "owner" && selectedStationId !== "all"
-          ? selectedStationId
-          : null;
+      const targetStationId = resolveActionStationId(order);
     console.log("START PREPARING");
        console.table({
     orderId: order.id,
@@ -630,10 +835,7 @@ export function KitchenDashboardPage({
     try {
       const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
-      const targetStationId =
-        dashboardContext?.role === "owner" && selectedStationId !== "all"
-          ? selectedStationId
-          : null;
+      const targetStationId = resolveActionStationId(order);
       const updated = await markOrderReady(
         order.id,
         targetStationId,
@@ -662,10 +864,7 @@ export function KitchenDashboardPage({
     try {
       const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
-      const targetStationId =
-        dashboardContext?.role === "owner" && selectedStationId !== "all"
-          ? selectedStationId
-          : null;
+      const targetStationId = resolveActionStationId(order);
       await markOrderCompleted(
         order.id,
         targetStationId,
@@ -688,39 +887,43 @@ export function KitchenDashboardPage({
   }
 
   // ── derived ────────────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (!search.trim()) return orders;
-    const q = search.toLowerCase();
-    return orders.filter(
-      (o) =>
-        o.id.toLowerCase().includes(q) ||
-        (o.customerName ?? "").toLowerCase().includes(q) ||
-        (o.tableNumber ?? "").toLowerCase().includes(q),
-    );
-  }, [orders, search]);
+  const filteredByContext = useMemo(
+    () =>
+      filterKitchenWorkspaceOrders(orders, {
+        stationId: selectedStationId,
+        service: serviceFilter,
+        state: "all",
+        search,
+      }),
+    [orders, search, selectedStationId, serviceFilter],
+  );
 
   const byStatus = useMemo(
     () => ({
-      accepted: filtered.filter((o) => o.status === "accepted"),
-      preparing: filtered.filter((o) => o.status === "preparing"),
-      ready: filtered.filter((o) => o.status === "ready"),
+      accepted: filteredByContext.filter((o) => o.status === "accepted"),
+      preparing: filteredByContext.filter((o) => o.status === "preparing"),
+      ready: filteredByContext.filter((o) => o.status === "ready"),
     }),
-    [filtered],
+    [filteredByContext],
   );
-  const canActOnStation =
-    dashboardContext?.role === "kitchen" || selectedStationId !== "all";
+  const visibleOrders = useMemo(() => {
+    const filteredOrders = filterKitchenWorkspaceOrders(filteredByContext, {
+      stationId: selectedStationId,
+      service: serviceFilter,
+      state: stateFilter,
+      search,
+    });
 
-  const totalActive = orders.length;
-  const avgPrep = useMemo(() => {
-    const done = orders.filter(
-      (o) => o.preparationStartedAt && o.readyMarkedAt,
-    );
-    if (!done.length) return 0;
-    return Math.round(
-      done.reduce((s, o) => s + elapsedMin(o.preparationStartedAt!), 0) /
-        done.length,
-    );
-  }, [orders]);
+    return sortKitchenWorkspaceOrders(filteredOrders, sortDirection);
+  }, [
+    filteredByContext,
+    search,
+    selectedStationId,
+    serviceFilter,
+    sortDirection,
+    stateFilter,
+  ]);
+  const totalActive = visibleOrders.length;
 
   const dateStr = now.toLocaleDateString("en-US", {
     weekday: "short",
@@ -733,7 +936,7 @@ export function KitchenDashboardPage({
   });
   const stationLabel =
     dashboardContext?.role === "kitchen"
-      ? (dashboardContext.assignedStation?.name ?? "Main Kitchen")
+      ? (dashboardContext.assignedStation?.name ?? "Station not assigned")
       : selectedStationId === "all"
         ? "All Stations"
         : (dashboardContext?.stations.find(
@@ -750,11 +953,10 @@ export function KitchenDashboardPage({
           </div>
         ) : null}
         <div className="kd-header-logo-area">
-          <div className="kd-logo-mark">{restaurant.name.charAt(0)}</div>
-          <div>
-            <div className="kd-restaurant-name">{restaurant.name}</div>
-            <div className="kd-kitchen-label">Kitchen Dashboard</div>
-          </div>
+          <ServeFlowBrand variant="compact" />
+          <span className="kd-header-kitchen-context">
+            Kitchen: {stationLabel}
+          </span>
         </div>
         <div className="kd-divider" />
         <div className="kd-status-pill">
@@ -773,7 +975,9 @@ export function KitchenDashboardPage({
             aria-label="Search orders"
           />
         </div>
-        <div className="kd-active-badge">🍽 {totalActive} ACTIVE</div>
+        <div className="kd-active-badge">
+          <span /> {totalActive} Active
+        </div>
         <div className="kd-header-actions">
           <button
             className="kd-signout-btn"
@@ -803,27 +1007,47 @@ export function KitchenDashboardPage({
       </header>
 
       {/* ── FILTER BAR ─────────────────────────────────────────────────── */}
-      <div className="kd-filter-bar">
-        <button className="kd-filter-btn active">All Types</button>
-        <button className="kd-filter-btn">🍽 Dine-in</button>
-        <button className="kd-filter-btn">🥡 Takeaway</button>
-        <button className="kd-filter-btn">🛵 Delivery</button>
-        <div className="kd-filter-sep" />
-        <button className="kd-sort-btn">↕ Newest First</button>
-      </div>
-
-      {error && <div className="kd-error-banner">⚠️ {error}</div>}
-      {realtimeNotice ? (
-        <div className="kd-realtime-notice" role="status">
-          <strong>{realtimeNotice}</strong>
-          <button type="button" onClick={() => setRealtimeNotice(null)}>
-            Dismiss
-          </button>
+      <div className="kd-filter-bar" aria-label="Kitchen queue filters">
+        <div className="kd-filter-group">
+          <span className="kd-filter-label">Service</span>
+          {([
+            ["all", "All"],
+            ["dine-in", "Dine-in"],
+            ["takeaway", "Takeaway"],
+            ["delivery", "Delivery"],
+          ] as const).map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className={`kd-filter-btn${serviceFilter === value ? " active" : ""}`}
+              aria-pressed={serviceFilter === value}
+              onClick={() => setServiceFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      ) : null}
 
-      {/* ── BODY ───────────────────────────────────────────────────────── */}
-      <div className="kd-station-bar">
+        <div className="kd-filter-group kd-state-filters">
+          <span className="kd-filter-label">State</span>
+          {([
+            ["all", "All", filteredByContext.length],
+            ["accepted", "New", byStatus.accepted.length],
+            ["preparing", "Preparing", byStatus.preparing.length],
+            ["ready", "Ready", byStatus.ready.length],
+          ] as const).map(([value, label, count]) => (
+            <button
+              type="button"
+              key={value}
+              className={`kd-filter-btn state-${value}${stateFilter === value ? " active" : ""}`}
+              aria-pressed={stateFilter === value}
+              onClick={() => setStateFilter(value)}
+            >
+              {label} <strong>{count}</strong>
+            </button>
+          ))}
+        </div>
+
         {dashboardContext?.role === "owner" ? (
           <label className="kd-station-picker">
             <span>Station</span>
@@ -840,9 +1064,89 @@ export function KitchenDashboardPage({
             </select>
           </label>
         ) : (
-          <div className="kd-station-lock">Station: {stationLabel}</div>
+          <div className="kd-station-context">Station: {stationLabel}</div>
         )}
+
+        <div className="kd-sort-control" ref={sortControlRef}>
+          <button
+            type="button"
+            ref={sortTriggerRef}
+            className="kd-sort-trigger"
+            aria-haspopup="menu"
+            aria-expanded={sortMenuOpen}
+            aria-controls="kitchen-sort-menu"
+            onClick={() => setSortMenuOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+              event.preventDefault();
+              setSortMenuOpen(true);
+              window.requestAnimationFrame(() => {
+                const optionIndex = event.key === "ArrowUp" ? 1 : 0;
+                sortOptionRefs.current[optionIndex]?.focus();
+              });
+            }}
+          >
+            <span>
+              Sort: {sortDirection === "oldest" ? "Oldest First" : "Newest First"}
+            </span>
+            <span className="kd-sort-chevron" aria-hidden="true" />
+          </button>
+          {sortMenuOpen ? (
+            <div
+              id="kitchen-sort-menu"
+              className="kd-sort-menu"
+              role="menu"
+              aria-label="Sort kitchen tickets"
+            >
+              {(["oldest", "newest"] as const).map((direction, index) => {
+                const selected = sortDirection === direction;
+                return (
+                  <button
+                    key={direction}
+                    type="button"
+                    ref={(element) => {
+                      sortOptionRefs.current[index] = element;
+                    }}
+                    className={`kd-sort-option${selected ? " selected" : ""}`}
+                    role="menuitemradio"
+                    aria-checked={selected}
+                    onClick={() => {
+                      setSortDirection(direction);
+                      setSortMenuOpen(false);
+                      sortTriggerRef.current?.focus();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                        event.preventDefault();
+                        const offset = event.key === "ArrowDown" ? 1 : -1;
+                        sortOptionRefs.current[(index + offset + 2) % 2]?.focus();
+                      } else if (event.key === "Home" || event.key === "End") {
+                        event.preventDefault();
+                        sortOptionRefs.current[event.key === "Home" ? 0 : 1]?.focus();
+                      }
+                    }}
+                  >
+                    <span className="kd-sort-check" aria-hidden="true">
+                      {selected ? "✓" : ""}
+                    </span>
+                    {direction === "oldest" ? "Oldest First" : "Newest First"}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </div>
+
+      {error && <div className="kd-error-banner">⚠️ {error}</div>}
+      {realtimeNotice ? (
+        <div className="kd-realtime-notice" role="status">
+          <strong>{realtimeNotice}</strong>
+          <button type="button" onClick={() => setRealtimeNotice(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="kd-loading">
@@ -852,79 +1156,52 @@ export function KitchenDashboardPage({
           </div>
         </div>
       ) : (
-        <div className="kd-body">
-          {/* ── KANBAN ─────────────────────────────────────────────────── */}
-          <div className="kd-kanban">
-            <KanbanCol
-              colKey="new"
-              title="Accepted"
-              orders={byStatus.accepted}
-              actionId={actionId}
-              onStart={canActOnStation ? handleStart : undefined}
-              now={now}
-            />
-            <KanbanCol
-              colKey="preparing"
-              title="Preparing"
-              orders={byStatus.preparing}
-              actionId={actionId}
-              onReady={canActOnStation ? handleReady : undefined}
-              now={now}
-            />
-            <KanbanCol
-              colKey="ready"
-              title="Ready for Pickup"
-              orders={byStatus.ready}
-              actionId={actionId}
-              onComplete={canActOnStation ? handleComplete : undefined}
-              now={now}
-            />
+        <main className="kd-order-workspace">
+          <div className="kd-queue-summary">
+            <div>
+              <strong>{visibleOrders.length}</strong>
+              <span>visible orders</span>
+            </div>
+            <p>
+              {sortDirection === "oldest"
+                ? "Oldest tickets appear first."
+                : "Newest tickets appear first."}{" "}
+              Select a state to focus the queue.
+            </p>
           </div>
-
-          {/* ── SIDEBAR ────────────────────────────────────────────────── */}
-          <aside className="kd-sidebar">
-            <div className="kd-sidebar-header">📊 Live Stats</div>
-
-            <div className="kd-sidebar-section">
-              <div className="kd-sidebar-label">Kitchen Performance</div>
-              <div className="kd-stat-row">
-                <span className="kd-stat-label">Accepted</span>
-                <span className="kd-stat-value blue">
-                  {byStatus.accepted.length}
-                </span>
-              </div>
-              <div className="kd-stat-row">
-                <span className="kd-stat-label">Preparing</span>
-                <span className="kd-stat-value orange">
-                  {byStatus.preparing.length}
-                </span>
-              </div>
-              <div className="kd-stat-row">
-                <span className="kd-stat-label">Ready</span>
-                <span className="kd-stat-value green">
-                  {byStatus.ready.length}
-                </span>
-              </div>
-              <div className="kd-stat-row">
-                <span className="kd-stat-label">Avg Prep Time</span>
-                <span className="kd-stat-value">
-                  {avgPrep > 0 ? `${avgPrep}m` : "—"}
-                </span>
-              </div>
+          {visibleOrders.length > 0 ? (
+            <div className="kd-order-grid">
+              {visibleOrders.map((order) => (
+                <KitchenOrderCard
+                  key={kitchenTicketKey(order)}
+                  order={order}
+                  actionId={actionId}
+                  canAct={
+                    dashboardContext?.role === "kitchen" ||
+                    resolveActionStationId(order) !== null
+                  }
+                  onStart={handleStart}
+                  onReady={handleReady}
+                  onComplete={handleComplete}
+                  showStation={selectedStationId === "all"}
+                />
+              ))}
             </div>
-
-            <div className="kd-sidebar-section">
-              <div className="kd-sidebar-label">Active Staff</div>
-              <div className="kd-staff-avatars">
-                {["K", "C", "O"].map((l) => (
-                  <div key={l} className="kd-staff-avatar">
-                    {l}
-                  </div>
-                ))}
-              </div>
+          ) : (
+            <div className="kd-queue-empty">
+              <strong>
+                {selectedStationId === "all"
+                  ? "Kitchen is clear"
+                  : `No active orders for ${stationLabel}`}
+              </strong>
+              <span>
+                {selectedStationId === "all"
+                  ? "No active kitchen orders."
+                  : "Try another service or state filter."}
+              </span>
             </div>
-          </aside>
-        </div>
+          )}
+        </main>
       )}
       {requestOpen && (
         <div className="kd-request-layer" onClick={() => setRequestOpen(false)}>

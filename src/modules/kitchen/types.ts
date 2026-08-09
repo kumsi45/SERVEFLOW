@@ -22,6 +22,7 @@ export type KitchenOrder = {
   status: KitchenOrderStatus;
   customerName: string | null;
   tableNumber: string | null;
+  serviceType?: "dine-in" | "takeaway" | "delivery" | null;
   totalPrice: number;
   createdAt: string;
   preparationStartedAt: string | null;
