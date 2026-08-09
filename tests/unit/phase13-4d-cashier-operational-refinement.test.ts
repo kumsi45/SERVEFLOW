@@ -97,8 +97,8 @@ describe("Phase 13.4D cashier operational refinement", () => {
       })),
     );
     expect(twenty.totalQuantity).toBe(20);
-    expect(twenty.previewText).toBe("Item 1 ×1 • Item 2 ×1 • Item 3 ×1");
-    expect(twenty.hiddenDistinctCount).toBe(17);
+    expect(twenty.previewText).toBe("Item 1 ×1 • Item 2 ×1 • Item 3 ×1 • Item 4 ×1 • Item 5 ×1");
+    expect(twenty.hiddenDistinctCount).toBe(15);
     expect(twenty.fullSummary).toContain("Item 20 ×1");
   });
 

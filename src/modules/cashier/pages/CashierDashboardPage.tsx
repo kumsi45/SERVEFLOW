@@ -3017,7 +3017,7 @@ export function CashierDashboardPage({
                             </span>
                             {itemSummary.hiddenDistinctCount > 0 ? (
                               <span className="cd-row-items-more">
-                                +{itemSummary.hiddenDistinctCount} more
+                                • +{itemSummary.hiddenDistinctCount} more
                               </span>
                             ) : null}
                           </div>

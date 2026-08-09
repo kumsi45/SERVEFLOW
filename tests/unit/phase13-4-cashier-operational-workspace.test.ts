@@ -129,9 +129,11 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain("orderTableCode(order)");
     expect(page).toContain("return numericTable ? `T${Number(numericTable[1])}` : table;");
     expect(operationalRowsMarkup).not.toContain("Service Location");
-    expect(finalStyles).toContain("grid-template-columns: 48px minmax(140px, 1fr) 100px 120px 70px 130px");
+    expect(finalStyles).toContain("grid-template-columns: 56px minmax(180px, 220px) 140px 130px 90px 190px");
     expect(finalStyles).toContain('"location source method amount wait action"');
     expect(finalStyles).toContain('". items items items items action"');
+    expect(finalStyles).toContain("column-gap: 16px");
+    expect(finalStyles).toContain("padding: 14px 16px");
     const orderedCells = ["{location}", "cd-row-source", "{itemDetails}", "cd-row-method", "cd-row-amount", "{time}", "{action}"];
     orderedCells.reduce((previous, cell) => {
       const position = renderedRowMarkup.indexOf(cell);
@@ -159,11 +161,14 @@ describe("Phase 13.4C simplified cashier operational workspace", () => {
     expect(page).toContain("summarizeOperationalItems(allItems)");
     expect(page).toContain('className="cd-row-items-preview"');
     expect(page).toContain('className="cd-row-items-more"');
+    expect(page).toContain("• +{itemSummary.hiddenDistinctCount} more");
     expect(page).toContain("itemSummary.hiddenDistinctCount");
     expect(page).toContain('aria-label={`${itemCountLabel}. ${fullItemLabel}`}');
     expect(operationalRowsMarkup).not.toContain("<strong>{itemCountLabel}</strong>");
     expect(finalStyles).toContain("text-overflow: ellipsis");
-    expect(finalStyles).toContain("flex: 0 0 auto");
+    expect(finalStyles).toContain("flex: 0 1 auto");
+    expect(finalStyles).toContain("gap: 4px !important");
+    expect(finalStyles).not.toContain("justify-content: space-between");
   });
 
   it("uses compact elapsed labels and premium white rows", () => {

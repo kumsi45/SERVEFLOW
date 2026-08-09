@@ -28,25 +28,25 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
               <div class="cd-operational-rows">
                 <article class="cd-operational-row queue-pending">
                   <div class="cd-row-location"><strong>T12</strong></div>
-                  <div class="cd-row-source"><span>Waiter • Abdi</span></div>
-                  <div class="cd-row-items" aria-label="20 items. Coffee ×1, Burger ×2, Pizza ×1, and 17 more items">
+                  <div class="cd-row-source"><span>Waiter • test waiter</span></div>
+                  <div class="cd-row-items" aria-label="8 items. pizza ×1, tea ×1, burger ×1, macchiato ×1, mango juice ×1, and 3 more items">
                     <div class="cd-row-items-detail" aria-hidden="true">
-                      <span class="cd-row-items-preview">An intentionally very long coffee menu item ×1 • Burger ×2 • Pizza ×1</span>
-                      <span class="cd-row-items-more">+17 more</span>
+                      <span class="cd-row-items-preview">pizza ×1 • tea ×1 • burger ×1 • macchiato ×1 • mango juice ×1</span>
+                      <span class="cd-row-items-more">• +3 more</span>
                     </div>
                   </div>
                   <div class="cd-row-method"><span class="cd-row-payment-value payment-due">Payment Due</span></div>
-                  <div class="cd-row-amount"><strong>ETB 2,587.50</strong></div>
-                  <div class="cd-row-wait fresh"><strong>2 min</strong></div>
+                  <div class="cd-row-amount"><strong>ETB 1,909</strong></div>
+                  <div class="cd-row-wait fresh"><strong>1 hr 8 min</strong></div>
                   <button class="cd-row-action">Verify Payment</button>
                 </article>
                 <article class="cd-operational-row queue-ready normal-order">
                   <div class="cd-row-location"><strong>T5</strong></div>
-                  <div class="cd-row-source"><span>Waiter • Abdi</span></div>
-                  <div class="cd-row-items" aria-label="7 items. Coffee ×1, Pizza ×1, Tea ×1, and 4 more items">
+                  <div class="cd-row-source"><span>Waiter • test waiter</span></div>
+                  <div class="cd-row-items" aria-label="7 items. Coffee ×1, Pizza ×1, Tea ×1, Juice ×1, Cake ×1, and 2 more items">
                     <div class="cd-row-items-detail" aria-hidden="true">
-                      <span class="cd-row-items-preview">Coffee ×1 • Pizza ×1 • Tea ×1</span>
-                      <span class="cd-row-items-more">+4 more</span>
+                      <span class="cd-row-items-preview">Coffee ×1 • Pizza ×1 • Tea ×1 • Juice ×1 • Cake ×1</span>
+                      <span class="cd-row-items-more">• +2 more</span>
                     </div>
                   </div>
                   <div class="cd-row-method"><span class="cd-row-payment-value">Cash</span></div>
@@ -77,6 +77,7 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       const amount = select(".cd-row-amount strong");
       const row = select(".cd-operational-row").getBoundingClientRect();
       const more = select(".cd-row-items-more").getBoundingClientRect();
+      const preview = select(".cd-row-items-preview").getBoundingClientRect();
       const tabs = [...document.querySelectorAll<HTMLElement>(".cd-tab")]
         .map((tab) => tab.getBoundingClientRect());
       const minimumTabGap = Math.min(
@@ -87,6 +88,14 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       const rowStyles = getComputedStyle(select(".cd-operational-row"));
       const itemsRect = select(".cd-row-items").getBoundingClientRect();
       const sourceRect = select(".cd-row-source").getBoundingClientRect();
+      const topRects = [
+        ".cd-row-location",
+        ".cd-row-source",
+        ".cd-row-method",
+        ".cd-row-amount",
+        ".cd-row-wait",
+        ".cd-row-action",
+      ].map((selector) => select(selector).getBoundingClientRect());
       const singleLineSelectors = [".cd-row-location strong", ".cd-row-source span", ".cd-row-items-preview", ".cd-row-payment-value", ".cd-row-amount strong", ".cd-row-wait strong", ".cd-row-action"];
       return {
         tabsOverflow: select(".cd-tabs").scrollWidth > select(".cd-tabs").clientWidth,
@@ -100,6 +109,7 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
         sourceClipped: select(".cd-row-source span").scrollWidth > select(".cd-row-source span").clientWidth,
         stateClipped: select(".cd-row-payment-value").scrollWidth > select(".cd-row-payment-value").clientWidth,
         waitingClipped: select(".cd-row-wait strong").scrollWidth > select(".cd-row-wait strong").clientWidth,
+        primaryItemsClipped: select(".cd-operational-row .cd-row-items-preview").scrollWidth > select(".cd-operational-row .cd-row-items-preview").clientWidth,
         normalItemsClipped: select(".normal-order .cd-row-items-preview").scrollWidth > select(".normal-order .cd-row-items-preview").clientWidth,
         normalItemsClientWidth: select(".normal-order .cd-row-items-preview").clientWidth,
         normalItemsScrollWidth: select(".normal-order .cd-row-items-preview").scrollWidth,
@@ -112,6 +122,11 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
         actionClipped: action.scrollWidth > action.clientWidth,
         rowHeight: row.height,
         moreVisible: more.width > 0 && more.right <= action.left,
+        moreInlineGap: Math.round(more.left - preview.right),
+        minimumTopColumnGap: Math.round(Math.min(
+          ...topRects.slice(1).map((rect, index) => rect.left - topRects[index].right),
+        )),
+        sourcePaymentOverlap: sourceRect.right > topRects[2].left,
         minimumTabGap,
         distinctTabBackgrounds: new Set(tabStyles.map((style) => style.backgroundColor)).size,
         distinctTabColors: new Set(tabStyles.map((style) => style.color)).size,
@@ -138,8 +153,10 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       rowOverflow: false,
       amountClipped: false,
       sourceClipped: false,
+      sourcePaymentOverlap: false,
       stateClipped: false,
       waitingClipped: false,
+      primaryItemsClipped: false,
       normalItemsClipped: false,
       normalSourceClipped: false,
       normalMoreVisible: true,
@@ -147,6 +164,7 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       actionClipped: false,
       rowHeight: 80,
       moreVisible: true,
+      moreInlineGap: 4,
       distinctTabBackgrounds: 4,
       distinctTabColors: 4,
       inactiveTabsColored: true,
@@ -158,6 +176,7 @@ test("four-queue cashier workspace stays contained at desktop POS widths", async
       itemEllipsis: true,
     });
     expect(geometry.minimumTabGap).toBeGreaterThanOrEqual(5);
+    expect(geometry.minimumTopColumnGap).toBeGreaterThanOrEqual(12);
   }
 
   await page.setViewportSize({ width: 1366, height: 768 });

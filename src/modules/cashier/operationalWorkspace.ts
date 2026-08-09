@@ -41,7 +41,7 @@ type OperationalItem = {
 
 export function summarizeOperationalItems(
   items: readonly OperationalItem[],
-  previewLimit = 3,
+  previewLimit = 5,
 ) {
   const distinctItems = new Map<
     string,

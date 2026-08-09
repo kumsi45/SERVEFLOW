@@ -16,4 +16,13 @@ describe("cashier shift action contrast", () => {
     expect(css).toContain("background: #b91c1c; color: #fff");
     expect(css).toContain("background: #7f1d1d; color: #fecaca; opacity: 1");
   });
+
+  it("keeps Close Shift fields and reconciliation totals readable", () => {
+    expect(css).toContain(".cd-modal.wide .cd-field input");
+    expect(css).toContain("background: #ffffff;\n  color: #14251d;");
+    expect(css).toContain(".cd-modal.wide .cd-reconcile-panel");
+    expect(css).toContain("background: #f3f7f5;\n  color: #14251d;");
+    expect(css).toContain(".cd-modal.wide .cd-reconcile-row.total strong");
+    expect(css).toContain("color: #075c34;");
+  });
 });
