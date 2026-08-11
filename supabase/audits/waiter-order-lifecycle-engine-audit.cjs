@@ -126,7 +126,7 @@ async function main() {
       await expectReject(
         "Another restaurant cannot collect this dining session",
         () => db.query("select public.verify_dining_session_payment($1,'Cash',null,null,null,false)", [first.order_id]),
-        /only active cashiers and owners/i,
+        /only an active cashier/i,
       );
     }
 

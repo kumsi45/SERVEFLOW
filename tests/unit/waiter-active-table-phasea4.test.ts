@@ -34,7 +34,8 @@ describe("waiter active table phase A4 contract", () => {
     expect(page).toContain("const kitchenItems = sessionDetail ? sessionKitchenItems(sessionDetail) : []");
     expect(page).toContain('status === "ready"');
     expect(page).toContain('"READY"');
-    expect(page).toContain('"SERVED"');
+    expect(page).not.toContain('markWaiterOrderServed');
+    expect(page).not.toContain('"SERVED"');
   });
 
   it("confirms bill requests and prevents duplicate bill taps", () => {

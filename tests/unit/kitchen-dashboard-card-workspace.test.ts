@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   filterKitchenWorkspaceOrders,
+  getKitchenTicketIdentity,
+  getKitchenTicketReceivedAt,
   sortKitchenWorkspaceOrders,
+  trackNewKitchenTicketIdentities,
 } from "../../src/modules/kitchen/kitchenWorkspace";
 import { resolveKitchenOrderStatus } from "../../src/modules/kitchen/services/kitchenOrderService";
 import type { KitchenOrder } from "../../src/modules/kitchen/types";
@@ -111,6 +114,103 @@ describe("kitchen dashboard card workspace", () => {
       .toEqual(["order-5", "order-4", "order-3", "order-2", "order-1"]);
   });
 
+  it("keeps same-table order rounds as independent station batch tickets", () => {
+    const diningSessionCreatedAt = "2026-08-11T13:45:00.000Z";
+    const secondRoundReceivedAt = "2026-08-11T20:32:00.000Z";
+    const burgerTicket: KitchenOrder = {
+      ...multiStationOrders[0],
+      id: "table-5-session",
+      tableNumber: "5",
+      kitchenBatchKey: "initial",
+      status: "ready",
+      createdAt: diningSessionCreatedAt,
+      items: [{
+        ...multiStationOrders[0].items[0],
+        id: "burger",
+        orderId: "table-5-session",
+        name: "Burger",
+        kitchenStationId: "hot-kitchen",
+        kitchenStationName: "Hot Kitchen",
+        appendedAt: null,
+      }],
+      stationProgress: [{
+        ...multiStationOrders[0].stationProgress[0],
+        stationId: "hot-kitchen",
+        stationName: "Hot Kitchen",
+        stationStatus: "ready",
+      }],
+    };
+    const macchiatoTicket: KitchenOrder = {
+      ...burgerTicket,
+      kitchenBatchKey: "1786480320000000",
+      status: "accepted",
+      items: [{
+        ...burgerTicket.items[0],
+        id: "macchiato",
+        name: "Macchiato",
+        kitchenStationId: "beverages",
+        kitchenStationName: "Beverages",
+        appendedAt: secondRoundReceivedAt,
+      }],
+      stationProgress: [{
+        ...burgerTicket.stationProgress[0],
+        stationId: "beverages",
+        stationName: "Beverages",
+        stationStatus: "accepted",
+      }],
+    };
+
+    expect(getKitchenTicketIdentity(burgerTicket)).toBe("table-5-session:hot-kitchen:initial");
+    expect(getKitchenTicketIdentity(macchiatoTicket)).toBe("table-5-session:beverages:1786480320000000");
+    expect(getKitchenTicketReceivedAt(burgerTicket)).toBe(diningSessionCreatedAt);
+    expect(getKitchenTicketReceivedAt(macchiatoTicket)).toBe(secondRoundReceivedAt);
+    expect(sortKitchenWorkspaceOrders([macchiatoTicket, burgerTicket], "oldest"))
+      .toEqual([burgerTicket, macchiatoTicket]);
+    expect([burgerTicket.status, macchiatoTicket.status]).toEqual(["ready", "accepted"]);
+
+    const selectedTicket = getKitchenTicketIdentity(macchiatoTicket);
+    const preparing = [burgerTicket, macchiatoTicket].map((ticket) =>
+      getKitchenTicketIdentity(ticket) === selectedTicket
+        ? { ...ticket, status: "preparing" as const }
+        : ticket,
+    );
+    expect(preparing.map((ticket) => ticket.status)).toEqual(["ready", "preparing"]);
+    const ready = preparing.map((ticket) =>
+      getKitchenTicketIdentity(ticket) === selectedTicket
+        ? { ...ticket, status: "ready" as const }
+        : ticket,
+    );
+    expect(ready.map((ticket) => ticket.status)).toEqual(["ready", "ready"]);
+  });
+
+  it("rings only for an unseen ticket identity, never for status transitions", () => {
+    const ticket = multiStationOrders[0];
+    const seen = new Set<string>();
+
+    expect(trackNewKitchenTicketIdentities([ticket], seen)).toEqual([
+      getKitchenTicketIdentity(ticket),
+    ]);
+    expect(trackNewKitchenTicketIdentities([
+      { ...ticket, status: "preparing" },
+    ], seen)).toEqual([]);
+    expect(trackNewKitchenTicketIdentities([], seen)).toEqual([]);
+    expect(trackNewKitchenTicketIdentities([
+      { ...ticket, status: "ready" },
+    ], seen)).toEqual([]);
+
+    const newRound = {
+      ...ticket,
+      kitchenBatchKey: "new-round",
+      items: ticket.items.map((item) => ({
+        ...item,
+        appendedAt: "2026-08-11T20:32:00.000Z",
+      })),
+    };
+    expect(trackNewKitchenTicketIdentities([ticket, newRound], seen)).toEqual([
+      getKitchenTicketIdentity(newRound),
+    ]);
+  });
+
   it("sorts after station, service, and state filters and re-sorts realtime arrivals", () => {
     const filtered = filterKitchenWorkspaceOrders(multiStationOrders, {
       stationId: "b",
@@ -190,6 +290,9 @@ describe("kitchen dashboard card workspace", () => {
     expect(page).toContain("Batch completed\\.");
     expect(page).toContain("setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey))");
     expect(page).toContain("await refreshStationOrders(false);");
+    expect(page).toContain("getKitchenTicketIdentity(order)");
+    expect(page).toContain("order.kitchenBatchKey");
+    expect(service).toContain("target_batch_key: kitchenBatchKey");
   });
 
   it("refreshes the kitchen queue from central order, item, table, and payment events", () => {
@@ -199,6 +302,9 @@ describe("kitchen dashboard card workspace", () => {
     expect(page).toContain('"restaurant_tables"');
     expect(page).toContain('event.type.startsWith("PAYMENT_")');
     expect(page).not.toContain('"order_invoices"');
+    expect(page).toContain("seenKitchenTicketKeysRef.current");
+    expect(page).toContain("trackNewKitchenTicketIdentities");
+    expect(page).not.toContain("knownKitchenTicketKeysRef.current = nextTicketKeys");
   });
 
   it("accepts canonical and compatible station transition response shapes", () => {
@@ -228,6 +334,10 @@ describe("kitchen dashboard card workspace", () => {
     expect(page).toContain("Mark Ready");
     expect(page).toContain("Complete Station");
     expect(page).toContain('className={`kd-context-action ${order.status}`}');
+    expect(page).toContain("const receivedAt = getKitchenTicketReceivedAt(order)");
+    expect(page).toContain('<time dateTime={receivedAt}>{fmtTime(receivedAt)}</time>');
+    expect(page).toContain("order.items.map((item) => renderItem(item))");
+    expect(page).not.toContain("New items received");
   });
 
   it("fits four readable cards on large desktops and responds down to one column", () => {

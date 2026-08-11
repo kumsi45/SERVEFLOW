@@ -22,7 +22,10 @@ import {
 import {
   filterKitchenWorkspaceOrders,
   getKitchenOrderStationNames,
+  getKitchenTicketIdentity,
+  getKitchenTicketReceivedAt,
   sortKitchenWorkspaceOrders,
+  trackNewKitchenTicketIdentities,
   type KitchenSortDirection,
 } from "../kitchenWorkspace";
 import type {
@@ -153,7 +156,7 @@ function TimerLabel({ iso, _now }: { iso: string | null; _now: Date }) {
 
 // ─── Order Ticket ─────────────────────────────────────────────────────────────
 function kitchenTicketKey(order: KitchenOrder) {
-  return `${order.id}:${order.kitchenBatchKey ?? "initial"}`;
+  return getKitchenTicketIdentity(order);
 }
 
 type KitchenServiceType = "dine-in" | "takeaway" | "delivery";
@@ -186,20 +189,11 @@ function OrderTicket({
   onComplete?: () => void;
   now: Date;
 }) {
-  const elapsed = elapsedMin(order.preparationStartedAt ?? order.createdAt);
+  const receivedAt = getKitchenTicketReceivedAt(order);
+  const elapsed = elapsedMin(receivedAt);
   const isUrgent = elapsed >= 25;
   const isWarning = elapsed >= 15 && !isUrgent;
   const isBusy = actionId === kitchenTicketKey(order);
-  const originalItems = order.items.filter((item) => !item.appendedAt);
-  const appendedItems = order.items.filter((item) => item.appendedAt);
-  const latestAppendTime = appendedItems.reduce<string | null>(
-    (latest, item) => {
-      if (!item.appendedAt) return latest;
-      if (!latest || item.appendedAt > latest) return item.appendedAt;
-      return latest;
-    },
-    null,
-  );
 
   return (
     <div
@@ -246,11 +240,11 @@ function OrderTicket({
             </div>
           )}
           <div className="kd-ticket-table" style={{ marginTop: 2 }}>
-            {fmtTime(order.createdAt)}
+            {fmtTime(receivedAt)}
           </div>
         </div>
         <TimerLabel
-          iso={order.preparationStartedAt ?? order.createdAt}
+          iso={receivedAt}
           _now={now}
         />
       </div>
@@ -261,7 +255,7 @@ function OrderTicket({
             No item data
           </div>
         ) : (
-          originalItems.map((item) => (
+          order.items.map((item) => (
             <div key={item.id} className="kd-item-row">
               <div
                 className={`kd-item-qty${isUrgent ? " kd-item-urgent-qty" : ""}`}
@@ -274,29 +268,6 @@ function OrderTicket({
               </div>
             </div>
           ))
-        )}
-        {appendedItems.length > 0 && (
-          <div className="kd-added-items">
-            <div className="kd-added-header">
-              <strong>NEW ITEMS RECEIVED</strong>
-              {latestAppendTime && (
-                <span>Received {fmtTime(latestAppendTime)}</span>
-              )}
-            </div>
-            {appendedItems.map((item) => (
-              <div key={item.id} className="kd-item-row kd-item-added">
-                <div
-                  className={`kd-item-qty${isUrgent ? " kd-item-urgent-qty" : ""}`}
-                >
-                  {item.quantity}
-                </div>
-                <div className="kd-item-name">{item.name}</div>
-                <div className="kd-item-price">
-                  {fmtMoney(item.price * item.quantity)}
-                </div>
-              </div>
-            ))}
-          </div>
         )}
       </div>
 
@@ -434,7 +405,8 @@ function KitchenOrderCard({
 }) {
   const ticketKey = kitchenTicketKey(order);
   const isBusy = actionId === ticketKey;
-  const elapsed = elapsedMin(order.preparationStartedAt ?? order.createdAt);
+  const receivedAt = getKitchenTicketReceivedAt(order);
+  const elapsed = elapsedMin(receivedAt);
   const ageClass = elapsed >= 25 ? "urgent" : elapsed >= 15 ? "warning-age" : "";
   const timerClass =
     elapsed >= 25
@@ -452,21 +424,8 @@ function KitchenOrderCard({
   const identifier = order.tableNumber
     ? `Table ${order.tableNumber}`
     : fmtTicket(order);
-  const originalItems = order.items.filter((item) => !item.appendedAt);
-  const appendedItems = order.items.filter((item) => item.appendedAt);
-  const latestAppendTime = appendedItems.reduce<string | null>(
-    (latest, item) =>
-      item.appendedAt && (!latest || item.appendedAt > latest)
-        ? item.appendedAt
-        : latest,
-    null,
-  );
-
-  const renderItem = (item: KitchenOrderItem, appended = false) => (
-    <div
-      key={item.id}
-      className={`kd-card-item${appended ? " appended" : ""}`}
-    >
+  const renderItem = (item: KitchenOrderItem) => (
+    <div key={item.id} className="kd-card-item">
       <div className="kd-card-item-main">
         <strong>{item.quantity}x</strong>
         <span>{item.name}</span>
@@ -511,24 +470,15 @@ function KitchenOrderCard({
         <span className={`kd-service-badge ${serviceType}`}>
           {kitchenServiceLabel(serviceType)}
         </span>
-        <time dateTime={order.createdAt}>{fmtTime(order.createdAt)}</time>
+        <time dateTime={receivedAt}>{fmtTime(receivedAt)}</time>
       </div>
 
       <div className="kd-card-items">
         {order.items.length === 0 ? (
           <div className="kd-card-item-empty">No item data</div>
         ) : (
-          originalItems.map((item) => renderItem(item))
+          order.items.map((item) => renderItem(item))
         )}
-        {appendedItems.length > 0 ? (
-          <div className="kd-card-appended">
-            <div className="kd-card-appended-label">
-              <strong>New items received</strong>
-              {latestAppendTime ? <span>{fmtTime(latestAppendTime)}</span> : null}
-            </div>
-            {appendedItems.map((item) => renderItem(item, true))}
-          </div>
-        ) : null}
       </div>
 
       <footer className="kd-card-action">
@@ -598,7 +548,7 @@ export function KitchenDashboardPage({
   const contextRef = useRef<KitchenDashboardContext | null>(null);
   const selectedStationRef = useRef<"all" | string>("all");
   const skipNextStationLoadRef = useRef(true);
-  const knownKitchenTicketKeysRef = useRef<Set<string>>(new Set());
+  const seenKitchenTicketKeysRef = useRef<Set<string>>(new Set());
   const kitchenRealtimeReadyRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const actionLocksRef = useRef<Set<string>>(new Set());
@@ -638,10 +588,9 @@ export function KitchenDashboardPage({
   }, [selectedStationId]);
 
   function applyKitchenOrders(rows: KitchenOrder[], notifyNewTickets: boolean) {
-    const nextTicketKeys = new Set(rows.map(kitchenTicketKey));
-    const newTicketCount = rows.filter(
-      (order) =>
-        !knownKitchenTicketKeysRef.current.has(kitchenTicketKey(order)),
+    const newTicketCount = trackNewKitchenTicketIdentities(
+      rows,
+      seenKitchenTicketKeysRef.current,
     ).length;
 
     if (
@@ -655,7 +604,6 @@ export function KitchenDashboardPage({
       playNotificationTone("kitchen");
     }
 
-    knownKitchenTicketKeysRef.current = nextTicketKeys;
     kitchenRealtimeReadyRef.current = true;
     setOrders(rows);
   }
@@ -823,6 +771,7 @@ export function KitchenDashboardPage({
                 ...updated,
                 kitchenBatchKey: o.kitchenBatchKey,
                 items: o.items,
+                stationProgress: o.stationProgress,
               }
             : o,
         ),
@@ -861,6 +810,7 @@ export function KitchenDashboardPage({
                 ...updated,
                 kitchenBatchKey: o.kitchenBatchKey,
                 items: o.items,
+                stationProgress: o.stationProgress,
               }
             : o,
         ),

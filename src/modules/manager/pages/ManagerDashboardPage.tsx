@@ -66,35 +66,56 @@ function tableVisualLabel(table: ManagerFloorTable) {
   if (visualStatus === "attention") return "Attention";
   if (visualStatus === "cashier") return "Payment";
   if (visualStatus === "occupied") return "Occupied";
-  if (visualStatus === "cleaning") return "Cleaning";
+  if (visualStatus === "cleaning") return "Inactive";
   return "Available";
 }
 
 function buildActivityItems(tables: ManagerFloorTable[]) {
-  const items = tables
+  return tables
     .filter(
       (table) =>
-        table.active || table.runningBill > 0 || table.alerts.length > 0,
+        table.activeOrderId || table.runningBill > 0 || table.alerts.length > 0,
     )
-    .slice(0, 5)
+    .sort(
+      (left, right) =>
+        (right.sessionDurationMinutes ?? 0) -
+        (left.sessionDurationMinutes ?? 0),
+    )
+    .slice(0, 8)
     .map((table) => {
-      if (table.status === "waiting_payment")
-        return `${table.label} requested bill`;
-      if (table.readyItemCount > 0) return `Kitchen ready for ${table.label}`;
-      if (table.assignedWaiterName)
-        return `${table.assignedWaiterName} assigned to ${table.label}`;
-      if (table.active) return `${table.label} seated`;
-      return `${table.label} released`;
+      if (table.alerts[0]) {
+        return {
+          id: `${table.id}-${table.alerts[0].type}`,
+          text: `${table.label}: ${table.alerts[0].label}`,
+          meta: `${table.alerts[0].minutes}m active`,
+        };
+      }
+      if (table.status === "waiting_payment") {
+        return {
+          id: `${table.id}-payment`,
+          text: `${table.label} requested payment`,
+          meta: "Cashier review",
+        };
+      }
+      if (table.readyItemCount > 0) {
+        return {
+          id: `${table.id}-ready`,
+          text: `${table.readyItemCount} item${table.readyItemCount === 1 ? "" : "s"} ready for ${table.label}`,
+          meta: "Kitchen ready",
+        };
+      }
+      return {
+        id: `${table.id}-active`,
+        text: `${table.label} is in active service`,
+        meta: table.assignedWaiterName
+          ? `Waiter ${table.assignedWaiterName}`
+          : "Unassigned",
+      };
     });
-  return items.length > 0
-    ? items
-    : ["Restaurant floor is ready", "No recent table events"];
 }
 
 export function ManagerDashboardPage({
   restaurantId,
-  restaurantName,
-  managerName,
   currency,
 }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerDashboardSnapshot | null>(
@@ -107,7 +128,7 @@ export function ManagerDashboardPage({
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [tableQuery, setTableQuery] = useState("");
   const [tableFilter, setTableFilter] = useState("all");
-  const [visibleTableCount, setVisibleTableCount] = useState(8);
+  const [visibleTableCount, setVisibleTableCount] = useState(12);
 
   const loadSnapshot = useCallback(async () => {
     try {
@@ -129,10 +150,23 @@ export function ManagerDashboardPage({
     void loadSnapshot();
   }, [loadSnapshot]);
 
-  useTenantRealtime({ channelName: "manager-dashboard", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "cashier_shifts"], refresh: loadSnapshot });
+  useTenantRealtime({
+    channelName: "manager-dashboard",
+    restaurantId,
+    tables: [
+      "orders",
+      "order_items",
+      "order_invoices",
+      "restaurant_tables",
+      "restaurant_table_waiter_assignments",
+      "restaurant_staff",
+      "cashier_shifts",
+    ],
+    refresh: loadSnapshot,
+  });
 
-  const notifications = snapshot?.notifications ?? [];
   const floorTables = snapshot?.floorTables ?? [];
+  const liveMetrics = snapshot?.liveMetrics;
   const filteredTables = floorTables.filter((table) => {
     const query = tableQuery.trim().toLowerCase();
     const matchesQuery =
@@ -140,22 +174,18 @@ export function ManagerDashboardPage({
       table.label.toLowerCase().includes(query) ||
       (table.assignedWaiterName || "").toLowerCase().includes(query);
     const visual = tableVisualStatus(table);
-    const matchesFilter = tableFilter === "all" || visual === tableFilter;
-    return matchesQuery && matchesFilter;
+    return matchesQuery && (tableFilter === "all" || visual === tableFilter);
   });
   const visibleTables = filteredTables.slice(0, visibleTableCount);
-  const occupiedPercent = useMemo(() => {
-    if (!snapshot?.floorTables.length) return 0;
-    const activeTableCount = snapshot.floorTables.filter(
-      (table) => table.active,
-    ).length;
-    if (!activeTableCount) return 0;
-    return (
-      Math.round((snapshot.kpis.occupiedTables / activeTableCount) * 100) || 0
-    );
-  }, [snapshot]);
+  const activeServiceLocations = floorTables.filter((table) => table.active);
+  const occupiedPercent = activeServiceLocations.length
+    ? Math.round(
+        ((snapshot?.kpis.occupiedTables ?? 0) / activeServiceLocations.length) *
+          100,
+      )
+    : 0;
   const selectedTable =
-    snapshot?.floorTables.find((table) => table.id === selectedTableId) ?? null;
+    floorTables.find((table) => table.id === selectedTableId) ?? null;
   const activityItems = useMemo(
     () => buildActivityItems(floorTables),
     [floorTables],
@@ -163,22 +193,6 @@ export function ManagerDashboardPage({
   const kitchenLoad =
     (snapshot?.kpis.kitchenWaiting ?? 0) +
     (snapshot?.kpis.kitchenPreparing ?? 0);
-  const suggestedAction =
-    notifications[0] ??
-    (kitchenLoad > 0
-      ? "Monitor kitchen queue and payment flow."
-      : "Keep floor coverage balanced.");
-  const liveMetrics = snapshot?.liveMetrics;
-  const revenueToday = liveMetrics?.revenueToday ?? 0;
-  const digitalRevenue = liveMetrics?.digitalCollected ?? 0;
-  const averageWait = floorTables.length
-    ? Math.round(
-        floorTables.reduce(
-          (sum, table) => sum + (table.sessionDurationMinutes ?? 0),
-          0,
-        ) / floorTables.length,
-      )
-    : 0;
   const kitchenDelays = floorTables.filter(
     (table) => table.status === "kitchen_delay",
   ).length;
@@ -189,274 +203,264 @@ export function ManagerDashboardPage({
       table.status === "waiting" ||
       (table.activeOrderId && !table.assignedWaiterName),
   ).length;
-  const complaints = notifications.filter((message) =>
-    message.toLowerCase().includes("complaint"),
-  ).length;
-  const vipWaiting = floorTables.filter(
-    (table) =>
-      (table.customerName ?? "").toLowerCase().includes("vip") &&
-      table.status === "waiting",
-  ).length;
-  const shiftIssues = notifications.filter((message) =>
-    message.toLowerCase().includes("shift"),
-  ).length;
+  const longestKitchenAlert = floorTables.reduce((longest, table) => {
+    const tableLongest = table.alerts
+      .filter((alert) => alert.type === "kitchen_delay")
+      .reduce((maximum, alert) => Math.max(maximum, alert.minutes), 0);
+    return Math.max(longest, tableLongest);
+  }, 0);
+
   const overviewCards = [
     {
-      icon: "$",
-      label: "Revenue Today",
-      value: formatCurrency(revenueToday, currency),
+      label: "Sales Today",
+      value: formatCurrency(liveMetrics?.revenueToday ?? 0, currency),
       tone: "green",
-      status: "Live sales",
+      status: `${liveMetrics?.ordersToday ?? 0} orders today`,
     },
     {
-      icon: "#",
-      label: "Orders",
-      value: liveMetrics?.ordersToday ?? 0,
+      label: "Active Orders",
+      value: liveMetrics?.ordersPending ?? 0,
       tone: "blue",
-      status: `${liveMetrics?.ordersPending ?? 0} pending`,
+      status: `${liveMetrics?.ordersPreparing ?? 0} preparing`,
     },
     {
-      icon: "Ø",
-      label: "Average Bill",
-      value: formatCurrency(liveMetrics?.averageOrder ?? 0, currency),
-      tone: "violet",
-      status: "Today",
-    },
-    {
-      icon: "▦",
-      label: "Tables Occupied",
-      value: snapshot?.kpis.occupiedTables ?? 0,
-      tone: "green",
-      status: `${occupiedPercent}% occupancy`,
-    },
-    {
-      icon: "!",
-      label: "Pending Payments",
-      value: pendingPayments,
-      tone: pendingPayments ? "red" : "slate",
-      status: pendingPayments ? "Needs review" : "Clear",
-    },
-    {
-      icon: "$",
       label: "Payment Due",
       value: formatCurrency(liveMetrics?.paymentDueAmount ?? 0, currency),
-      tone: (liveMetrics?.paymentDueAmount ?? 0) > 0 ? "amber" : "slate",
-      status: "Outstanding bills",
+      tone: pendingPayments > 0 ? "amber" : "slate",
+      status: `${pendingPayments} awaiting payment`,
     },
     {
-      icon: "↺",
-      label: "Refunds",
-      value: formatCurrency(liveMetrics?.refunds ?? 0, currency),
-      tone: (liveMetrics?.refunds ?? 0) > 0 ? "red" : "slate",
-      status: "Today",
+      label: "Occupied Service Locations",
+      value: `${snapshot?.kpis.occupiedTables ?? 0}/${activeServiceLocations.length}`,
+      tone: "green",
+      status: `${occupiedPercent}% occupied`,
     },
     {
-      icon: "⌛",
-      label: "Collection Time",
-      value: formatDuration(
-        Math.round(liveMetrics?.averageCollectionMinutes ?? 0),
-      ),
-      tone: "blue",
-      status: "Average today",
-    },
-    {
-      icon: "◫",
       label: "Kitchen Load",
       value: kitchenLoad,
-      tone: kitchenDelays ? "red" : "amber",
+      tone: kitchenDelays > 0 ? "red" : "amber",
       status: `${kitchenDelays} delayed`,
     },
     {
-      icon: "♙",
-      label: "Staff On Shift",
+      label: "Staff on Shift",
       value: snapshot?.kpis.staffOnDuty ?? 0,
       tone: "blue",
-      status: "Active now",
-    },
-    {
-      icon: "⌛",
-      label: "Waiting Tables",
-      value: waitingTables,
-      tone: waitingTables ? "amber" : "slate",
-      status: averageWait ? `${formatDuration(averageWait)} avg` : "No wait",
+      status: `${waitingTables} need coverage`,
     },
   ];
-  const attentionItems = [
-    {
-      label: "Late Orders",
-      value: floorTables.filter((table) =>
-        table.alerts.some((alert) => alert.type === "long_session"),
-      ).length,
-      href: "/manager/tables",
-      available: true,
-    },
-    {
-      label: "Kitchen Delay",
-      value: kitchenDelays,
-      href: "/manager/kitchen",
-      available: true,
-    },
-    {
-      label: "VIP Waiting",
-      value: vipWaiting,
-      href: "/manager/customers",
-      available: true,
-    },
-    {
-      label: "Complaints",
-      value: complaints,
-      href: "/manager/customers",
-      available: true,
-    },
-    {
-      label: "Pending Bills",
-      value: pendingPayments,
-      href: "/manager/tables",
-      available: true,
-    },
-    {
-      label: "Tables Waiting",
-      value: waitingTables,
-      href: "/manager/tables",
-      available: true,
-    },
-    {
-      label: "Shift Issues",
-      value: shiftIssues,
-      href: "/manager/staff",
-      available: true,
-    },
-  ];
+
+  const attentionItems = floorTables
+    .flatMap((table) => {
+      const alertRows = table.alerts.map((alert) => ({
+        id: `${table.id}-${alert.type}`,
+        priority:
+          alert.type === "kitchen_delay" || alert.type === "long_session"
+            ? "critical"
+            : "warning",
+        issue: alert.label,
+        location: table.label,
+        detail: table.assignedWaiterName
+          ? `Waiter ${table.assignedWaiterName}`
+          : "Unassigned",
+        age: `${alert.minutes}m`,
+        href:
+          alert.type === "kitchen_delay" || alert.type === "waiting_pickup"
+            ? "/manager/kitchen"
+            : "/manager/tables",
+      }));
+      if (
+        table.status === "waiting_payment" &&
+        !table.alerts.some((alert) => alert.type === "waiting_payment")
+      ) {
+        alertRows.push({
+          id: `${table.id}-payment`,
+          priority: "warning",
+          issue: "Payment due",
+          location: table.label,
+          detail: formatCurrency(table.runningBill, currency),
+          age: "Now",
+          href: "/manager/tables",
+        });
+      }
+      if (
+        table.activeOrderId &&
+        !table.assignedWaiterName &&
+        !table.alerts.some((alert) => alert.type === "waiting")
+      ) {
+        alertRows.push({
+          id: `${table.id}-coverage`,
+          priority: "warning",
+          issue: "Waiter coverage needed",
+          location: table.label,
+          detail: "Unassigned active service",
+          age: "Now",
+          href: "/manager/staff",
+        });
+      }
+      return alertRows;
+    })
+    .sort((left, right) => {
+      if (left.priority !== right.priority)
+        return left.priority === "critical" ? -1 : 1;
+      return Number.parseInt(right.age, 10) - Number.parseInt(left.age, 10);
+    })
+    .slice(0, 8);
 
   return (
     <main className="md-overview">
-      <div className="manager-module-header">
-        <div>
-          <span>Overview</span>
-          <h1>Manager Dashboard</h1>
-        </div>
-        <p>
-          {status === "loading"
-            ? "Syncing live operations..."
-            : status === "error"
-              ? error
-              : `${restaurantName} · ${managerName}`}
-        </p>
-      </div>
+      {status === "error" && <p className="md-overview-error">{error}</p>}
 
-      <div className="md-block-heading">
-        <div>
-          <span>Today</span>
-          <h2>Today&apos;s KPIs</h2>
-        </div>
-        <small>Updates in realtime</small>
-      </div>
-      <section className="md-kpis" aria-label="Live KPIs">
-        {overviewCards.map((kpi) => (
-          <article className={`md-kpi md-kpi-${kpi.tone}`} key={kpi.label}>
-            <i aria-hidden="true">{kpi.icon}</i>
-            <span>{kpi.label}</span>
-            <strong>{kpi.value}</strong>
-            <small>{kpi.status}</small>
-          </article>
-        ))}
-      </section>
-
-      <section className="md-attention" id="notifications">
+      <section className="md-pulse" aria-labelledby="shift-pulse-title">
         <div className="md-block-heading">
           <div>
-            <span>Prioritized</span>
-            <h2>Attention Center</h2>
+            <span>Live operations</span>
+            <h2 id="shift-pulse-title">Shift Pulse</h2>
           </div>
-          <small>
-            {attentionItems.filter((item) => item.value > 0).length} items need
-            review
+          <small aria-live="polite">
+            {status === "loading" ? "Syncing..." : "Realtime"}
           </small>
         </div>
-        <div className="md-attention-grid">
-          {attentionItems.map((item) => (
-            <a key={item.label} href={item.href}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <small>{item.value ? "Review now" : "Clear"}</small>
-            </a>
+        <div className="md-kpis" aria-label="Six live shift metrics">
+          {overviewCards.map((kpi) => (
+            <article className={`md-kpi md-kpi-${kpi.tone}`} key={kpi.label}>
+              <span>{kpi.label}</span>
+              <strong>{kpi.value}</strong>
+              <small>{kpi.status}</small>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="md-main-grid">
+      <section
+        className="md-attention"
+        id="notifications"
+        aria-labelledby="attention-title"
+      >
+        <div className="md-block-heading">
+          <div>
+            <span>Prioritized queue</span>
+            <h2 id="attention-title">Needs Attention</h2>
+          </div>
+          <small>{attentionItems.length} active</small>
+        </div>
+        {attentionItems.length > 0 ? (
+          <div className="md-attention-list">
+            <div className="md-attention-head" aria-hidden="true">
+              <span>Priority / Issue</span>
+              <span>Service Location</span>
+              <span>Context</span>
+              <span>Waiting</span>
+              <span>Action</span>
+            </div>
+            {attentionItems.map((item) => (
+              <div className="md-attention-row" key={item.id}>
+                <div>
+                  <i className={`is-${item.priority}`} aria-hidden="true" />
+                  <strong>{item.issue}</strong>
+                </div>
+                <span>{item.location}</span>
+                <span>{item.detail}</span>
+                <time>{item.age}</time>
+                <a href={item.href}>Review</a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="md-attention-clear">
+            <span aria-hidden="true">✓</span>
+            <div>
+              <strong>No active operational issues</strong>
+              <p>New service, kitchen, or payment alerts will appear here.</p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="md-main-grid" aria-label="Live restaurant operations">
         <article className="md-floor">
           <div className="md-section-heading">
             <div>
-              <h1>Floor Status</h1>
+              <h2>Live Service Locations</h2>
               <span>
-                {occupiedPercent}% occupied · {floorTables.length} tables
-                monitored
+                {occupiedPercent}% occupied · {activeServiceLocations.length}{" "}
+                active locations
               </span>
             </div>
           </div>
           <div className="md-floor-controls">
-            <input
-              value={tableQuery}
-              onChange={(event) => setTableQuery(event.target.value)}
-              placeholder="Search table or waiter"
-            />
-            <select
-              value={tableFilter}
-              onChange={(event) => setTableFilter(event.target.value)}
-            >
-              <option value="all">All statuses</option>
-              <option value="available">Available</option>
-              <option value="occupied">Occupied</option>
-              <option value="cashier">Payment Due</option>
-              <option value="attention">Needs Attention</option>
-              <option value="cleaning">Cleaning</option>
-            </select>
+            <label>
+              <span className="sr-only">Search service locations</span>
+              <input
+                value={tableQuery}
+                onChange={(event) => setTableQuery(event.target.value)}
+                placeholder="Search location or waiter"
+              />
+            </label>
+            <label>
+              <span className="sr-only">Filter service locations</span>
+              <select
+                value={tableFilter}
+                onChange={(event) => setTableFilter(event.target.value)}
+              >
+                <option value="all">All statuses</option>
+                <option value="available">Available</option>
+                <option value="occupied">Occupied</option>
+                <option value="cashier">Payment Due</option>
+                <option value="attention">Needs Attention</option>
+                <option value="cleaning">Inactive</option>
+              </select>
+            </label>
           </div>
           <div className="md-table-grid">
-            {visibleTables.map((table) => (
-              <button
-                className={`md-table md-table-${tableVisualStatus(table)}`}
-                key={table.id}
-                type="button"
-                onClick={() => setSelectedTableId(table.id)}
-              >
-                <div className="md-table-topline">
-                  <strong>{table.label}</strong>
-                  <span>{tableVisualLabel(table)}</span>
-                </div>
-                <div className="md-table-meta">
-                  <small>Waiter</small>
-                  <b>{table.assignedWaiterName || "Unassigned"}</b>
-                </div>
-                <div className="md-table-metrics">
-                  <div>
-                    <small>Guests</small>
-                    <b>{table.seats ?? "—"}</b>
+            {visibleTables.map((table) => {
+              const visualStatus = tableVisualStatus(table);
+              const isAvailable = visualStatus === "available";
+              return (
+                <button
+                  className={`md-table md-table-${visualStatus}`}
+                  key={table.id}
+                  type="button"
+                  onClick={() => setSelectedTableId(table.id)}
+                  aria-label={`Open ${table.label} details, ${tableVisualLabel(table)}`}
+                >
+                  <div className="md-table-topline">
+                    <strong>{table.label}</strong>
+                    <span>{tableVisualLabel(table)}</span>
                   </div>
-                  <div>
-                    <small>Bill</small>
-                    <b>{formatCurrency(table.runningBill, currency)}</b>
-                  </div>
-                  <div>
-                    <small>Duration</small>
-                    <b>{formatDuration(table.sessionDurationMinutes)}</b>
-                  </div>
-                </div>
-                <div className="md-table-status-row">
-                  <em>{statusText(table.kitchenStatus)}</em>
-                  <em>
-                    {table.alerts.length
-                      ? `Priority · ${table.alerts[0].minutes}m`
-                      : "Normal priority"}
-                  </em>
-                </div>
-                {table.alerts.length > 0 && <p>{table.alerts[0].label}</p>}
-              </button>
-            ))}
+                  {!isAvailable && visualStatus !== "cleaning" && (
+                    <>
+                      <div className="md-table-meta">
+                        <small>Waiter</small>
+                        <b>{table.assignedWaiterName || "Unassigned"}</b>
+                      </div>
+                      <div className="md-table-metrics">
+                        <div>
+                          <small>Bill</small>
+                          <b>{formatCurrency(table.runningBill, currency)}</b>
+                        </div>
+                        <div>
+                          <small>Duration</small>
+                          <b>{formatDuration(table.sessionDurationMinutes)}</b>
+                        </div>
+                      </div>
+                      <div className="md-table-status-row">
+                        <em>{statusText(table.kitchenStatus)}</em>
+                        <em>{statusText(table.cashierStatus)}</em>
+                      </div>
+                      {table.alerts[0] && (
+                        <p>
+                          {table.alerts[0].label} · {table.alerts[0].minutes}m
+                        </p>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })}
             {filteredTables.length === 0 && (
               <p className="md-empty">
-                No matching tables. Clear filters or check table setup.
+                No matching service locations. Clear the filters to see the
+                floor.
               </p>
             )}
           </div>
@@ -464,60 +468,82 @@ export function ManagerDashboardPage({
             <button
               className="md-load-more"
               type="button"
-              onClick={() => setVisibleTableCount((count) => count + 8)}
+              onClick={() => setVisibleTableCount((count) => count + 12)}
             >
-              Show more tables
+              Show more service locations
             </button>
           )}
         </article>
 
-        <aside className="md-side">
-          <article className="md-panel md-alert-panel">
+        <aside className="md-side" aria-label="Operational health">
+          <article className="md-panel">
             <div className="md-panel-title">
-              <span>◫</span>
-              <strong>Kitchen Status</strong>
+              <strong>Kitchen</strong>
+              <a href="/manager/kitchen">Open</a>
             </div>
-            <div className="md-alert-list">
-              <p>{snapshot?.kpis.kitchenWaiting ?? 0} tickets waiting</p>
-              <p>{snapshot?.kpis.kitchenPreparing ?? 0} tickets preparing</p>
-              <p>{kitchenDelays} delayed tables</p>
-            </div>
-            <a className="md-panel-link" href="/manager/kitchen">
-              Open kitchen
-            </a>
+            <dl className="md-health-stats">
+              <div>
+                <dt>Waiting</dt>
+                <dd>{snapshot?.kpis.kitchenWaiting ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Preparing</dt>
+                <dd>{snapshot?.kpis.kitchenPreparing ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Ready</dt>
+                <dd>{liveMetrics?.ordersReady ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Delayed</dt>
+                <dd className={kitchenDelays ? "is-risk" : ""}>
+                  {kitchenDelays}
+                </dd>
+              </div>
+              <div className="is-wide">
+                <dt>Longest active delay</dt>
+                <dd>
+                  {longestKitchenAlert ? `${longestKitchenAlert}m` : "None"}
+                </dd>
+              </div>
+            </dl>
           </article>
 
           <article className="md-panel">
             <div className="md-panel-title">
-              <strong>Staff Status</strong>
+              <strong>Staff / Shift</strong>
               <a href="/manager/staff">Manage</a>
             </div>
-            <div className="md-activity-list">
-              <p>
-                <span />
-                {snapshot?.kpis.staffOnDuty ?? 0} staff currently on shift
-                <small>Live coverage</small>
-              </p>
-              <p>
-                <span />
-                {waitingTables} tables need waiter attention
-                <small>Floor workload</small>
-              </p>
-              {activityItems.slice(0, 2).map((item, index) => (
-                <p key={`${item}-${index}`}>
-                  <span />
-                  {item}
-                  <small>Recent activity</small>
-                </p>
-              ))}
-            </div>
+            <dl className="md-health-stats">
+              <div>
+                <dt>On shift</dt>
+                <dd>{snapshot?.kpis.staffOnDuty ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Uncovered</dt>
+                <dd className={waitingTables ? "is-risk" : ""}>
+                  {waitingTables}
+                </dd>
+              </div>
+              <div className="is-wide">
+                <dt>Current shift</dt>
+                <dd>{snapshot?.restaurant.currentShift ?? "Current Shift"}</dd>
+              </div>
+            </dl>
           </article>
 
-          <article className="md-panel md-revenue-panel">
+          <article className="md-panel">
             <div className="md-panel-title">
-              <strong>Revenue Snapshot</strong>
+              <strong>Payments / Collections</strong>
+              <a href="/manager/tables">Review</a>
             </div>
-            <dl>
+            <dl className="md-health-stats md-health-money">
+              <div className="is-wide">
+                <dt>Total today</dt>
+                <dd>
+                  {formatCurrency(liveMetrics?.revenueToday ?? 0, currency)}
+                </dd>
+              </div>
               <div>
                 <dt>Cash</dt>
                 <dd>
@@ -526,48 +552,57 @@ export function ManagerDashboardPage({
               </div>
               <div>
                 <dt>Digital</dt>
-                <dd>{formatCurrency(digitalRevenue, currency)}</dd>
-              </div>
-              <div>
-                <dt>Total today</dt>
-                <dd>{formatCurrency(revenueToday, currency)}</dd>
-              </div>
-              <div>
-                <dt>Average bill</dt>
                 <dd>
-                  {formatCurrency(liveMetrics?.averageOrder ?? 0, currency)}
+                  {formatCurrency(liveMetrics?.digitalCollected ?? 0, currency)}
                 </dd>
+              </div>
+              <div className="is-wide">
+                <dt>Outstanding</dt>
+                <dd className={pendingPayments ? "is-risk" : ""}>
+                  {formatCurrency(liveMetrics?.paymentDueAmount ?? 0, currency)}
+                </dd>
+              </div>
+              <div className="is-wide">
+                <dt>Pending verification</dt>
+                <dd>{pendingPayments}</dd>
               </div>
             </dl>
           </article>
         </aside>
       </section>
 
-      <section className="manager-quick-actions" aria-label="Quick actions">
-        <div>
-          <strong>Quick Actions</strong>
-          <span>Move directly to the operational workspace you need</span>
+      <section className="md-recent" aria-labelledby="recent-activity-title">
+        <div className="md-block-heading">
+          <div>
+            <span>Live floor signals</span>
+            <h2 id="recent-activity-title">Recent Activity</h2>
+          </div>
         </div>
-        <div className="manager-action-row">
-          <a href="/manager/tables">Manage floor</a>
-          <a href="/manager/staff">Assign staff</a>
-          <button type="button" onClick={() => void loadSnapshot()}>
-            Refresh
-          </button>
-        </div>
+        {activityItems.length > 0 ? (
+          <div className="md-recent-list">
+            {activityItems.map((item) => (
+              <div key={item.id}>
+                <i aria-hidden="true" />
+                <strong>{item.text}</strong>
+                <span>{item.meta}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="md-recent-empty">
+            No active service activity right now.
+          </p>
+        )}
       </section>
 
-      <section className="md-copilot md-ai-panel">
-        <div>
-          <span>AI Operations Copilot</span>
-          <h2>{suggestedAction}</h2>
-          <p>
-            {kitchenLoad} active kitchen tickets · {notifications.length} live
-            alerts
-          </p>
-        </div>
-        <a href="/manager/ai">Open Operations Copilot</a>
-      </section>
+      <a
+        className="md-ai-entry"
+        href="/manager/ai"
+        aria-label="Open ServeFlow AI assistant"
+      >
+        <span aria-hidden="true">AI</span>
+        Ask ServeFlow
+      </a>
 
       {selectedTable && (
         <div
@@ -590,7 +625,7 @@ export function ManagerDashboardPage({
               <button
                 type="button"
                 onClick={() => setSelectedTableId(null)}
-                aria-label="Close table details"
+                aria-label="Close service location details"
               >
                 Close
               </button>
@@ -640,7 +675,7 @@ export function ManagerDashboardPage({
                   ))}
                 </div>
               ) : (
-                <p>No active table alerts.</p>
+                <p>No active service location alerts.</p>
               )}
             </section>
             <section className="md-detail-section">

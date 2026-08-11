@@ -18,7 +18,6 @@ import {
   loadWaiterSessionDetail,
   loadWaiterAssistanceRequests,
   loadWaiterTableMetrics,
-  markWaiterOrderServed,
   moveWaiterDiningSession,
   requestWaiterCancellation,
   requestWaiterFinalBill,
@@ -344,7 +343,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [assistanceRequests, setAssistanceRequests] = useState<WaiterAssistanceRequest[]>([]);
   const [resolvingAssistanceIds, setResolvingAssistanceIds] = useState<Set<string>>(new Set());
   const [readyAlerts, setReadyAlerts] = useState<Set<string>>(new Set());
-  const [serving, setServing] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveTargetId, setMoveTargetId] = useState("");
   const [moving, setMoving] = useState(false);
@@ -628,21 +626,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       setAuthError(e instanceof Error ? e.message : "PIN was not accepted.");
     } finally {
       setAuthWorking(false);
-    }
-  }
-  async function markServed() {
-    if (!sessionTable?.activeOrderId) return;
-    try {
-      setServing(true);
-      setError(null);
-      await markWaiterOrderServed(sessionTable.activeOrderId);
-      setSessionNotice(`Table ${sessionTable.tableNumber} marked served.`);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not mark this order served.",
-      );
-    } finally {
-      setServing(false);
     }
   }
   async function moveSession() {
@@ -1097,13 +1080,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                           .map((item) => `${item.name} x${item.quantity}`)
                           .join(", ")}
                       </span>
-                      <button
-                        type="button"
-                        disabled={serving}
-                        onClick={() => void markServed()}
-                      >
-                        {serving ? "SAVING..." : "SERVED"}
-                      </button>
                     </div>
                   ) : null}
                 </section>

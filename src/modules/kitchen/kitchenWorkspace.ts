@@ -34,6 +34,41 @@ export function getKitchenOrderStationNames(order: KitchenOrder): string[] {
   );
 }
 
+export function getKitchenTicketIdentity(order: KitchenOrder): string {
+  const stationIdentity =
+    getKitchenOrderStationIds(order).sort().join("+") || "unassigned";
+  return `${order.id}:${stationIdentity}:${order.kitchenBatchKey ?? "initial"}`;
+}
+
+export function getKitchenTicketReceivedAt(order: KitchenOrder): string {
+  if (order.kitchenBatchKey && order.kitchenBatchKey !== "initial") {
+    const appendedAt = order.items
+      .map((item) => item.appendedAt)
+      .filter((value): value is string => Boolean(value))
+      .filter((value) => Number.isFinite(Date.parse(value)))
+      .sort();
+
+    if (appendedAt[0]) return appendedAt[0];
+  }
+
+  return order.createdAt;
+}
+
+export function trackNewKitchenTicketIdentities(
+  orders: readonly KitchenOrder[],
+  seenTicketIdentities: Set<string>,
+): string[] {
+  const newTicketIdentities = orders
+    .map(getKitchenTicketIdentity)
+    .filter((identity) => !seenTicketIdentities.has(identity));
+
+  for (const order of orders) {
+    seenTicketIdentities.add(getKitchenTicketIdentity(order));
+  }
+
+  return newTicketIdentities;
+}
+
 export function kitchenServiceType(order: KitchenOrder): KitchenServiceType {
   if (order.serviceType) return order.serviceType;
   return order.tableNumber ? "dine-in" : "takeaway";
@@ -74,17 +109,7 @@ export function filterKitchenWorkspaceOrders(
 }
 
 export function getKitchenQueueEnteredAt(order: KitchenOrder): number {
-  if (order.kitchenBatchKey && order.kitchenBatchKey !== "initial") {
-    const appendedAt = order.items
-      .map((item) => item.appendedAt)
-      .filter((value): value is string => Boolean(value))
-      .map((value) => new Date(value).getTime())
-      .filter(Number.isFinite);
-
-    if (appendedAt.length > 0) return Math.min(...appendedAt);
-  }
-
-  return new Date(order.createdAt).getTime();
+  return new Date(getKitchenTicketReceivedAt(order)).getTime();
 }
 
 export function sortKitchenWorkspaceOrders(
