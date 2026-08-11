@@ -2,74 +2,44 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.resolve(__dirname, "../..");
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
-function read(relativePath) {
-  return fs.readFileSync(path.join(root, relativePath), "utf8");
-}
-
-function exists(relativePath) {
-  return fs.existsSync(path.join(root, relativePath));
-}
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-const files = {
-  router: "src/app/router/AppRouter.tsx",
-  service: "src/modules/waiter-auth/services/waiterAuthService.ts",
-  page: "src/modules/waiter-auth/pages/WaiterLoginPage.tsx",
-  css: "src/modules/waiter-auth/styles/waiterLogin.css",
-  types: "src/modules/waiter-auth/types.ts",
-  migration: "supabase/migrations/069_waiter_auth_phasew1.sql",
-  staffAuth: "src/modules/staff-auth/services/staffAuthService.ts",
-};
-
-for (const file of Object.values(files)) {
-  assert(exists(file), `Missing required file: ${file}`);
-}
-
-const router = read(files.router);
-const service = read(files.service);
-const page = read(files.page);
-const migration = read(files.migration);
-const staffAuth = read(files.staffAuth);
+const router = read("src/app/router/AppRouter.tsx");
+const service = read("src/modules/waiter-auth/services/waiterAuthService.ts");
+const page = read("src/modules/waiter-auth/pages/WaiterLoginPage.tsx");
+const endpoint = read("supabase/functions/waiter-pin-login/index.ts");
+const shared = read("supabase/functions/_shared/waiterPin.ts");
+const migration = read("supabase/migrations/228_phasea1_waiter_pin_authentication.sql");
+const manageStaff = read("supabase/functions/manage-staff/index.ts");
 
 assert(router.includes("/^\\/waiter\\/([^/]+)\\/?$/"), "Router must expose /waiter/:restaurantSlug.");
-assert(router.includes("<WaiterLoginPage restaurantSlug={route.restaurantSlug} />"), "Router must render waiter login page only.");
+assert(page.includes("Waiter Login") && page.includes("Enter PIN"), "Waiter entry must use the focused PIN flow.");
+assert(!page.includes("loadWaiterTerminalProfiles") && !page.includes("WaiterGrid"), "Waiter entry must not fetch or render the directory.");
+assert(!page.includes("window.location.replace"), "Waiter entry must use warm-shell navigation.");
 
-assert(page.includes("ServeFlow Waiter"), "Waiter login must show ServeFlow Waiter branding.");
-assert(page.includes("Username"), "Waiter login must collect username.");
-assert(page.includes("PIN / Password"), "Waiter login must collect PIN/password.");
-assert(page.includes("signOutWaiter"), "Waiter login must provide logout.");
-assert(!page.match(/table|order|kitchen|cashier|payment/i), "Waiter page must not implement W2+ operations.");
+assert(service.includes("/functions/v1/waiter-pin-login"), "PIN-only server authentication endpoint is missing.");
+assert(service.includes("waiterSupabase.auth.setSession"), "PIN login must establish a normal Supabase session.");
+assert(service.includes("clearWaiterSensitiveClientState"), "Waiter logout must clear sensitive local state synchronously.");
 
-assert(service.includes("storageKey: WAITER_AUTH_STORAGE_KEY"), "Waiter auth must use isolated storage key.");
-assert(service.includes("WAITER_SESSION_KEY"), "Waiter session must use dedicated minimal session storage.");
-assert(service.includes("resolve_waiter_login_identity"), "Waiter login must resolve waiter identity through waiter-only RPC.");
-assert(service.includes("get_waiter_terminal_context"), "Waiter terminal must load only minimal restaurant context.");
-assert(service.includes("staffId") && service.includes("displayName") && service.includes("restaurant"), "Waiter session must store minimal waiter identity.");
-assert(!service.includes("signOutStaff"), "Waiter logout must not reuse owner/cashier/kitchen staff signout.");
+assert(migration.includes("waiter_pin_credentials_active_pin_unique"), "Active tenant PIN uniqueness is missing.");
+assert(migration.includes("enable row level security"), "PIN credential tables must enable RLS.");
+assert(migration.includes("revoke all on table public.waiter_pin_credentials from public, anon, authenticated"), "PIN credentials must be server-only.");
+assert(!migration.match(/\bpin\s+text\b/i), "Plaintext PIN storage is forbidden.");
 
-assert(migration.includes("add value if not exists 'waiter'"), "Database must support waiter staff role.");
-assert(migration.includes("staff.role::text = 'waiter'"), "Waiter RPC must enforce waiter role.");
-assert(migration.includes("staff.active = true"), "Waiter RPC must reject inactive staff.");
-assert(migration.includes("add column if not exists active boolean not null default true"), "Database must have an active restaurant flag for waiter validation.");
-assert(migration.includes("restaurants.active = true"), "Waiter RPC must reject inactive restaurants.");
-assert(migration.includes("grant execute on function public.get_waiter_terminal_context(text) to anon, authenticated"), "Terminal context RPC grant missing.");
-assert(migration.includes("grant execute on function public.resolve_waiter_login_identity(text, text) to anon, authenticated"), "Waiter identity RPC grant missing.");
-assert(!migration.match(/alter table public\.(orders|order_items|payments|invoices|kitchen|reports|analytics)/i), "W1 migration must not touch ordering, kitchen, cashier, payment, reports, or analytics tables.");
-assert(!migration.match(/create or replace function public\..*(order|payment|invoice|kitchen|report|analytics)/i), "W1 migration must not create W2+ workflow RPCs.");
+assert(endpoint.includes("requireWaiterPinPepper"), "Server-only PIN pepper is required.");
+assert(endpoint.includes("waiterThrottleFingerprint"), "Tenant/source throttling is required.");
+assert(shared.includes("waiter-throttle:v1:${restaurantId}:${clientAddress}"), "Throttling must not trust a rotatable browser terminal ID.");
+assert(endpoint.includes("waiterSupabasePassword(pepper, restaurant.id, staff.employee_id)"), "A server-only high-entropy waiter Auth password must be derived.");
+assert(endpoint.includes("signInWithPassword({ email: staff.email, password: authPassword })"), "Supabase Auth must remain the session authority.");
+assert(endpoint.includes('staff.role !== "waiter"') && endpoint.includes("staff.restaurant_id !== restaurant.id"), "Waiter role and tenant membership checks are required.");
+assert(endpoint.includes('rpc("record_waiter_login"'), "Successful login must use the authoritative waiter login record RPC.");
 
-assert(staffAuth.includes('value === "owner" || value === "cashier" || value === "kitchen"'), "Existing owner/cashier/kitchen staff auth role filter should remain unchanged.");
-assert(!staffAuth.includes('"waiter"'), "Existing staff auth must not include waiter.");
+assert(manageStaff.includes("saveWaiterPinCredential"), "Waiter create/reset must enroll PIN credentials.");
+assert(manageStaff.includes("generateAvailableWaiterPin"), "PIN reset must avoid active tenant conflicts.");
 
-console.log("Waiter Auth Phase W1 Audit");
-console.log("PASS: Active waiter login path is isolated at /waiter/:restaurantSlug.");
-console.log("PASS: Username + PIN/password login UI exists.");
-console.log("PASS: Role, active staff, active restaurant, and restaurant membership checks are enforced by waiter-only RPC.");
-console.log("PASS: Logout clears waiter session and dedicated waiter auth storage only.");
-console.log("PASS: Owner/cashier/kitchen staff auth remains unchanged.");
-console.log("PASS: No waiter ordering, table management, kitchen, cashier, payment, report, QR, or dashboard implementation was added.");
+console.log("Waiter Auth Phase A1 Audit");
+console.log("PASS: PIN-only waiter entry does not fetch or render a waiter directory.");
+console.log("PASS: PIN fingerprints are tenant-scoped, keyed, unique for active credentials, and server-only.");
+console.log("PASS: Login is rate-limited and establishes a normal Supabase Auth session.");
+console.log("PASS: Waiter creation/reset enrolls credentials and logout clears local state first.");

@@ -4,7 +4,7 @@
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\user\\ServeFlow\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "tests/e2e/cashier-checkout-workspace.spec.ts"
+      "tests/e2e/waiter-tables-phasea2.spec.ts"
     ],
     "configFile": "C:\\Users\\user\\ServeFlow\\playwright.config.ts",
     "rootDir": "C:/Users/user/ServeFlow/tests/e2e",
@@ -94,13 +94,13 @@
   },
   "suites": [
     {
-      "title": "cashier-checkout-workspace.spec.ts",
-      "file": "cashier-checkout-workspace.spec.ts",
+      "title": "waiter-tables-phasea2.spec.ts",
+      "file": "waiter-tables-phasea2.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "checkout slide-over is fixed, single, scrollable, and mode aware",
+          "title": "assigned tables render as a prioritized compact operational grid",
           "ok": true,
           "tags": [],
           "tests": [
@@ -115,12 +115,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5002,
+                  "duration": 3673,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:37.086Z",
+                  "startTime": "2026-08-10T11:27:38.825Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -128,13 +128,13 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-41a1a4a57df54bc03bcc",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 100,
+          "id": "8f42ceb5507911be6c40-b143e543df633e5cfdb3",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 122,
           "column": 1
         },
         {
-          "title": "checkout slide-over stays within requested desktop widths",
+          "title": "free and active cards keep their existing one-tap destinations without reload",
           "ok": true,
           "tags": [],
           "tests": [
@@ -149,12 +149,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 897,
+                  "duration": 3327,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:54.478Z",
+                  "startTime": "2026-08-10T11:28:00.158Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -162,13 +162,13 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-bb5b4299f0ef5ca3b930",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 192,
+          "id": "8f42ceb5507911be6c40-2db4cc411b5883f4ceef",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 145,
           "column": 1
         },
         {
-          "title": "screenshot preview opens and closes without exposing upload controls",
+          "title": "zero authoritative rows show the assignment empty state and logout remains immediate",
           "ok": true,
           "tags": [],
           "tests": [
@@ -183,12 +183,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 796,
+                  "duration": 2966,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:55.398Z",
+                  "startTime": "2026-08-10T11:28:03.531Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -196,13 +196,115 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-dc8ac6997ea63d39e84a",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 225,
+          "id": "8f42ceb5507911be6c40-454edc18c0c55ba2f436",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 159,
           "column": 1
         },
         {
-          "title": "checkout slide-over is fixed, single, scrollable, and mode aware",
+          "title": "table grid uses four, three, and two columns across required tablet and mobile widths",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5446,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:06.527Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-71243c9739aa9215da65",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 169,
+          "column": 1
+        },
+        {
+          "title": "active table A4 shows simple order, kitchen ready state, total, and bill confirmation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3838,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:12.015Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-4984d6df8e856a97c358",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 180,
+          "column": 1
+        },
+        {
+          "title": "active table A4 stays readable across requested responsive sizes",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 14657,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:15.886Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-af8841eb63027a3374f3",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 210,
+          "column": 1
+        },
+        {
+          "title": "assigned tables render as a prioritized compact operational grid",
           "ok": true,
           "tags": [],
           "tests": [
@@ -217,12 +319,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 5409,
+                  "duration": 3832,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:37.099Z",
+                  "startTime": "2026-08-10T11:27:38.791Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -230,13 +332,13 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-a7dec151a788e0cad149",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 100,
+          "id": "8f42ceb5507911be6c40-c955d9397ed43fa4155f",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 122,
           "column": 1
         },
         {
-          "title": "checkout slide-over stays within requested desktop widths",
+          "title": "free and active cards keep their existing one-tap destinations without reload",
           "ok": true,
           "tags": [],
           "tests": [
@@ -251,12 +353,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 1315,
+                  "duration": 3342,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:54.886Z",
+                  "startTime": "2026-08-10T11:28:00.313Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -264,13 +366,13 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-3d1728b7fe4dbde9b197",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 192,
+          "id": "8f42ceb5507911be6c40-a099a862b691f5b5e04e",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 145,
           "column": 1
         },
         {
-          "title": "screenshot preview opens and closes without exposing upload controls",
+          "title": "zero authoritative rows show the assignment empty state and logout remains immediate",
           "ok": true,
           "tags": [],
           "tests": [
@@ -285,12 +387,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 1054,
+                  "duration": 3460,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-08T07:01:56.231Z",
+                  "startTime": "2026-08-10T11:28:03.684Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -298,9 +400,111 @@
               "status": "expected"
             }
           ],
-          "id": "af45bb8de9f4b4fc5937-f2c76d267326c3106b70",
-          "file": "cashier-checkout-workspace.spec.ts",
-          "line": 225,
+          "id": "8f42ceb5507911be6c40-5e49eca4c6e95d8686c4",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 159,
+          "column": 1
+        },
+        {
+          "title": "table grid uses four, three, and two columns across required tablet and mobile widths",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6149,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:07.194Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-97460ed247b6a7fd711d",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 169,
+          "column": 1
+        },
+        {
+          "title": "active table A4 shows simple order, kitchen ready state, total, and bill confirmation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 3152,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:13.393Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-889f50fd385c48cf220b",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 180,
+          "column": 1
+        },
+        {
+          "title": "active table A4 stays readable across requested responsive sizes",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 15533,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T11:28:16.573Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8f42ceb5507911be6c40-1c3b17de26dd68672236",
+          "file": "waiter-tables-phasea2.spec.ts",
+          "line": 210,
           "column": 1
         }
       ]
@@ -308,9 +512,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-08T07:01:33.677Z",
-    "duration": 24082.293,
-    "expected": 6,
+    "startTime": "2026-08-10T11:27:35.585Z",
+    "duration": 57111.389,
+    "expected": 12,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

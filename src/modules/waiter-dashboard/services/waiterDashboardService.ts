@@ -1,4 +1,7 @@
-import { waiterSupabase } from "../../waiter-auth/services/waiterAuthService";
+import {
+  consumePrefetchedWaiterTables,
+  waiterSupabase,
+} from "../../waiter-auth/services/waiterAuthService";
 import {
   canonicalOperationalStatus,
   canonicalPaymentStatus,
@@ -340,6 +343,10 @@ export async function splitWaiterBill(
 export async function loadWaiterDashboardTables(
   restaurantSlug: string,
 ): Promise<WaiterDashboardTable[]> {
+  const prefetchedRows = consumePrefetchedWaiterTables(restaurantSlug);
+  if (prefetchedRows) {
+    return (prefetchedRows as WaiterDashboardRow[]).map(normalizeTable);
+  }
   const { data, error } = await waiterSupabase.rpc(
     "get_waiter_dashboard_tables",
     {

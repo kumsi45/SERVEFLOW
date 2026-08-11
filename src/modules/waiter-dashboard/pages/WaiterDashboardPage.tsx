@@ -7,6 +7,7 @@ import {
   waiterSupabase,
 } from "../../waiter-auth/services/waiterAuthService";
 import { formatCurrency } from "../../../core/format/currency";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   canonicalPaymentStatus,
@@ -24,6 +25,12 @@ import {
   updateWaiterPendingItem,
   updateWaiterPendingItemNote,
 } from "../services/waiterDashboardService";
+import {
+  buildWaiterTableCards,
+  filterWaiterTableCards,
+  waiterTableCounts,
+  type WaiterTableFilter,
+} from "../services/waiterTablesPresentation";
 import type {
   WaiterDashboardSummary,
   WaiterDashboardTable,
@@ -34,15 +41,6 @@ import "../styles/waiterDashboard.css";
 import { syncWaiterOrderQueue } from "../../waiter-order/services/waiterOrderService";
 
 type Props = { restaurantSlug: string };
-type Filter =
-  | "all"
-  | "available"
-  | "occupied"
-  | "qr"
-  | "waiter"
-  | "payment"
-  | "attention"
-  | "reserved";
 type Connection = "connecting" | "connected" | "reconnecting";
 type ProductivityView = "tables" | "orders";
 const IDLE_LOCK_MS = 5 * 60 * 1000;
@@ -77,7 +75,7 @@ function summaryFrom(
         waiterStaffId: stored.staffId,
         waiterDisplayName: stored.displayName,
         currentShift: "Current Shift",
-        assignmentMode: "all_tables",
+        assignmentMode: "assigned_tables",
         currencyCode: stored.restaurant.currencyCode,
         currencySymbol: stored.restaurant.currencySymbol,
         locale: stored.restaurant.locale,
@@ -194,6 +192,63 @@ function sessionBatches(detail: WaiterSessionDetail) {
       return { number: index + 1, createdAt, items, status };
     });
 }
+function itemIcon(name: string) {
+  const value = name.toLowerCase();
+  if (value.includes("burger")) return "🍔";
+  if (value.includes("coffee")) return "☕";
+  if (value.includes("tea")) return "🍵";
+  if (value.includes("water")) return "💧";
+  if (value.includes("cake") || value.includes("dessert")) return "🍰";
+  return "•";
+}
+function waiterKitchenStatus(status: string) {
+  return status === "ready"
+    ? "READY"
+    : status === "completed"
+      ? "SERVED"
+      : status === "preparing"
+        ? "COOKING"
+        : "SENT";
+}
+function kitchenStatusClass(status: string) {
+  return status === "ready"
+    ? "ready"
+    : status === "completed"
+      ? "served"
+      : status === "preparing"
+        ? "cooking"
+        : "sent";
+}
+function sessionOrderItems(detail: WaiterSessionDetail) {
+  const grouped = new Map<
+    string,
+    { name: string; quantity: number; notes: string | null; total: number }
+  >();
+  for (const item of detail.invoices.flatMap((invoice) => invoice.items)) {
+    const key = `${item.name}:${item.notes ?? ""}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.quantity += item.quantity;
+      existing.total += item.quantity * item.price;
+    } else {
+      grouped.set(key, {
+        name: item.name,
+        quantity: item.quantity,
+        notes: item.notes,
+        total: item.quantity * item.price,
+      });
+    }
+  }
+  return [...grouped.values()];
+}
+function sessionKitchenItems(detail: WaiterSessionDetail) {
+  return detail.invoices.flatMap((invoice) => invoice.items);
+}
+function readyKitchenItems(detail: WaiterSessionDetail) {
+  return sessionKitchenItems(detail).filter(
+    (item) => item.kitchenStatus === "ready",
+  );
+}
 function playReadySound() {
   const AudioContextClass =
     window.AudioContext ||
@@ -228,7 +283,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     summaryFrom([], restaurantSlug),
   );
   const money = (value: number) => formatCurrency(value, summary);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<WaiterTableFilter>("all");
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
@@ -244,6 +299,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [metrics, setMetrics] = useState<Map<string, WaiterTableMetric>>(
     new Map(),
   );
+  const [metricsHydrated, setMetricsHydrated] = useState(false);
   const [switchMode, setSwitchMode] = useState<"switch" | "unlock" | null>(null);
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
@@ -261,6 +317,8 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   );
   const [splitting, setSplitting] = useState(false);
   const [requestingBill, setRequestingBill] = useState(false);
+  const [billConfirmOpen, setBillConfirmOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [view, setView] = useState<ProductivityView>("tables");
   const [orderSearch, setOrderSearch] = useState("");
   const idleTimer = useRef<number | null>(null);
@@ -268,57 +326,89 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const readyHydratedRef = useRef(false);
   const knownAssistanceRef = useRef(new Set<string>());
   const autoOpenedRef = useRef(false);
+  const initialLoadStartedRef = useRef(false);
 
   const loadTables = useCallback(async () => {
     const rows = await loadWaiterDashboardTables(restaurantSlug);
-    if (rows[0]?.restaurantId) {
-      const requests = await loadWaiterAssistanceRequests(rows[0].restaurantId);
+    setTables(rows);
+    setSummary(summaryFrom(rows, restaurantSlug));
+
+    const restaurantId = rows[0]?.restaurantId;
+    if (!restaurantId) {
+      setMetrics(new Map());
+      setMetricsHydrated(true);
+      return;
+    }
+
+    void Promise.all([
+      loadWaiterAssistanceRequests(restaurantId),
+      loadWaiterTableMetrics(
+        rows.flatMap((row) => (row.activeOrderId ? [row.activeOrderId] : [])),
+      ),
+    ]).then(([requests, nextMetrics]) => {
       const newRequest = requests.find((request) => !knownAssistanceRef.current.has(request.id));
       if (newRequest) {
         const requestTable = rows.find((row) => row.tableId === newRequest.table_id);
         setSessionNotice(`Table ${requestTable?.tableNumber ?? ""} needs assistance.`.replace("Table  needs", "A table needs"));
       }
       knownAssistanceRef.current = new Set(requests.map((request) => request.id));
-    }
-    const nextMetrics = await loadWaiterTableMetrics(
-      rows.flatMap((row) => (row.activeOrderId ? [row.activeOrderId] : [])),
-    );
-    const readyIds = new Set(
-      rows
-        .filter(
-          (row) =>
-            row.activeOrderId &&
-            (nextMetrics.get(row.activeOrderId)?.readyItemCount ?? 0) > 0,
-        )
-        .map((row) => row.tableId),
-    );
-    const newlyReady = [...readyIds].filter(
-      (id) => !knownReadyRef.current.has(id),
-    );
-    if (readyHydratedRef.current && newlyReady.length) {
-      playReadySound();
-      const readyTables = rows
-        .filter((row) => newlyReady.includes(row.tableId))
-        .map((row) => `Table ${row.tableNumber}`)
-        .join(", ");
-      setSessionNotice(`${readyTables} ready for service.`);
-    }
-    knownReadyRef.current = readyIds;
-    readyHydratedRef.current = true;
-    setReadyAlerts(readyIds);
-    setTables(rows);
-    setMetrics(nextMetrics);
-    setSummary(summaryFrom(rows, restaurantSlug));
+      const readyIds = new Set(
+        rows
+          .filter(
+            (row) =>
+              row.activeOrderId &&
+              (nextMetrics.get(row.activeOrderId)?.readyItemCount ?? 0) > 0,
+          )
+          .map((row) => row.tableId),
+      );
+      const newlyReady = [...readyIds].filter(
+        (id) => !knownReadyRef.current.has(id),
+      );
+      if (readyHydratedRef.current && newlyReady.length) {
+        playReadySound();
+        const readyTables = rows
+          .filter((row) => newlyReady.includes(row.tableId))
+          .map((row) => `Table ${row.tableNumber}`)
+          .join(", ");
+        setSessionNotice(`${readyTables} ready for service.`);
+      }
+      knownReadyRef.current = readyIds;
+      readyHydratedRef.current = true;
+      setReadyAlerts(readyIds);
+      setMetrics(nextMetrics);
+      setMetricsHydrated(true);
+    }).catch(() => setMetricsHydrated(true));
+  }, [restaurantSlug]);
+  const exitWaiterSession = useCallback((reason?: "expired") => {
+    const logout = signOutWaiter();
+    setTables([]);
+    setSummary(null);
+    setSessionTable(null);
+    setSessionDetail(null);
+    setMetrics(new Map());
+    setMetricsHydrated(false);
+    setReadyAlerts(new Set());
+    setSearch("");
+    setOrderSearch("");
+    setPin("");
+    setUsername("");
+    setAuthError(null);
+    const suffix = reason === "expired" ? "?reason=expired" : "";
+    navigateWaiter(`/waiter/${encodeURIComponent(restaurantSlug)}${suffix}`, true);
+    void logout.catch(() => undefined);
   }, [restaurantSlug]);
   const connection: Connection = useTenantRealtime({
     channelName: "waiter-shared-tablet",
     restaurantId: summary?.restaurantId ?? "",
     tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "waiter_assistance_requests"],
     client: waiterSupabase,
+    refreshOnConnect: false,
     refresh: () => loadTables().catch((e) => setError(e instanceof Error ? e.message : "Realtime update failed.")),
   });
 
   useEffect(() => {
+    if (initialLoadStartedRef.current) return;
+    initialLoadStartedRef.current = true;
     void loadTables()
       .catch((e) => {
         setError(
@@ -356,7 +446,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
         .then(() => loadTables())
         .catch(() => undefined);
     window.addEventListener("online", sync);
-    if (navigator.onLine) sync();
     return () => window.removeEventListener("online", sync);
   }, [loadTables, restaurantSlug]);
   useEffect(() => {
@@ -367,12 +456,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     const reset = () => {
       if (idleTimer.current !== null) clearTimeout(idleTimer.current);
       idleTimer.current = window.setTimeout(() => {
-        void signOutWaiter().finally(() =>
-          navigateWaiter(
-            `/waiter/${encodeURIComponent(restaurantSlug)}?reason=expired`,
-            true,
-          ),
-        );
+        exitWaiterSession("expired");
       }, IDLE_LOCK_MS);
     };
     for (const event of ["pointerdown", "keydown", "touchstart"] as const)
@@ -383,7 +467,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
         window.removeEventListener(event, reset);
       if (idleTimer.current !== null) clearTimeout(idleTimer.current);
     };
-  }, [restaurantSlug]);
+  }, [exitWaiterSession]);
   useEffect(() => {
     if (!sessionTable?.activeOrderId) {
       setSessionDetail(null);
@@ -423,33 +507,15 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       }),
     [metrics, tables],
   );
-  const filtered = useMemo(
-    () =>
-      enriched.filter(({ table, sessionNumber, invoiceNumbers }) => {
-        const state = visualStatus(table);
-        const q = search.trim().toLowerCase();
-        const filterMatch =
-          filter === "all" ||
-          (filter === "occupied"
-            ? state !== "available" && state !== "reserved"
-            : filter === "attention"
-              ? readyAlerts.has(table.tableId)
-              : filter === "payment"
-                ? state === "payment"
-                : state === filter);
-        const searchMatch =
-          !q ||
-          String(table.tableNumber).includes(q) ||
-          (sessionNumber ?? table.activeOrderId ?? "")
-            .toLowerCase()
-            .includes(q) ||
-          invoiceNumbers.some((number) => number.toLowerCase().includes(q)) ||
-          (table.qrCustomerName ?? "").toLowerCase().includes(q) ||
-          (table.tableLabel ?? "").toLowerCase().includes(q);
-        return filterMatch && searchMatch;
-      }),
-    [enriched, filter, readyAlerts, search],
+  const tableCards = useMemo(
+    () => buildWaiterTableCards(tables, metrics),
+    [metrics, tables],
   );
+  const filtered = useMemo(
+    () => filterWaiterTableCards(tableCards, filter, search),
+    [filter, search, tableCards],
+  );
+  const tableCounts = useMemo(() => waiterTableCounts(tableCards), [tableCards]);
   const activeOrderCards = useMemo(
     () =>
       enriched.filter(
@@ -577,13 +643,20 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     if (!sessionTable?.activeOrderId) return;
     try {
       setRequestingBill(true);
+      setError(null);
       await requestWaiterFinalBill(sessionTable.activeOrderId);
-      setSessionNotice(`Table ${sessionTable.tableNumber} is ready to bill.`);
+      setBillConfirmOpen(false);
+      setSessionNotice("BILL REQUESTED");
+      setSessionDetail(
+        await loadWaiterSessionDetail(
+          sessionTable.activeOrderId,
+          sessionTable.restaurantId,
+        ),
+      );
       await loadTables();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not request the final bill.",
-      );
+      console.error(e);
+      setError("Could not update. Try again.");
     } finally {
       setRequestingBill(false);
     }
@@ -628,6 +701,8 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
 
   const restaurant = summary?.restaurantName ?? "Restaurant";
   const waiter = summary?.waiterDisplayName ?? "Waiter";
+  const waiterNameParts = waiter.trim().split(/\s+/);
+  const waiterFirstName = waiterNameParts[waiterNameParts.length - 1] || waiter;
   const unpaidItems =
     sessionDetail?.invoices
       .filter(
@@ -653,8 +728,37 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
           canonicalPaymentStatus(invoice.status) === "held",
       )
       .reduce((sum, invoice) => sum + invoice.total, 0) ?? 0;
+  const orderItems = sessionDetail ? sessionOrderItems(sessionDetail) : [];
+  const kitchenItems = sessionDetail ? sessionKitchenItems(sessionDetail) : [];
+  const readyItems = sessionDetail ? readyKitchenItems(sessionDetail) : [];
+  const hasReadyItems = readyItems.length > 0;
+  const billAlreadyRequested = Boolean(
+    sessionDetail?.billRequestedAt || sessionDetail?.billingStartedAt,
+  );
   return (
     <main className={`w2-page${sessionTable ? " session-open" : ""}`}>
+      {!sessionTable ? (
+        <header className="a2-header">
+          <div className="a2-brand">
+            <ServeFlowBrand variant="full" />
+            <span aria-hidden="true" />
+            <strong>{waiterFirstName}</strong>
+          </div>
+          <div className="a2-heading">
+            <h1>My Tables</h1>
+            <span>{tableCounts.all}</span>
+          </div>
+          <div className="a2-header-actions">
+            <span className={`a2-connection ${connection}`}>
+              <i aria-hidden="true" />
+              {connection === "connected" ? "Online" : "Connecting"}
+            </span>
+            <button type="button" onClick={() => exitWaiterSession()}>
+              Logout
+            </button>
+          </div>
+        </header>
+      ) : (
       <header className="w10-header">
         <div className="w2-brand">
           {summary?.restaurantLogoUrl ? (
@@ -673,125 +777,58 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
           {now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
         </time>
       </header>
+      )}
       {sessionNotice && !sessionTable ? (
-        <div className="w94-ready-notice" role="alert">
+        <div className="a2-notice" role="alert">
           <span>🔔</span>
           <strong>{sessionNotice}</strong>
-          <button onClick={() => setSessionNotice(null)}>Dismiss</button>
+          <button onClick={() => setSessionNotice(null)} aria-label="Dismiss notification">×</button>
         </div>
       ) : null}
       {error && <div className="w2-error">{error}</div>}
       {view === "tables" ? (
         <>
-          <section className="w10-tools">
-            <div>
-              {(
-                [
-                  ["all", "All"],
-                  ["available", "Available"],
-                  ["occupied", "Occupied"],
-                  ["payment", "Needs Bill"],
-                ] as Array<[Filter, string]>
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  className={filter === value ? "active" : ""}
-                  onClick={() => setFilter(value)}
-                >
-                  {label}
+          <section className="a2-tools" aria-label="Table filters">
+            <div className="a2-filters">
+              {([["all", "All"], ["free", "Free"], ["active", "Active"], ["ready", "Ready"], ["bill", "Bill"]] as Array<[WaiterTableFilter, string]>).map(([value, label]) => (
+                <button type="button" key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)} aria-pressed={filter === value}>
+                  <span>{label}</span>
+                  {value === "all" || tableCounts[value] > 0 ? <b>{tableCounts[value]}</b> : null}
                 </button>
               ))}
-              <button
-                className={filter === "attention" ? "active" : ""}
-                onClick={() => setFilter("attention")}
-              >
-                Kitchen Ready
-              </button>
             </div>
-            <label>
-              <span>⌕</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search table or customer"
-              />
-            </label>
+            {tableCards.length > 10 ? (
+              <label className="a2-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find table" aria-label="Find assigned table" /></label>
+            ) : null}
           </section>
           {loading ? (
-            <div className="w2-state">Loading tables…</div>
+            <section className="a2-grid" aria-label="Loading assigned tables">{Array.from({ length: 8 }, (_, index) => <div className="a2-skeleton" key={index} />)}</section>
           ) : (
-            <section className="w10-grid">
-              {filtered.map(
-                ({
-                  table,
-                  total,
-                  invoices,
-                  itemCount,
-                  readyItems,
-                  lifecycleStatus,
-                }) => {
-                  const state = !table.activeOrderId
-                    ? "available"
-                    : lifecycleStatus === "ready_to_serve"
-                      ? "ready"
-                      : lifecycleStatus === "needs_bill" ||
-                          lifecycleStatus === "billing"
-                        ? "bill"
-                        : table.activeOrderSource === "public_qr"
-                          ? "qr"
-                          : "waiter";
-                  const label = !table.activeOrderId
-                    ? "Available"
-                    : (
-                        {
-                          serving: "Serving",
-                          kitchen_waiting: "Kitchen Waiting",
-                          ready_to_serve: "Ready to Serve",
-                          needs_bill: "Needs Bill",
-                          billing: "Waiting Cashier",
-                          paid: "Paid",
-                        } as const
-                      )[lifecycleStatus];
-                  return (
-                    <button
-                      type="button"
-                      key={table.tableId}
-                      className={`w10-table ${state}`}
-                      onClick={() => openTable(table)}
-                      aria-label={`Table ${table.tableNumber}, ${label}`}
-                    >
-                      <header>
-                        <strong>Table {table.tableNumber}</strong>
-                        <span>{label}</span>
-                      </header>
-                      <div className="w10-table-total">{money(total)}</div>
-                      <small>
-                        {table.qrCustomerName
-                          ? `${table.qrCustomerName.split(" + ").length} guest(s) · `
-                          : ""}
-                        {table.assignedWaiterName || waiter}
-                      </small>
-                      <small>
-                        {table.activeOrderId
-                          ? `Open ${elapsed(table.activeOrderCreatedAt, now)} · ${itemCount} items · ${invoices} bill${invoices === 1 ? "" : "s"}`
-                          : "Tap to order"}
-                      </small>
-                      <small>
-                        {readyItems
-                          ? `${readyItems} ready to serve`
-                          : table.activeOrderId
-                            ? "Kitchen active"
-                            : "Menu opens automatically"}
-                      </small>
-                      <span className="w10-table-tap">Tap table</span>
-                    </button>
-                  );
-                },
-              )}
+            <section className="a2-grid" aria-label="My assigned tables">
+              {filtered.map(({ table, metric, state }) => {
+                const label = ({ free: "Free", active: "Active", ready: "Kitchen Ready", bill: "Bill" } as const)[state];
+                return (
+                  <button type="button" key={table.tableId} className={`a2-table ${state}`} onClick={() => openTable(table)} aria-label={`Table ${table.tableNumber}, ${label}`}>
+                    <header><strong>{table.tableLabel || `Table ${table.tableNumber}`}</strong><span><i aria-hidden="true" />{label}</span></header>
+                    {state === "free" ? (
+                      <><strong className="a2-table-number">{table.tableNumber}</strong><span className="a2-table-action">＋ Order</span></>
+                    ) : (
+                      <div className="a2-table-detail">
+                        <strong>{metricsHydrated && metric ? `${metric.itemCount} item${metric.itemCount === 1 ? "" : "s"}` : "Active order"}</strong>
+                        {metricsHydrated && metric ? <b>{money(metric.total)}</b> : null}
+                        {state === "ready" && metric?.readyItemCount ? <em>{metric.readyItemCount} ready</em> : null}
+                        <time>{elapsed(table.activeOrderCreatedAt, now)}</time>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </section>
           )}
-          {!loading && !filtered.length ? (
-            <div className="w2-state">No tables match.</div>
+          {!loading && !tableCards.length ? (
+            <div className="a2-empty"><span aria-hidden="true">▦</span><strong>No tables assigned</strong><p>Ask your manager for a table assignment.</p></div>
+          ) : !loading && !filtered.length ? (
+            <div className="a2-empty compact"><strong>No tables match</strong></div>
           ) : null}
         </>
       ) : null}
@@ -834,42 +871,28 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
         </section>
       ) : null}
       {sessionTable && (
-        <div className="w2-session w92-session">
-          <header className="w10-session-header">
-            <button onClick={() => setSessionTable(null)}>← Tables</button>
+        <div className="w2-session w92-session a4-session">
+          <header className="a4-session-header">
+            <button type="button" onClick={() => setSessionTable(null)}>
+              TABLES
+            </button>
             <div>
-              <small>
-                Open{" "}
-                {elapsed(
-                  sessionDetail?.openedAt ?? sessionTable.activeOrderCreatedAt,
-                  now,
-                )}
-              </small>
-              <strong>Table {sessionTable.tableNumber}</strong>
-            </div>
-            {!sessionDetail || sessionAllowsItems(sessionDetail) ? (
-              <a
-                className="w103-add-top"
-                href={`/waiter/${encodeURIComponent(restaurantSlug)}/order/${encodeURIComponent(String(sessionTable.tableNumber))}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  openAddItems(sessionTable);
-                }}
-              >
-                + Add Items
-              </a>
-            ) : (
-              <span className="w103-session-locked">
-                {sessionDetail?.orderingReason ?? "Loading"}
+              <strong>TABLE {sessionTable.tableNumber}</strong>
+              <span>
+                {hasReadyItems
+                  ? "READY"
+                  : sessionDetail?.billRequestedAt
+                    ? "BILL"
+                    : "ACTIVE"}
               </span>
-            )}
+            </div>
           </header>
           {!sessionDetail ? (
             <div className={`w2-state${sessionDetailError ? " error" : ""}`}>
               {sessionDetailError ? (
                 <>
-                  <strong>Table details unavailable</strong>
-                  <span>{sessionDetailError}</span>
+                  <strong>Could not update.</strong>
+                  <span>Try again.</span>
                   <button
                     onClick={() =>
                       navigateWaiter(
@@ -877,249 +900,175 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                       )
                     }
                   >
-                    Open Restaurant Menu
+                    + ADD ITEMS
                   </button>
                 </>
               ) : (
-                "Loading table…"
+                "Loading table..."
               )}
             </div>
           ) : (
-            <div className="w10-session-body">
-              <section className="w10-current-bill">
-                <small>
-                  Dining Session:{" "}
-                  {sessionDetail.diningSessionStatus.toUpperCase()} ·{" "}
-                  {sessionDetail.sessionNumber}
-                </small>
-                <strong>Table {sessionTable.tableNumber}</strong>
-                <span
-                  className={
-                    sessionDetail.orderingAllowed
-                      ? "w109-ordering-open"
-                      : "w109-ordering-locked"
-                  }
-                >
-                  {sessionServiceStatus(sessionDetail)}
-                </span>
-                <div className="w10-session-facts">
-                  <span>
-                    <small>Guests</small>
-                    <b>
-                      {(sessionDetail.customerName ?? "")
-                        .split(" + ")
-                        .filter(Boolean).length || 1}
-                    </b>
-                  </span>
-                  <span>
-                    <small>Elapsed</small>
-                    <b>{elapsed(sessionDetail.openedAt, now)}</b>
-                  </span>
-                  <span>
-                    <small>Waiter</small>
-                    <b>
-                      {sessionDetail.waiterName ||
-                        sessionTable.assignedWaiterName ||
-                        waiter}
-                    </b>
-                  </span>
-                  <span>
-                    <small>Paid</small>
-                    <b>{money(paidTotal)}</b>
-                  </span>
-                  <span>
-                    <small>Pending</small>
-                    <b>{money(pendingTotal)}</b>
-                  </span>
-                  <span>
-                    <small>Running Total</small>
-                    <b>{money(sessionDetail.total)}</b>
-                  </span>
-                  <span>
-                    <small>Kitchen</small>
-                    <b>{sessionKitchenStatus(sessionDetail)}</b>
-                  </span>
+            <div className="a4-body">
+              <section className={`a4-table-hero${hasReadyItems ? " ready" : ""}`}>
+                <div>
+                  <span>TABLE {sessionTable.tableNumber}</span>
+                  <strong>
+                    {hasReadyItems
+                      ? "READY"
+                      : sessionDetail.billRequestedAt
+                        ? "BILL REQUESTED"
+                        : "ACTIVE"}
+                  </strong>
+                </div>
+                <div className="a4-total">
+                  <span>TOTAL</span>
+                  <strong>{money(sessionDetail.total)}</strong>
                 </div>
               </section>
               {sessionNotice ? (
                 <div className="w92-notice" role="status">
                   {sessionNotice}
-                  <button onClick={() => setSessionNotice(null)}>×</button>
+                  <button onClick={() => setSessionNotice(null)}>x</button>
                 </div>
               ) : null}
-              <section className="w10-kitchen">
-                <h2>Kitchen Batches</h2>
-                {sessionBatches(sessionDetail).map((batch) => (
-                  <article key={batch.createdAt}>
-                    <span>
-                      <strong>Batch {batch.number}</strong>
-                      <small>
-                        {batch.items
-                          .map((item) => `${item.quantity}× ${item.name}`)
-                          .join(", ")}
-                      </small>
-                      <small>
-                        {money(
-                          batch.items.reduce(
-                            (sum, item) => sum + item.quantity * item.price,
-                            0,
-                          ),
-                        )}
-                      </small>
-                    </span>
-                    <b className={batch.status}>
-                      {batch.status === "pending" || batch.status === "held"
-                        ? paymentLabel(batch.status)
-                        : batch.status === "ready"
-                          ? "Ready"
-                          : batch.status === "served"
-                            ? "Served"
-                            : batch.status === "preparing"
-                              ? "Preparing"
-                              : batch.status === "accepted"
-                                ? "Waiting Kitchen"
-                                : "Waiting Kitchen"}
-                    </b>
-                  </article>
-                ))}
-                {sessionKitchenStatus(sessionDetail) === "Ready" ? (
-                  <button
-                    className="w10-secondary-action"
-                    disabled={serving}
-                    onClick={() => void markServed()}
-                  >
-                    {serving ? "Marking…" : "Mark Ready Items Served"}
-                  </button>
-                ) : null}
-              </section>
-              <section className="w10-current-orders" id="current-orders">
-                <h2>
-                  Current Order · Running Total {money(sessionDetail.total)}
-                </h2>
-                {sessionBatches(sessionDetail).map((batch) => (
-                  <article key={batch.createdAt}>
-                    <strong>
-                      Batch {batch.number} ·{" "}
-                      {money(
-                        batch.items.reduce(
-                          (sum, item) => sum + item.quantity * item.price,
-                          0,
-                        ),
-                      )}
-                    </strong>
-                    {batch.items.map((item) => {
-                      const editable =
-                        item.kitchenStatus === "held" ||
-                        item.kitchenStatus === "accepted";
+              <div className="a4-columns">
+                <section className="a4-panel" aria-label="Order">
+                  <h2>ORDER</h2>
+                  <div className="a4-order-list">
+                    {orderItems.map((item) => (
+                      <article key={`${item.name}:${item.notes ?? ""}`}>
+                        <span>
+                          {item.quantity} x {item.name}
+                        </span>
+                        {item.notes ? <small>{item.notes}</small> : null}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+                <section className="a4-panel" aria-label="Kitchen">
+                  <h2>KITCHEN</h2>
+                  <div className="a4-kitchen-list">
+                    {kitchenItems.map((item) => {
+                      const label = waiterKitchenStatus(item.kitchenStatus);
                       return (
-                        <div key={item.id}>
+                        <article
+                          key={item.id}
+                          className={kitchenStatusClass(item.kitchenStatus)}
+                        >
                           <span>
-                            <strong>{item.name}</strong>
-                            <small>
-                              Quantity {item.quantity}
-                              {item.notes ? ` · ${item.notes}` : ""}
-                            </small>
+                            {item.name} x{item.quantity}
                           </span>
-                          <b>{money(item.quantity * item.price)}</b>
-                          {editable ? (
-                            <span className="w10-item-actions">
-                              <button
-                                onClick={() =>
-                                  void editPendingItem(
-                                    item.id,
-                                    Math.max(1, item.quantity - 1),
-                                  )
-                                }
-                              >
-                                −
-                              </button>
-                              <button
-                                onClick={() =>
-                                  void editPendingItem(
-                                    item.id,
-                                    item.quantity + 1,
-                                  )
-                                }
-                              >
-                                +
-                              </button>
-                              <button
-                                onClick={() =>
-                                  void editPendingItemNote(item.id, item.notes)
-                                }
-                              >
-                                Add Note
-                              </button>
-                              <button
-                                onClick={() => void editPendingItem(item.id, 0)}
-                              >
-                                Cancel Item
-                              </button>
-                            </span>
-                          ) : (
-                            <small className="w103-edit-locked">
-                              Already sent to kitchen.
-                              <br />
-                              Cannot modify.
-                            </small>
-                          )}
-                        </div>
+                          <b>{label}</b>
+                        </article>
                       );
                     })}
-                  </article>
-                ))}
-              </section>
+                  </div>
+                  {hasReadyItems ? (
+                    <div className="a4-ready-box" role="status">
+                      <strong>READY</strong>
+                      <span>
+                        {readyItems
+                          .map((item) => `${item.name} x${item.quantity}`)
+                          .join(", ")}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={serving}
+                        onClick={() => void markServed()}
+                      >
+                        {serving ? "SAVING..." : "SERVED"}
+                      </button>
+                    </div>
+                  ) : null}
+                </section>
+              </div>
             </div>
           )}
-          <footer className="w10-session-actions">
+          <footer className="a4-actions">
             <button
+              type="button"
+              className="primary"
+              disabled={!sessionDetail || !sessionAllowsItems(sessionDetail)}
+              onClick={() => openAddItems(sessionTable)}
+            >
+              + ADD ITEMS
+            </button>
+            <button
+              type="button"
               className="bill"
-              disabled={
-                !sessionDetail ||
-                Boolean(sessionDetail.billRequestedAt) ||
-                requestingBill
-              }
-              onClick={() => void requestBill()}
+              disabled={!sessionDetail || billAlreadyRequested || requestingBill}
+              onClick={() => setBillConfirmOpen(true)}
             >
-              {requestingBill ? (
-                "Requesting…"
-              ) : sessionDetail?.billingStartedAt ? (
-                <>
-                  Waiting Cashier<span>Bill request received</span>
-                </>
-              ) : sessionDetail?.billRequestedAt ? (
-                <>
-                  Bill Requested<span>Waiting Cashier</span>
-                </>
-              ) : (
-                "Request Bill"
-              )}
+              {requestingBill
+                ? "REQUESTING..."
+                : billAlreadyRequested
+                  ? "BILL REQUESTED"
+                  : "REQUEST BILL"}
             </button>
-            <button
-              disabled={!sessionDetail || unpaidUnits < 2}
-              onClick={() => {
-                setSplitQuantities(new Map());
-                setSplitOpen(true);
-              }}
-            >
-              Split Bill<span>Choose pending items or quantities</span>
-            </button>
-            <button
-              disabled={!sessionDetail || !sessionDetail.transferAllowed}
-              title={
-                sessionDetail?.transferReason ?? "Transfer this dining session"
-              }
-              onClick={() => {
-                setMoveTargetId("");
-                setMoveOpen(true);
-              }}
-            >
-              Transfer Table
-              {sessionDetail && !sessionDetail.transferAllowed ? (
-                <span>{sessionDetail.transferReason}</span>
-              ) : null}
+            <button type="button" onClick={() => setMoreOpen((current) => !current)}>
+              MORE
             </button>
           </footer>
+          {moreOpen && sessionDetail ? (
+            <aside className="a4-more" aria-label="More actions">
+              <button
+                type="button"
+                disabled={unpaidUnits < 2}
+                onClick={() => {
+                  setSplitQuantities(new Map());
+                  setMoreOpen(false);
+                  setSplitOpen(true);
+                }}
+              >
+                Split Bill
+              </button>
+              <button
+                type="button"
+                disabled={!sessionDetail.transferAllowed}
+                title={sessionDetail.transferReason ?? "Transfer table"}
+                onClick={() => {
+                  setMoveTargetId("");
+                  setMoreOpen(false);
+                  setMoveOpen(true);
+                }}
+              >
+                Transfer Table
+              </button>
+              {kitchenItems.some(
+                (item) =>
+                  item.kitchenStatus === "held" ||
+                  item.kitchenStatus === "accepted",
+              ) ? (
+                <div className="a4-more-items">
+                  {kitchenItems
+                    .filter(
+                      (item) =>
+                        item.kitchenStatus === "held" ||
+                        item.kitchenStatus === "accepted",
+                    )
+                    .map((item) => (
+                      <article key={item.id}>
+                        <span>
+                          {item.name} x{item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void editPendingItemNote(item.id, item.notes)}
+                        >
+                          Add Note
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void editPendingItem(item.id, 0)}
+                        >
+                          Cancel Item
+                        </button>
+                      </article>
+                    ))}
+                </div>
+              ) : null}
+            </aside>
+          ) : null}
         </div>
       )}
       {moveOpen && sessionTable ? (
@@ -1175,6 +1124,36 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                 onClick={() => void moveSession()}
               >
                 {moving ? "Moving…" : "Confirm Move"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {billConfirmOpen && sessionTable && sessionDetail ? (
+        <div className="w2-overlay" onClick={() => setBillConfirmOpen(false)}>
+          <section
+            className="a4-bill-confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Request bill"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <span>TABLE {sessionTable.tableNumber}</span>
+              <strong>{money(sessionDetail.total)}</strong>
+            </header>
+            <h2>Request bill?</h2>
+            <div>
+              <button type="button" onClick={() => setBillConfirmOpen(false)}>
+                BACK
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={requestingBill || billAlreadyRequested}
+                onClick={() => void requestBill()}
+              >
+                {requestingBill ? "REQUESTING..." : "REQUEST"}
               </button>
             </div>
           </section>
@@ -1332,19 +1311,14 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
           </section>
         </div>
       )}
+      {sessionTable ? (
       <button
         className="w106-logout"
-        onClick={() =>
-          void signOutWaiter().finally(() =>
-            navigateWaiter(
-              `/waiter/${encodeURIComponent(restaurantSlug)}`,
-              true,
-            ),
-          )
-        }
+        onClick={() => exitWaiterSession()}
       >
         ↪ <span>Logout</span>
       </button>
+      ) : null}
     </main>
   );
 }

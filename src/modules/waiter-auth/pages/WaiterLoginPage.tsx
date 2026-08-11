@@ -1,190 +1,183 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import {
-  getKnownWaiterProfiles,
   getStoredWaiterSession,
   loadWaiterTerminalContext,
-  loadWaiterTerminalProfiles,
-  resolveWaiterTerminalProfile,
-  signInWaiter,
+  signInWaiterWithPin,
 } from "../services/waiterAuthService";
-import type { WaiterTerminalContext, WaiterTerminalProfile } from "../types";
+import type { WaiterTerminalContext } from "../types";
 import {
+  ConnectionStatus,
   PinIndicator,
   PinPad,
-  RestaurantHeader,
-  SearchWaiter,
-  WaiterGrid,
 } from "../components/WaiterLoginTerminal";
 import "../styles/waiterLogin.css";
 
 type WaiterLoginPageProps = { restaurantSlug: string };
+type LoginView = "entry" | "pin";
+const WAITER_PIN_LENGTH = 4;
 
-function getWaiterDashboardPath(canonicalRestaurantSlug: string) {
+function openWaiterDashboard(canonicalRestaurantSlug: string) {
   window.sessionStorage.setItem("serveflow.waiter.restaurant-slug", canonicalRestaurantSlug);
-  return "/waiter/dashboard";
+  window.history.replaceState({}, "", "/waiter/dashboard");
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 export function WaiterLoginPage({ restaurantSlug }: WaiterLoginPageProps) {
   const [restaurant, setRestaurant] = useState<WaiterTerminalContext | null>(null);
-  const [profiles, setProfiles] = useState<WaiterTerminalProfile[]>(() => getKnownWaiterProfiles(restaurantSlug));
-  const [selectedWaiter, setSelectedWaiter] = useState<WaiterTerminalProfile | null>(null);
-  const [search, setSearch] = useState("");
+  const [view, setView] = useState<LoginView>("entry");
   const [pin, setPin] = useState("");
-  const [now, setNow] = useState(() => new Date());
   const [online, setOnline] = useState(() => navigator.onLine);
   const [loading, setLoading] = useState(true);
-  const [resolving, setResolving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
-  const sessionExpired = new URLSearchParams(window.location.search).get("reason") === "expired";
 
   useEffect(() => {
     const session = getStoredWaiterSession(restaurantSlug);
-    if (session) window.location.replace(getWaiterDashboardPath(session.restaurant.slug));
+    if (session) openWaiterDashboard(session.restaurant.slug);
   }, [restaurantSlug]);
 
   useEffect(() => {
     let mounted = true;
-    void Promise.all([loadWaiterTerminalContext(restaurantSlug), loadWaiterTerminalProfiles(restaurantSlug)])
-      .then(([context, terminalProfiles]) => {
-        if (mounted) {
-          setRestaurant(context);
-          setProfiles(terminalProfiles);
-        }
+    void loadWaiterTerminalContext(restaurantSlug)
+      .then((context) => {
+        if (mounted) setRestaurant(context);
       })
-      .catch(() => { if (mounted) setError("This restaurant terminal is currently unavailable."); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .catch(() => {
+        if (mounted) setError("Connection unavailable.");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [restaurantSlug]);
 
   useEffect(() => {
-    const clock = window.setInterval(() => setNow(new Date()), 30_000);
     const handleOnline = () => setOnline(true);
     const handleOffline = () => setOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {
-      window.clearInterval(clock);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
-  const visibleProfiles = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return profiles;
-    return profiles.filter((profile) =>
-      profile.displayName.toLowerCase().includes(query) || profile.employeeId.toLowerCase().includes(query)
-    );
-  }, [profiles, search]);
-
-  async function findWaiter() {
-    const known = visibleProfiles.length === 1 ? visibleProfiles[0] : null;
-    if (known) {
-      selectWaiter(known);
-      return;
-    }
-    try {
-      setResolving(true);
-      setError(null);
-      const profile = await resolveWaiterTerminalProfile(restaurantSlug, search);
-      setProfiles(getKnownWaiterProfiles(restaurantSlug));
-      selectWaiter(profile);
-    } catch {
-      setError("Waiter not found. Check the name or employee ID and try again.");
-    } finally {
-      setResolving(false);
-    }
-  }
-
-  function selectWaiter(profile: WaiterTerminalProfile) {
-    setSelectedWaiter(profile);
-    setPin("");
-    setError(null);
-  }
-
   function addDigit(digit: string) {
-    if (!submitting) setPin((value) => (value.length < 12 ? `${value}${digit}` : value));
+    if (!submitting) {
+      setPin((value) => `${value}${digit}`.slice(0, WAITER_PIN_LENGTH));
+      setError(null);
+    }
   }
 
   async function submitPin() {
-    if (!selectedWaiter || !pin || submitting) return;
+    if (submittingRef.current || pin.length !== WAITER_PIN_LENGTH || !online) return;
+    submittingRef.current = true;
     try {
       setSubmitting(true);
       setError(null);
-      const session = await signInWaiter(restaurantSlug, selectedWaiter.employeeId, pin);
-      window.location.replace(getWaiterDashboardPath(session.restaurant.slug));
-    } catch {
-      setError("Incorrect PIN. Please try again.");
+      const result = await signInWaiterWithPin(restaurantSlug, pin);
+      openWaiterDashboard(result.session.restaurant.slug);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "PIN not recognized. Try again.");
       setPin("");
       setShake(true);
-      window.setTimeout(() => setShake(false), 420);
+      window.setTimeout(() => setShake(false), 320);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
 
   useEffect(() => {
-    if (!selectedWaiter) return;
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+    if (view !== "pin") return;
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (/^\d$/.test(event.key)) addDigit(event.key);
-      else if (event.key === "Backspace") setPin((value) => value.slice(0, -1));
-      else if (event.key === "Enter") void submitPin();
-      else if (event.key === "Escape") setSelectedWaiter(null);
+      else if (event.key === "Backspace") {
+        event.preventDefault();
+        setPin((value) => value.slice(0, -1));
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        void submitPin();
+      } else if (event.key === "Escape" && !submitting) {
+        setView("entry");
+        setPin("");
+        setError(null);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
   if (loading || !restaurant) {
-    return <main className="wlt-loading"><img src="/serveflowlogo.png" alt="ServeFlow" /><span>Preparing waiter terminal…</span></main>;
+    return (
+      <main className="wlt-loading">
+        <ServeFlowBrand variant="full" />
+        <span>{error ?? "Opening waiter terminal…"}</span>
+      </main>
+    );
   }
 
   return (
     <main className="wlt-page">
-      <RestaurantHeader restaurant={restaurant} now={now} online={online} />
-      {!online && <div className="wlt-offline-note">Offline · Orders will synchronize automatically when the connection returns.</div>}
-      {(sessionExpired || error) && !selectedWaiter && (
-        <div className={`wlt-notice ${error ? "is-error" : ""}`} role={error ? "alert" : "status"}>
-          {error ?? "Session expired. Please select your name to continue."}
-        </div>
-      )}
+      <div className="wlt-status-row">
+        <ConnectionStatus online={online} />
+      </div>
 
-      {!selectedWaiter ? (
-        <section className="wlt-selection" aria-labelledby="waiter-selection-title">
-          <div className="wlt-section-heading">
-            <span>Restaurant terminal</span>
-            <h1 id="waiter-selection-title">Select your name to begin</h1>
-            <p>Tap your profile, enter your PIN, and start working.</p>
-          </div>
-          <SearchWaiter value={search} onChange={(value) => { setSearch(value); setError(null); }} onResolve={() => void findWaiter()} busy={resolving} />
-          <WaiterGrid profiles={visibleProfiles} onSelect={selectWaiter} />
-          {profiles.length === 0 && !search && (
-            <div className="wlt-empty"><strong>Find your profile</strong><span>Enter your name or employee ID above once. This terminal will remember verified waiters.</span></div>
-          )}
-          {profiles.length > 0 && visibleProfiles.length === 0 && (
-            <div className="wlt-empty"><strong>No saved profile matches</strong><span>Press Find to securely locate an active waiter.</span></div>
-          )}
+      {view === "entry" ? (
+        <section className="wlt-entry" aria-labelledby="waiter-terminal-title">
+          <ServeFlowBrand variant="full" />
+          <div className="wlt-tenant-name">{restaurant.name}</div>
+          <h1 id="waiter-terminal-title">Waiter Ordering Terminal</h1>
+          {error ? <div className="wlt-entry-error" role="alert">{error}</div> : null}
+          <button
+            type="button"
+            className="wlt-login-button"
+            onClick={() => {
+              setView("pin");
+              setPin("");
+              setError(online ? null : "Connection unavailable.");
+            }}
+          >
+            Waiter Login
+          </button>
         </section>
       ) : (
-        <section className={`wlt-pin-view ${shake ? "is-shaking" : ""}`} aria-labelledby="pin-title">
-          <button type="button" className="wlt-back" onClick={() => { setSelectedWaiter(null); setPin(""); setError(null); }}>← All waiters</button>
-          <div className="wlt-pin-identity">
-            <span className="wlt-pin-avatar">{selectedWaiter.displayName.slice(0, 1).toUpperCase()}</span>
+        <section className={`wlt-pin-panel${shake ? " is-shaking" : ""}`} aria-labelledby="pin-title">
+          <button
+            type="button"
+            className="wlt-back"
+            onClick={() => {
+              setView("entry");
+              setPin("");
+              setError(null);
+            }}
+            disabled={submitting}
+            aria-label="Back to waiter login"
+          >
+            ←
+          </button>
+          <div className="wlt-pin-heading">
             <span>{restaurant.name}</span>
-            <h1 id="pin-title">Welcome, {selectedWaiter.displayName}</h1>
-            <p>Enter your PIN to start working</p>
-            <PinIndicator length={pin.length} />
-            {error && <div className="wlt-pin-error" role="alert"><strong>Incorrect PIN</strong><span>Please try again.</span></div>}
+            <h1 id="pin-title">Enter PIN</h1>
+            <PinIndicator length={pin.length} size={WAITER_PIN_LENGTH} />
           </div>
+          {error ? <div className="wlt-pin-error" role="alert">{error}</div> : null}
           <PinPad
             onDigit={addDigit}
-            onBackspace={() => setPin((value) => value.slice(0, -1))}
+            onBackspace={() => {
+              setPin((value) => value.slice(0, -1));
+              setError(null);
+            }}
             onSubmit={() => void submitPin()}
             disabled={submitting}
+            submitDisabled={pin.length !== WAITER_PIN_LENGTH || !online}
           />
-          <p className="wlt-keyboard-hint">Press Enter to confirm · Esc to choose another waiter</p>
+          <div className="wlt-pin-support">Use keypad or keyboard</div>
         </section>
       )}
     </main>

@@ -1,4 +1,4 @@
-import { waiterSupabase } from "../../waiter-auth/services/waiterAuthService";
+import { getActiveWaiterSession, waiterSupabase } from "../../waiter-auth/services/waiterAuthService";
 import type {
   PublicQrCartItem,
   PublicQrOrderInvoice,
@@ -23,6 +23,16 @@ const waiterQueueKey=(restaurantSlug:string)=>`serveflow.waiter.order-queue.v2:$
 type QueuedWaiterOrder={clientRequestId:string;restaurantSlug:string;tableNumber:string;customerName?:string;customerPhone?:string;orderNote?:string;items:PublicQrCartItem[]};
 export function queueWaiterOrder(order:QueuedWaiterOrder){const key=waiterQueueKey(order.restaurantSlug);const current=JSON.parse(localStorage.getItem(key)??"[]") as QueuedWaiterOrder[];if(!current.some(item=>item.clientRequestId===order.clientRequestId))localStorage.setItem(key,JSON.stringify([...current,order]));}
 export async function syncWaiterOrderQueue(restaurantSlug:string){const key=waiterQueueKey(restaurantSlug);const current=(JSON.parse(localStorage.getItem(key)??"[]") as QueuedWaiterOrder[]).filter(order=>order.restaurantSlug.trim().toLowerCase()===restaurantSlug.trim().toLowerCase());const remaining=[...current];for(const order of current){try{await submitWaiterOrder(order);remaining.splice(remaining.findIndex(item=>item.clientRequestId===order.clientRequestId),1);localStorage.setItem(key,JSON.stringify(remaining));}catch{break}}return remaining.length;}
+const waiterSessionRequests = new Map<string, Promise<WaiterOrderSession>>();
+
+function waiterSessionRequestKey(restaurantSlug: string, tableNumber: string) {
+  const waiterId = getActiveWaiterSession()?.staffId ?? "anonymous";
+  return [
+    restaurantSlug.trim().toLowerCase(),
+    String(tableNumber).trim(),
+    waiterId,
+  ].join(":");
+}
 
 function normalizeSessionItem(value: unknown): PublicQrSessionItem | null {
   if (!value || typeof value !== "object") return null;
@@ -162,13 +172,25 @@ function normalizeSubmittedOrder(value: unknown): SubmittedPublicQrOrder {
 }
 
 export async function fetchWaiterOrderSession(restaurantSlug: string, tableNumber: string) {
-  const { data, error } = await waiterSupabase.rpc("get_waiter_order_session", {
-    target_restaurant_slug: restaurantSlug,
-    table_number: tableNumber,
-  });
+  const requestKey = waiterSessionRequestKey(restaurantSlug, tableNumber);
+  const existingRequest = waiterSessionRequests.get(requestKey);
+  if (existingRequest) return existingRequest;
 
-  if (error) throw new Error(error.message);
-  return normalizeWaiterSession(data);
+  const request = (async () => {
+    try {
+      const { data, error } = await waiterSupabase.rpc("get_waiter_order_session", {
+        target_restaurant_slug: restaurantSlug,
+        table_number: tableNumber,
+      });
+      if (error) throw new Error(error.message);
+      return normalizeWaiterSession(data);
+    } finally {
+      waiterSessionRequests.delete(requestKey);
+    }
+  })();
+
+  waiterSessionRequests.set(requestKey, request);
+  return request;
 }
 
 export async function submitWaiterOrder({

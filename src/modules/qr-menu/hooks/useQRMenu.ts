@@ -16,8 +16,20 @@ type QRMenuState = {
   error: string | null;
 };
 
+type CachedMenuState = Omit<QRMenuState, "loading" | "error"> & {
+  storedAt: number;
+};
+
+const MENU_CACHE_TTL_MS = 30_000;
+const menuCache = new Map<string, CachedMenuState>();
+const menuRequests = new Map<string, Promise<CachedMenuState>>();
+
 function categoryCacheKey(slug: string) {
   return `serveflow:public-menu-category:${slug}`;
+}
+
+function menuCacheKey(slug: string) {
+  return slug.trim().toLowerCase();
 }
 
 export function useQRMenu(
@@ -54,15 +66,44 @@ export function useQRMenu(
 
   useEffect(() => {
     let active = true;
+    const cacheKey = menuCacheKey(restaurantSlug);
+    const cached = menuCache.get(cacheKey);
+    const cacheIsFresh =
+      cached && Date.now() - cached.storedAt < MENU_CACHE_TTL_MS;
 
-    setState((current) => ({ ...current, loading: true, error: null }));
-    setUsingCachedMenu(false);
+    if (cacheIsFresh) {
+      setState({
+        restaurant: cached.restaurant,
+        categories: cached.categories,
+        items: cached.items,
+        loading: false,
+        error: null,
+      });
+      setUsingCachedMenu(true);
+    } else {
+      setState((current) => ({ ...current, loading: true, error: null }));
+      setUsingCachedMenu(false);
+    }
 
-    fetchQRMenuData(restaurantSlug)
+    const request =
+      menuRequests.get(cacheKey) ??
+      fetchQRMenuData(restaurantSlug)
+        .then((data) => ({
+          restaurant: data.restaurant,
+          categories: data.categories,
+          items: data.items,
+          storedAt: Date.now(),
+        }))
+        .finally(() => menuRequests.delete(cacheKey));
+    menuRequests.set(cacheKey, request);
+
+    request
       .then((data) => {
         if (!active) {
           return;
         }
+
+        menuCache.set(cacheKey, data);
 
         setState({
           restaurant: data.restaurant,
@@ -74,6 +115,18 @@ export function useQRMenu(
       })
       .catch((error: Error) => {
         if (!active) {
+          return;
+        }
+
+        if (cached) {
+          setState({
+            restaurant: cached.restaurant,
+            categories: cached.categories,
+            items: cached.items,
+            loading: false,
+            error: null,
+          });
+          setUsingCachedMenu(true);
           return;
         }
 
