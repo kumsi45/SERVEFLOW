@@ -120,8 +120,20 @@ function isOrderRow(value: unknown): value is OrderRow {
     typeof row.id === "string" &&
     isKitchenOrderStatus(operationalStatus) &&
     typeof row.created_at === "string" &&
-    typeof row.total_price !== "undefined",
+    (typeof row.total_price !== "undefined" || typeof (row as { total?: unknown }).total !== "undefined"),
   );
+}
+
+function transitionOrderRow(value: unknown): OrderRow | null {
+  const row = Array.isArray(value) ? value[0] : value;
+  if (!isOrderRow(row)) return null;
+  return {
+    ...row,
+    total_price:
+      typeof row.total_price !== "undefined"
+        ? row.total_price
+        : Number((row as { total?: unknown }).total ?? 0),
+  };
 }
 
 function getMenuItemName(menuItem: OrderItemRow["menu_items"]): string {
@@ -405,11 +417,12 @@ export async function startOrderPreparation(
     throw new Error(error.message);
   }
 
-  if (!isOrderRow(data)) {
+  const order = transitionOrderRow(data);
+  if (!order) {
     throw new Error("Kitchen transition did not return an order.");
   }
 
-  return normalizeOrder(data);
+  return normalizeOrder(order);
 }
 
 export async function markOrderReady(
@@ -427,11 +440,12 @@ export async function markOrderReady(
     throw new Error(error.message);
   }
 
-  if (!isOrderRow(data)) {
+  const order = transitionOrderRow(data);
+  if (!order) {
     throw new Error("Kitchen transition did not return an order.");
   }
 
-  return normalizeOrder(data);
+  return normalizeOrder(order);
 }
 
 export async function markOrderCompleted(
@@ -449,9 +463,10 @@ export async function markOrderCompleted(
     throw new Error(error.message);
   }
 
-  if (!isOrderRow(data)) {
+  const order = transitionOrderRow(data);
+  if (!order) {
     throw new Error("Kitchen transition did not return an order.");
   }
 
-  return normalizeOrder(data);
+  return normalizeOrder(order);
 }

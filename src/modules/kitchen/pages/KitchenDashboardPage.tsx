@@ -37,6 +37,18 @@ let activeKitchenCurrency: KitchenRestaurant | null = null;
 function fmtMoney(v: number) {
   return formatCurrency(v, activeKitchenCurrency);
 }
+const kitchenQueueRealtimeTables = new Set([
+  "orders",
+  "order_items",
+  "restaurant_tables",
+]);
+
+function isTerminalKitchenError(error: unknown) {
+  return (
+    error instanceof Error &&
+    /^(Order closed\.|Batch completed\.)$/.test(error.message)
+  );
+}
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function fmtTicket(order: KitchenOrder) {
   return order.kitchenTicketNumber ?? order.displayNumber ?? "Kitchen ticket";
@@ -412,7 +424,6 @@ function KitchenOrderCard({
   onStart,
   onReady,
   onComplete,
-  showStation,
 }: {
   order: KitchenOrder;
   actionId: string | null;
@@ -420,7 +431,6 @@ function KitchenOrderCard({
   onStart: (order: KitchenOrder) => void;
   onReady: (order: KitchenOrder) => void;
   onComplete: (order: KitchenOrder) => void;
-  showStation: boolean;
 }) {
   const ticketKey = kitchenTicketKey(order);
   const isBusy = actionId === ticketKey;
@@ -442,7 +452,6 @@ function KitchenOrderCard({
   const identifier = order.tableNumber
     ? `Table ${order.tableNumber}`
     : fmtTicket(order);
-  const stationNames = getKitchenOrderStationNames(order);
   const originalItems = order.items.filter((item) => !item.appendedAt);
   const appendedItems = order.items.filter((item) => item.appendedAt);
   const latestAppendTime = appendedItems.reduce<string | null>(
@@ -502,19 +511,8 @@ function KitchenOrderCard({
         <span className={`kd-service-badge ${serviceType}`}>
           {kitchenServiceLabel(serviceType)}
         </span>
-        <span className="kd-card-source">
-          {order.customerName || "Kitchen order"}
-          {!showStation && stationNames.length > 0
-            ? ` \u2022 ${stationNames.join(", ")}`
-            : ""}
-        </span>
         <time dateTime={order.createdAt}>{fmtTime(order.createdAt)}</time>
       </div>
-      {showStation ? (
-        <div className="kd-card-station">
-          Station: {stationNames.join(", ") || "Unassigned"}
-        </div>
-      ) : null}
 
       <div className="kd-card-items">
         {order.items.length === 0 ? (
@@ -603,6 +601,7 @@ export function KitchenDashboardPage({
   const knownKitchenTicketKeysRef = useRef<Set<string>>(new Set());
   const kitchenRealtimeReadyRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const actionLocksRef = useRef<Set<string>>(new Set());
   const sortControlRef = useRef<HTMLDivElement | null>(null);
   const sortTriggerRef = useRef<HTMLButtonElement | null>(null);
   const sortOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -769,8 +768,10 @@ export function KitchenDashboardPage({
       }, 120);
     };
     const unsubscribe = getRestaurantEventStream(restaurantId).subscribe((event) => {
-      if (!["orders", "order_items", "restaurant_tables"].includes(event.table)) return;
-      if (event.table === "order_items") setRealtimeNotice("Kitchen queue updated.");
+      const paymentEvent = event.type.startsWith("PAYMENT_");
+      if (!kitchenQueueRealtimeTables.has(event.table) && !paymentEvent) return;
+      if (event.table === "order_items" || paymentEvent)
+        setRealtimeNotice("Kitchen queue updated.");
       refresh();
     }, (status) => {
       setRealtimeState(status);
@@ -796,8 +797,10 @@ export function KitchenDashboardPage({
   }
 
   async function handleStart(order: KitchenOrder) {
+    const ticketKey = kitchenTicketKey(order);
+    if (actionLocksRef.current.has(ticketKey)) return;
+    actionLocksRef.current.add(ticketKey);
     try {
-      const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
       const targetStationId = resolveActionStationId(order);
     console.log("START PREPARING");
@@ -826,14 +829,23 @@ export function KitchenDashboardPage({
       );
       await refreshStationOrders(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed.");
+      if (isTerminalKitchenError(e)) {
+        setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey));
+        setError(null);
+        await refreshStationOrders(false);
+      } else {
+        setError(e instanceof Error ? e.message : "Failed.");
+      }
     } finally {
+      actionLocksRef.current.delete(ticketKey);
       setActionId(null);
     }
   }
   async function handleReady(order: KitchenOrder) {
+    const ticketKey = kitchenTicketKey(order);
+    if (actionLocksRef.current.has(ticketKey)) return;
+    actionLocksRef.current.add(ticketKey);
     try {
-      const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
       const targetStationId = resolveActionStationId(order);
       const updated = await markOrderReady(
@@ -855,14 +867,23 @@ export function KitchenDashboardPage({
       );
       await refreshStationOrders(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed.");
+      if (isTerminalKitchenError(e)) {
+        setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey));
+        setError(null);
+        await refreshStationOrders(false);
+      } else {
+        setError(e instanceof Error ? e.message : "Failed.");
+      }
     } finally {
+      actionLocksRef.current.delete(ticketKey);
       setActionId(null);
     }
   }
   async function handleComplete(order: KitchenOrder) {
+    const ticketKey = kitchenTicketKey(order);
+    if (actionLocksRef.current.has(ticketKey)) return;
+    actionLocksRef.current.add(ticketKey);
     try {
-      const ticketKey = kitchenTicketKey(order);
       setActionId(ticketKey);
       const targetStationId = resolveActionStationId(order);
       await markOrderCompleted(
@@ -873,8 +894,15 @@ export function KitchenDashboardPage({
       setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey));
       await refreshStationOrders(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed.");
+      if (isTerminalKitchenError(e)) {
+        setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey));
+        setError(null);
+        await refreshStationOrders(false);
+      } else {
+        setError(e instanceof Error ? e.message : "Failed.");
+      }
     } finally {
+      actionLocksRef.current.delete(ticketKey);
       setActionId(null);
     }
   }
@@ -1183,7 +1211,6 @@ export function KitchenDashboardPage({
                   onStart={handleStart}
                   onReady={handleReady}
                   onComplete={handleComplete}
-                  showStation={selectedStationId === "all"}
                 />
               ))}
             </div>

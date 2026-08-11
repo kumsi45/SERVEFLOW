@@ -7,10 +7,12 @@ const page = read("src/modules/waiter-dashboard/pages/WaiterDashboardPage.tsx");
 const styles = read("src/modules/waiter-dashboard/styles/waiterDashboard.css");
 
 describe("waiter active table phase A4 contract", () => {
-  it("renders the active table around order, kitchen, total, and two primary actions", () => {
+  it("renders the active table around order, total, and two primary actions", () => {
     expect(page).toContain('className="a4-session-header"');
     expect(page).toContain("<h2>ORDER</h2>");
-    expect(page).toContain("<h2>KITCHEN</h2>");
+    expect(page).not.toContain("<h2>KITCHEN</h2>");
+    expect(page).not.toContain('aria-label="Kitchen"');
+    expect(page).not.toContain('className="a4-kitchen-list"');
     expect(page).toContain("<span>TOTAL</span>");
     expect(page).toContain("+ ADD ITEMS");
     expect(page).toContain("REQUEST BILL");
@@ -27,13 +29,11 @@ describe("waiter active table phase A4 contract", () => {
     expect(activeTable).not.toContain("Payment Due");
   });
 
-  it("uses presentation-only item aggregation and waiter-facing kitchen labels", () => {
+  it("uses presentation-only item aggregation and waiter-facing ready labels", () => {
     expect(page).toContain("const orderItems = sessionDetail ? sessionOrderItems(sessionDetail) : []");
     expect(page).toContain("const kitchenItems = sessionDetail ? sessionKitchenItems(sessionDetail) : []");
     expect(page).toContain('status === "ready"');
     expect(page).toContain('"READY"');
-    expect(page).toContain('"COOKING"');
-    expect(page).toContain('"SENT"');
     expect(page).toContain('"SERVED"');
   });
 
@@ -46,10 +46,9 @@ describe("waiter active table phase A4 contract", () => {
   });
 
   it("defines tablet-first responsive A4 layout and large actions", () => {
-    expect(styles).toContain(".a4-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)");
+    expect(styles).toContain(".a4-columns{display:grid;grid-template-columns:minmax(0,1fr)");
     expect(styles).toContain(".a4-actions button{min-height:56px");
     expect(styles).toContain("@media(max-width:820px)");
-    expect(styles).toContain(".a4-columns{grid-template-columns:1fr}");
     expect(styles).toContain("@media(max-width:520px)");
   });
 });

@@ -141,7 +141,7 @@ function sessionKitchenStatus(detail: WaiterSessionDetail) {
       : status === "ready"
         ? "Ready"
         : status === "accepted"
-          ? "Waiting Kitchen"
+          ? "Sent"
           : "Not released";
 }
 function sessionAllowsItems(detail: WaiterSessionDetail) {
@@ -200,24 +200,6 @@ function itemIcon(name: string) {
   if (value.includes("water")) return "💧";
   if (value.includes("cake") || value.includes("dessert")) return "🍰";
   return "•";
-}
-function waiterKitchenStatus(status: string) {
-  return status === "ready"
-    ? "READY"
-    : status === "completed"
-      ? "SERVED"
-      : status === "preparing"
-        ? "COOKING"
-        : "SENT";
-}
-function kitchenStatusClass(status: string) {
-  return status === "ready"
-    ? "ready"
-    : status === "completed"
-      ? "served"
-      : status === "preparing"
-        ? "cooking"
-        : "sent";
 }
 function sessionOrderItems(detail: WaiterSessionDetail) {
   const grouped = new Map<
@@ -680,7 +662,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     }
   }
   async function editPendingItemNote(id: string, current: string | null) {
-    const next = window.prompt("Kitchen note", current ?? "");
+    const next = window.prompt("Item note", current ?? "");
     if (next === null) return;
     try {
       setError(null);
@@ -806,7 +788,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
           ) : (
             <section className="a2-grid" aria-label="My assigned tables">
               {filtered.map(({ table, metric, state }) => {
-                const label = ({ free: "Free", active: "Active", ready: "Kitchen Ready", bill: "Bill" } as const)[state];
+                const label = ({ free: "Free", active: "Active", ready: "Ready", bill: "Bill" } as const)[state];
                 return (
                   <button type="button" key={table.tableId} className={`a2-table ${state}`} onClick={() => openTable(table)} aria-label={`Table ${table.tableNumber}, ${label}`}>
                     <header><strong>{table.tableLabel || `Table ${table.tableNumber}`}</strong><span><i aria-hidden="true" />{label}</span></header>
@@ -932,7 +914,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                 </div>
               ) : null}
               <div className="a4-columns">
-                <section className="a4-panel" aria-label="Order">
+                <section className="a4-panel a4-order-panel" aria-label="Order">
                   <h2>ORDER</h2>
                   <div className="a4-order-list">
                     {orderItems.map((item) => (
@@ -943,25 +925,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                         {item.notes ? <small>{item.notes}</small> : null}
                       </article>
                     ))}
-                  </div>
-                </section>
-                <section className="a4-panel" aria-label="Kitchen">
-                  <h2>KITCHEN</h2>
-                  <div className="a4-kitchen-list">
-                    {kitchenItems.map((item) => {
-                      const label = waiterKitchenStatus(item.kitchenStatus);
-                      return (
-                        <article
-                          key={item.id}
-                          className={kitchenStatusClass(item.kitchenStatus)}
-                        >
-                          <span>
-                            {item.name} x{item.quantity}
-                          </span>
-                          <b>{label}</b>
-                        </article>
-                      );
-                    })}
                   </div>
                   {hasReadyItems ? (
                     <div className="a4-ready-box" role="status">
@@ -1088,7 +1051,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
               <button onClick={() => setMoveOpen(false)}>×</button>
             </header>
             <p>
-              Invoices, payments, kitchen tickets, and customer history stay
+              Invoices, item progress, and customer history stay
               attached to this session. No records will be copied.
             </p>
             <label>
@@ -1177,7 +1140,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
             </header>
             <p>
               Choose how many of each item should move to the second bill. The
-              dining session and kitchen batches remain unchanged.
+              table record and item progress remain unchanged.
             </p>
             <div className="w106-split-items">
               {unpaidItems.map((item) => {

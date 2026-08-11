@@ -173,15 +173,42 @@ describe("kitchen dashboard card workspace", () => {
     expect(page).toContain("order.stationProgress[0]?.stationId");
     expect(page).toContain("resolveActionStationId(order) !== null");
     expect(page).not.toContain('selectedStationId !== "all";\n\n  const totalActive');
-    expect(page).toContain('showStation={selectedStationId === "all"}');
-    expect(page).toContain('className="kd-card-station"');
+    expect(page).not.toContain('showStation={selectedStationId === "all"}');
+    expect(page).not.toContain('className="kd-card-station"');
+    expect(page).not.toContain('className="kd-card-source"');
+    expect(page).not.toContain('"Kitchen order"');
     expect(page).toContain("const totalActive = visibleOrders.length");
+  });
+
+  it("cleans stale closed tickets and prevents duplicate kitchen actions", () => {
+    expect(page).toContain("const actionLocksRef = useRef<Set<string>>(new Set())");
+    expect(page).toContain("if (actionLocksRef.current.has(ticketKey)) return;");
+    expect(page).toContain("actionLocksRef.current.add(ticketKey);");
+    expect(page).toContain("actionLocksRef.current.delete(ticketKey);");
+    expect(page).toContain("function isTerminalKitchenError(error: unknown)");
+    expect(page).toContain("Order closed\\.");
+    expect(page).toContain("Batch completed\\.");
+    expect(page).toContain("setOrders((p) => p.filter((o) => kitchenTicketKey(o) !== ticketKey))");
+    expect(page).toContain("await refreshStationOrders(false);");
+  });
+
+  it("refreshes the kitchen queue from central order, item, table, and payment events", () => {
+    expect(page).toContain("const kitchenQueueRealtimeTables = new Set");
+    expect(page).toContain('"orders"');
+    expect(page).toContain('"order_items"');
+    expect(page).toContain('"restaurant_tables"');
+    expect(page).toContain('event.type.startsWith("PAYMENT_")');
+    expect(page).not.toContain('"order_invoices"');
   });
 
   it("accepts canonical and compatible station transition response shapes", () => {
     expect(service).toContain("isKitchenOrderStatus(row.operational_status)");
     expect(service).toContain(": row.status;");
     expect(service).toContain("isKitchenOrderStatus(operationalStatus)");
+    expect(service).toContain("function transitionOrderRow(value: unknown): OrderRow | null");
+    expect(service).toContain("Array.isArray(value) ? value[0] : value");
+    expect(service).toContain("typeof row.total_price !== \"undefined\"");
+    expect(service).toContain("typeof (row as { total?: unknown }).total !== \"undefined\"");
   });
 
   it("uses station batch status for queue cards instead of aggregate order status", () => {
