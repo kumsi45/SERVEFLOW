@@ -69,6 +69,14 @@ export type WaiterCancellationRequest = {
   currentPaymentStatus: string;
 };
 
+export type WaiterAssistanceRequest = {
+  id: string;
+  orderId: string;
+  tableId: string;
+  status: "pending" | "acknowledged";
+  requestedAt: string;
+};
+
 export type WaiterSessionDetail = {
   orderId: string;
   sessionNumber: string;

@@ -22,9 +22,14 @@ import {
   moveWaiterDiningSession,
   requestWaiterCancellation,
   requestWaiterFinalBill,
+  resolveWaiterAssistanceRequest,
   splitWaiterBill,
   updateWaiterPendingItemNote,
 } from "../services/waiterDashboardService";
+import {
+  activeWaiterAssistanceRequests,
+  WAITER_ASSISTANCE_STALE_MS,
+} from "../services/waiterAssistance";
 import {
   buildWaiterTableCards,
   filterWaiterTableCards,
@@ -34,6 +39,7 @@ import {
 import type {
   WaiterDashboardSummary,
   WaiterDashboardTable,
+  WaiterAssistanceRequest,
   WaiterSessionInvoice,
   WaiterSessionDetail,
   WaiterTableMetric,
@@ -335,6 +341,8 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const [authWorking, setAuthWorking] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const [assistanceRequests, setAssistanceRequests] = useState<WaiterAssistanceRequest[]>([]);
+  const [resolvingAssistanceIds, setResolvingAssistanceIds] = useState<Set<string>>(new Set());
   const [readyAlerts, setReadyAlerts] = useState<Set<string>>(new Set());
   const [serving, setServing] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -359,7 +367,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const idleTimer = useRef<number | null>(null);
   const knownReadyRef = useRef<Set<string>>(new Set());
   const readyHydratedRef = useRef(false);
-  const knownAssistanceRef = useRef(new Set<string>());
   const autoOpenedRef = useRef(false);
   const initialLoadStartedRef = useRef(false);
 
@@ -370,23 +377,22 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
 
     const restaurantId = rows[0]?.restaurantId;
     if (!restaurantId) {
+      setAssistanceRequests([]);
       setMetrics(new Map());
       setMetricsHydrated(true);
       return;
     }
 
     void Promise.all([
-      loadWaiterAssistanceRequests(restaurantId),
+      loadWaiterAssistanceRequests(restaurantId, rows.map((row) => row.tableId)),
       loadWaiterTableMetrics(
         rows.flatMap((row) => (row.activeOrderId ? [row.activeOrderId] : [])),
       ),
     ]).then(([requests, nextMetrics]) => {
-      const newRequest = requests.find((request) => !knownAssistanceRef.current.has(request.id));
-      if (newRequest) {
-        const requestTable = rows.find((row) => row.tableId === newRequest.table_id);
-        setSessionNotice(`Table ${requestTable?.tableNumber ?? ""} needs assistance.`.replace("Table  needs", "A table needs"));
-      }
-      knownAssistanceRef.current = new Set(requests.map((request) => request.id));
+      setAssistanceRequests(activeWaiterAssistanceRequests(
+        requests,
+        new Set(rows.map((row) => row.tableId)),
+      ));
       const readyIds = new Set(
         rows
           .filter(
@@ -412,12 +418,16 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       setReadyAlerts(readyIds);
       setMetrics(nextMetrics);
       setMetricsHydrated(true);
-    }).catch(() => setMetricsHydrated(true));
+    }).catch(() => {
+      setAssistanceRequests([]);
+      setMetricsHydrated(true);
+    });
   }, [restaurantSlug]);
   const exitWaiterSession = useCallback((reason?: "expired") => {
     const logout = signOutWaiter();
     setTables([]);
     setSummary(null);
+    setAssistanceRequests([]);
     setSessionTable(null);
     setSessionDetail(null);
     setMetrics(new Map());
@@ -452,6 +462,22 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       })
       .finally(() => setLoading(false));
   }, [loadTables]);
+  useEffect(() => {
+    if (!assistanceRequests.length) return;
+    const nextExpiry = Math.min(
+      ...assistanceRequests.map(
+        (request) => Date.parse(request.requestedAt) + WAITER_ASSISTANCE_STALE_MS,
+      ),
+    );
+    if (!Number.isFinite(nextExpiry)) return;
+    const timer = window.setTimeout(() => {
+      setAssistanceRequests((current) => activeWaiterAssistanceRequests(
+        current,
+        new Set(tables.map((table) => table.tableId)),
+      ));
+    }, Math.max(0, nextExpiry - Date.now() + 25));
+    return () => window.clearTimeout(timer);
+  }, [assistanceRequests, tables]);
   useEffect(() => {
     if (
       !loading &&
@@ -715,6 +741,28 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       );
     }
   }
+  async function resolveAssistance(request: WaiterAssistanceRequest) {
+    if (resolvingAssistanceIds.has(request.id)) return;
+    setResolvingAssistanceIds((current) => new Set(current).add(request.id));
+    setAssistanceRequests((current) => current.filter((item) => item.id !== request.id));
+    try {
+      await resolveWaiterAssistanceRequest(request.id);
+      void loadTables().catch(() => undefined);
+    } catch {
+      setAssistanceRequests((current) =>
+        current.some((item) => item.id === request.id)
+          ? current
+          : [request, ...current],
+      );
+      setError("Could not update. Try again.");
+    } finally {
+      setResolvingAssistanceIds((current) => {
+        const next = new Set(current);
+        next.delete(request.id);
+        return next;
+      });
+    }
+  }
   function openCancellation(target: CancellationTarget) {
     setCancellationReason("Customer changed mind");
     setCancellationNote("");
@@ -847,6 +895,28 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
         </time>
       </header>
       )}
+      {assistanceRequests.length ? (
+        <section className="a2-assistance-alerts" aria-label="Active assistance requests">
+          {assistanceRequests.map((request) => {
+            const requestTable = tables.find((table) => table.tableId === request.tableId);
+            if (!requestTable) return null;
+            return (
+              <div className="a2-assistance-alert" role="alert" key={request.id}>
+                <span aria-hidden="true">🔔</span>
+                <strong>TABLE {requestTable.tableNumber} NEEDS HELP</strong>
+                <button
+                  type="button"
+                  disabled={resolvingAssistanceIds.has(request.id)}
+                  onClick={() => void resolveAssistance(request)}
+                  aria-label={`Resolve assistance request for Table ${requestTable.tableNumber}`}
+                >
+                  {resolvingAssistanceIds.has(request.id) ? "UPDATING" : "DONE"}
+                </button>
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
       {sessionNotice && !sessionTable ? (
         <div className="a2-notice" role="alert">
           <span>🔔</span>

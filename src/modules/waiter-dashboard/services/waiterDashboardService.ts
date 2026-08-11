@@ -9,11 +9,13 @@ import {
 import type {
   WaiterDashboardTable,
   WaiterCancellationRequest,
+  WaiterAssistanceRequest,
   WaiterSessionDetail,
   WaiterSessionInvoice,
   WaiterTableMetric,
   WaiterTableStatus,
 } from "../types";
+import { WAITER_ASSISTANCE_STALE_MS } from "./waiterAssistance";
 
 type WaiterDashboardRow = {
   restaurant_id: string;
@@ -65,13 +67,41 @@ function normalizeTable(row: WaiterDashboardRow): WaiterDashboardTable {
   };
 }
 
-export async function loadWaiterAssistanceRequests(restaurantId: string) {
+export async function loadWaiterAssistanceRequests(
+  restaurantId: string,
+  assignedTableIds: readonly string[],
+): Promise<WaiterAssistanceRequest[]> {
+  if (!assignedTableIds.length) return [];
+  const cutoff = new Date(Date.now() - WAITER_ASSISTANCE_STALE_MS).toISOString();
   const { data, error } = await waiterSupabase.from("waiter_assistance_requests")
-    .select("id,order_id,table_id,requested_at")
-    .eq("restaurant_id", restaurantId).eq("status", "pending")
+    .select("id,order_id,table_id,status,requested_at")
+    .eq("restaurant_id", restaurantId)
+    .in("status", ["pending", "acknowledged"])
+    .in("table_id", assignedTableIds)
+    .gte("requested_at", cutoff)
     .order("requested_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((request) => ({
+    id: request.id,
+    orderId: request.order_id,
+    tableId: request.table_id,
+    status: request.status as WaiterAssistanceRequest["status"],
+    requestedAt: request.requested_at,
+  }));
+}
+
+export async function resolveWaiterAssistanceRequest(requestId: string) {
+  const { data, error } = await waiterSupabase.rpc(
+    "resolve_waiter_assistance_request",
+    { target_request_id: requestId },
+  );
+  if (error) throw new Error(error.message);
+  return data as {
+    request_id: string;
+    status: "resolved";
+    resolved_at: string;
+    resolved_by_staff_id: string;
+  };
 }
 
 export async function loadWaiterSessionDetail(
