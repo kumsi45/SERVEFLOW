@@ -20,9 +20,9 @@ import {
   loadWaiterTableMetrics,
   markWaiterOrderServed,
   moveWaiterDiningSession,
+  requestWaiterCancellation,
   requestWaiterFinalBill,
   splitWaiterBill,
-  updateWaiterPendingItem,
   updateWaiterPendingItemNote,
 } from "../services/waiterDashboardService";
 import {
@@ -34,6 +34,7 @@ import {
 import type {
   WaiterDashboardSummary,
   WaiterDashboardTable,
+  WaiterSessionInvoice,
   WaiterSessionDetail,
   WaiterTableMetric,
 } from "../types";
@@ -43,7 +44,22 @@ import { syncWaiterOrderQueue } from "../../waiter-order/services/waiterOrderSer
 type Props = { restaurantSlug: string };
 type Connection = "connecting" | "connected" | "reconnecting";
 type ProductivityView = "tables" | "orders";
+type CancellationTarget =
+  | { scope: "order"; detail: WaiterSessionDetail }
+  | {
+      scope: "item";
+      detail: WaiterSessionDetail;
+      item: WaiterSessionInvoice["items"][number];
+    };
 const IDLE_LOCK_MS = 5 * 60 * 1000;
+const CANCELLATION_REASONS = [
+  "Customer changed mind",
+  "Wrong item entered",
+  "Duplicate item",
+  "Wrong table",
+  "Customer requested different item",
+  "Other",
+] as const;
 
 function summaryFrom(
   tables: WaiterDashboardTable[],
@@ -204,7 +220,13 @@ function itemIcon(name: string) {
 function sessionOrderItems(detail: WaiterSessionDetail) {
   const grouped = new Map<
     string,
-    { name: string; quantity: number; notes: string | null; total: number }
+    {
+      name: string;
+      quantity: number;
+      notes: string | null;
+      total: number;
+      cancellationRequested: boolean;
+    }
   >();
   for (const item of detail.invoices.flatMap((invoice) => invoice.items)) {
     const key = `${item.name}:${item.notes ?? ""}`;
@@ -212,12 +234,14 @@ function sessionOrderItems(detail: WaiterSessionDetail) {
     if (existing) {
       existing.quantity += item.quantity;
       existing.total += item.quantity * item.price;
+      existing.cancellationRequested ||= Boolean(item.cancellationRequest);
     } else {
       grouped.set(key, {
         name: item.name,
         quantity: item.quantity,
         notes: item.notes,
         total: item.quantity * item.price,
+        cancellationRequested: Boolean(item.cancellationRequest),
       });
     }
   }
@@ -230,6 +254,29 @@ function readyKitchenItems(detail: WaiterSessionDetail) {
   return sessionKitchenItems(detail).filter(
     (item) => item.kitchenStatus === "ready",
   );
+}
+function canRequestItemCancellation(item: WaiterSessionInvoice["items"][number]) {
+  return (
+    !item.cancellationRequest &&
+    !["completed", "served", "delivered", "cancelled", "voided"].includes(
+      item.kitchenStatus,
+    )
+  );
+}
+function kitchenStatusName(status: string) {
+  return status === "held"
+    ? "Not released"
+    : status === "paid" || status === "accepted"
+      ? "Sent"
+      : status === "preparing"
+        ? "Preparing"
+        : status === "ready"
+          ? "Ready"
+          : status === "completed"
+            ? "Served"
+            : status === "cancelled"
+              ? "Cancelled"
+              : status;
 }
 function playReadySound() {
   const AudioContextClass =
@@ -298,6 +345,12 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
     new Map(),
   );
   const [splitting, setSplitting] = useState(false);
+  const [cancellationTarget, setCancellationTarget] =
+    useState<CancellationTarget | null>(null);
+  const [cancellationReason, setCancellationReason] =
+    useState<(typeof CANCELLATION_REASONS)[number]>("Customer changed mind");
+  const [cancellationNote, setCancellationNote] = useState("");
+  const [requestingCancellation, setRequestingCancellation] = useState(false);
   const [requestingBill, setRequestingBill] = useState(false);
   const [billConfirmOpen, setBillConfirmOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -382,7 +435,7 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const connection: Connection = useTenantRealtime({
     channelName: "waiter-shared-tablet",
     restaurantId: summary?.restaurantId ?? "",
-    tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "waiter_assistance_requests"],
+    tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "order_cancellation_requests", "waiter_assistance_requests"],
     client: waiterSupabase,
     refreshOnConnect: false,
     refresh: () => loadTables().catch((e) => setError(e instanceof Error ? e.message : "Realtime update failed.")),
@@ -643,24 +696,6 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       setRequestingBill(false);
     }
   }
-  async function editPendingItem(id: string, quantity: number) {
-    try {
-      setError(null);
-      await updateWaiterPendingItem(id, quantity);
-      if (sessionTable?.activeOrderId)
-        setSessionDetail(
-          await loadWaiterSessionDetail(
-            sessionTable.activeOrderId,
-            sessionTable.restaurantId,
-          ),
-        );
-      await loadTables();
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not update pending item.",
-      );
-    }
-  }
   async function editPendingItemNote(id: string, current: string | null) {
     const next = window.prompt("Item note", current ?? "");
     if (next === null) return;
@@ -678,6 +713,49 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
       setError(
         e instanceof Error ? e.message : "Could not update the item note.",
       );
+    }
+  }
+  function openCancellation(target: CancellationTarget) {
+    setCancellationReason("Customer changed mind");
+    setCancellationNote("");
+    setMoreOpen(false);
+    setCancellationTarget(target);
+  }
+  async function submitCancellationRequest() {
+    if (!sessionTable?.activeOrderId || !cancellationTarget) return;
+    if (cancellationReason === "Other" && !cancellationNote.trim()) {
+      setError("Add a short explanation for Other.");
+      return;
+    }
+    try {
+      setRequestingCancellation(true);
+      setError(null);
+      await requestWaiterCancellation({
+        orderId: sessionTable.activeOrderId,
+        orderItemId:
+          cancellationTarget.scope === "item"
+            ? cancellationTarget.item.id
+            : null,
+        reason: cancellationReason,
+        note: cancellationNote,
+      });
+      setCancellationTarget(null);
+      setSessionNotice("Cancellation Requested. Waiting for review.");
+      setSessionDetail(
+        await loadWaiterSessionDetail(
+          sessionTable.activeOrderId,
+          sessionTable.restaurantId,
+        ),
+      );
+      await loadTables();
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Could not request cancellation review.",
+      );
+    } finally {
+      setRequestingCancellation(false);
     }
   }
 
@@ -713,6 +791,15 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
   const orderItems = sessionDetail ? sessionOrderItems(sessionDetail) : [];
   const kitchenItems = sessionDetail ? sessionKitchenItems(sessionDetail) : [];
   const readyItems = sessionDetail ? readyKitchenItems(sessionDetail) : [];
+  const cancellableItems = kitchenItems.filter(canRequestItemCancellation);
+  const orderCancellationRequested = Boolean(sessionDetail?.cancellationRequest);
+  const orderCancellationAllowed = Boolean(
+    sessionDetail &&
+      !orderCancellationRequested &&
+      sessionDetail.diningSessionStatus === "open" &&
+      sessionDetail.orderStatus !== "closed" &&
+      cancellableItems.length > 0,
+  );
   const hasReadyItems = readyItems.length > 0;
   const billAlreadyRequested = Boolean(
     sessionDetail?.billRequestedAt || sessionDetail?.billingStartedAt,
@@ -921,6 +1008,12 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                       <article key={`${item.name}:${item.notes ?? ""}`}>
                         <span>
                           {item.quantity} x {item.name}
+                          {item.cancellationRequested ? (
+                            <small className="a4-cancel-state">
+                              Cancellation Requested
+                              <b>Waiting for review</b>
+                            </small>
+                          ) : null}
                         </span>
                         {item.notes ? <small>{item.notes}</small> : null}
                       </article>
@@ -997,34 +1090,62 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
               >
                 Transfer Table
               </button>
-              {kitchenItems.some(
-                (item) =>
-                  item.kitchenStatus === "held" ||
-                  item.kitchenStatus === "accepted",
-              ) ? (
+              <button
+                type="button"
+                disabled={!orderCancellationAllowed || !sessionDetail}
+                onClick={() =>
+                  sessionDetail
+                    ? openCancellation({ scope: "order", detail: sessionDetail })
+                    : undefined
+                }
+              >
+                {orderCancellationRequested
+                  ? "Cancellation Requested"
+                  : "Request Order Cancellation"}
+              </button>
+              {kitchenItems.length ? (
                 <div className="a4-more-items">
                   {kitchenItems
-                    .filter(
-                      (item) =>
-                        item.kitchenStatus === "held" ||
-                        item.kitchenStatus === "accepted",
-                    )
                     .map((item) => (
                       <article key={item.id}>
                         <span>
                           {item.name} x{item.quantity}
+                          <small>
+                            Kitchen: {kitchenStatusName(item.kitchenStatus)}
+                          </small>
+                          {item.cancellationRequest ? (
+                            <small className="a4-cancel-state compact">
+                              Cancellation Requested
+                            </small>
+                          ) : null}
                         </span>
+                        {item.kitchenStatus === "held" ||
+                        item.kitchenStatus === "accepted" ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void editPendingItemNote(item.id, item.notes)
+                            }
+                          >
+                            Add Note
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          onClick={() => void editPendingItemNote(item.id, item.notes)}
+                          disabled={!sessionDetail || !canRequestItemCancellation(item)}
+                          onClick={() =>
+                            sessionDetail
+                              ? openCancellation({
+                                  scope: "item",
+                                  detail: sessionDetail,
+                                  item,
+                                })
+                              : undefined
+                          }
                         >
-                          Add Note
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void editPendingItem(item.id, 0)}
-                        >
-                          Cancel Item
+                          {item.cancellationRequest
+                            ? "Requested"
+                            : "Request Cancellation"}
                         </button>
                       </article>
                     ))}
@@ -1117,6 +1238,145 @@ export function WaiterDashboardPage({ restaurantSlug }: Props) {
                 onClick={() => void requestBill()}
               >
                 {requestingBill ? "REQUESTING..." : "REQUEST"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {cancellationTarget && sessionTable ? (
+        <div
+          className="w2-overlay"
+          onClick={() =>
+            requestingCancellation ? undefined : setCancellationTarget(null)
+          }
+        >
+          <section
+            className="a4-cancel-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              cancellationTarget.scope === "item"
+                ? "Cancel order item"
+                : "Cancel order"
+            }
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <small>
+                  {cancellationTarget.scope === "item"
+                    ? "Cancel Order Item"
+                    : "Cancel Order"}
+                </small>
+                <h2>Request Cancellation</h2>
+              </div>
+              <button
+                type="button"
+                disabled={requestingCancellation}
+                onClick={() => setCancellationTarget(null)}
+              >
+                x
+              </button>
+            </header>
+            <dl>
+              <div>
+                <dt>Table</dt>
+                <dd>Table {sessionTable.tableNumber}</dd>
+              </div>
+              <div>
+                <dt>Order</dt>
+                <dd>#{cancellationTarget.detail.sessionNumber}</dd>
+              </div>
+              {cancellationTarget.scope === "item" ? (
+                <div>
+                  <dt>Item</dt>
+                  <dd>
+                    {cancellationTarget.item.quantity} x{" "}
+                    {cancellationTarget.item.name}
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Current status</dt>
+                <dd>
+                  {cancellationTarget.scope === "item"
+                    ? kitchenStatusName(cancellationTarget.item.kitchenStatus)
+                    : kitchenStatusName(
+                        cancellationTarget.detail.invoices[0]?.kitchenStatus ??
+                          "mixed",
+                      )}
+                </dd>
+              </div>
+              <div>
+                <dt>Payment</dt>
+                <dd>
+                  {cancellationTarget.scope === "item"
+                    ? paymentName(cancellationTarget.item.invoiceStatus)
+                    : cancellationTarget.detail.invoices
+                        .map((invoice) => paymentName(invoice.status))
+                        .filter((value, index, values) => values.indexOf(value) === index)
+                        .join(", ")}
+                </dd>
+              </div>
+            </dl>
+            <label>
+              <span>Cancellation Reason</span>
+              <select
+                value={cancellationReason}
+                onChange={(event) =>
+                  setCancellationReason(
+                    event.target.value as (typeof CANCELLATION_REASONS)[number],
+                  )
+                }
+              >
+                {CANCELLATION_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reason}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>
+                Note{" "}
+                {cancellationReason === "Other" ? "(Required)" : "(Optional)"}
+              </span>
+              <textarea
+                value={cancellationNote}
+                maxLength={300}
+                rows={3}
+                onChange={(event) => setCancellationNote(event.target.value)}
+                placeholder={
+                  cancellationReason === "Other"
+                    ? "Add a short explanation"
+                    : "Add a short note"
+                }
+              />
+            </label>
+            <p>
+              This sends a review request only. Payment, kitchen progress, and
+              the service location remain unchanged.
+            </p>
+            <div>
+              <button
+                type="button"
+                disabled={requestingCancellation}
+                onClick={() => setCancellationTarget(null)}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={
+                  requestingCancellation ||
+                  (cancellationReason === "Other" && !cancellationNote.trim())
+                }
+                onClick={() => void submitCancellationRequest()}
+              >
+                {requestingCancellation
+                  ? "Requesting..."
+                  : "Request Cancellation"}
               </button>
             </div>
           </section>

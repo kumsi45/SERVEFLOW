@@ -53,6 +53,11 @@ import {
   type ServiceLocationCardModel,
   type ServiceLocationStatus,
 } from "../components/ServiceLocationQuickSwitch";
+import {
+  handleCashierCancellationRequest,
+  loadCashierCancellationRequests,
+  type CashierCancellationRequest,
+} from "../services/cashierCancellationService";
 import "../styles/cashierDashboard.css";
 
 function fmtOrderLabel(order: Pick<CashierOrder, "displayNumber" | "id">) {
@@ -409,6 +414,22 @@ type ShiftActivity = {
   metadata: Record<string, unknown> | null;
   created_at: string;
 };
+
+function cancellationStatusLabel(value: string, kind: "payment" | "kitchen") {
+  const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (kind === "payment") return paymentLabel(normalized);
+  if (["", "none", "held", "pending", "waiting payment", "new"].includes(normalized))
+    return "Not started";
+  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function cancellationItemsLabel(request: CashierCancellationRequest) {
+  const visible = request.items.slice(0, 3)
+    .map((item) => `${item.quantity}× ${item.name}`);
+  const hidden = Math.max(0, request.items.length - visible.length);
+  const preview = `${visible.join(" · ")}${hidden ? ` · +${hidden} more` : ""}`;
+  return request.scope === "order" ? `Entire Order${preview ? ` · ${preview}` : ""}` : preview;
+}
 
 type QueueTab = "pending" | "paid" | "preparing" | "ready" | "completed";
 const QUEUE_PRESENTATION = {
@@ -1508,6 +1529,11 @@ export function CashierDashboardPage({
     useState<string | null>(null);
   const [workspaceSearch, setWorkspaceSearch] = useState("");
   const [activityCollapsed, setActivityCollapsed] = useState(false);
+  const [cancellationRequestsOpen, setCancellationRequestsOpen] = useState(false);
+  const [cancellationRequests, setCancellationRequests] = useState<CashierCancellationRequest[]>([]);
+  const [cancellationRequestsError, setCancellationRequestsError] = useState<string | null>(null);
+  const [cancellationConfirmation, setCancellationConfirmation] = useState<CashierCancellationRequest | null>(null);
+  const [cancellationWorkingId, setCancellationWorkingId] = useState<string | null>(null);
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [categories, setCategories] = useState<MenuCategoryRow[]>([]);
   const [menuItems, setMenuItems] = useState<CashierMenuItem[]>([]);
@@ -1579,6 +1605,21 @@ export function CashierDashboardPage({
   const dashboardHydratedRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const checkoutOpenerRef = useRef<HTMLElement | null>(null);
+  const cancellationOpenerRef = useRef<HTMLElement | null>(null);
+
+  function openCancellationRequests() {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement)
+      cancellationOpenerRef.current = activeElement;
+    setCancellationRequestsOpen(true);
+  }
+
+  function closeCancellationRequests() {
+    if (cancellationWorkingId) return;
+    setCancellationConfirmation(null);
+    setCancellationRequestsOpen(false);
+    window.setTimeout(() => cancellationOpenerRef.current?.focus(), 0);
+  }
 
   function hasUnsavedCheckoutChanges() {
     if (!drawerOrder) return false;
@@ -1634,11 +1675,24 @@ export function CashierDashboardPage({
         event.preventDefault();
         document.querySelector<HTMLInputElement>(".cd-header-search input")?.focus();
       }
-      if (event.key === "Escape" && drawerOrder) closeCheckoutDrawer();
+      if (event.key === "Escape" && cancellationConfirmation && !cancellationWorkingId) {
+        setCancellationConfirmation(null);
+      } else if (event.key === "Escape" && cancellationRequestsOpen) {
+        closeCancellationRequests();
+      } else if (event.key === "Escape" && drawerOrder) closeCheckoutDrawer();
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, [drawerOrder, collectionPaymentMethod, ownerDuplicateOverride, paymentNote]);
+  }, [cancellationConfirmation, cancellationRequestsOpen, cancellationWorkingId, drawerOrder, collectionPaymentMethod, ownerDuplicateOverride, paymentNote]);
+
+  useEffect(() => {
+    if (!cancellationRequestsOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(() =>
+      document.querySelector<HTMLButtonElement>(".cd-cancellation-modal-close")?.focus(), 0);
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [cancellationRequestsOpen]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1727,6 +1781,7 @@ export function CashierDashboardPage({
       { data: activityRows },
       workflowState,
       { data: paymentMethodRows, error: paymentMethodsError },
+      cancellationState,
     ] = await Promise.all([
       supabase
         .from("restaurant_staff")
@@ -1771,6 +1826,12 @@ export function CashierDashboardPage({
       supabase.rpc("get_cashier_checkout_payment_methods", {
         target_restaurant_id: restaurantId,
       }),
+      loadCashierCancellationRequests(restaurantId)
+        .then((requests) => ({ requests, error: null as string | null }))
+        .catch((loadError: unknown) => ({
+          requests: [] as CashierCancellationRequest[],
+          error: loadError instanceof Error ? loadError.message : "Cancellation requests could not be loaded.",
+        })),
     ]);
 
     if (invoicesError) throw new Error(invoicesError.message);
@@ -1779,6 +1840,7 @@ export function CashierDashboardPage({
     if (menuError) throw new Error(menuError.message);
     if (shiftError) throw new Error(shiftError.message);
     setPaymentMethodConfigurationError(paymentMethodsError?.message ?? null);
+    setCancellationRequestsError(cancellationState.error);
 
     const rest = Array.isArray(staffData?.restaurants)
       ? staffData.restaurants[0]
@@ -1869,6 +1931,7 @@ export function CashierDashboardPage({
       })) as ShiftActivity[],
     );
     setWorkflow(workflowState);
+    setCancellationRequests(cancellationState.requests);
     setCheckoutPaymentMethods(
       !paymentMethodsError && Array.isArray(paymentMethodRows)
         ? paymentMethodRows.filter(
@@ -1927,7 +1990,7 @@ export function CashierDashboardPage({
         );
       }, 120);
     };
-    const cashierTables = new Set(["orders", "order_invoices", "order_items", "restaurant_tables", "cashier_shifts", "cash_reconciliations", "shift_activity_logs"]);
+    const cashierTables = new Set(["orders", "order_invoices", "order_items", "order_cancellation_requests", "restaurant_tables", "cashier_shifts", "cash_reconciliations", "shift_activity_logs"]);
     const unsubscribe = getRestaurantEventStream(restaurantId).subscribe(
       (event) => { if (cashierTables.has(event.table)) refresh(); },
       (status) => { setRealtimeState(status); if (status === "connected" && dashboardHydratedRef.current) refresh(); },
@@ -2744,6 +2807,41 @@ export function CashierDashboardPage({
       ?.focus();
   }
 
+  async function handleCancellationAction(
+    request: CashierCancellationRequest,
+    action: "direct_cancel" | "send_to_manager",
+  ) {
+    try {
+      setCancellationWorkingId(request.id);
+      setCancellationRequestsError(null);
+      const result = await handleCashierCancellationRequest(request.id, action);
+      setCancellationConfirmation(null);
+      setCancellationRequests((current) => current.filter((entry) => entry.id !== request.id));
+      pushToast({
+        type: action === "direct_cancel" ? "success" : "information",
+        title: action === "direct_cancel" ? "Cancellation completed" : "Sent to Manager",
+        description: action === "direct_cancel"
+          ? `${cancellationItemsLabel(request)} was cancelled. No refund or table release was created.`
+          : `The request from ${request.requestedByName} is preserved for Manager review.`,
+        dedupeKey: `cashier-cancellation-result:${request.id}:${result.status}`,
+      });
+      await loadDashboard();
+    } catch (actionError) {
+      const message = actionError instanceof Error
+        ? actionError.message
+        : "Cancellation request could not be handled.";
+      pushToast({
+        type: "error",
+        title: "Cancellation state changed",
+        description: message,
+        dedupeKey: `cashier-cancellation-error:${request.id}:${message}`,
+      });
+      await loadDashboard().catch(() => setCancellationRequestsError(message));
+    } finally {
+      setCancellationWorkingId(null);
+    }
+  }
+
   const visibleCashierActivity = activity
     .filter((entry) => [
       "payment_submitted", "payment_verified", "receipt_printed", "invoice_closed",
@@ -2751,7 +2849,7 @@ export function CashierDashboardPage({
     ].some((allowed) => entry.action === allowed || entry.action.includes(allowed)))
     .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
     .slice(0, 5);
-  const pendingCancellationCount = 0;
+  const pendingCancellationCount = cancellationRequests.length;
 
   return (
     <div className="cd-root">
@@ -2775,10 +2873,166 @@ export function CashierDashboardPage({
         onSearchChange={handleWorkspaceSearch}
       />
       <CashierToastViewport toasts={toasts} controller={toastController} />
+      {cancellationRequestsOpen ? (
+        <div
+          className="cd-cancellation-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !cancellationConfirmation)
+              closeCancellationRequests();
+          }}
+        >
+          <section
+            className="cd-cancellation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cd-cancellation-title"
+          >
+            <header className="cd-cancellation-modal-header">
+              <div>
+                <span>Cashier review queue</span>
+                <h2 id="cd-cancellation-title">Cancellation Requests</h2>
+                <p><strong>{pendingCancellationCount} Pending</strong></p>
+              </div>
+              <button
+                className="cd-cancellation-modal-close"
+                type="button"
+                aria-label="Close cancellation requests"
+                onClick={closeCancellationRequests}
+                disabled={Boolean(cancellationWorkingId)}
+              >
+                ×
+              </button>
+            </header>
+            <div className="cd-cancellation-scroll">
+              {cancellationRequestsError ? (
+                <div className="cd-cancellation-state error" role="alert">
+                  Cancellation requests could not be loaded. The dashboard remains available.
+                </div>
+              ) : cancellationRequests.length === 0 ? (
+                <div className="cd-cancellation-state">
+                  <CashierIcon name="completed" />
+                  <strong>No cancellation requests</strong>
+                  <span>New requests from staff will appear here.</span>
+                </div>
+              ) : (
+                <table className="cd-cancellation-table">
+                  <thead>
+                    <tr>
+                      <th>Table</th>
+                      <th>Requester</th>
+                      <th>Item(s)</th>
+                      <th>Reason</th>
+                      <th>Payment</th>
+                      <th>Kitchen</th>
+                      <th>Amount</th>
+                      <th>Waiting</th>
+                      <th>Authority / Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cancellationRequests.map((request) => {
+                      const direct = request.authority === "cashier_direct";
+                      const financial = request.authority === "financial_approval_required";
+                      const actionable = request.authority !== "not_actionable";
+                      const working = cancellationWorkingId === request.id;
+                      const itemLabel = cancellationItemsLabel(request);
+                      return (
+                      <tr key={request.id}>
+                        <td><strong>{compactTableCode(request.tableNumber)}</strong></td>
+                        <td className="cd-cancellation-requester"><span>Waiter</span><strong>{request.requestedByName}</strong></td>
+                        <td className="cd-cancellation-items" title={itemLabel}><strong>{itemLabel}</strong></td>
+                        <td className="cd-cancellation-reason" title={request.note || request.reason}>{request.reason}</td>
+                        <td><span className={`cd-cancellation-status payment ${canonicalPaymentStatus(request.paymentStatus)}`}>{cancellationStatusLabel(request.paymentStatus, "payment")}</span></td>
+                        <td><span className={`cd-cancellation-status kitchen ${direct ? "safe" : "attention"}`}>{cancellationStatusLabel(request.kitchenStatus, "kitchen")}</span></td>
+                        <td><strong>{fmtMoney(request.affectedAmount)}</strong></td>
+                        <td>{durationFrom(request.requestedAt, now)}</td>
+                        <td>
+                          {direct ? (
+                            <div className="cd-cancellation-approval safe">
+                              <span>Cashier Can Cancel</span>
+                            <button
+                              className="cd-cancellation-action direct"
+                              type="button"
+                              disabled={working}
+                              onClick={() => setCancellationConfirmation(request)}
+                            >
+                              {working ? "Checking…" : "Cancel Directly"}
+                            </button>
+                            </div>
+                          ) : (
+                            <div className={`cd-cancellation-approval ${financial ? "financial" : "manager"}`}>
+                              <span>{financial ? "Financial Approval Required" : "Manager Approval Required"}</span>
+                              <button
+                                className="cd-cancellation-action manager"
+                                type="button"
+                                disabled={!actionable || working}
+                                onClick={() => void handleCancellationAction(request, "send_to_manager")}
+                              >
+                                {working ? "Sending…" : "Send to Manager"}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );})}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+          {cancellationConfirmation ? (
+            <div className="cd-cancellation-confirm-overlay" role="presentation">
+              <section
+                className="cd-cancellation-confirm"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="cd-cancellation-confirm-title"
+              >
+                <header>
+                  <div>
+                    <span>Server eligibility will be checked again</span>
+                    <h3 id="cd-cancellation-confirm-title">Confirm Cancellation</h3>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close confirmation"
+                    disabled={Boolean(cancellationWorkingId)}
+                    onClick={() => setCancellationConfirmation(null)}
+                  >×</button>
+                </header>
+                <dl>
+                  <div><dt>Table</dt><dd>{compactTableCode(cancellationConfirmation.tableNumber)}</dd></div>
+                  <div><dt>Order</dt><dd>#{cancellationConfirmation.orderNumber}</dd></div>
+                  <div><dt>Requested by</dt><dd>Waiter {cancellationConfirmation.requestedByName}</dd></div>
+                  <div><dt>Item</dt><dd>{cancellationItemsLabel(cancellationConfirmation)}</dd></div>
+                  <div><dt>Reason</dt><dd>{cancellationConfirmation.note || cancellationConfirmation.reason}</dd></div>
+                  <div><dt>Payment</dt><dd>{cancellationStatusLabel(cancellationConfirmation.paymentStatus, "payment")}</dd></div>
+                  <div><dt>Kitchen</dt><dd>{cancellationStatusLabel(cancellationConfirmation.kitchenStatus, "kitchen")}</dd></div>
+                  <div><dt>Affected Amount</dt><dd>{fmtMoney(cancellationConfirmation.affectedAmount)}</dd></div>
+                </dl>
+                <footer>
+                  <button
+                    type="button"
+                    disabled={Boolean(cancellationWorkingId)}
+                    onClick={() => setCancellationConfirmation(null)}
+                  >Keep Request</button>
+                  <button
+                    className="destructive"
+                    type="button"
+                    disabled={Boolean(cancellationWorkingId)}
+                    onClick={() => void handleCancellationAction(cancellationConfirmation, "direct_cancel")}
+                  >{cancellationWorkingId ? "Checking current state…" : "Confirm Cancellation"}</button>
+                </footer>
+              </section>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <aside className="cd-pos-nav" aria-label="Cashier navigation">
         <nav className="cd-pos-nav-primary">
           <button className="active" type="button" onClick={() => setPosEntryOpen(true)}><CashierIcon name="order" /><span><strong>New Order</strong></span></button>
-          <button type="button" onClick={() => pushToast({ type: "warning", title: "Cancellation requests", description: "Requests remain read-only until an authorized workflow is available.", dedupeKey: "cashier-cancellation-requests-read-only" })}><CashierIcon name="cancel" /><span><strong>Cancellation Requests</strong></span>{pendingCancellationCount > 0 ? <b className="cd-nav-badge">{pendingCancellationCount}</b> : null}</button>
+          <button type="button" aria-haspopup="dialog" aria-expanded={cancellationRequestsOpen} onClick={openCancellationRequests}><CashierIcon name="cancel" /><span><strong>Cancellation Requests</strong></span>{pendingCancellationCount > 0 ? <b className="cd-nav-badge">{pendingCancellationCount}</b> : null}</button>
         </nav>
         <section className={`cd-nav-activity${activityCollapsed ? " collapsed" : ""}`}>
           <button className="cd-nav-section-toggle" type="button" aria-expanded={!activityCollapsed} onClick={() => setActivityCollapsed((current) => !current)}><span>Live Activity</span><b>{activityCollapsed ? "+" : "−"}</b></button>

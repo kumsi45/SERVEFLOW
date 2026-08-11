@@ -108,7 +108,7 @@ describe("Phase A2 table presentation", () => {
     expect(page).toContain("Ask your manager for a table assignment.");
     expect(page).toContain("onClick={() => openTable(table)}");
     expect(page).toContain("buildWaiterTableCards(tables, metrics)");
-    expect(page).toContain('tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "waiter_assistance_requests"]');
+    expect(page).toContain('tables: ["restaurant_tables", "restaurant_table_waiter_assignments", "orders", "order_items", "order_invoices", "order_cancellation_requests", "waiter_assistance_requests"]');
     expect(page).not.toContain("Menu opens automatically");
     expect(page).not.toContain("Tap table");
     expect(page).not.toContain("if (navigator.onLine) sync()");

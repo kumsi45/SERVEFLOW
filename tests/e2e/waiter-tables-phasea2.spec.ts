@@ -88,6 +88,7 @@ async function prepare(page: Page, rows = assignedRows) {
     }));
   }, { restaurantId, waiterId });
   let tableRequests = 0;
+  let cancellationRequests: Array<Record<string, unknown>> = [];
   await page.route("**/rest/v1/rpc/get_waiter_dashboard_tables", (route) => {
     tableRequests += 1;
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
@@ -110,6 +111,27 @@ async function prepare(page: Page, rows = assignedRows) {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ allowed: true, reason: null }) }));
   await page.route("**/rest/v1/order_invoices**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([{ id: "invoice-ready", payment_status: "paid" }]) }));
+  await page.route("**/rest/v1/order_cancellation_requests**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cancellationRequests) }));
+  await page.route("**/rest/v1/rpc/request_waiter_cancellation", async (route) => {
+    const payload = route.request().postDataJSON() as { target_order_id: string; target_order_item_id: string | null; cancellation_reason: string; cancellation_note: string | null };
+    cancellationRequests = [
+      {
+        id: "cancel-request-1",
+        order_id: payload.target_order_id,
+        order_item_id: payload.target_order_item_id,
+        request_scope: payload.target_order_item_id ? "item" : "order",
+        reason: payload.cancellation_reason,
+        note: payload.cancellation_note,
+        status: "pending_review",
+        requested_at: new Date().toISOString(),
+        current_order_status: "serving",
+        current_kitchen_status: "preparing",
+        current_payment_status: "paid",
+      },
+    ];
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ request_id: "cancel-request-1", status: "pending_review" }) });
+  });
   await page.route("**/rest/v1/rpc/request_waiter_final_bill", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: "null" }));
   await page.route("**/rest/v1/waiter_assistance_requests**", (route) =>
@@ -127,7 +149,7 @@ test("assigned tables render as a prioritized compact operational grid", async (
   await expect(page.locator(".a2-heading")).toContainText("My Tables6");
   const labels = await page.locator(".a2-table").evaluateAll((cards) => cards.map((card) => card.getAttribute("aria-label")));
   expect(labels).toEqual([
-    "Table 5, Kitchen Ready",
+    "Table 5, Ready",
     "Table 3, Bill",
     "Table 8, Active",
     "Table 2, Free",
@@ -181,16 +203,15 @@ test("active table A4 shows simple order, kitchen ready state, total, and bill c
   await prepare(page);
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/waiter/dashboard");
-  await page.getByRole("button", { name: "Table 5, Kitchen Ready" }).click();
+  await page.getByRole("button", { name: "Table 5, Ready" }).click();
 
   await expect(page.locator(".a4-session-header")).toContainText("TABLE 5");
   await expect(page.locator(".a4-table-hero")).toContainText("READY");
   await expect(page.locator(".a4-panel").filter({ hasText: "ORDER" })).toContainText("2 x Burger");
   await expect(page.locator(".a4-panel").filter({ hasText: "ORDER" })).toContainText("1 x Coffee");
   await expect(page.locator(".a4-panel").filter({ hasText: "ORDER" })).toContainText("1 x Tea");
-  await expect(page.locator(".a4-panel").filter({ hasText: "KITCHEN" })).toContainText("Coffee x1");
-  await expect(page.locator(".a4-panel").filter({ hasText: "KITCHEN" })).toContainText("READY");
-  await expect(page.locator(".a4-panel").filter({ hasText: "KITCHEN" })).toContainText("COOKING");
+  await expect(page.locator(".a4-ready-box")).toContainText("Coffee x1");
+  await expect(page.locator(".a4-ready-box")).toContainText("READY");
   await expect(page.locator(".a4-total")).toContainText("Br 1,260");
   await expect(page.locator(".a4-session")).not.toContainText("Kitchen Batches");
   await expect(page.locator(".a4-session")).not.toContainText("Dining Session");
@@ -198,13 +219,38 @@ test("active table A4 shows simple order, kitchen ready state, total, and bill c
   const columns = await page.locator(".a4-columns").evaluate((grid) =>
     getComputedStyle(grid).gridTemplateColumns.split(" ").length,
   );
-  expect(columns).toBe(2);
+  expect(columns).toBe(1);
 
   await page.getByRole("button", { name: "REQUEST BILL" }).click();
   await expect(page.locator(".a4-bill-confirm")).toContainText("TABLE 5");
   await expect(page.locator(".a4-bill-confirm")).toContainText("Br 1,260");
   await page.getByRole("button", { name: "REQUEST", exact: true }).click();
   await expect(page.locator(".w92-notice")).toContainText("BILL REQUESTED");
+});
+
+test("active table A4 requests cancellation without removing order state", async ({ page }) => {
+  await prepare(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/waiter/dashboard");
+  await page.getByRole("button", { name: "Table 5, Ready" }).click();
+
+  await page.getByRole("button", { name: "MORE" }).click();
+  await page.locator(".a4-more-items article", { hasText: "Burger x2" }).getByRole("button", { name: "Request Cancellation" }).click();
+  await expect(page.locator(".a4-cancel-modal")).toContainText("Request Cancellation");
+  await page.getByRole("button", { name: "Request Cancellation" }).last().click();
+
+  await expect(page.locator(".w92-notice")).toContainText("Cancellation Requested");
+  await page.getByRole("button", { name: "MORE" }).click();
+  const burgerRow = page.locator(".a4-more-items article", { hasText: "Burger x2" });
+  await expect(burgerRow).toContainText("Cancellation Requested");
+  await expect(burgerRow.getByRole("button", { name: "Requested" })).toBeDisabled();
+  await expect(page.locator(".a4-total")).toContainText("Br 1,260");
+  await expect(page.locator(".a4-order-panel")).toContainText("2 x Burger");
+
+  await page.reload();
+  await page.getByRole("button", { name: "Table 5, Ready" }).click();
+  await page.getByRole("button", { name: "MORE" }).click();
+  await expect(page.locator(".a4-more-items article", { hasText: "Burger x2" })).toContainText("Cancellation Requested");
 });
 
 test("active table A4 stays readable across requested responsive sizes", async ({ page }) => {
@@ -219,7 +265,7 @@ test("active table A4 stays readable across requested responsive sizes", async (
   ] as const) {
     await page.setViewportSize({ width, height });
     await page.goto("/waiter/dashboard");
-    await page.getByRole("button", { name: "Table 5, Kitchen Ready" }).click();
+    await page.getByRole("button", { name: "Table 5, Ready" }).click();
     await expect(page.locator(".a4-session-header")).toContainText("TABLE 5");
     await expect(page.locator(".a4-actions")).toBeVisible();
     const geometry = await page.locator(".a4-session").evaluate((node) => {
@@ -235,7 +281,7 @@ test("active table A4 stays readable across requested responsive sizes", async (
     });
     expect(geometry.horizontalOverflow).toBe(false);
     expect(geometry.actionHeight).toBeGreaterThanOrEqual(width <= 520 ? 54 : 56);
-    expect(geometry.columnCount).toBe(width <= 820 ? 1 : 2);
+    expect(geometry.columnCount).toBe(1);
     await page.locator(".a4-session-header").getByRole("button").first().click();
   }
 });

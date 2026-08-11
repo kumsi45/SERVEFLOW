@@ -52,7 +52,21 @@ export type WaiterSessionInvoice = {
   createdAt: string;
   creatorName: string | null;
   source: string;
-  items: Array<{ id: string; name: string; quantity: number; price: number; notes: string | null; invoiceStatus: string; kitchenStatus: string; appendedAt: string | null; createdAt: string | null }>;
+  items: Array<{ id: string; name: string; quantity: number; price: number; notes: string | null; invoiceStatus: string; kitchenStatus: string; appendedAt: string | null; createdAt: string | null; cancellationRequest: WaiterCancellationRequest | null }>;
+};
+
+export type WaiterCancellationRequest = {
+  id: string;
+  orderId: string;
+  orderItemId: string | null;
+  scope: "order" | "item";
+  reason: string;
+  note: string | null;
+  status: "pending_review";
+  requestedAt: string;
+  currentOrderStatus: string;
+  currentKitchenStatus: string;
+  currentPaymentStatus: string;
 };
 
 export type WaiterSessionDetail = {
@@ -74,6 +88,7 @@ export type WaiterSessionDetail = {
   creatorName: string | null;
   total: number;
   invoices: WaiterSessionInvoice[];
+  cancellationRequest: WaiterCancellationRequest | null;
 };
 
 export type WaiterTableMetric = {

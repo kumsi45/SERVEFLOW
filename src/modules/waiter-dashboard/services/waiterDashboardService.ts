@@ -8,6 +8,7 @@ import {
 } from "../../../core/payment/lifecycle";
 import type {
   WaiterDashboardTable,
+  WaiterCancellationRequest,
   WaiterSessionDetail,
   WaiterSessionInvoice,
   WaiterTableMetric,
@@ -84,6 +85,7 @@ export async function loadWaiterSessionDetail(
     { data: noteData, error: noteError },
     { data: orderingData, error: orderingError },
     { data: paymentData, error: paymentError },
+    { data: cancellationData, error: cancellationError },
   ] = await Promise.all([
     waiterSupabase.rpc("get_waiter_session_detail", {
       target_order_id: orderId,
@@ -103,6 +105,13 @@ export async function loadWaiterSessionDetail(
       .select("id,payment_status")
       .eq("restaurant_id", restaurantId)
       .eq("order_id", orderId),
+    waiterSupabase
+      .from("order_cancellation_requests")
+      .select("id,order_id,order_item_id,request_scope,reason,note,status,requested_at,current_order_status,current_kitchen_status,current_payment_status")
+      .eq("restaurant_id", restaurantId)
+      .eq("order_id", orderId)
+      .eq("status", "pending_review")
+      .order("requested_at", { ascending: false }),
   ]);
   if (error) throw new Error(error.message);
   if (batchError) throw new Error(batchError.message);
@@ -110,6 +119,30 @@ export async function loadWaiterSessionDetail(
   if (noteError) throw new Error(noteError.message);
   if (orderingError) throw new Error(orderingError.message);
   if (paymentError) throw new Error(paymentError.message);
+  if (cancellationError) throw new Error(cancellationError.message);
+  const cancellationRequests = ((cancellationData ?? []) as Array<Record<string, unknown>>).map(
+    (row): WaiterCancellationRequest => ({
+      id: String(row.id),
+      orderId: String(row.order_id),
+      orderItemId: typeof row.order_item_id === "string" ? row.order_item_id : null,
+      scope: row.request_scope === "order" ? "order" : "item",
+      reason: String(row.reason ?? ""),
+      note: typeof row.note === "string" ? row.note : null,
+      status: "pending_review",
+      requestedAt: String(row.requested_at),
+      currentOrderStatus: String(row.current_order_status ?? ""),
+      currentKitchenStatus: String(row.current_kitchen_status ?? ""),
+      currentPaymentStatus: String(row.current_payment_status ?? ""),
+    }),
+  );
+  const cancellationByItem = new Map(
+    cancellationRequests
+      .filter((request) => request.orderItemId)
+      .map((request) => [request.orderItemId!, request]),
+  );
+  const orderCancellation = cancellationRequests.find(
+    (request) => request.scope === "order",
+  ) ?? null;
   const paymentByInvoice = new Map(
     (paymentData ?? []).map((row) => [
       String(row.id),
@@ -148,6 +181,8 @@ export async function loadWaiterSessionDetail(
           paymentByInvoice.get(String(invoice.id)) ??
           canonicalPaymentStatus(invoice.status),
         kitchenStatus: String(item.kitchen_status ?? "held"),
+        cancellationRequest:
+          cancellationByItem.get(String(item.id)) ?? orderCancellation,
         appendedAt:
           typeof boundary?.appended_at === "string"
             ? boundary.appended_at
@@ -216,6 +251,7 @@ export async function loadWaiterSessionDetail(
     creatorName: String(order.creator_name ?? "") || null,
     total: Number(order.total),
     invoices: normalizedInvoices,
+    cancellationRequest: orderCancellation,
   };
 }
 
@@ -303,6 +339,20 @@ export async function splitWaiterParty(
 export async function requestWaiterFinalBill(orderId: string) {
   const { error } = await waiterSupabase.rpc("request_waiter_final_bill", {
     target_order_id: orderId,
+  });
+  if (error) throw new Error(error.message);
+}
+export async function requestWaiterCancellation(input: {
+  orderId: string;
+  orderItemId?: string | null;
+  reason: string;
+  note?: string | null;
+}) {
+  const { error } = await waiterSupabase.rpc("request_waiter_cancellation", {
+    target_order_id: input.orderId,
+    target_order_item_id: input.orderItemId ?? null,
+    cancellation_reason: input.reason,
+    cancellation_note: input.note ?? null,
   });
   if (error) throw new Error(error.message);
 }

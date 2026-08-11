@@ -10,6 +10,7 @@ export const RESTAURANT_REALTIME_TABLES = [
   "menu_items", "kitchen_stations", "restaurants",
   "staff_activity_log", "manager_ai_recommendation_decisions",
   "waiter_assistance_requests", "receipt_generation_events",
+  "order_cancellation_requests",
   "inventory_movements", "inventory_categories", "inventory_suppliers",
   "inventory_storage_locations", "inventory_units",
 ] as const;
