@@ -186,7 +186,6 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   }
 
   return <main className="moc-page">
-    <header className="moc-header"><div><span>Real-time service control</span><h1>Live Operations</h1></div><div className="moc-live-summary"><strong><i /> Live</strong><span>{managerActions.length} manager action{managerActions.length === 1 ? "" : "s"}</span></div></header>
     {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
 
     <section className="moc-panel moc-actions" aria-labelledby="manager-actions-title">

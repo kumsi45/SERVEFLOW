@@ -74,7 +74,7 @@ function navigateToInventory(restaurantId: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: Props) {
+export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerKitchenSupervisionSnapshot | null>(null);
   const [requests, setRequests] = useState<InventoryRequest[]>([]);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -187,11 +187,6 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
   }
 
   return <main className="mks-page">
-    <header className="mks-command-header">
-      <div><span>Kitchen supervision</span><h1>Kitchen</h1><p>{restaurantName} · Current operational state</p></div>
-      <strong><i /> Live</strong>
-    </header>
-
     <nav className="mks-nav" aria-label="Manager Kitchen sections">
       {(["overview", "orders", "performance"] as const).map((view) => <button key={view} type="button" className={activeView === view ? "active" : ""} onClick={() => setActiveView(view)}>{view.charAt(0).toUpperCase() + view.slice(1)}</button>)}
     </nav>

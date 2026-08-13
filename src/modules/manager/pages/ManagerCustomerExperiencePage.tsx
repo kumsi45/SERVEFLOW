@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CurrencyConfig } from "../../../core/format/currency";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
-import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
 import {
-  assignManagerCustomerWaiter,
   escalateManagerComplaint,
   loadManagerCustomerExperience,
-  notifyManagerCustomerCashier,
-  notifyManagerCustomerKitchen,
   resolveManagerComplaint,
+  type CustomerExperienceAlert,
+  type ManagerComplaint,
   type ManagerCustomerExperienceSnapshot,
   type ManagerCustomerSession,
 } from "../services/managerCustomerExperienceService";
@@ -20,30 +19,69 @@ type Props = {
   currency?: CurrencyConfig;
 };
 
-type CustomerTab = "waiting" | "vip" | "complaints" | "bill" | "timeline" | "reservations";
+type GuestTab = "attention" | "complaints" | "requests" | "lookup";
+type GuestAttentionItem =
+  | { id: string; kind: "session"; severity: "warning" | "critical"; alert: CustomerExperienceAlert }
+  | { id: string; kind: "complaint"; severity: "warning" | "critical"; complaint: ManagerComplaint };
 
-function fmtMinutes(minutes: number | null) {
-  if (minutes == null) return "-";
+const TABS: Array<{ id: GuestTab; label: string }> = [
+  { id: "attention", label: "Needs Attention" },
+  { id: "complaints", label: "Complaints" },
+  { id: "requests", label: "Special Requests" },
+  { id: "lookup", label: "Guest Lookup" },
+];
+
+function formatMinutes(minutes: number | null) {
+  if (minutes == null) return "Not recorded";
   if (minutes < 60) return `${minutes}m`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-export function ManagerCustomerExperiencePage({ restaurantId, restaurantName, managerName, currency }: Props) {
+function ageFrom(value: string) {
+  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+  return formatMinutes(Math.floor(elapsed / 60_000));
+}
+
+function serviceReference(session: ManagerCustomerSession | null | undefined) {
+  if (!session) return "Service session";
+  return session.tableNumber
+    ? `Table ${session.tableNumber}`
+    : `Order ${session.displayNumber}`;
+}
+
+function complaintReference(complaint: ManagerComplaint, session?: ManagerCustomerSession) {
+  if (session) return serviceReference(session);
+  if (complaint.tableNumber) return `Table ${complaint.tableNumber}`;
+  return complaint.orderId ? "Order session" : "Service location not recorded";
+}
+
+function issueLabel(alert: CustomerExperienceAlert) {
+  if (alert.type === "long_wait") return "Excessive service wait";
+  if (alert.type === "bill_wait") return "Delayed bill assistance";
+  if (alert.type === "complaint") return "Unresolved complaint";
+  if (alert.type === "special_request") return "Special request needs attention";
+  return "Service attention needed";
+}
+
+function priorityLabel(severity: CustomerExperienceAlert["severity"]) {
+  return severity === "critical" ? "Urgent" : "Attention";
+}
+
+export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerCustomerExperienceSnapshot | null>(null);
+  const [activeTab, setActiveTab] = useState<GuestTab>("attention");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [historySession, setHistorySession] = useState<ManagerCustomerSession | null>(null);
+  const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<CustomerTab>("waiting");
 
   const refresh = useCallback(async () => {
     try {
-      const next = await loadManagerCustomerExperience(restaurantId);
-      setSnapshot(next);
-      setSelectedOrderId((current) => current ?? next.sessions[0]?.orderId ?? null);
+      setSnapshot(await loadManagerCustomerExperience(restaurantId));
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load customer experience.");
+      setError(loadError instanceof Error ? loadError.message : "Unable to load guest attention data.");
     }
   }, [restaurantId]);
 
@@ -51,16 +89,83 @@ export function ManagerCustomerExperiencePage({ restaurantId, restaurantName, ma
     void refresh();
   }, [refresh]);
 
-  useTenantRealtime({ channelName: "manager-customer-experience", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "manager_customer_complaints", "staff_activity_log"], refresh });
-
-  const selectedSession = snapshot?.sessions.find((session) => session.orderId === selectedOrderId) ?? snapshot?.sessions[0] ?? null;
-  const selectedComplaints = snapshot?.complaints.filter((complaint) => complaint.orderId === selectedSession?.orderId) ?? [];
-  const visibleSessions = (snapshot?.sessions ?? []).filter((session) => {
-    if (activeTab === "vip") return session.vip;
-    if (activeTab === "complaints") return session.unresolvedComplaintCount > 0;
-    if (activeTab === "bill") return (session.billWaitingMinutes ?? 0) > 0;
-    return true;
+  useTenantRealtime({
+    channelName: "manager-customer-experience",
+    restaurantId,
+    tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "manager_customer_complaints", "staff_activity_log"],
+    refresh,
   });
+
+  const sessionsById = useMemo(
+    () => new Map((snapshot?.sessions ?? []).map((session) => [session.orderId, session])),
+    [snapshot],
+  );
+  const selectedComplaint = snapshot?.complaints.find((complaint) => complaint.id === selectedComplaintId) ?? null;
+  const selectedSession = selectedOrderId
+    ? sessionsById.get(selectedOrderId) ?? null
+    : selectedComplaint?.orderId
+      ? sessionsById.get(selectedComplaint.orderId) ?? null
+      : null;
+  const sessionComplaints = snapshot?.complaints.filter((complaint) => complaint.orderId === selectedSession?.orderId) ?? [];
+
+  const attentionRows = useMemo(() => {
+    const alerts = (snapshot?.alerts ?? []).filter((alert) => alert.type !== "vip_wait");
+    const coveredOrders = new Set(alerts.map((alert) => alert.orderId));
+    for (const session of snapshot?.sessions ?? []) {
+      const normalized = session.status.toLowerCase();
+      if ((normalized.includes("delay") || normalized.includes("attention")) && !coveredOrders.has(session.orderId)) {
+        alerts.push({
+          id: `${session.orderId}:service-delay`,
+          type: "long_wait",
+          severity: "critical",
+          orderId: session.orderId,
+          tableNumber: session.tableNumber,
+          message: "The current service state requires manager attention.",
+        });
+      }
+    }
+    const items: GuestAttentionItem[] = alerts.map((alert) => ({ id: alert.id, kind: "session", severity: alert.severity, alert }));
+    const complaintOrdersCovered = new Set(alerts.filter((alert) => alert.type === "complaint").map((alert) => alert.orderId));
+    for (const complaint of snapshot?.complaints ?? []) {
+      if (complaint.status === "resolved" || (complaint.orderId && complaintOrdersCovered.has(complaint.orderId))) continue;
+      items.push({ id: `complaint:${complaint.id}`, kind: "complaint", severity: complaint.severity === "high" ? "critical" : "warning", complaint });
+    }
+    return items.sort((left, right) => Number(right.severity === "critical") - Number(left.severity === "critical"));
+  }, [snapshot]);
+
+  const specialRequests = useMemo(
+    () => (snapshot?.sessions ?? []).flatMap((session) => {
+      const served = session.timeline.some((event) => event.label === "Served");
+      return served ? [] : session.specialRequests.map((request, index) => ({ id: `${session.orderId}:${index}`, request, session }));
+    }),
+    [snapshot],
+  );
+
+  const lookupResults = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return [];
+    return (snapshot?.sessions ?? []).filter((session) => [
+      session.customerName,
+      session.customerPhone,
+      session.displayNumber,
+      session.tableNumber,
+    ].some((value) => value?.toLowerCase().includes(normalized)));
+  }, [query, snapshot]);
+
+  function openSession(orderId: string) {
+    setSelectedComplaintId(null);
+    setSelectedOrderId(orderId);
+  }
+
+  function openComplaint(complaint: ManagerComplaint) {
+    setSelectedOrderId(complaint.orderId);
+    setSelectedComplaintId(complaint.id);
+  }
+
+  function closeInspector() {
+    setSelectedOrderId(null);
+    setSelectedComplaintId(null);
+  }
 
   async function runAction(action: () => Promise<void>, success: string) {
     try {
@@ -70,171 +175,156 @@ export function ManagerCustomerExperiencePage({ restaurantId, restaurantName, ma
       setNotice(success);
       await refresh();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Customer action failed.");
+      setError(actionError instanceof Error ? actionError.message : "Guest service action failed.");
     }
   }
 
   return (
     <main className="mcx-page">
-      <header className="manager-module-header mcx-header">
-        <div>
-          <span>Customer Experience</span>
-          <h1>Customers</h1>
-        </div>
-        <p>{restaurantName} - {managerName} monitors service quality in real time</p>
-      </header>
-
-      <nav className="manager-tabs" aria-label="Customer module sections">
-        {[
-          ["waiting", "Waiting"],
-          ["vip", "VIP"],
-          ["complaints", "Complaints"],
-          ["bill", "Bill Requests"],
-          ["timeline", "Timeline"],
-          ["reservations", "Reservations"],
-        ].map(([key, label]) => <button key={key} type="button" className={activeTab === key ? "active" : ""} onClick={() => setActiveTab(key as CustomerTab)}>{label}</button>)}
+      <nav className="mcx-tabs" aria-label="Guest workspace sections">
+        {TABS.map((tab) => (
+          <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>
+            {tab.label}
+            {tab.id === "attention" && attentionRows.length > 0 && <span>{attentionRows.length}</span>}
+          </button>
+        ))}
       </nav>
 
-      {(notice || error) && <div className={`mcx-message ${error ? "error" : ""}`}>{error || notice}</div>}
+      {(notice || error) && <div className={`mcx-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
 
-      {activeTab !== "timeline" && <section className="mcx-kpis" aria-label="Customer experience metrics">
-        <article><span>Waiting Customers</span><strong>{snapshot?.waitingCustomers ?? 0}</strong></article>
-        <article><span>Tables Requesting Bill</span><strong>{snapshot?.tablesRequestingBill ?? 0}</strong></article>
-        <article><span>Special Requests</span><strong>{snapshot?.specialRequests ?? 0}</strong></article>
-        <article><span>VIP Guests</span><strong>{snapshot?.vipGuests ?? 0}</strong></article>
-        <article><span>Complaints</span><strong>{snapshot?.customerComplaints ?? 0}</strong></article>
-        <article><span>Reservation Queue</span><strong>{snapshot?.reservationQueue ?? 0}</strong><small>future</small></article>
-      </section>}
-
-      {activeTab !== "timeline" && (snapshot?.alerts.length ?? 0) > 0 && (
-        <section className="mcx-alerts" aria-label="Customer alerts">
-          {(snapshot?.alerts ?? []).map((alert) => (
-            <button key={alert.id} type="button" className={`mcx-alert ${alert.severity}`} onClick={() => setSelectedOrderId(alert.orderId)}>
-              <strong>Table {alert.tableNumber ?? "-"}</strong>
-              <span>{alert.message}</span>
-            </button>
-          ))}
+      {activeTab === "attention" && (
+        <section className="mcx-workspace" aria-label="Needs Attention">
+          {attentionRows.length > 0 ? (
+            <div className="mcx-row-list mcx-attention-list">
+              <div className="mcx-row mcx-row-head" aria-hidden="true"><span>Location / Order</span><span>Issue</span><span>Waiting Time</span><span>Priority</span><span>Assigned Staff</span><span /></div>
+              {attentionRows.map((item) => {
+                const alert = item.kind === "session" ? item.alert : null;
+                const complaint = item.kind === "complaint" ? item.complaint : null;
+                const session = alert ? sessionsById.get(alert.orderId) : complaint?.orderId ? sessionsById.get(complaint.orderId) : undefined;
+                const wait = complaint ? ageFrom(complaint.createdAt) : formatMinutes(alert?.type === "bill_wait" ? session?.billWaitingMinutes ?? null : session?.waitingMinutes ?? null);
+                return (
+                  <article key={item.id} className={`mcx-row mcx-attention-row ${item.severity}`}>
+                    <div data-label="Location / Order"><strong>{complaint ? complaintReference(complaint, session) : serviceReference(session)}</strong><small>{session?.displayNumber ?? (complaint?.customerName || "Order not recorded")}</small></div>
+                    <div data-label="Issue"><strong>{complaint ? "Unresolved complaint" : issueLabel(alert!)}</strong><small>{complaint?.description ?? alert?.message}</small></div>
+                    <span data-label="Waiting Time">{wait}</span>
+                    <span data-label="Priority" className={`mcx-priority ${item.severity}`}><i />{priorityLabel(item.severity)}</span>
+                    <span data-label="Assigned Staff">{session?.assignedWaiter || "Not assigned"}</span>
+                    <button type="button" onClick={() => complaint ? openComplaint(complaint) : openSession(alert!.orderId)}>View</button>
+                  </article>
+                );
+              })}
+            </div>
+          ) : <div className="mcx-empty"><strong>No guest attention needed</strong><span>Current service sessions have no supported manager exceptions.</span></div>}
         </section>
       )}
 
-      {activeTab === "reservations" ? (
-        <section className="mcx-panel"><h3>Reservations</h3><p className="mcx-empty">Reservation queue is prepared for future activation.</p></section>
-      ) : activeTab === "timeline" ? (
-        <section className="mcx-panel">
-          <h3>Customer Timeline</h3>
-          <div className="mcx-timeline">
-            {(selectedSession?.timeline ?? []).map((event) => <article key={event.id}><strong>{event.label}</strong><small>{new Date(event.at).toLocaleString()}</small></article>)}
-            {!selectedSession?.timeline?.length && <p className="mcx-empty">No timeline events for the selected customer session.</p>}
-          </div>
-        </section>
-      ) : (
-      <section className="mcx-layout">
-        <div className="mcx-sessions">
-          {visibleSessions.map((session) => (
-            <button key={session.orderId} type="button" className={`mcx-session ${selectedSession?.orderId === session.orderId ? "selected" : ""} ${session.vip ? "vip" : ""} ${session.unresolvedComplaintCount > 0 ? "complaint" : ""}`} onClick={() => setSelectedOrderId(session.orderId)}>
-              <div>
-                <strong>Table {session.tableNumber ?? "-"}</strong>
-                <span>{session.vip ? "VIP" : session.status}</span>
-              </div>
-              <p>{session.customerName || "Guest"} · {session.assignedWaiter || "No waiter assigned"}</p>
-              <dl>
-                <div><dt>Waiting</dt><dd>{fmtMinutes(session.waitingMinutes)}</dd></div>
-                <div><dt>Bill wait</dt><dd>{fmtMinutes(session.billWaitingMinutes)}</dd></div>
-                <div><dt>Total</dt><dd>{formatCurrency(session.totalPrice, currency)}</dd></div>
-              </dl>
-            </button>
-          ))}
-          {visibleSessions.length === 0 && <p className="mcx-empty">No customer sessions in this tab.</p>}
-        </div>
-
-        <section className="mcx-detail">
-          <div className="mcx-detail-head">
-            <div>
-              <span>Customer Session</span>
-              <h2>{selectedSession ? `Table ${selectedSession.tableNumber ?? "-"}` : "No active session"}</h2>
-              {selectedSession && <p>{selectedSession.customerName || "Guest"} · {selectedSession.displayNumber}</p>}
+      {activeTab === "complaints" && (
+        <section className="mcx-workspace" aria-label="Complaints">
+          {(snapshot?.complaints.length ?? 0) > 0 ? (
+            <div className="mcx-row-list mcx-complaints-list">
+              <div className="mcx-row mcx-row-head" aria-hidden="true"><span>Location / Customer</span><span>Complaint</span><span>Age</span><span>Priority</span><span>Status</span><span /></div>
+              {snapshot?.complaints.map((complaint) => {
+                const session = complaint.orderId ? sessionsById.get(complaint.orderId) : undefined;
+                return (
+                  <article key={complaint.id} className="mcx-row mcx-complaint-row">
+                    <div data-label="Location / Customer"><strong>{complaintReference(complaint, session)}</strong><small>{complaint.customerName || session?.customerName || "Customer not recorded"}</small></div>
+                    <div data-label="Complaint"><strong>{complaint.category}</strong><small>{complaint.description}</small></div>
+                    <span data-label="Age">{ageFrom(complaint.createdAt)}</span>
+                    <span data-label="Priority" className={`mcx-severity ${complaint.severity}`}>{complaint.severity}</span>
+                    <span data-label="Status" className={`mcx-status ${complaint.status}`}>{complaint.status}</span>
+                    <button type="button" onClick={() => openComplaint(complaint)}>Review</button>
+                  </article>
+                );
+              })}
             </div>
-            {selectedSession && <button type="button" onClick={() => setHistorySession(selectedSession)}>View Customer History</button>}
-          </div>
+          ) : <div className="mcx-empty"><strong>No complaints recorded</strong><span>New supported complaints will appear here.</span></div>}
+        </section>
+      )}
+
+      {activeTab === "requests" && (
+        <section className="mcx-workspace" aria-label="Special Requests">
+          {specialRequests.length > 0 ? (
+            <div className="mcx-row-list mcx-request-list">
+              <div className="mcx-row mcx-row-head" aria-hidden="true"><span>Location / Order</span><span>Request</span><span>Age</span><span>Status</span><span>Assigned Staff</span><span /></div>
+              {specialRequests.map(({ id, request, session }) => (
+                <article key={id} className="mcx-row mcx-request-row">
+                  <div data-label="Location / Order"><strong>{serviceReference(session)}</strong><small>{session.displayNumber}</small></div>
+                  <div data-label="Request"><strong>{request}</strong></div>
+                  <span data-label="Age">{formatMinutes(session.waitingMinutes)}</span>
+                  <span data-label="Status" className="mcx-status open">Needs attention</span>
+                  <span data-label="Assigned Staff">{session.assignedWaiter || "Not assigned"}</span>
+                  <button type="button" onClick={() => openSession(session.orderId)}>View</button>
+                </article>
+              ))}
+            </div>
+          ) : <div className="mcx-empty"><strong>No special requests need attention</strong><span>Only unserved requests supported by current order notes appear here.</span></div>}
+        </section>
+      )}
+
+      {activeTab === "lookup" && (
+        <section className="mcx-workspace" aria-label="Guest Lookup">
+          <label className="mcx-search"><span>Search guests</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, phone, order or service location..." /></label>
+          {!query.trim() ? <div className="mcx-empty"><strong>Search current service sessions</strong><span>Use a supported customer name, phone, order number, or configured table number.</span></div> : lookupResults.length > 0 ? (
+            <div className="mcx-row-list mcx-lookup-list">
+              <div className="mcx-row mcx-row-head" aria-hidden="true"><span>Customer</span><span>Location / Order</span><span>Phone</span><span>Status</span><span /></div>
+              {lookupResults.map((session) => (
+                <article key={session.orderId} className="mcx-row mcx-lookup-row">
+                  <div data-label="Customer"><strong>{session.customerName || "Customer not recorded"}</strong></div>
+                  <div data-label="Location / Order"><strong>{serviceReference(session)}</strong><small>{session.displayNumber}</small></div>
+                  <span data-label="Phone">{session.customerPhone || "Not recorded"}</span>
+                  <span data-label="Status" className="mcx-status neutral">{session.status}</span>
+                  <button type="button" onClick={() => openSession(session.orderId)}>View</button>
+                </article>
+              ))}
+            </div>
+          ) : <div className="mcx-empty"><strong>No matching guest or service session</strong><span>Try a different supported name, phone, order, or table value.</span></div>}
+        </section>
+      )}
+
+      {(selectedSession || selectedComplaint) && <button type="button" className="mcx-scrim" aria-label="Close guest details" onClick={closeInspector} />}
+      {(selectedSession || selectedComplaint) && (
+        <aside className="mcx-inspector" role="dialog" aria-modal="true" aria-labelledby="guest-inspector-title">
+          <header>
+            <div><span>Guest context</span><h2 id="guest-inspector-title">{selectedComplaint ? "Complaint Review" : serviceReference(selectedSession)}</h2></div>
+            <button type="button" className="mcx-close" onClick={closeInspector} aria-label="Close guest details">×</button>
+          </header>
+
+          {selectedComplaint && (
+            <section>
+              <div className="mcx-inspector-title"><h3>{selectedComplaint.category}</h3><span className={`mcx-status ${selectedComplaint.status}`}>{selectedComplaint.status}</span></div>
+              <p>{selectedComplaint.description}</p>
+              <dl>
+                <div><dt>Location</dt><dd>{complaintReference(selectedComplaint, selectedSession ?? undefined)}</dd></div>
+                <div><dt>Customer</dt><dd>{selectedComplaint.customerName || selectedSession?.customerName || "Not recorded"}</dd></div>
+                <div><dt>Age</dt><dd>{ageFrom(selectedComplaint.createdAt)}</dd></div>
+                <div><dt>Priority</dt><dd className="mcx-capitalize">{selectedComplaint.severity}</dd></div>
+              </dl>
+              {selectedComplaint.status !== "resolved" && <div className="mcx-inspector-actions">
+                {selectedComplaint.status !== "escalated" && <button type="button" className="secondary" onClick={() => void runAction(() => escalateManagerComplaint(restaurantId, selectedComplaint.id), "Complaint escalated for follow-up.")}>Escalate</button>}
+                <button type="button" onClick={() => void runAction(() => resolveManagerComplaint(restaurantId, selectedComplaint.id), "Complaint resolved.")}>Resolve complaint</button>
+              </div>}
+            </section>
+          )}
 
           {selectedSession && (
             <>
-              <div className="mcx-actions">
-                <select defaultValue="" onChange={(event) => {
-                  const waiterId = event.target.value;
-                  if (!waiterId) return;
-                  void runAction(() => assignManagerCustomerWaiter(restaurantId, selectedSession.orderId, waiterId), "Waiter assigned.");
-                  event.currentTarget.value = "";
-                }}>
-                  <option value="">Assign waiter</option>
-                  {(snapshot?.waiters ?? []).map((waiter) => <option key={waiter.id} value={waiter.id}>{waiter.displayName}</option>)}
-                </select>
-                <button type="button" onClick={() => void runAction(() => notifyManagerCustomerKitchen(restaurantId, selectedSession.orderId, `Customer service attention requested for table ${selectedSession.tableNumber ?? "-"}.`), "Kitchen notified.")}>Notify Kitchen</button>
-                <button type="button" onClick={() => void runAction(() => notifyManagerCustomerCashier(restaurantId, selectedSession.orderId, `Customer billing attention requested for table ${selectedSession.tableNumber ?? "-"}.`), "Cashier notified.")}>Notify Cashier</button>
-              </div>
-
-              {selectedSession.specialRequests.length > 0 && (
-                <section className="mcx-panel">
-                  <h3>Special Requests</h3>
-                  {selectedSession.specialRequests.map((request, index) => <p key={`${request}:${index}`}>{request}</p>)}
-                </section>
-              )}
-
-              <section className="mcx-panel">
-                <h3>Customer Complaints</h3>
-                {selectedComplaints.map((complaint) => (
-                  <article key={complaint.id} className={`mcx-complaint ${complaint.status}`}>
-                    <div>
-                      <strong>{complaint.category}</strong>
-                      <span>{complaint.status}</span>
-                    </div>
-                    <p>{complaint.description}</p>
-                    <div className="mcx-complaint-actions">
-                      {complaint.status !== "resolved" && <button type="button" onClick={() => void runAction(() => escalateManagerComplaint(restaurantId, complaint.id), "Complaint escalated.")}>Escalate Complaint</button>}
-                      {complaint.status !== "resolved" && <button type="button" onClick={() => void runAction(() => resolveManagerComplaint(restaurantId, complaint.id), "Complaint resolved.")}>Mark Resolved</button>}
-                    </div>
-                  </article>
-                ))}
-                {selectedComplaints.length === 0 && <p className="mcx-empty">No complaints for this session.</p>}
+              <section>
+                <div className="mcx-inspector-title"><h3>Current Service</h3><span className="mcx-status neutral">{selectedSession.status}</span></div>
+                <dl>
+                  <div><dt>Location / Order</dt><dd>{serviceReference(selectedSession)}</dd></div>
+                  <div><dt>Order</dt><dd>{selectedSession.displayNumber}</dd></div>
+                  <div><dt>Customer</dt><dd>{selectedSession.customerName || "Not recorded"}</dd></div>
+                  <div><dt>Phone</dt><dd>{selectedSession.customerPhone || "Not recorded"}</dd></div>
+                  <div><dt>Waiting</dt><dd>{formatMinutes(selectedSession.waitingMinutes)}</dd></div>
+                  <div><dt>Assigned Staff</dt><dd>{selectedSession.assignedWaiter || "Not assigned"}</dd></div>
+                </dl>
               </section>
-
-              <section className="mcx-panel">
-                <h3>Customer Timeline</h3>
-                <ol className="mcx-timeline">
-                  {selectedSession.timeline.map((event) => (
-                    <li key={event.id}>
-                      <time>{new Date(event.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
-                      <span>{event.label}</span>
-                    </li>
-                  ))}
-                </ol>
-              </section>
+              {selectedSession.specialRequests.length > 0 && <section><h3>Special Requests</h3><ul>{selectedSession.specialRequests.map((request, index) => <li key={`${request}:${index}`}>{request}</li>)}</ul></section>}
+              {!selectedComplaint && sessionComplaints.length > 0 && <section><h3>Complaints</h3>{sessionComplaints.map((complaint) => <button type="button" className="mcx-linked-complaint" key={complaint.id} onClick={() => openComplaint(complaint)}><span><strong>{complaint.category}</strong><small>{complaint.description}</small></span><b>{complaint.status}</b></button>)}</section>}
+              {selectedSession.timeline.length > 0 && <section><h3>Recent Session Context</h3><ol className="mcx-timeline">{selectedSession.timeline.slice(-5).reverse().map((event) => <li key={event.id}><time>{new Date(event.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><span>{event.label}</span></li>)}</ol></section>}
             </>
           )}
-        </section>
-      </section>)}
-
-      {historySession && (
-        <div className="mcx-modal" role="dialog" aria-modal="true">
-          <section>
-            <header>
-              <div>
-                <span>Customer History</span>
-                <h2>{historySession.customerName || "Guest"}</h2>
-              </div>
-              <button type="button" onClick={() => setHistorySession(null)}>Close</button>
-            </header>
-            <dl>
-              <div><dt>Phone</dt><dd>{historySession.customerPhone || "-"}</dd></div>
-              <div><dt>Current table</dt><dd>{historySession.tableNumber || "-"}</dd></div>
-              <div><dt>Current bill</dt><dd>{formatCurrency(historySession.totalPrice, currency)}</dd></div>
-              <div><dt>Complaints</dt><dd>{historySession.complaintCount}</dd></div>
-            </dl>
-            <ol className="mcx-timeline">
-              {historySession.timeline.map((event) => <li key={event.id}><time>{new Date(event.at).toLocaleString()}</time><span>{event.label}</span></li>)}
-            </ol>
-          </section>
-        </div>
+        </aside>
       )}
     </main>
   );
