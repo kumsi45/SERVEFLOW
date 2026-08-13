@@ -1,238 +1,199 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
-import {
-  fetchManagerDashboardSnapshot,
-  releaseManagerDiningSession,
-} from "../services/managerDashboardService";
+import { fetchManagerDashboardSnapshot, releaseManagerDiningSession } from "../services/managerDashboardService";
 import { assignWaiterTables, loadManagerStaffOperations, type ManagerStaffMember, type ManagerStaffOperationsSnapshot } from "../services/managerStaffOperationsService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
-import { loadInventoryItems,loadInventoryRequests,type InventoryItem,type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
 import "../styles/managerOperationsCenter.css";
 
-type Props = {
-  restaurantId: string;
-  currency?: CurrencyConfig;
-};
+type Props = { restaurantId: string; currency?: CurrencyConfig };
+type ActionFilter = "all" | "urgent" | "approvals" | "service";
+type LocationFilter = "all" | "active" | "free" | "attention";
+type ActionPriority = "critical" | "attention" | "normal";
+type ManagerAction = { id: string; title: string; detail: string; age: string; priority: ActionPriority; category: "approvals" | "service"; tableId?: string; destination?: string };
+type RecentOperation = { id: string; at: string; label: string };
 
-function duration(minutes: number | null) {
-  if (minutes == null) return "-";
+function elapsed(minutes: number | null) {
+  if (minutes == null) return "";
   return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-function tableStatus(table: ManagerFloorTable) {
-  if (!table.active) return "Cleaning";
-  if (table.cashierStatus === "waiting_payment" || table.status === "waiting_payment") return "Payment Due";
-  if (table.status === "kitchen_delay" || table.alerts.length > 0) return "Needs Attention";
-  if (table.status === "occupied" || table.activeOrderId) return "Occupied";
-  return "Available";
+function minutesSince(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return 0;
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+}
+
+function timeLabel(value: string) {
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+function locationState(table: ManagerFloorTable) {
+  if (!table.activeOrderId) return "free" as const;
+  if (table.cashierStatus === "waiting_payment" || table.status === "waiting_payment") return "payment-due" as const;
+  if (table.alerts.length > 0) return "attention" as const;
+  if (table.kitchenStatus === "ready") return "ready" as const;
+  if (table.kitchenStatus === "preparing" || table.kitchenStatus === "waiting") return "preparing" as const;
+  return "active" as const;
+}
+
+function stateLabel(table: ManagerFloorTable) {
+  const state = locationState(table);
+  if (state === "payment-due") return "Payment due";
+  return state.charAt(0).toUpperCase() + state.slice(1);
+}
+
+function paymentStatusLabel(table: ManagerFloorTable) {
+  if (table.cashierStatus === "waiting_payment") return "Payment due";
+  if (table.cashierStatus === "billing") return "Billing in progress";
+  if (table.cashierStatus === "paid") return "Paid";
+  return "Open";
+}
+
+function actionPriority(minutes: number, urgent = false): ActionPriority {
+  if (urgent || minutes >= 30) return "critical";
+  if (minutes >= 15) return "attention";
+  return "normal";
+}
+
+function navigateTo(href: string, restaurantId: string) {
+  if (href.startsWith("/inventory/")) window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
+  window.history.pushState({}, "", href);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function buildManagerActions(tables: ManagerFloorTable[], inventoryRequests: InventoryRequest[]): ManagerAction[] {
+  const inventoryActions = inventoryRequests.filter((request) => request.status === "pending").map((request) => {
+    const minutes = minutesSince(request.requestedAt);
+    const context = [request.stationName || "Kitchen", request.requesterName, `${request.quantity} ${request.unit}`].filter(Boolean).join(" · ");
+    return { id: `inventory-${request.id}`, title: "Kitchen Material Request", detail: `${request.itemName} · ${context}`, age: elapsed(minutes), priority: actionPriority(minutes, request.urgency === "critical"), category: "approvals" as const, destination: "/inventory/dashboard" };
+  });
+  const serviceActions = tables.flatMap<ManagerAction>((table) => {
+    if (!table.activeOrderId) return [];
+    const alert = table.alerts[0];
+    if (alert) {
+      const title = alert.type === "waiting_payment" ? "Payment Exception" : alert.type === "kitchen_delay" ? "Service Delay" : alert.type === "waiting_pickup" ? "Ready Order Waiting" : alert.type === "long_session" ? "Long Service Session" : "Service Waiting";
+      return [{ id: `service-${table.id}`, title, detail: [table.label, table.assignedWaiterName, stateLabel(table)].filter(Boolean).join(" · "), age: elapsed(alert.minutes), priority: actionPriority(alert.minutes, alert.type === "kitchen_delay"), category: "service", tableId: table.id }];
+    }
+    if (!table.assignedWaiterName) return [{ id: `coverage-${table.id}`, title: "Staff Coverage", detail: `${table.label} · Active service has no assigned staff`, age: elapsed(table.sessionDurationMinutes), priority: "normal", category: "service", tableId: table.id }];
+    return [];
+  });
+  const rank: Record<ActionPriority, number> = { critical: 0, attention: 1, normal: 2 };
+  return [...inventoryActions, ...serviceActions].sort((a, b) => rank[a.priority] - rank[b.priority]);
+}
+
+function buildRecentOperations(tables: ManagerFloorTable[], inventoryRequests: InventoryRequest[]): RecentOperation[] {
+  const requests = inventoryRequests.slice(0, 8).map((request) => ({ id: `request-${request.id}`, at: request.requestedAt, label: `${request.stationName || "Kitchen"} submitted a material request for ${request.itemName}` }));
+  const sessions = tables.flatMap((table) => table.activeOrderId && table.openedAt ? [{ id: `session-${table.activeOrderId}`, at: table.openedAt, label: `${table.label} service session started` }] : []);
+  return [...requests, ...sessions].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 8);
 }
 
 export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [dashboard, setDashboard] = useState<ManagerDashboardSnapshot | null>(null);
   const [staffOps, setStaffOps] = useState<ManagerStaffOperationsSnapshot | null>(null);
+  const [inventoryRequests, setInventoryRequests] = useState<InventoryRequest[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
+  const [search, setSearch] = useState("");
+  const [showAllOrderItems, setShowAllOrderItems] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
-  const [inventoryRequests,setInventoryRequests]=useState<InventoryRequest[]>([]);
-  const [inventoryItems,setInventoryItems]=useState<InventoryItem[]>([]);
 
   const refresh = useCallback(async () => {
     try {
-      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextInventoryItems] = await Promise.all([
-        fetchManagerDashboardSnapshot(restaurantId),
-        loadManagerStaffOperations(restaurantId),
-        loadInventoryRequests(restaurantId),
-        loadInventoryItems(restaurantId),
-      ]);
+      const [nextDashboard, nextStaffOps, nextInventoryRequests] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
-      setInventoryRequests(nextInventoryRequests);setInventoryItems(nextInventoryItems);
+      setInventoryRequests(nextInventoryRequests);
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Operations Center unavailable.");
+      setError(loadError instanceof Error ? loadError.message : "Live Operations is unavailable.");
     }
   }, [restaurantId]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { setShowAllOrderItems(false); }, [selectedTableId]);
+  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests"], refresh });
 
-  useTenantRealtime({ channelName: "manager-operations-center", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests", "inventory_items"], refresh });
-
-  const tables = dashboard?.floorTables ?? [];
+  const serviceLocations = useMemo(() => (dashboard?.floorTables ?? []).filter((table) => table.active), [dashboard]);
   const waiters = useMemo(() => (staffOps?.staff ?? []).filter((member): member is ManagerStaffMember => member.role === "waiter" && member.active), [staffOps]);
-  const selectedTable = tables.find((table) => table.id === selectedTableId) ?? tables[0] ?? null;
-  const openOrders = tables.filter((table) => table.activeOrderId).length;
-  const paymentQueue = tables.filter((table) => table.cashierStatus === "waiting_payment" || table.status === "waiting_payment").length;
-  const kitchenDelays = tables.filter((table) => table.status === "kitchen_delay" || table.alerts.some((alert) => alert.type === "kitchen_delay")).length;
-  const currentRevenue = tables.reduce((sum, table) => sum + table.runningBill, 0);
-  const staffOnline = (staffOps?.staff ?? []).filter((member) => member.online).length;
-  const complaints = dashboard?.notifications.filter((item) => item.toLowerCase().includes("complaint")).length ?? 0;
-  const vipGuests = tables.filter((table) => (table.customerName || "").toLowerCase().includes("vip")).length;
-  const unassignedTables = tables.filter((table) => table.activeOrderId && !table.assignedWaiterName).length;
-  const staffMissing = (staffOps?.staff ?? []).filter((member) => member.active && !member.online).length;
-  const pendingInventory=inventoryRequests.filter(request=>request.status==="pending");
-  const delayedInventory=inventoryRequests.filter(request=>(request.status==="pending"||request.status==="accepted")&&Date.now()-new Date(request.requestedAt).getTime()>30*60_000);
-  const criticalStock=inventoryItems.filter(item=>item.currentQuantity<=item.reorderLevel);
-  const taskItems = [
-    { label: "Kitchen Delays", value: kitchenDelays, tone: kitchenDelays > 0 ? "critical" : "ok" },
-    { label: "Pending Payments", value: paymentQueue, tone: paymentQueue > 0 ? "warning" : "ok" },
-    { label: "Complaints", value: complaints, tone: complaints > 0 ? "critical" : "ok" },
-    { label: "VIP Guests", value: vipGuests, tone: vipGuests > 0 ? "warning" : "ok" },
-    { label: "Reservations", value: 0, tone: "ok" },
-    { label: "Staff Missing", value: staffMissing, tone: staffMissing > 0 ? "warning" : "ok" },
-    { label: "Tables Waiting", value: unassignedTables, tone: unassignedTables > 0 ? "warning" : "ok" },
-    { label: "Shift Issues", value: dashboard?.notifications.some((item) => item.toLowerCase().includes("shift")) ? 1 : 0, tone: "warning" },
-    { label: "Inventory Alerts", value: pendingInventory.length+criticalStock.length, tone: pendingInventory.length+criticalStock.length>0?"warning":"ok" },
-    { label: "System Alerts", value: dashboard?.notifications.length ?? 0, tone: (dashboard?.notifications.length ?? 0) > 0 ? "warning" : "ok" },
-  ];
+  const selectedTable = serviceLocations.find((table) => table.id === selectedTableId) ?? null;
+  const managerActions = useMemo(() => buildManagerActions(serviceLocations, inventoryRequests), [serviceLocations, inventoryRequests]);
+  const actionCounts = useMemo(() => ({ all: managerActions.length, urgent: managerActions.filter((item) => item.priority === "critical").length, approvals: managerActions.filter((item) => item.category === "approvals").length, service: managerActions.filter((item) => item.category === "service").length }), [managerActions]);
+  const visibleActions = managerActions.filter((item) => actionFilter === "all" || (actionFilter === "urgent" ? item.priority === "critical" : item.category === actionFilter));
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleLocations = serviceLocations.filter((table) => {
+    const state = locationState(table);
+    const matchesSearch = !normalizedSearch || table.label.toLowerCase().includes(normalizedSearch) || (table.assignedWaiterName || "").toLowerCase().includes(normalizedSearch);
+    const matchesFilter = locationFilter === "all" || (locationFilter === "active" && Boolean(table.activeOrderId)) || (locationFilter === "free" && state === "free") || (locationFilter === "attention" && (state === "attention" || state === "payment-due"));
+    return matchesSearch && matchesFilter;
+  });
+  const activeLocations = serviceLocations.filter((table) => table.activeOrderId).length;
+  const freeLocations = serviceLocations.length - activeLocations;
+  const kitchenDelayed = serviceLocations.filter((table) => table.alerts.some((alert) => alert.type === "kitchen_delay")).length;
+  const paymentDue = serviceLocations.filter((table) => table.cashierStatus === "waiting_payment" || table.status === "waiting_payment").length;
+  const staffIssues = serviceLocations.filter((table) => table.activeOrderId && !table.assignedWaiterName).length;
+  const recentOperations = useMemo(() => buildRecentOperations(serviceLocations, inventoryRequests), [serviceLocations, inventoryRequests]);
+
+  function reviewAction(action: ManagerAction) {
+    if (action.tableId) { setSelectedTableId(action.tableId); setNotice(null); }
+    else if (action.destination) navigateTo(action.destination, restaurantId);
+  }
 
   async function assignWaiter(tableId: string, waiterId: string) {
     try {
-      setNotice(null);
-      setError(null);
+      setNotice(null); setError(null);
       const waiter = waiters.find((member) => member.id === waiterId);
       const existingTableIds = waiter?.assignedTables.map((table) => table.id) ?? [];
       await assignWaiterTables(restaurantId, waiterId, Array.from(new Set([...existingTableIds, tableId])));
-      setNotice("Waiter assignment updated.");
+      setNotice("Staff assignment updated.");
       await refresh();
-    } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Could not assign waiter.");
-    }
+    } catch (actionError) { setError(actionError instanceof Error ? actionError.message : "Could not update the assignment."); }
   }
 
-  async function releaseTable(orderId: string, tableLabel: string) {
-    if (!window.confirm(`Release ${tableLabel}? Confirm payment is complete and the customer has left.`)) return;
+  async function releaseTable(orderId: string, locationLabel: string) {
+    if (!window.confirm(`Release ${locationLabel}? Confirm payment is complete and the service session has ended.`)) return;
     const reason = window.prompt("Emergency release reason (required):")?.trim();
-    if (!reason) {
-      setError("An emergency release reason is required.");
-      return;
-    }
+    if (!reason) { setError("An emergency release reason is required."); return; }
     try {
-      setReleasingOrderId(orderId);
-      setNotice(null);
-      setError(null);
+      setReleasingOrderId(orderId); setNotice(null); setError(null);
       await releaseManagerDiningSession(orderId, reason);
-      setNotice(`${tableLabel} released successfully.`);
-      await refresh();
-    } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Could not release table.");
-    } finally {
-      setReleasingOrderId(null);
-    }
+      setNotice(`${locationLabel} released successfully.`); setSelectedTableId(null); await refresh();
+    } catch (actionError) { setError(actionError instanceof Error ? actionError.message : "Could not release the service location."); }
+    finally { setReleasingOrderId(null); }
   }
 
-  return (
-    <main className="moc-page">
-      <header className="manager-module-header"><div><span>Attention center</span><h1>Operations</h1></div><p>Live floor, service, kitchen, and payment exceptions</p></header>
-      <section className="manager-quick-actions"><div><strong>Action queue</strong><span>Prioritized from live restaurant activity</span></div><div className="manager-action-row"><button type="button" onClick={() => void refresh()}>Refresh</button></div></section>
-      {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`}>{error || notice}</div>}
+  return <main className="moc-page">
+    <header className="moc-header"><div><span>Real-time service control</span><h1>Live Operations</h1></div><div className="moc-live-summary"><strong><i /> Live</strong><span>{managerActions.length} manager action{managerActions.length === 1 ? "" : "s"}</span></div></header>
+    {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
 
-      <section className="moc-kpis" aria-label="Operations Center summary">
-        <article><span>Current Shift</span><strong>Active</strong></article>
-        <article><span>Open Orders</span><strong>{openOrders}</strong></article>
-        <article><span>Payment Due</span><strong>{paymentQueue}</strong></article>
-        <article><span>Kitchen Delays</span><strong>{kitchenDelays}</strong></article>
-        <article><span>Staff Online</span><strong>{staffOnline}</strong></article>
-        <article><span>Current Revenue</span><strong>{formatCurrency(currentRevenue, currency)}</strong></article>
+    <section className="moc-panel moc-actions" aria-labelledby="manager-actions-title">
+      <div className="moc-section-head"><div><span>Intervention queue</span><h2 id="manager-actions-title">Manager Actions <b>{managerActions.length}</b></h2></div><div className="moc-filter-row" aria-label="Filter manager actions">{(["all", "urgent", "approvals", "service"] as const).map((filter) => <button key={filter} type="button" className={actionFilter === filter ? "is-active" : ""} onClick={() => setActionFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)} <span>{actionCounts[filter]}</span></button>)}</div></div>
+      <div className="moc-action-list">{visibleActions.map((action) => <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>{action.destination ? "Open Inventory" : "Review"}</button></article>)}{visibleActions.length === 0 && <div className="moc-empty"><strong>✓ No manager actions pending</strong><span>Current service is operating normally.</span></div>}</div>
+    </section>
+
+    <div className="moc-command-layout">
+      <section className="moc-panel moc-service" aria-labelledby="live-service-title">
+        <div className="moc-section-head moc-service-head"><div><span>Command center</span><h2 id="live-service-title">Live Service</h2><p>{serviceLocations.length} locations · {activeLocations} active · {freeLocations} available</p></div><label className="moc-search"><span className="sr-only">Search service location</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search service location..." /></label></div>
+        <div className="moc-filter-row moc-location-filters" aria-label="Filter service locations">{(["all", "active", "free", "attention"] as const).map((filter) => <button key={filter} type="button" className={locationFilter === filter ? "is-active" : ""} onClick={() => setLocationFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</button>)}</div>
+        <div className="moc-location-grid">{visibleLocations.map((table) => { const state = locationState(table); const hasSession = Boolean(table.activeOrderId); return <button key={table.id} type="button" className={`moc-location ${state}`} onClick={() => { setSelectedTableId(table.id); setNotice(null); }} aria-label={`Open ${table.label}, ${stateLabel(table)}`}><span className="moc-location-top"><strong>{table.label}</strong>{hasSession && table.sessionDurationMinutes != null && <time>{elapsed(table.sessionDurationMinutes)}</time>}</span><span className="moc-location-state"><i />{stateLabel(table)}</span>{hasSession && <span className="moc-location-session"><b>{table.assignedWaiterName || "Staff unassigned"}</b><em>{formatCurrency(table.runningBill, currency)}</em></span>}</button>; })}{visibleLocations.length === 0 && <div className="moc-empty"><strong>No service locations found.</strong><span>Try another search or filter.</span></div>}</div>
       </section>
+      <aside className="moc-panel moc-shift" aria-labelledby="shift-health-title"><div className="moc-section-head"><div><span>Current workload</span><h2 id="shift-health-title">Shift Health</h2></div></div><dl><div><dt>Active service</dt><dd>{activeLocations}</dd></div><div><dt>Open orders</dt><dd>{dashboard?.kpis.activeDiningSessions ?? 0}</dd></div><div><dt>Kitchen delayed</dt><dd className={kitchenDelayed ? "needs-attention" : ""}>{kitchenDelayed}</dd></div><div><dt>Payment due</dt><dd className={paymentDue ? "needs-attention" : ""}>{paymentDue}</dd></div><div><dt>Manager actions</dt><dd className={managerActions.length ? "needs-attention" : ""}>{managerActions.length}</dd></div><div><dt>Staff issues</dt><dd className={staffIssues ? "needs-attention" : ""}>{staffIssues}</dd></div></dl>{managerActions.length === 0 && kitchenDelayed === 0 && staffIssues === 0 && <p className="moc-healthy"><i /> Shift operating normally</p>}</aside>
+    </div>
 
-      <section className="moc-task-board" aria-label="Attention queue">
-        {taskItems.map((item) => (
-          <article className={`moc-task ${item.tone}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </article>
-        ))}
-      </section>
+    <section className="moc-panel moc-recent" aria-labelledby="recent-operations-title"><div className="moc-section-head"><div><span>Live context</span><h2 id="recent-operations-title">Recent Operations</h2></div></div><div className="moc-timeline">{recentOperations.map((operation) => <p key={operation.id}><time>{timeLabel(operation.at)}</time><span>{operation.label}</span></p>)}{recentOperations.length === 0 && <div className="moc-empty"><strong>No recent operational activity.</strong></div>}</div></section>
 
-      <section className="moc-grid">
-        <article className="moc-card moc-inventory-alerts"><div className="moc-card-head"><div><span>Inventory Workflow</span><h2>Requests & Critical Stock</h2></div><strong>{pendingInventory.length} pending</strong></div><div className="moc-queue">{pendingInventory.slice(0,5).map(request=><p key={request.id}><strong>{request.itemName} · {request.quantity} {request.unit}</strong><span>{request.urgency} · {request.stationName??"Kitchen"}</span></p>)}{criticalStock.slice(0,5).map(item=><p key={item.id}><strong>{item.name}</strong><span>Critical: {item.currentQuantity} {item.unit}</span></p>)}{pendingInventory.length===0&&criticalStock.length===0&&<p className="moc-empty">No inventory alerts.</p>}{delayedInventory.length>0&&<p><strong>{delayedInventory.length} delayed request(s)</strong><span>Waiting more than 30 minutes</span></p>}</div></article>
-        <article className="moc-card moc-floor">
-          <div className="moc-card-head">
-            <div><span>Dining Room</span><h2>Table Command Center</h2></div>
-            <strong>{tables.length} tables</strong>
-          </div>
-          <div className="moc-table-list">
-            {tables.map((table) => (
-              <button key={table.id} type="button" className={selectedTable?.id === table.id ? "selected" : ""} onClick={() => setSelectedTableId(table.id)}>
-                <strong>{table.label}</strong>
-                <span>{tableStatus(table)}</span>
-                <small>{table.assignedWaiterName || "No waiter"} · {formatCurrency(table.runningBill, currency)} · {duration(table.sessionDurationMinutes)}</small>
-              </button>
-            ))}
-            {tables.length === 0 && <p className="moc-empty">No active tables. Seat guests or verify table setup.</p>}
-          </div>
-        </article>
-
-        <article className="moc-card moc-assignment">
-          <div className="moc-card-head">
-            <div><span>Table Assignment</span><h2>{selectedTable?.label ?? "Select a table"}</h2></div>
-          </div>
-          {selectedTable ? (
-            <>
-              <dl>
-                <div><dt>Status</dt><dd>{tableStatus(selectedTable)}</dd></div>
-                <div><dt>Order</dt><dd>{selectedTable.activeOrderStatus ?? "No open order"}</dd></div>
-                <div><dt>Guests</dt><dd>{selectedTable.seats ?? "-"}</dd></div>
-                <div><dt>Payment</dt><dd>{selectedTable.cashierStatus.replace(/_/g, " ")}</dd></div>
-                <div><dt>Current bill</dt><dd>{formatCurrency(selectedTable.runningBill, currency)}</dd></div>
-                <div><dt>Duration</dt><dd>{duration(selectedTable.sessionDurationMinutes)}</dd></div>
-              </dl>
-              <label>
-                Assign waiter
-                <select defaultValue="" onChange={(event) => {
-                  const waiterId = event.target.value;
-                  if (!waiterId) return;
-                  void assignWaiter(selectedTable.id, waiterId);
-                  event.currentTarget.value = "";
-                }}>
-                  <option value="">Choose waiter</option>
-                  {waiters.map((waiter) => <option key={waiter.id} value={waiter.id}>{waiter.fullName}</option>)}
-                </select>
-              </label>
-              {selectedTable.activeOrderId &&
-                selectedTable.cashierStatus === "paid" &&
-                selectedTable.kitchenStatus === "completed" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void releaseTable(
-                        selectedTable.activeOrderId!,
-                        selectedTable.label,
-                      )
-                    }
-                    disabled={releasingOrderId === selectedTable.activeOrderId}
-                  >
-                    {releasingOrderId === selectedTable.activeOrderId
-                      ? "Releasing..."
-                      : "Release Table"}
-                  </button>
-                )}
-            </>
-          ) : <p className="moc-empty">Select a table to manage waiter assignment.</p>}
-        </article>
-
-        <article className="moc-card">
-          <div className="moc-card-head"><div><span>Payment Queue</span><h2>Cashier Status</h2></div></div>
-          <div className="moc-queue">
-            {tables.filter((table) => table.cashierStatus === "waiting_payment" || table.cashierStatus === "billing").map((table) => (
-              <p key={table.id}><strong>{table.label}</strong><span>{formatCurrency(table.runningBill, currency)}</span></p>
-            ))}
-            {paymentQueue === 0 && <p className="moc-empty">No tables waiting for payment.</p>}
-          </div>
-        </article>
-
-        <article className="moc-card">
-          <div className="moc-card-head"><div><span>Live Timeline</span><h2>Recent Operations</h2></div></div>
-          <div className="moc-timeline">
-            {(dashboard?.notifications ?? []).map((item) => <p key={item}><span />{item}</p>)}
-            {(dashboard?.notifications.length ?? 0) === 0 && <p className="moc-empty">No incidents or operational alerts right now.</p>}
-          </div>
-        </article>
-      </section>
-    </main>
-  );
+    {selectedTable && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTableId(null); }}><aside className="moc-inspector" role="dialog" aria-modal="true" aria-labelledby="location-inspector-title">
+      <header><div><span>Service Location</span><h2 id="location-inspector-title">{selectedTable.label}</h2>{selectedTable.activeOrderId && selectedTable.sessionDurationMinutes != null && <time>{elapsed(selectedTable.sessionDurationMinutes)}</time>}</div><div className="moc-inspector-head-actions"><span className={`moc-location-state ${locationState(selectedTable)}`}><i />{stateLabel(selectedTable)}</span><button type="button" aria-label="Close service location inspector" onClick={() => setSelectedTableId(null)}>×</button></div></header>
+      {selectedTable.activeOrderId ? <>
+        <section><h3>Service</h3><dl><div><dt>Assigned staff</dt><dd>{selectedTable.assignedWaiterName || "Unassigned"}</dd></div>{selectedTable.openedAt && <div><dt>Session started</dt><dd>{timeLabel(selectedTable.openedAt)}</dd></div>}</dl></section>
+        <section><h3>Current Order</h3><div className="moc-order-items">{(showAllOrderItems ? selectedTable.orderItems : selectedTable.orderItems.slice(0, 3)).map((item) => <p key={item.id}><span>{item.name}</span><strong>×{item.quantity}</strong></p>)}{selectedTable.orderItems.length === 0 && <p className="moc-order-items-empty">No current items available.</p>}{selectedTable.orderItems.length > 3 && <button type="button" onClick={() => setShowAllOrderItems((visible) => !visible)}>{showAllOrderItems ? "Show fewer" : `+${selectedTable.orderItems.length - 3} more`}</button>}</div><dl className="moc-order-state"><div><dt>Kitchen</dt><dd>{selectedTable.kitchenStatus}</dd></div></dl></section>
+        <section><h3>Payment</h3><dl className="moc-payment-state"><div><dt>Total</dt><dd>{formatCurrency(selectedTable.runningBill, currency)}</dd></div><div><dt>Paid</dt><dd>{formatCurrency(selectedTable.paidAmount, currency)}</dd></div><div><dt>Due</dt><dd>{formatCurrency(selectedTable.dueAmount, currency)}</dd></div><div><dt>Status</dt><dd>{paymentStatusLabel(selectedTable)}</dd></div></dl></section>
+        {selectedTable.alerts.some((alert) => alert.type === "kitchen_delay") && <section className="moc-manager-attention"><h3>Manager Attention</h3><p>Kitchen delay requires intervention.</p><button type="button" onClick={() => navigateTo("/manager/kitchen", restaurantId)}>Open Kitchen</button></section>}
+      </> : <div className="moc-empty moc-inspector-empty"><strong>No active service session.</strong><span>This location is currently available.</span></div>}
+    </aside></div>}
+  </main>;
 }

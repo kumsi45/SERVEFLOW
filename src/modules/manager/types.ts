@@ -63,6 +63,12 @@ export type ManagerOperationAlert = {
   minutes: number;
 };
 
+export type ManagerOrderItemSummary = {
+  id: string;
+  name: string;
+  quantity: number;
+};
+
 export type ManagerFloorTable = {
   id: string;
   number: number;
@@ -77,10 +83,13 @@ export type ManagerFloorTable = {
   openedAt: string | null;
   assignedWaiterName: string | null;
   runningBill: number;
+  paidAmount: number;
+  dueAmount: number;
   sessionDurationMinutes: number | null;
   kitchenStatus: ManagerKitchenStatus;
   cashierStatus: ManagerCashierStatus;
   itemCount: number;
+  orderItems: ManagerOrderItemSummary[];
   readyItemCount: number;
   invoiceCount: number;
   alerts: ManagerOperationAlert[];

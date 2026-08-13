@@ -13,7 +13,7 @@ type Props = {
 
 const MANAGER_NAV = [
   { key: "dashboard", label: "Dashboard", mobileLabel: "Overview", href: "/manager/dashboard", icon: "⌂" },
-  { key: "tables", label: "Operations", mobileLabel: "Operations", href: "/manager/tables", icon: "◎" },
+  { key: "tables", label: "Live Operations", mobileLabel: "Live", href: "/manager/tables", icon: "◎" },
   { key: "kitchen", label: "Kitchen", mobileLabel: "Kitchen", href: "/manager/kitchen", icon: "◫" },
   { key: "staff", label: "Staff", mobileLabel: "Staff", href: "/manager/staff", icon: "♙" },
   { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: "♡" },

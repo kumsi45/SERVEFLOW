@@ -42,6 +42,7 @@ export type ManagerKitchenBatch = {
   status: "waiting" | "preparing" | "ready";
   priority: number;
   itemCount: number;
+  items: Array<{ id: string; name: string; quantity: number }>;
   waitingMinutes: number;
   preparingMinutes: number | null;
   canManage: boolean;
@@ -89,6 +90,7 @@ type ItemRow = {
   appended_at?: string | null;
   kitchen_preparation_started_at?: string | null;
   kitchen_ready_marked_at?: string | null;
+  menu_items?: { name?: string | null } | Array<{ name?: string | null }> | null;
   orders?: {
     id?: string;
     display_number?: string | null;
@@ -121,6 +123,11 @@ function firstOrder(row: ItemRow) {
   return Array.isArray(row.orders) ? row.orders[0] : row.orders;
 }
 
+function itemName(row: ItemRow) {
+  const menuItem = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+  return menuItem?.name?.trim() || "Menu item";
+}
+
 function workloadFor(queueLength: number, activeBatches: number, paused: boolean): ManagerKitchenStationSummary["currentWorkload"] {
   if (paused) return "paused";
   if (queueLength === 0) return "idle";
@@ -146,7 +153,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
       .order("priority", { ascending: true }),
     supabase
       .from("order_items")
-      .select("id,order_id,kitchen_station_id,kitchen_status,quantity,created_at,appended_at,kitchen_preparation_started_at,kitchen_ready_marked_at,orders!order_items_order_same_restaurant(id,display_number,table_number,customer_name,kitchen_priority,status)")
+      .select("id,order_id,kitchen_station_id,kitchen_status,quantity,created_at,appended_at,kitchen_preparation_started_at,kitchen_ready_marked_at,menu_items!order_items_menu_item_id_fkey(name),orders!order_items_order_same_restaurant(id,display_number,table_number,customer_name,kitchen_priority,status)")
       .eq("restaurant_id", restaurantId)
       .in("kitchen_status", ["accepted", "preparing", "ready"]),
     supabase
@@ -210,6 +217,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
     const status: ManagerKitchenBatch["status"] = item.kitchen_status === "preparing" ? "preparing" : item.kitchen_status === "ready" ? "ready" : "waiting";
     if (existing) {
       existing.itemCount += quantity;
+      existing.items.push({ id: item.id, name: itemName(item), quantity });
       existing.waitingMinutes = Math.max(existing.waitingMinutes, waitingMinutes);
       existing.preparingMinutes = preparingMinutes == null ? existing.preparingMinutes : Math.max(existing.preparingMinutes ?? 0, preparingMinutes);
       existing.status = existing.status === "preparing" || status === "preparing" ? "preparing" : existing.status === "ready" || status === "ready" ? "ready" : "waiting";
@@ -223,6 +231,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
         status,
         priority: Number(order?.kitchen_priority ?? 0),
         itemCount: quantity,
+        items: [{ id: item.id, name: itemName(item), quantity }],
         waitingMinutes,
         preparingMinutes,
         canManage: true,

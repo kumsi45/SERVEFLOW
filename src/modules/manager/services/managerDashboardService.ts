@@ -59,12 +59,14 @@ type OrderRow = {
 };
 
 type OrderItemRow = {
+  id: string;
   order_id: string;
   quantity: number | string;
   kitchen_status: string | null;
   created_at: string;
   kitchen_preparation_started_at?: string | null;
   kitchen_ready_marked_at?: string | null;
+  menu_items?: { name?: string | null } | { name?: string | null }[] | null;
 };
 
 type InvoiceRow = {
@@ -193,7 +195,7 @@ async function fetchOrderItems(
   const { data, error } = await supabase
     .from("order_items")
     .select(
-      "order_id,quantity,kitchen_status,created_at,kitchen_preparation_started_at,kitchen_ready_marked_at",
+      "id,order_id,quantity,kitchen_status,created_at,kitchen_preparation_started_at,kitchen_ready_marked_at,menu_items!order_items_menu_item_id_fkey(name)",
     )
     .eq("restaurant_id", restaurantId)
     .in("order_id", orderIds)
@@ -419,6 +421,11 @@ function assignmentName(row: AssignmentRow | undefined): string | null {
   return staff?.display_name || null;
 }
 
+function orderItemName(row: OrderItemRow): string {
+  const menuItem = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+  return menuItem?.name?.trim() || "Menu item";
+}
+
 function minutesSince(value: string | null | undefined, now: Date) {
   if (!value) return null;
   const timestamp = new Date(value).getTime();
@@ -624,6 +631,13 @@ function buildFloorTables(
             )
             .reduce((sum, invoice) => sum + Number(invoice.total_price ?? 0), 0)
         : Number(order?.total_price ?? 0);
+    const paidAmount = invoices
+      .filter(
+        (invoice) =>
+          invoice.payment_status === "paid" &&
+          !["cancelled", "refunded"].includes(invoice.status || ""),
+      )
+      .reduce((sum, invoice) => sum + Number(invoice.total_price ?? 0), 0);
 
     return {
       id: table.id,
@@ -639,6 +653,8 @@ function buildFloorTables(
       openedAt,
       assignedWaiterName: assignmentName(assignmentsByTableId.get(table.id)),
       runningBill,
+      paidAmount,
+      dueAmount: Math.max(0, runningBill - paidAmount),
       sessionDurationMinutes,
       kitchenStatus,
       cashierStatus,
@@ -646,6 +662,11 @@ function buildFloorTables(
         (sum, item) => sum + Number(item.quantity ?? 0),
         0,
       ),
+      orderItems: items.map((item) => ({
+        id: item.id,
+        name: orderItemName(item),
+        quantity: Number(item.quantity ?? 0),
+      })),
       readyItemCount: items
         .filter((item) => item.kitchen_status === "ready")
         .reduce((sum, item) => sum + Number(item.quantity ?? 0), 0),
