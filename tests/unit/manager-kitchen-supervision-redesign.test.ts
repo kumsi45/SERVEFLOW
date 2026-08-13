@@ -19,7 +19,7 @@ describe("Manager Kitchen supervision redesign", () => {
   });
 
   it("provides the compact command summary without giant KPI cards", () => {
-    for (const metric of ["Waiting", "Preparing", "Delayed", "Ready", "Avg prep", "Active staff", "Stations"]) expect(page).toContain(metric);
+    for (const metric of ["Waiting", "Preparing", "Delayed", "Ready", "Avg prep", "Active staff", "Station coverage"]) expect(page).toContain(metric);
     expect(styles).toContain("grid-template-columns: repeat(7, minmax(0, 1fr))");
     expect(styles).not.toContain("min-height: 104px");
   });

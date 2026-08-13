@@ -25,7 +25,8 @@ export type ManagerStaffMember = {
   phoneNumber: string | null;
   shift: string | null;
   role: ManagerStaffRole;
-  shiftStatus: "on_shift" | "off_shift";
+  shiftStatus: "not_recorded";
+  breakStatus: "on_break" | "not_on_break" | "not_recorded";
   clockIn: string | null;
   clockOut: string | null;
   assignedTables: ManagerRestaurantTableOption[];
@@ -167,8 +168,13 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
   }
 
   const latestActivityByStaff = new Map<string, string>();
+  const latestBreakStateByStaff = new Map<string, "on_break" | "not_on_break">();
   const activity = ((activityResult.data ?? []) as ActivityRow[]).map((entry) => {
     if (entry.target_staff_id && !latestActivityByStaff.has(entry.target_staff_id)) latestActivityByStaff.set(entry.target_staff_id, entry.created_at);
+    if (entry.target_staff_id && !latestBreakStateByStaff.has(entry.target_staff_id)) {
+      if (entry.action === "staff_break_started") latestBreakStateByStaff.set(entry.target_staff_id, "on_break");
+      if (entry.action === "staff_break_ended") latestBreakStateByStaff.set(entry.target_staff_id, "not_on_break");
+    }
     return { id: entry.id, action: entry.action, targetStaffId: entry.target_staff_id, targetStaffEmail: entry.target_staff_email, details: entry.details ?? {}, createdAt: entry.created_at };
   });
 
@@ -188,8 +194,9 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
           phoneNumber: member.phone_number,
           shift: member.shift_label,
           role: member.role as ManagerStaffRole,
-          shiftStatus: online ? "on_shift" : "off_shift",
-          clockIn: member.last_login_at,
+          shiftStatus: "not_recorded",
+          breakStatus: latestBreakStateByStaff.get(member.id) ?? "not_recorded",
+          clockIn: null,
           clockOut: member.last_logout_at ?? null,
           assignedTables,
           assignedKitchenStationId: member.assigned_kitchen_station_id,

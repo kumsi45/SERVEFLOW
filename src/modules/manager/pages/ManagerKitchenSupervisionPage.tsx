@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { updateManagerStaff } from "../services/managerStaffOperationsService";
 import {
   callAdditionalKitchenStaff,
   loadManagerKitchenSupervision,
@@ -81,6 +82,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [messageOpen, setMessageOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [staffingStationId, setStaffingStationId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +112,8 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
 
   const stations = snapshot?.stations ?? [];
   const selectedStation = stations.find((station) => station.id === selectedStationId) ?? null;
+  const staffingStation = stations.find((station) => station.id === staffingStationId) ?? null;
+  const kitchenStaff = snapshot?.kitchenStaff ?? [];
   const allBatches = useMemo(
     () => stations.flatMap((station) => station.activeBatches.map((batch) => ({ ...batch, stationName: station.name }))),
     [stations],
@@ -125,6 +129,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
   const ready = stations.reduce((sum, station) => sum + station.ready, 0);
   const activeStaff = stations.reduce((sum, station) => sum + station.activeStaff, 0);
   const activeStations = stations.filter((station) => station.active && !station.paused).length;
+  const staffedStations = stations.filter((station) => station.active && !station.paused && station.activeStaff > 0).length;
 
   const attentionStations = useMemo(() => {
     const priority = { no_cook: 0, overdue: 1, inactive: 2, overloaded: 3, queue: 4 } as const;
@@ -159,6 +164,18 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
     void runAction(() => setManagerKitchenStationPaused(restaurantId, station.id, true, "Manager pause"), "Station paused.");
   }
 
+  function assignKitchenStaff(staffId: string) {
+    if (!staffingStation) return;
+    const member = kitchenStaff.find((candidate) => candidate.id === staffId);
+    if (!member) return;
+    const currentStation = stations.find((station) => station.id === member.assignedStationId);
+    if (member.assignedStationId && member.assignedStationId !== staffingStation.id && !window.confirm(`Move ${member.name} to ${staffingStation.name}?\n\nCurrent station: ${currentStation?.name || "Another station"}\nNew station: ${staffingStation.name}\n\nExisting kitchen tickets and order state will remain unchanged.`)) return;
+    void runAction(async () => {
+      await updateManagerStaff(restaurantId, member.id, { assignedKitchenStationId: staffingStation.id });
+      setStaffingStationId(null);
+    }, member.assignedStationId ? "Kitchen staff moved to station." : "Kitchen staff assigned to station.");
+  }
+
   function renderOrderRow(batch: ManagerKitchenBatch & { stationName: string }, compact = false) {
     return <button className={`mks-order-row ${isDelayed(batch) ? "delayed" : ""}`} key={`${batch.stationId}:${batch.orderId}`} type="button" onClick={() => openStation(batch.stationId)}>
       <span className="mks-order-location"><strong>{serviceLocation(batch)}</strong><small>{batch.displayNumber}</small></span>
@@ -189,7 +206,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
         <article><span>Ready</span><strong>{ready}</strong></article>
         <article><span>Avg prep</span><strong>{fmtMinutes(snapshot?.performance.averageTicketMinutes ?? 0)}</strong></article>
         <article><span>Active staff</span><strong>{activeStaff}</strong></article>
-        <article><span>Stations</span><strong>{activeStations}/{stations.length}</strong></article>
+        <article><span>Station coverage</span><strong>{staffedStations}/{activeStations} staffed</strong></article>
       </section>
 
       <section className="mks-panel mks-attention" aria-labelledby="mks-attention-title">
@@ -211,7 +228,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
           {stations.map((station) => <button key={station.id} type="button" className={`mks-station-row ${stationTone(station)}`} onClick={() => openStation(station.id)}>
             <span className="mks-station-name"><strong>{station.name}</strong><em>{stationStatus(station)}</em></span>
             <span className="mks-station-load">{station.queueLength === 0 ? "No active workload" : `Queue ${station.waiting} · Preparing ${station.preparing} · Ready ${station.ready} · Delayed ${station.delayed}`}</span>
-            <span className="mks-station-meta">{station.queueLength > 0 && <>Avg {fmtMinutes(station.averagePreparationMinutes)} · </>}Staff {station.activeStaff}</span>
+            <span className="mks-station-meta">{station.queueLength > 0 && <>Avg {fmtMinutes(station.averagePreparationMinutes)} · </>}Staff {station.activeStaff}{station.queueLength > 0 && station.activeStaff === 0 && <b> · No active kitchen staff</b>}</span>
             <b aria-hidden="true">›</b>
           </button>)}
           {stations.length === 0 && <p className="mks-empty">No kitchen stations configured.</p>}
@@ -250,10 +267,16 @@ export function ManagerKitchenSupervisionPage({ restaurantId, restaurantName }: 
       <header><div><span>Kitchen Station</span><h2 id="mks-inspector-title">{selectedStation.name}</h2></div><div><em className={stationTone(selectedStation)}>{stationStatus(selectedStation)}</em><button type="button" aria-label="Close station inspector" onClick={() => setSelectedStationId(null)}>×</button></div></header>
       <section><h3>Current Load</h3><dl><div><dt>Waiting</dt><dd>{selectedStation.waiting}</dd></div><div><dt>Preparing</dt><dd>{selectedStation.preparing}</dd></div><div><dt>Ready</dt><dd>{selectedStation.ready}</dd></div><div><dt>Delayed</dt><dd>{selectedStation.delayed}</dd></div><div><dt>Average prep</dt><dd>{fmtMinutes(selectedStation.averagePreparationMinutes)}</dd></div><div><dt>Active staff</dt><dd>{selectedStation.activeStaff}</dd></div></dl></section>
       {selectedStation.delayed > 0 && <section><h3>Delayed Orders</h3><div className="mks-inspector-orders">{selectedStation.activeBatches.filter(isDelayed).map((batch) => <article key={batch.orderId}><div><strong>{serviceLocation(batch)}</strong><span>{batchItems(batch)}</span></div><dl><div><dt>Current stage</dt><dd>{batch.status}</dd></div><div><dt>Elapsed</dt><dd>{fmtMinutes(batchAge(batch))}</dd></div></dl>{batch.canManage && <div className="mks-ticket-actions"><button type="button" onClick={() => void runAction(() => prioritizeManagerKitchenOrder(restaurantId, batch.orderId), "Ticket prioritized.")}>Prioritize</button><select defaultValue="" aria-label={`Reassign ${batch.displayNumber}`} onChange={(event) => { const destinationId = event.target.value; if (destinationId) void runAction(() => reassignManagerKitchenBatch(restaurantId, batch.orderId, batch.stationId, destinationId), "Ticket reassigned."); event.currentTarget.value = ""; }}><option value="">Reassign…</option>{stations.filter((station) => station.id !== batch.stationId && station.active && !station.paused).map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}</select></div>}</article>)}</div></section>}
-      <section><h3>Staff</h3>{selectedStation.activeStaffNames.length > 0 ? <ul>{selectedStation.activeStaffNames.map((name) => <li key={name}>{name}</li>)}</ul> : <p className="mks-inspector-note">No active kitchen staff at this station.</p>}</section>
+      <section><div className="mks-staff-heading"><h3>Staff</h3><button type="button" onClick={() => setStaffingStationId(selectedStation.id)}>Manage Staff</button></div>{selectedStation.assignedStaffNames.length > 0 ? <><p className="mks-inspector-note">Assigned</p><ul>{selectedStation.assignedStaffNames.map((name) => <li key={name}>{name}</li>)}</ul>{selectedStation.activeStaff === 0 && <p className="mks-inspector-note">No assigned staff are currently active at this station.</p>}</> : <p className="mks-inspector-note">No kitchen staff assigned to this station.</p>}</section>
       {(selectedStation.delayed > 0 || (selectedStation.queueLength > 0 && selectedStation.activeStaff === 0) || selectedStation.paused) && <section className="mks-manager-attention"><h3>Manager Attention</h3><p>{selectedStation.paused ? "Station is paused." : selectedStation.queueLength > 0 && selectedStation.activeStaff === 0 ? "Active workload has no kitchen staff on session." : "Preparation time exceeds the supported delay threshold."}</p>{selectedStation.queueLength > 0 && selectedStation.activeStaff === 0 && <button type="button" onClick={() => void runAction(() => callAdditionalKitchenStaff(restaurantId, selectedStation.id, `Additional staff requested for ${selectedStation.name}`), "Additional kitchen staff called.")}>Call Staff</button>}{selectedStation.paused && <button type="button" onClick={() => void runAction(() => setManagerKitchenStationPaused(restaurantId, selectedStation.id, false), "Station resumed.")}>Resume Station</button>}</section>}
       <details className="mks-station-actions"><summary>••• Station Actions</summary><div>{!selectedStation.paused && <button type="button" onClick={() => pauseStation(selectedStation)}>Pause Station</button>}<button type="button" onClick={() => setMessageOpen((open) => !open)}>Send Message</button></div></details>
       {messageOpen && <form className="mks-context-message" onSubmit={(event) => { event.preventDefault(); const trimmed = message.trim(); if (!trimmed) return; void runAction(async () => { await sendManagerKitchenMessage(restaurantId, selectedStation.id, trimmed); setMessage(""); setMessageOpen(false); }, "Message sent to kitchen."); }}><label>Message {selectedStation.name}<textarea value={message} onChange={(event) => setMessage(event.target.value)} rows={3} /></label><button type="submit">Send Message</button></form>}
     </aside></div>}
+
+    {staffingStation && <div className="mks-staffing-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStaffingStationId(null); }}><section className="mks-staffing-dialog" role="dialog" aria-modal="true" aria-labelledby="mks-staffing-title">
+      <header><div><span>Station Staff</span><h2 id="mks-staffing-title">{staffingStation.name}</h2><p>Current staff: {staffingStation.assignedStaffNames.join(" · ") || "None"}</p></div><button type="button" aria-label="Close station staff" onClick={() => setStaffingStationId(null)}>×</button></header>
+      <div className="mks-kitchen-staff-list">{kitchenStaff.map((member) => { const currentStation = stations.find((station) => station.id === member.assignedStationId); const assignedHere = member.assignedStationId === staffingStation.id; const status = member.breakStatus === "on_break" ? "On break" : member.online ? "On shift" : "Offline"; return <article key={member.id}><span><strong>{member.name}</strong><small>{member.employeeId} · {currentStation?.name || "No station"}</small></span><em className={status.toLowerCase().replace(" ", "-")}>{status}</em><button type="button" disabled={assignedHere} onClick={() => assignKitchenStaff(member.id)}>{assignedHere ? "Assigned" : currentStation ? "Move here" : "Assign"}</button></article>; })}{kitchenStaff.length === 0 && <p className="mks-empty">No eligible kitchen staff available.</p>}</div>
+      <footer><button type="button" onClick={() => setStaffingStationId(null)}>Close</button></footer>
+    </section></div>}
   </main>;
 }

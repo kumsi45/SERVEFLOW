@@ -98,6 +98,8 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
   const [search, setSearch] = useState("");
   const [showAllOrderItems, setShowAllOrderItems] = useState(false);
+  const [assigningTableId, setAssigningTableId] = useState<string | null>(null);
+  const [pendingWaiterId, setPendingWaiterId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const serviceLocations = useMemo(() => (dashboard?.floorTables ?? []).filter((table) => table.active), [dashboard]);
   const waiters = useMemo(() => (staffOps?.staff ?? []).filter((member): member is ManagerStaffMember => member.role === "waiter" && member.active), [staffOps]);
   const selectedTable = serviceLocations.find((table) => table.id === selectedTableId) ?? null;
+  const assigningTable = serviceLocations.find((table) => table.id === assigningTableId) ?? null;
   const managerActions = useMemo(() => buildManagerActions(serviceLocations, inventoryRequests), [serviceLocations, inventoryRequests]);
   const actionCounts = useMemo(() => ({ all: managerActions.length, urgent: managerActions.filter((item) => item.priority === "critical").length, approvals: managerActions.filter((item) => item.category === "approvals").length, service: managerActions.filter((item) => item.category === "service").length }), [managerActions]);
   const visibleActions = managerActions.filter((item) => actionFilter === "all" || (actionFilter === "urgent" ? item.priority === "critical" : item.category === actionFilter));
@@ -136,6 +139,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const kitchenDelayed = serviceLocations.filter((table) => table.alerts.some((alert) => alert.type === "kitchen_delay")).length;
   const paymentDue = serviceLocations.filter((table) => table.cashierStatus === "waiting_payment" || table.status === "waiting_payment").length;
   const staffIssues = serviceLocations.filter((table) => table.activeOrderId && !table.assignedWaiterName).length;
+  const unassignedLocations = serviceLocations.filter((table) => table.activeOrderId && !table.assignedWaiterName);
   const recentOperations = useMemo(() => buildRecentOperations(serviceLocations, inventoryRequests), [serviceLocations, inventoryRequests]);
 
   function reviewAction(action: ManagerAction) {
@@ -150,8 +154,23 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
       const existingTableIds = waiter?.assignedTables.map((table) => table.id) ?? [];
       await assignWaiterTables(restaurantId, waiterId, Array.from(new Set([...existingTableIds, tableId])));
       setNotice("Staff assignment updated.");
+      setAssigningTableId(null);
+      setPendingWaiterId(null);
       await refresh();
     } catch (actionError) { setError(actionError instanceof Error ? actionError.message : "Could not update the assignment."); }
+  }
+
+  function openWaiterAssignment(tableId: string) {
+    setAssigningTableId(tableId);
+    setPendingWaiterId(waiters.find((member) => member.assignedTables.some((table) => table.id === tableId))?.id ?? null);
+  }
+
+  function confirmWaiterAssignment() {
+    if (!assigningTable || !pendingWaiterId) return;
+    const nextWaiter = waiters.find((member) => member.id === pendingWaiterId);
+    if (!nextWaiter) return;
+    if (assigningTable.activeOrderId && assigningTable.assignedWaiterName && assigningTable.assignedWaiterName !== nextWaiter.fullName && !window.confirm(`Reassign ${assigningTable.label}?\n\nCurrent waiter: ${assigningTable.assignedWaiterName}\nNew waiter: ${nextWaiter.fullName}\n\nActive session and orders will remain unchanged.`)) return;
+    void assignWaiter(assigningTable.id, nextWaiter.id);
   }
 
   async function releaseTable(orderId: string, locationLabel: string) {
@@ -180,6 +199,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
         <div className="moc-section-head moc-service-head"><div><span>Command center</span><h2 id="live-service-title">Live Service</h2><p>{serviceLocations.length} locations · {activeLocations} active · {freeLocations} available</p></div><label className="moc-search"><span className="sr-only">Search service location</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search service location..." /></label></div>
         <div className="moc-filter-row moc-location-filters" aria-label="Filter service locations">{(["all", "active", "free", "attention"] as const).map((filter) => <button key={filter} type="button" className={locationFilter === filter ? "is-active" : ""} onClick={() => setLocationFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</button>)}</div>
         <div className="moc-location-grid">{visibleLocations.map((table) => { const state = locationState(table); const hasSession = Boolean(table.activeOrderId); return <button key={table.id} type="button" className={`moc-location ${state}`} onClick={() => { setSelectedTableId(table.id); setNotice(null); }} aria-label={`Open ${table.label}, ${stateLabel(table)}`}><span className="moc-location-top"><strong>{table.label}</strong>{hasSession && table.sessionDurationMinutes != null && <time>{elapsed(table.sessionDurationMinutes)}</time>}</span><span className="moc-location-state"><i />{stateLabel(table)}</span>{hasSession && <span className="moc-location-session"><b>{table.assignedWaiterName || "Staff unassigned"}</b><em>{formatCurrency(table.runningBill, currency)}</em></span>}</button>; })}{visibleLocations.length === 0 && <div className="moc-empty"><strong>No service locations found.</strong><span>Try another search or filter.</span></div>}</div>
+        <div className="moc-coverage-strip"><div><strong>Unassigned Locations</strong><span>{unassignedLocations.length ? `${unassignedLocations.length} active service location${unassignedLocations.length === 1 ? "" : "s"} need coverage.` : "✓ All active service locations have staff coverage."}</span></div>{unassignedLocations.length > 0 && <div className="moc-unassigned-list">{unassignedLocations.map((table) => <button type="button" key={table.id} onClick={() => openWaiterAssignment(table.id)}><span><strong>{table.label}</strong><small>Active session</small></span>Assign waiter</button>)}</div>}</div>
       </section>
       <aside className="moc-panel moc-shift" aria-labelledby="shift-health-title"><div className="moc-section-head"><div><span>Current workload</span><h2 id="shift-health-title">Shift Health</h2></div></div><dl><div><dt>Active service</dt><dd>{activeLocations}</dd></div><div><dt>Open orders</dt><dd>{dashboard?.kpis.activeDiningSessions ?? 0}</dd></div><div><dt>Kitchen delayed</dt><dd className={kitchenDelayed ? "needs-attention" : ""}>{kitchenDelayed}</dd></div><div><dt>Payment due</dt><dd className={paymentDue ? "needs-attention" : ""}>{paymentDue}</dd></div><div><dt>Manager actions</dt><dd className={managerActions.length ? "needs-attention" : ""}>{managerActions.length}</dd></div><div><dt>Staff issues</dt><dd className={staffIssues ? "needs-attention" : ""}>{staffIssues}</dd></div></dl>{managerActions.length === 0 && kitchenDelayed === 0 && staffIssues === 0 && <p className="moc-healthy"><i /> Shift operating normally</p>}</aside>
     </div>
@@ -189,11 +209,17 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     {selectedTable && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTableId(null); }}><aside className="moc-inspector" role="dialog" aria-modal="true" aria-labelledby="location-inspector-title">
       <header><div><span>Service Location</span><h2 id="location-inspector-title">{selectedTable.label}</h2>{selectedTable.activeOrderId && selectedTable.sessionDurationMinutes != null && <time>{elapsed(selectedTable.sessionDurationMinutes)}</time>}</div><div className="moc-inspector-head-actions"><span className={`moc-location-state ${locationState(selectedTable)}`}><i />{stateLabel(selectedTable)}</span><button type="button" aria-label="Close service location inspector" onClick={() => setSelectedTableId(null)}>×</button></div></header>
       {selectedTable.activeOrderId ? <>
-        <section><h3>Service</h3><dl><div><dt>Assigned staff</dt><dd>{selectedTable.assignedWaiterName || "Unassigned"}</dd></div>{selectedTable.openedAt && <div><dt>Session started</dt><dd>{timeLabel(selectedTable.openedAt)}</dd></div>}</dl></section>
+        <section><h3>Service</h3><dl><div><dt>Assigned Waiter</dt><dd className="moc-assigned-waiter"><span>{selectedTable.assignedWaiterName || "Unassigned"}</span><button type="button" onClick={() => openWaiterAssignment(selectedTable.id)}>{selectedTable.assignedWaiterName ? "Change" : "Assign"}</button></dd></div>{selectedTable.openedAt && <div><dt>Session started</dt><dd>{timeLabel(selectedTable.openedAt)}</dd></div>}</dl></section>
         <section><h3>Current Order</h3><div className="moc-order-items">{(showAllOrderItems ? selectedTable.orderItems : selectedTable.orderItems.slice(0, 3)).map((item) => <p key={item.id}><span>{item.name}</span><strong>×{item.quantity}</strong></p>)}{selectedTable.orderItems.length === 0 && <p className="moc-order-items-empty">No current items available.</p>}{selectedTable.orderItems.length > 3 && <button type="button" onClick={() => setShowAllOrderItems((visible) => !visible)}>{showAllOrderItems ? "Show fewer" : `+${selectedTable.orderItems.length - 3} more`}</button>}</div><dl className="moc-order-state"><div><dt>Kitchen</dt><dd>{selectedTable.kitchenStatus}</dd></div></dl></section>
         <section><h3>Payment</h3><dl className="moc-payment-state"><div><dt>Total</dt><dd>{formatCurrency(selectedTable.runningBill, currency)}</dd></div><div><dt>Paid</dt><dd>{formatCurrency(selectedTable.paidAmount, currency)}</dd></div><div><dt>Due</dt><dd>{formatCurrency(selectedTable.dueAmount, currency)}</dd></div><div><dt>Status</dt><dd>{paymentStatusLabel(selectedTable)}</dd></div></dl></section>
         {selectedTable.alerts.some((alert) => alert.type === "kitchen_delay") && <section className="moc-manager-attention"><h3>Manager Attention</h3><p>Kitchen delay requires intervention.</p><button type="button" onClick={() => navigateTo("/manager/kitchen", restaurantId)}>Open Kitchen</button></section>}
-      </> : <div className="moc-empty moc-inspector-empty"><strong>No active service session.</strong><span>This location is currently available.</span></div>}
+      </> : <><section><h3>Service</h3><dl><div><dt>Assigned Waiter</dt><dd className="moc-assigned-waiter"><span>{selectedTable.assignedWaiterName || "Unassigned"}</span><button type="button" onClick={() => openWaiterAssignment(selectedTable.id)}>{selectedTable.assignedWaiterName ? "Change" : "Assign"}</button></dd></div></dl></section><div className="moc-empty moc-inspector-empty"><strong>No active service session.</strong><span>This location is currently available.</span></div></>}
     </aside></div>}
+
+    {assigningTable && <div className="moc-assignment-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAssigningTableId(null); }}><section className="moc-assignment-dialog" role="dialog" aria-modal="true" aria-labelledby="moc-assign-title">
+      <header><div><span>Assign Waiter</span><h2 id="moc-assign-title">{assigningTable.label}</h2><p>Current waiter: {assigningTable.assignedWaiterName || "Unassigned"}</p></div><button type="button" aria-label="Close waiter assignment" onClick={() => setAssigningTableId(null)}>×</button></header>
+      <div className="moc-waiter-list">{waiters.map((waiter) => { const status = waiter.breakStatus === "on_break" ? "On break" : waiter.online ? waiter.currentWorkload > 0 ? "Busy" : "Available" : "Offline"; return <label key={waiter.id} className={pendingWaiterId === waiter.id ? "selected" : ""}><input type="radio" name="waiter-assignment" checked={pendingWaiterId === waiter.id} onChange={() => setPendingWaiterId(waiter.id)} /><span><strong>{waiter.fullName}</strong><small>{waiter.assignedTables.length} table{waiter.assignedTables.length === 1 ? "" : "s"} · {waiter.activeOrders} active order{waiter.activeOrders === 1 ? "" : "s"}</small></span><em className={status.toLowerCase().replace(" ", "-")}>{status}</em></label>; })}{waiters.length === 0 && <div className="moc-empty"><strong>No eligible waiters available.</strong></div>}</div>
+      <footer><button type="button" className="secondary" onClick={() => setAssigningTableId(null)}>Cancel</button><button type="button" disabled={!pendingWaiterId} onClick={confirmWaiterAssignment}>{assigningTable.assignedWaiterName ? "Reassign" : "Assign"}</button></footer>
+    </section></div>}
   </main>;
 }

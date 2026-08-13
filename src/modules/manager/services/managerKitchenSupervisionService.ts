@@ -26,11 +26,21 @@ export type ManagerKitchenStationSummary = {
   averagePreparationMinutes: number;
   activeStaff: number;
   activeStaffNames: string[];
+  assignedStaffNames: string[];
   currentWorkload: "idle" | "normal" | "busy" | "overloaded" | "paused";
   rush: boolean;
   bottleneck: boolean;
   inactive: boolean;
   activeBatches: ManagerKitchenBatch[];
+};
+
+export type ManagerKitchenStaffMember = {
+  id: string;
+  name: string;
+  employeeId: string;
+  assignedStationId: string | null;
+  online: boolean;
+  breakStatus: "on_break" | "not_on_break" | "not_recorded";
 };
 
 export type ManagerKitchenBatch = {
@@ -58,6 +68,7 @@ export type ManagerKitchenPerformance = {
 
 export type ManagerKitchenSupervisionSnapshot = {
   stations: ManagerKitchenStationSummary[];
+  kitchenStaff: ManagerKitchenStaffMember[];
   totalQueue: number;
   delayedOrders: number;
   rushStations: number;
@@ -76,9 +87,12 @@ type StationRow = {
 type StaffRow = {
   id: string;
   display_name: string | null;
+  employee_id: string | null;
   assigned_kitchen_station_id: string | null;
   staff_session_active?: boolean | null;
 };
+
+type StaffActivityRow = { target_staff_id: string | null; action: string };
 
 type ItemRow = {
   id: string;
@@ -144,7 +158,7 @@ function overallWorkload(totalQueue: number, overloadedStations: number): Manage
 }
 
 export async function loadManagerKitchenSupervision(restaurantId: string): Promise<ManagerKitchenSupervisionSnapshot> {
-  const [stationsResult, itemsResult, staffResult] = await Promise.all([
+  const [stationsResult, itemsResult, staffResult, staffActivityResult] = await Promise.all([
     supabase
       .from("kitchen_stations")
       .select("id,name,display_color,active,paused_at")
@@ -158,15 +172,23 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
       .in("kitchen_status", ["accepted", "preparing", "ready"]),
     supabase
       .from("restaurant_staff")
-      .select("id,display_name,assigned_kitchen_station_id,staff_session_active")
+      .select("id,display_name,employee_id,assigned_kitchen_station_id,staff_session_active")
       .eq("restaurant_id", restaurantId)
       .eq("role", "kitchen")
       .eq("active", true),
+    supabase
+      .from("staff_activity_log")
+      .select("target_staff_id,action")
+      .eq("restaurant_id", restaurantId)
+      .in("action", ["staff_break_started", "staff_break_ended"])
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
 
   if (stationsResult.error) throw new Error(stationsResult.error.message);
   if (itemsResult.error) throw new Error(itemsResult.error.message);
   if (staffResult.error) throw new Error(staffResult.error.message);
+  if (staffActivityResult.error) throw new Error(staffActivityResult.error.message);
 
   const now = new Date();
   const stationMap = new Map<string, ManagerKitchenStationSummary>();
@@ -188,6 +210,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
       averagePreparationMinutes: 0,
       activeStaff: 0,
       activeStaffNames: [],
+      assignedStaffNames: [],
       currentWorkload: "idle",
       rush: false,
       bottleneck: false,
@@ -196,12 +219,28 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
     });
   }
 
-  for (const staff of (staffResult.data ?? []) as StaffRow[]) {
-    if (!staff.assigned_kitchen_station_id || !staff.staff_session_active) continue;
-    const station = stationMap.get(staff.assigned_kitchen_station_id);
+  const breakStateByStaff = new Map<string, "on_break" | "not_on_break">();
+  for (const activity of (staffActivityResult.data ?? []) as StaffActivityRow[]) {
+    if (!activity.target_staff_id || breakStateByStaff.has(activity.target_staff_id)) continue;
+    breakStateByStaff.set(activity.target_staff_id, activity.action === "staff_break_started" ? "on_break" : "not_on_break");
+  }
+  const kitchenStaff = ((staffResult.data ?? []) as StaffRow[]).map((staff) => ({
+    id: staff.id,
+    name: staff.display_name || "Kitchen staff",
+    employeeId: staff.employee_id || "Not recorded",
+    assignedStationId: staff.assigned_kitchen_station_id,
+    online: Boolean(staff.staff_session_active),
+    breakStatus: breakStateByStaff.get(staff.id) ?? "not_recorded" as const,
+  }));
+
+  for (const staff of kitchenStaff) {
+    if (!staff.assignedStationId) continue;
+    const station = stationMap.get(staff.assignedStationId);
     if (!station) continue;
+    station.assignedStaffNames.push(staff.name);
+    if (!staff.online || staff.breakStatus === "on_break") continue;
     station.activeStaff += 1;
-    station.activeStaffNames.push(staff.display_name || "Kitchen staff");
+    station.activeStaffNames.push(staff.name);
   }
 
   const batchMap = new Map<string, ManagerKitchenBatch>();
@@ -275,6 +314,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
 
   return {
     stations,
+    kitchenStaff,
     totalQueue,
     delayedOrders,
     rushStations: stations.filter((station) => station.rush).length,

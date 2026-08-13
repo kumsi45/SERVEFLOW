@@ -37,7 +37,7 @@ describe("Manager Live Operations redesign", () => {
     expect(page).not.toContain("Recent Session Activity");
     expect(page).not.toContain("Open Kitchen Context");
     expect(page).not.toContain("Choose staff member");
-    expect(page).toContain("Assigned staff");
+    expect(page).toContain("Assigned Waiter");
     expect(page).toContain("No active service session.");
   });
 

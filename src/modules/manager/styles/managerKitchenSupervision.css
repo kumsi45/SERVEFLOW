@@ -170,6 +170,7 @@
 .mks-station-row.critical .mks-station-name em { color: #b42318; background: #fef3f2; }
 .mks-station-load,
 .mks-station-meta { overflow: hidden; color: #475467; font-size: 12px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.mks-station-meta b { color: #b42318; font-size: 11px; }
 .mks-station-row > b { color: #98a2b3; font-size: 21px; }
 
 .mks-request-list > button {
@@ -266,6 +267,9 @@
 .mks-inspector ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .mks-inspector li { color: #344054; font-size: 13px; font-weight: 800; }
 .mks-inspector-note { margin: 0; color: #667085; font-size: 13px; }
+.mks-staff-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.mks-staff-heading h3 { margin: 0; }
+.mks-staff-heading button { min-height: 36px; padding: 0 10px; border: 1px solid #b2ccff; border-radius: 8px; color: #175cd3; background: #eff8ff; font: inherit; font-size: 11px; font-weight: 900; }
 .mks-inspector-orders { display: grid; gap: 9px; }
 .mks-inspector-orders article { padding: 11px; border: 1px solid #e4e7ec; border-left: 3px solid #d92d20; border-radius: 10px; background: #fffbfa; }
 .mks-inspector-orders article > div:first-child { display: grid; gap: 3px; }
@@ -298,6 +302,27 @@
 .mks-context-message label { display: grid; gap: 6px; color: #475467; font-size: 11px; font-weight: 850; }
 .mks-context-message textarea { width: 100%; resize: vertical; padding: 9px; border: 1px solid #d0d5dd; border-radius: 8px; font: inherit; }
 .mks-context-message button { justify-self: start; }
+
+.mks-staffing-layer { position: fixed; z-index: 95; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(16, 24, 40, 0.4); backdrop-filter: blur(2px); }
+.mks-staffing-dialog { display: flex; flex-direction: column; width: min(540px, 100%); max-height: min(720px, calc(100dvh - 40px)); overflow: hidden; border: 1px solid #e1e6ee; border-radius: 14px; background: #fff; box-shadow: 0 24px 60px rgba(16, 24, 40, 0.24); }
+.mks-staffing-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 17px 18px; border-bottom: 1px solid #e4e7ec; }
+.mks-staffing-dialog header span { color: #667085; font-size: 10px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.mks-staffing-dialog h2 { margin: 2px 0 0; color: #101828; font-size: 21px; }
+.mks-staffing-dialog header p { margin: 4px 0 0; color: #667085; font-size: 12px; }
+.mks-staffing-dialog header button { width: 44px; height: 44px; border: 0; border-radius: 10px; color: #475467; background: #f2f4f7; font-size: 24px; }
+.mks-kitchen-staff-list { display: grid; overflow-y: auto; padding: 8px 14px; }
+.mks-kitchen-staff-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 64px; padding: 8px; border-bottom: 1px solid #eef1f5; }
+.mks-kitchen-staff-list article > span { display: grid; gap: 3px; min-width: 0; }
+.mks-kitchen-staff-list strong { overflow: hidden; color: #101828; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.mks-kitchen-staff-list small { color: #667085; font-size: 11px; font-weight: 700; }
+.mks-kitchen-staff-list em { padding: 4px 7px; border-radius: 999px; color: #475467; background: #f2f4f7; font-size: 9px; font-style: normal; font-weight: 900; text-transform: uppercase; }
+.mks-kitchen-staff-list em.on-shift { color: #067647; background: #ecfdf3; }
+.mks-kitchen-staff-list em.on-break { color: #b54708; background: #fffaeb; }
+.mks-kitchen-staff-list button, .mks-staffing-dialog footer button { min-height: 40px; padding: 0 11px; border: 1px solid #b2ccff; border-radius: 8px; color: #175cd3; background: #eff8ff; font: inherit; font-size: 11px; font-weight: 900; }
+.mks-kitchen-staff-list button:disabled { color: #667085; border-color: #e4e7ec; background: #f8fafc; cursor: default; }
+.mks-staffing-dialog footer { display: flex; justify-content: flex-end; padding: 13px 18px; border-top: 1px solid #e4e7ec; }
+.mks-staffing-dialog footer button { min-height: 44px; color: #344054; border-color: #d0d5dd; background: #fff; }
+.mks-staffing-dialog { box-sizing: border-box; }
 
 @media (max-width: 1199px) {
   .mks-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -351,6 +376,12 @@
   .mks-ticket-actions { flex-wrap: wrap; }
   .mks-ticket-actions button,
   .mks-ticket-actions select { flex: 1 1 130px; min-height: 44px; }
+  .mks-staff-heading button { min-height: 44px; }
+  .mks-staffing-layer { padding: 0; place-items: stretch; }
+  .mks-staffing-dialog { width: 100%; max-height: none; height: 100dvh; border: 0; border-radius: 0; }
+  .mks-kitchen-staff-list article { grid-template-columns: minmax(0, 1fr) auto; min-height: 76px; }
+  .mks-kitchen-staff-list article button { grid-column: 1 / -1; min-height: 44px; }
+  .mks-staffing-dialog footer { padding-bottom: max(13px, env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 359px) {
