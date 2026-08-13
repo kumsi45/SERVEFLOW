@@ -13,8 +13,8 @@ const ManagerCustomerExperiencePage = lazy(() => import("../../manager/pages/Man
 const ManagerOperationalReportsPage = lazy(() => import("../../manager/pages/ManagerOperationalReportsPage").then((module) => ({ default: module.ManagerOperationalReportsPage })));
 const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages/ManagerRestaurantIntelligencePage").then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
 const ManagerAiOperationsPage = lazy(() => import("../../manager/pages/ManagerAiOperationsPage").then((module) => ({ default: module.ManagerAiOperationsPage })));
-const MenuRecipeLinkingPage = lazy(() => import("../../menu-recipes/pages/MenuRecipeLinkingPage").then((module) => ({ default: module.MenuRecipeLinkingPage })));
-const ThemeCustomizationStudio = lazy(() => import("../../menu/theme-engine/customization/ThemeCustomizationStudio").then((module) => ({ default: module.ThemeCustomizationStudio })));
+const ManagerMenuWorkspacePage = lazy(() => import("../../manager/pages/ManagerMenuWorkspacePage").then((module) => ({ default: module.ManagerMenuWorkspacePage })));
+const ManagerRecipeWorkspacePage = lazy(() => import("../../manager/pages/ManagerRecipeWorkspacePage").then((module) => ({ default: module.ManagerRecipeWorkspacePage })));
 
 type AccessState =
   | { status: "loading" }
@@ -75,14 +75,8 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "reports") page = <ManagerOperationalReportsPage {...props} />;
   if (section === "intelligence") page = <ManagerRestaurantIntelligencePage {...props} />;
   if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
-  if (section === "menu") {
-    page = (
-      <div className="manager-menu-studio-stack">
-        <ThemeCustomizationStudio restaurantId={restaurantId} role="manager" />
-        <MenuRecipeLinkingPage restaurantId={restaurantId} />
-      </div>
-    );
-  }
+  if (section === "menu") page = <ManagerMenuWorkspacePage {...props} />;
+  if (section === "recipes") page = <ManagerRecipeWorkspacePage {...props} />;
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>
       <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section}>

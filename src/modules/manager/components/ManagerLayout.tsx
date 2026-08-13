@@ -1,4 +1,8 @@
 import { type ReactNode, useEffect, useState } from "react";
+import {
+  Activity, BarChart3, BookOpen, CookingPot, Gem, Heart,
+  Home, Package, Sparkles, UtensilsCrossed, Users,
+} from "lucide-react";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import "../styles/managerLayout.css";
@@ -12,17 +16,17 @@ type Props = {
 };
 
 const MANAGER_NAV = [
-  { key: "dashboard", label: "Dashboard", mobileLabel: "Overview", href: "/manager/dashboard", icon: "⌂" },
-  { key: "tables", label: "Live Operations", mobileLabel: "Live", href: "/manager/tables", icon: "◎" },
-  { key: "kitchen", label: "Kitchen", mobileLabel: "Kitchen", href: "/manager/kitchen", icon: "◫" },
-  { key: "staff", label: "Staff", mobileLabel: "Staff", href: "/manager/staff", icon: "♙" },
-  { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: "♡" },
-  { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: "▥" },
-  { key: "intelligence", label: "Business Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
-  { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
-  { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: "RC" },
-  { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: "MN" },
-  { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: "IN" },
+  { key: "dashboard", label: "Dashboard", mobileLabel: "Overview", href: "/manager/dashboard", icon: Home },
+  { key: "tables", label: "Live Operations", mobileLabel: "Live", href: "/manager/tables", icon: Activity },
+  { key: "kitchen", label: "Kitchen", mobileLabel: "Kitchen", href: "/manager/kitchen", icon: CookingPot },
+  { key: "staff", label: "Staff", mobileLabel: "Staff", href: "/manager/staff", icon: Users },
+  { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: Heart },
+  { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: BarChart3 },
+  { key: "intelligence", label: "Business Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: Gem },
+  { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: Sparkles },
+  { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: BookOpen },
+  { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: UtensilsCrossed },
+  { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: Package },
 ];
 
 const MOBILE_NAV = MANAGER_NAV.filter((item) => ["dashboard", "tables", "kitchen", "staff"].includes(item.key));
@@ -71,17 +75,18 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
           <ServeFlowBrand variant="compact" />
         </div>
         <nav className="ml-sidebar-nav">
-          {MANAGER_NAV.map((item) => (
-            <a
+          {MANAGER_NAV.map((item) => {
+            const Icon = item.icon;
+            return <a
               className={activeSection === item.key ? "is-active" : ""}
               href={item.href}
               key={item.key}
               onClick={(event) => navigate(event, item.href)}
             >
-              <span>{item.icon}</span>
+              <span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>
               {item.label}
-            </a>
-          ))}
+            </a>;
+          })}
         </nav>
         <div className="ml-sidebar-footer">
           <div className="ml-sidebar-profile">
@@ -118,7 +123,7 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
         </header>
         <div className="ml-content">{children}</div>
         <nav className="ml-bottom-nav" aria-label="Primary mobile navigation">
-          {MOBILE_NAV.map((item) => <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onClick={(event) => navigate(event, item.href)}><span>{item.icon}</span>{item.mobileLabel}</a>)}
+          {MOBILE_NAV.map((item) => { const Icon = item.icon; return <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onClick={(event) => navigate(event, item.href)}><span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>{item.mobileLabel}</a>; })}
         </nav>
       </section>
     </main>

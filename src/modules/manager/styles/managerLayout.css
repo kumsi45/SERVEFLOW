@@ -79,6 +79,14 @@
   font-weight: 950;
 }
 
+.ml-nav-icon svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  stroke: currentColor;
+}
+
 .ml-sidebar-nav a.is-active {
   color: #fff;
   background: #2878e2;
@@ -810,11 +818,27 @@
     text-decoration: none;
   }
   .ml-bottom-nav span {
-    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: #475467;
+    background: #f1f4f7;
     line-height: 1;
+  }
+  .ml-bottom-nav .ml-nav-icon {
+    display: grid;
+    place-items: center;
+  }
+  .ml-bottom-nav .ml-nav-icon svg {
+    width: 17px;
+    height: 17px;
   }
   .ml-bottom-nav .is-active {
     color: var(--manager-primary);
+  }
+  .ml-bottom-nav .is-active .ml-nav-icon {
+    color: #fff;
+    background: var(--manager-primary);
   }
 
   .ml-notification {

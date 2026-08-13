@@ -11,6 +11,7 @@ export type MenuRecipeLink = {
   price: number;
   category_id: string | null;
   category_name: string | null;
+  kitchen_station_id: string | null;
   available: boolean;
   recipe_id: string | null;
   recipe_name: string | null;
@@ -61,7 +62,7 @@ export async function fetchRecipeMenuUsage(restaurantId: string, recipeId: strin
 
 export async function fetchMenuRecipeLinks(restaurantId: string): Promise<MenuRecipeLink[]> {
   const { data, error } = await supabase.from("menu_items")
-    .select("id,name,description,image_url,price,category_id,available,recipe_id,direct_inventory_item_id,categories!menu_items_category_same_restaurant(name),recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)")
+    .select("id,name,description,image_url,price,category_id,kitchen_station_id,available,recipe_id,direct_inventory_item_id,categories!menu_items_category_same_restaurant(name),recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)")
     .eq("restaurant_id", restaurantId).is("archived_at", null).order("name");
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: Record<string, unknown>) => {
@@ -76,6 +77,7 @@ export async function fetchMenuRecipeLinks(restaurantId: string): Promise<MenuRe
       price: Number(row.price ?? 0),
       category_id: row.category_id ? String(row.category_id) : null,
       category_name: (category as { name?: string } | null)?.name ?? null,
+      kitchen_station_id: row.kitchen_station_id ? String(row.kitchen_station_id) : null,
       available: Boolean(row.available),
       recipe_id: row.recipe_id ? String(row.recipe_id) : null,
       recipe_name: (recipe as { name?: string } | null)?.name ?? null,
