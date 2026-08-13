@@ -18,7 +18,7 @@ const MANAGER_NAV = [
   { key: "staff", label: "Staff", mobileLabel: "Staff", href: "/manager/staff", icon: "♙" },
   { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: "♡" },
   { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: "▥" },
-  { key: "intelligence", label: "Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
+  { key: "intelligence", label: "Business Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: "◆" },
   { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: "✦" },
   { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: "RC" },
   { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: "MN" },
@@ -104,7 +104,6 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
               <strong>{restaurantName}</strong>
             </div>
           </div>
-          <div className="ml-header-context"><span>Manager workspace</span><strong>{MANAGER_NAV.find((item) => item.key === activeSection)?.label ?? "Operations"}</strong></div>
           <div className="ml-header-meta">
             <div className="ml-clock">
               <strong>{formatTime(now)}</strong>
