@@ -12,7 +12,6 @@ const ManagerStaffOperationsPage = lazy(() => import("../../manager/pages/Manage
 const ManagerCustomerExperiencePage = lazy(() => import("../../manager/pages/ManagerCustomerExperiencePage").then((module) => ({ default: module.ManagerCustomerExperiencePage })));
 const ManagerOperationalReportsPage = lazy(() => import("../../manager/pages/ManagerOperationalReportsPage").then((module) => ({ default: module.ManagerOperationalReportsPage })));
 const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages/ManagerRestaurantIntelligencePage").then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
-const ManagerAiOperationsPage = lazy(() => import("../../manager/pages/ManagerAiOperationsPage").then((module) => ({ default: module.ManagerAiOperationsPage })));
 const ManagerMenuWorkspacePage = lazy(() => import("../../manager/pages/ManagerMenuWorkspacePage").then((module) => ({ default: module.ManagerMenuWorkspacePage })));
 const ManagerRecipeWorkspacePage = lazy(() => import("../../manager/pages/ManagerRecipeWorkspacePage").then((module) => ({ default: module.ManagerRecipeWorkspacePage })));
 const ManagerInventoryWorkspacePage = lazy(() => import("../../manager/pages/ManagerInventoryWorkspacePage").then((module) => ({ default: module.ManagerInventoryWorkspacePage })));
@@ -75,13 +74,12 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "customers") page = <ManagerCustomerExperiencePage {...props} />;
   if (section === "reports") page = <ManagerOperationalReportsPage {...props} />;
   if (section === "intelligence") page = <ManagerRestaurantIntelligencePage {...props} />;
-  if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
   if (section === "menu") page = <ManagerMenuWorkspacePage {...props} />;
   if (section === "recipes") page = <ManagerRecipeWorkspacePage {...props} />;
   if (section === "inventory") page = <ManagerInventoryWorkspacePage {...props} />;
   return (
-    <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>
-      <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section}>
+    <ManagerWorkspaceChrome restaurantId={restaurantId} section={section === "ai" ? "dashboard" : section}>
+      <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section} currency={access.currency}>
         <Suspense fallback={<main className="route-message"><p>Loading manager module...</p></main>}>
           {page}
         </Suspense>

@@ -595,15 +595,6 @@ export function ManagerDashboardPage({
         )}
       </section>
 
-      <a
-        className="md-ai-entry"
-        href="/manager/ai"
-        aria-label="Open ServeFlow AI assistant"
-      >
-        <span aria-hidden="true">AI</span>
-        Ask ServeFlow
-      </a>
-
       {selectedTable && (
         <div
           className="md-detail-layer"

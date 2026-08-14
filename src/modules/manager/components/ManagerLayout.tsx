@@ -1,10 +1,12 @@
 import { type ReactNode, useEffect, useState } from "react";
 import {
   Activity, BarChart3, BookOpen, CookingPot, Gem, Heart,
-  Home, Package, Sparkles, UtensilsCrossed, Users,
+  Home, Package, UtensilsCrossed, Users,
 } from "lucide-react";
+import type { CurrencyConfig } from "../../../core/format/currency";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
+import { ManagerCopilot } from "./ManagerCopilot";
 import "../styles/managerLayout.css";
 
 type Props = {
@@ -12,6 +14,7 @@ type Props = {
   restaurantName: string;
   managerName: string;
   section: string;
+  currency?: CurrencyConfig;
   children: ReactNode;
 };
 
@@ -23,7 +26,6 @@ const MANAGER_NAV = [
   { key: "customers", label: "Guests", mobileLabel: "Guests", href: "/manager/customers", icon: Heart },
   { key: "reports", label: "Reports", mobileLabel: "Reports", href: "/manager/reports", icon: BarChart3 },
   { key: "intelligence", label: "Business Intelligence", mobileLabel: "Intelligence", href: "/manager/intelligence", icon: Gem },
-  { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: Sparkles },
   { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: BookOpen },
   { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: UtensilsCrossed },
   { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/manager/inventory", icon: Package },
@@ -43,7 +45,7 @@ function formatTime(value: Date) {
   return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(value);
 }
 
-export function ManagerLayout({ restaurantId, restaurantName, managerName, section, children }: Props) {
+export function ManagerLayout({ restaurantId, restaurantName, managerName, section, currency, children }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const activeSection = section === "cashier" || section === "tables" ? "tables" : section;
@@ -125,6 +127,7 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
         <nav className="ml-bottom-nav" aria-label="Primary mobile navigation">
           {MOBILE_NAV.map((item) => { const Icon = item.icon; return <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onClick={(event) => navigate(event, item.href)}><span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>{item.mobileLabel}</a>; })}
         </nav>
+        <ManagerCopilot restaurantId={restaurantId} restaurantName={restaurantName} managerName={managerName} section={section} currency={currency}/>
       </section>
     </main>
   );

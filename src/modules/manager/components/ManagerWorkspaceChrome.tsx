@@ -36,8 +36,22 @@ export function ManagerWorkspaceChrome({
     };
   }, []);
 
-  const onRestaurantEvent = useCallback((event: { table: string }) => {
-    if (!["orders", "order_items", "manager_customer_complaints", "restaurant_staff"].includes(event.table)) return;
+  const onRestaurantEvent = useCallback(
+    (event: { table: string }) => {
+      window.dispatchEvent(
+        new CustomEvent("serveflow:manager-data-changed", {
+          detail: { table: event.table },
+        }),
+      );
+      if (
+        ![
+          "orders",
+          "order_items",
+          "manager_customer_complaints",
+          "restaurant_staff",
+        ].includes(event.table)
+      )
+        return;
       setCriticalCount((count) => Math.min(99, count + 1));
       if (
         notificationsEnabled &&
@@ -49,9 +63,17 @@ export function ManagerWorkspaceChrome({
           tag: `serveflow-manager-${restaurantId}`,
         });
       }
-  }, [notificationsEnabled, restaurantId]);
-  const centralRealtimeState = useRestaurantEvents({ restaurantId, onEvent: onRestaurantEvent });
-  useEffect(() => setRealtimeState(centralRealtimeState), [centralRealtimeState]);
+    },
+    [notificationsEnabled, restaurantId],
+  );
+  const centralRealtimeState = useRestaurantEvents({
+    restaurantId,
+    onEvent: onRestaurantEvent,
+  });
+  useEffect(
+    () => setRealtimeState(centralRealtimeState),
+    [centralRealtimeState],
+  );
 
   async function enableNotifications() {
     if (typeof Notification === "undefined") return;
@@ -86,14 +108,17 @@ export function ManagerWorkspaceChrome({
         </div>
       )}
       {criticalCount > 0 && (
-        <a
+        <button
           className="mwc-critical"
-          href="/manager/ai"
-          onClick={() => setCriticalCount(0)}
+          type="button"
+          onClick={() => {
+            setCriticalCount(0);
+            window.dispatchEvent(new CustomEvent("serveflow:open-copilot"));
+          }}
         >
           {criticalCount} live update{criticalCount === 1 ? "" : "s"} need
           review
-        </a>
+        </button>
       )}
       {children}
     </div>

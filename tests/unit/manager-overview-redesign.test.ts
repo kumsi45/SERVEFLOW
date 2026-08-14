@@ -45,7 +45,7 @@ describe("manager overview command center", () => {
     expect(page).not.toContain("Quick Actions");
     expect(page).not.toContain("AI Operations Copilot");
     expect(page).not.toContain("Open Operations Copilot");
-    expect(page).toContain('className="md-ai-entry"');
+    expect(page).not.toContain('className="md-ai-entry"');
   });
 
   it("keeps available location cards free from synthetic session details", () => {

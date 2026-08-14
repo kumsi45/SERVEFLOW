@@ -689,13 +689,6 @@
     overflow: visible;
   }
 
-  .ml-content .md-ai-entry {
-    position: static;
-    width: max-content;
-    max-width: 100%;
-    margin: 14px 0 0 auto;
-  }
-
   .ml-sidebar.is-open {
     transform: translateX(0);
   }

@@ -13,7 +13,7 @@ describe("Manager mobile document flow", () => {
 
   it("keeps bottom content and operational rails in normal responsive flow", () => {
     for (const selector of [".md-side", ".md-recent", ".moc-shift", ".moc-recent", ".mor-chart-card", ".mri-section"]) expect(styles).toContain(selector);
-    expect(styles).toMatch(/\.ml-content \.md-ai-entry \{[\s\S]*?position: static;/);
+    expect(styles).not.toContain(".ml-content .md-ai-entry");
     expect(styles).toMatch(/\.ml-content \.md-recent,[\s\S]*?position: static;/);
   });
 

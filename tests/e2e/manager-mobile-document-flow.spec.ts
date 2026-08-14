@@ -8,7 +8,7 @@ const dashboard = readFileSync(resolve(process.cwd(), "src/modules/manager/style
 test("manager shell uses one document scroll at mobile and tablet widths", async ({ page }) => {
   await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${layout}\n${dashboard}\nbody{margin:0}.fixture{height:430px;border:1px solid #ddd}</style></head><body>
     <main class="ml-shell"><section class="ml-workspace"><header class="ml-header">Manager</header><div class="ml-content"><main class="md-overview">
-      <section class="fixture">Metrics</section><section class="fixture">Operations</section><aside class="md-side fixture">Health</aside><section class="md-recent fixture">Recent Activity</section><a class="md-ai-entry"><span>AI</span>Ask ServeFlow</a>
+      <section class="fixture">Metrics</section><section class="fixture">Operations</section><aside class="md-side fixture">Health</aside><section class="md-recent fixture">Recent Activity</section>
     </main></div></section></main></body></html>`);
 
   for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
@@ -17,26 +17,22 @@ test("manager shell uses one document scroll at mobile and tablet widths", async
     const result = await page.evaluate(() => {
       const content = document.querySelector<HTMLElement>(".ml-content")!;
       const recent = document.querySelector<HTMLElement>(".md-recent")!;
-      const ai = document.querySelector<HTMLElement>(".md-ai-entry")!;
       return {
         pageScroll: scrollY,
         pageHeight: document.documentElement.scrollHeight,
         viewportHeight: innerHeight,
         contentOverflow: getComputedStyle(content).overflowY,
         recentPosition: getComputedStyle(recent).position,
-        aiPosition: getComputedStyle(ai).position,
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
         recentBottom: recent.getBoundingClientRect().bottom,
-        aiTop: ai.getBoundingClientRect().top,
       };
     });
     expect(result.pageHeight).toBeGreaterThan(result.viewportHeight);
     expect(result.pageScroll).toBeGreaterThan(0);
     expect(result.contentOverflow).toBe("visible");
     expect(result.recentPosition).toBe("static");
-    expect(result.aiPosition).toBe("static");
     expect(result.horizontalOverflow).toBe(false);
-    expect(result.aiTop).toBeGreaterThanOrEqual(result.recentBottom);
+    expect(result.recentBottom).toBeLessThanOrEqual(result.viewportHeight);
   }
 });
 

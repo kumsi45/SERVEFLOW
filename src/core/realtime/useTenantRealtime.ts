@@ -11,10 +11,11 @@ type TenantRealtimeOptions = {
   client?: SupabaseClient;
   debounceMs?: number;
   refreshOnConnect?: boolean;
+  enabled?: boolean;
 };
 
 /** Canonical tenant subscription with cleanup and network/tab-wake recovery. */
-export function useTenantRealtime({ channelName, restaurantId, tables, refresh, client = supabase, debounceMs = 120, refreshOnConnect = true }: TenantRealtimeOptions) {
+export function useTenantRealtime({ channelName, restaurantId, tables, refresh, client = supabase, debounceMs = 120, refreshOnConnect = true, enabled = true }: TenantRealtimeOptions) {
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
   const timer = useRef<number | undefined>(undefined);
@@ -25,9 +26,9 @@ export function useTenantRealtime({ channelName, restaurantId, tables, refresh, 
     timer.current = window.setTimeout(() => void refreshRef.current(), debounceMs);
   }, [debounceMs, tables.join("|")]);
   void channelName;
-  const state = useRestaurantEvents({ restaurantId, client, tables, onEvent });
+  const state = useRestaurantEvents({ restaurantId, client, tables, onEvent, enabled });
   useEffect(() => {
-    if (state === "connected" && refreshOnConnect) void refreshRef.current();
-  }, [refreshOnConnect, state]);
+    if (enabled && state === "connected" && refreshOnConnect) void refreshRef.current();
+  }, [enabled, refreshOnConnect, state]);
   return state;
 }

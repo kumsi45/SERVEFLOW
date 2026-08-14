@@ -17,7 +17,6 @@ describe("Manager sidebar icon system", () => {
       'href: "/manager/customers", icon: Heart',
       'href: "/manager/reports", icon: BarChart3',
       'href: "/manager/intelligence", icon: Gem',
-      'href: "/manager/ai", icon: Sparkles',
       'href: "/manager/recipes", icon: BookOpen',
       'href: "/manager/menu", icon: UtensilsCrossed',
       'href: "/manager/inventory", icon: Package',
