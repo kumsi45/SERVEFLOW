@@ -44,6 +44,9 @@ describe("global Manager ServeFlow Copilot", () => {
     expect(component).toContain("Recommended action");
     expect(component).not.toContain("logManagerAiDecision");
     expect(component).not.toContain("Confirm Reassignment");
+    expect(component).toContain('event.key === "Enter"');
+    expect(component).toContain("onSubmit={submit}");
+    expect(component).toContain(".finally(() => setLoading(false))");
   });
 
   it("fails closed for unsupported attendance and profit questions", () => {

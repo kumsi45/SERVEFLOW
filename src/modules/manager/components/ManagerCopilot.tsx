@@ -214,7 +214,30 @@ export function ManagerCopilot({
     if (!snapshot) {
       setMessages((current) => [...current, managerMessage]);
       setDraft("");
-      void refresh();
+      setLoading(true);
+      setError(null);
+      void loadManagerCopilotSnapshot(restaurantId)
+        .then((nextSnapshot) => {
+          setSnapshot(nextSnapshot);
+          const answer = investigateManagerQuestion(
+            question,
+            nextSnapshot,
+            currency,
+            context,
+          );
+          setMessages((current) => [
+            ...current,
+            { id: crypto.randomUUID(), role: "copilot", answer },
+          ]);
+        })
+        .catch((loadError) => {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "ServeFlow Copilot could not answer this question.",
+          );
+        })
+        .finally(() => setLoading(false));
       return;
     }
     const answer = investigateManagerQuestion(
@@ -274,7 +297,7 @@ export function ManagerCopilot({
                 <div>
                   <strong>ServeFlow Copilot</strong>
                   <small>
-                    <i /> Live · {restaurantName}
+                    <i /> Live - {restaurantName}
                   </small>
                 </div>
               </div>
