@@ -31,7 +31,7 @@ describe("inventory dashboard navigation and access", () => {
     expect(owner).toContain('{ id: "inventory", icon: "▦", label: "Inventory" }');
     expect(manager).toContain('{ key: "inventory", label: "Inventory"');
     expect(owner).toContain('"/inventory/dashboard"');
-    expect(manager).toContain('href: "/inventory/dashboard"');
+    expect(manager).toContain('href: "/manager/inventory"');
     expect(blockedRoleNavigation).not.toContain('href: "/inventory/');
     expect(blockedRoleNavigation).not.toContain('label: "Inventory"');
   });

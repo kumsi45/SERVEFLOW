@@ -615,6 +615,11 @@
 @media (max-width: 1023px) {
   .ml-shell {
     display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .ml-sidebar {
@@ -627,7 +632,68 @@
   }
 
   .ml-workspace {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
     margin-left: 0;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .ml-content {
+    min-height: 0;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .mwc-shell {
+    min-height: 0;
+  }
+
+  .ml-content > *,
+  .ml-content .md-overview,
+  .ml-content .moc-page,
+  .ml-content .mks-page,
+  .ml-content .mso-page,
+  .ml-content .mcx-page,
+  .ml-content .mor-page,
+  .ml-content .mri-page,
+  .ml-content .cop-page,
+  .ml-content .mrw-page,
+  .ml-content .mmw-page {
+    max-width: 100%;
+    min-height: 0;
+  }
+
+  .ml-content .md-side,
+  .ml-content .md-recent,
+  .ml-content .moc-shift,
+  .ml-content .moc-recent,
+  .ml-content .mks-shift,
+  .ml-content .mor-chart-card,
+  .ml-content .mri-section {
+    position: static;
+    max-height: none;
+  }
+
+  .ml-content .cop-actions > div,
+  .ml-content .cop-conversation {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .ml-content .cop-chat {
+    grid-template-rows: auto auto auto auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .ml-content .md-ai-entry {
+    position: static;
+    width: max-content;
+    max-width: 100%;
+    margin: 14px 0 0 auto;
   }
 
   .ml-sidebar.is-open {

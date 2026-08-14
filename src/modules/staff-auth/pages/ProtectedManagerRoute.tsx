@@ -15,6 +15,7 @@ const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages
 const ManagerAiOperationsPage = lazy(() => import("../../manager/pages/ManagerAiOperationsPage").then((module) => ({ default: module.ManagerAiOperationsPage })));
 const ManagerMenuWorkspacePage = lazy(() => import("../../manager/pages/ManagerMenuWorkspacePage").then((module) => ({ default: module.ManagerMenuWorkspacePage })));
 const ManagerRecipeWorkspacePage = lazy(() => import("../../manager/pages/ManagerRecipeWorkspacePage").then((module) => ({ default: module.ManagerRecipeWorkspacePage })));
+const ManagerInventoryWorkspacePage = lazy(() => import("../../manager/pages/ManagerInventoryWorkspacePage").then((module) => ({ default: module.ManagerInventoryWorkspacePage })));
 
 type AccessState =
   | { status: "loading" }
@@ -77,6 +78,7 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "ai") page = <ManagerAiOperationsPage {...props} />;
   if (section === "menu") page = <ManagerMenuWorkspacePage {...props} />;
   if (section === "recipes") page = <ManagerRecipeWorkspacePage {...props} />;
+  if (section === "inventory") page = <ManagerInventoryWorkspacePage {...props} />;
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section}>
       <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section}>

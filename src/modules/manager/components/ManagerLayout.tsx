@@ -26,7 +26,7 @@ const MANAGER_NAV = [
   { key: "ai", label: "AI", mobileLabel: "AI", href: "/manager/ai", icon: Sparkles },
   { key: "recipes", label: "Recipes", mobileLabel: "Recipes", href: "/manager/recipes", icon: BookOpen },
   { key: "menu", label: "Menu", mobileLabel: "Menu", href: "/manager/menu", icon: UtensilsCrossed },
-  { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/inventory/dashboard", icon: Package },
+  { key: "inventory", label: "Inventory", mobileLabel: "Inventory", href: "/manager/inventory", icon: Package },
 ];
 
 const MOBILE_NAV = MANAGER_NAV.filter((item) => ["dashboard", "tables", "kitchen", "staff"].includes(item.key));

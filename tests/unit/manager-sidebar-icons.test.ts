@@ -20,7 +20,7 @@ describe("Manager sidebar icon system", () => {
       'href: "/manager/ai", icon: Sparkles',
       'href: "/manager/recipes", icon: BookOpen',
       'href: "/manager/menu", icon: UtensilsCrossed',
-      'href: "/inventory/dashboard", icon: Package',
+      'href: "/manager/inventory", icon: Package',
     ]) expect(layout).toContain(mapping);
   });
 
