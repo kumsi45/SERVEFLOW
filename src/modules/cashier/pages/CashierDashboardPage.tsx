@@ -328,6 +328,9 @@ type ActiveShift = {
   notes: string | null;
   cash_collected: number;
   digital_collected: number;
+  cash_refunds?: number;
+  approved_expenses?: number;
+  pending_expenses?: number;
   orders_processed: number;
   payments_processed: number;
   expected_cash: number;
@@ -414,6 +417,9 @@ type ShiftActivity = {
   metadata: Record<string, unknown> | null;
   created_at: string;
 };
+
+type CashierColleague = { id: string; display_name: string };
+type CashHandover = { id: string; incoming_cashier_id: string; outgoing_cashier_id: string; expected_amount: number; declared_amount: number; status: "awaiting_confirmation" | "confirmed" | "discrepancy"; initiated_at: string };
 
 function cancellationStatusLabel(value: string, kind: "payment" | "kitchen") {
   const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ");
@@ -1582,6 +1588,19 @@ export function CashierDashboardPage({
   const [actualCash, setActualCash] = useState("");
   const [varianceReason, setVarianceReason] = useState("");
   const [workingShift, setWorkingShift] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseReason, setExpenseReason] = useState("");
+  const [expenseNote, setExpenseNote] = useState("");
+  const [expenseWorking, setExpenseWorking] = useState(false);
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [cashierColleagues, setCashierColleagues] = useState<CashierColleague[]>([]);
+  const [cashHandovers, setCashHandovers] = useState<CashHandover[]>([]);
+  const [handoverIncomingId, setHandoverIncomingId] = useState("");
+  const [handoverDeclared, setHandoverDeclared] = useState("");
+  const [handoverReceived, setHandoverReceived] = useState("");
+  const [handoverNote, setHandoverNote] = useState("");
+  const [handoverWorking, setHandoverWorking] = useState(false);
   const {
     controller: toastController,
     pushToast,
@@ -1782,6 +1801,8 @@ export function CashierDashboardPage({
       workflowState,
       { data: paymentMethodRows, error: paymentMethodsError },
       cancellationState,
+      { data: cashierRows, error: cashiersError },
+      { data: handoverRows, error: handoversError },
     ] = await Promise.all([
       supabase
         .from("restaurant_staff")
@@ -1832,6 +1853,8 @@ export function CashierDashboardPage({
           requests: [] as CashierCancellationRequest[],
           error: loadError instanceof Error ? loadError.message : "Cancellation requests could not be loaded.",
         })),
+      supabase.from("restaurant_staff").select("id,display_name").eq("restaurant_id", restaurantId).eq("role", "cashier").eq("active", true).order("display_name", { ascending: true }),
+      supabase.from("cashier_cash_handovers").select("id,incoming_cashier_id,outgoing_cashier_id,expected_amount,declared_amount,status,initiated_at").eq("restaurant_id", restaurantId).order("initiated_at", { ascending: false }).limit(20),
     ]);
 
     if (invoicesError) throw new Error(invoicesError.message);
@@ -1839,6 +1862,8 @@ export function CashierDashboardPage({
     if (categoriesError) throw new Error(categoriesError.message);
     if (menuError) throw new Error(menuError.message);
     if (shiftError) throw new Error(shiftError.message);
+    if (cashiersError) throw new Error(cashiersError.message);
+    if (handoversError) throw new Error(handoversError.message);
     setPaymentMethodConfigurationError(paymentMethodsError?.message ?? null);
     setCancellationRequestsError(cancellationState.error);
 
@@ -1932,6 +1957,8 @@ export function CashierDashboardPage({
     );
     setWorkflow(workflowState);
     setCancellationRequests(cancellationState.requests);
+    setCashierColleagues((cashierRows ?? []) as CashierColleague[]);
+    setCashHandovers(((handoverRows ?? []) as Array<Omit<CashHandover, "expected_amount" | "declared_amount"> & { expected_amount: number | string; declared_amount: number | string }>).map((row) => ({ ...row, expected_amount: Number(row.expected_amount), declared_amount: Number(row.declared_amount) })));
     setCheckoutPaymentMethods(
       !paymentMethodsError && Array.isArray(paymentMethodRows)
         ? paymentMethodRows.filter(
@@ -1990,7 +2017,7 @@ export function CashierDashboardPage({
         );
       }, 120);
     };
-    const cashierTables = new Set(["orders", "order_invoices", "order_items", "order_cancellation_requests", "restaurant_tables", "cashier_shifts", "cash_reconciliations", "shift_activity_logs"]);
+    const cashierTables = new Set(["orders", "order_invoices", "order_items", "order_cancellation_requests", "restaurant_tables", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"]);
     const unsubscribe = getRestaurantEventStream(restaurantId).subscribe(
       (event) => { if (cashierTables.has(event.table)) refresh(); },
       (status) => { setRealtimeState(status); if (status === "connected" && dashboardHydratedRef.current) refresh(); },
@@ -2377,6 +2404,59 @@ export function CashierDashboardPage({
     }
   }
 
+  async function handleRecordExpense() {
+    if (!activeShift) return;
+    const amount = Number(expenseAmount);
+    if (!Number.isFinite(amount) || amount <= 0) { setError("Expense amount must be greater than zero."); return; }
+    if (!expenseReason.trim()) { setError("Expense reason is required."); return; }
+    try {
+      setExpenseWorking(true);
+      setError(null);
+      const { error: expenseError } = await supabase.rpc("record_cashier_shift_expense", {
+        target_shift_id: activeShift.id,
+        expense_amount: amount,
+        expense_reason: expenseReason.trim(),
+        expense_note: expenseNote.trim() || null,
+      });
+      if (expenseError) throw new Error(expenseError.message);
+      setExpenseModalOpen(false);
+      setExpenseAmount(""); setExpenseReason(""); setExpenseNote("");
+      pushToast({ type: "success", title: "Expense submitted", description: "Manager approval is pending.", dedupeKey: `cashier-expense:${activeShift.id}:${amount}` });
+      await loadDashboard();
+    } catch (expenseError) {
+      setError(expenseError instanceof Error ? expenseError.message : "Could not record the expense.");
+    } finally { setExpenseWorking(false); }
+  }
+
+  async function handleInitiateHandover() {
+    if (!activeShift || !handoverIncomingId) return;
+    const declared = Number(handoverDeclared);
+    if (!Number.isFinite(declared) || declared < 0) { setError("Declared handover cash must be zero or greater."); return; }
+    try {
+      setHandoverWorking(true); setError(null);
+      const { error: handoverError } = await supabase.rpc("initiate_cashier_handover", { target_shift_id: activeShift.id, incoming_staff_id: handoverIncomingId, declared_cash: declared, handover_note: handoverNote.trim() || null });
+      if (handoverError) throw new Error(handoverError.message);
+      setHandoverModalOpen(false); setHandoverIncomingId(""); setHandoverDeclared(""); setHandoverNote("");
+      pushToast({ type: "information", title: "Handover started", description: "The incoming cashier must count and confirm the cash.", dedupeKey: `cashier-handover:${activeShift.id}` });
+      await loadDashboard();
+    } catch (handoverError) { setError(handoverError instanceof Error ? handoverError.message : "Could not initiate handover."); }
+    finally { setHandoverWorking(false); }
+  }
+
+  async function handleConfirmHandover(handoverId: string) {
+    const received = Number(handoverReceived);
+    if (!Number.isFinite(received) || received < 0) { setError("Received cash must be zero or greater."); return; }
+    try {
+      setHandoverWorking(true); setError(null);
+      const { error: handoverError } = await supabase.rpc("confirm_cashier_handover", { target_handover_id: handoverId, counted_cash: received, confirmation_note: handoverNote.trim() || null });
+      if (handoverError) throw new Error(handoverError.message);
+      setHandoverModalOpen(false); setHandoverReceived(""); setHandoverNote("");
+      pushToast({ type: "success", title: "Handover confirmed", description: "The counted amount is now permanently recorded.", dedupeKey: `cashier-handover-confirm:${handoverId}` });
+      await loadDashboard();
+    } catch (handoverError) { setError(handoverError instanceof Error ? handoverError.message : "Could not confirm handover."); }
+    finally { setHandoverWorking(false); }
+  }
+
   async function handlePrintRequestedBill(session: DiningSessionSummary) {
     try {
       setBillWorkingSessionId(session.diningSessionId);
@@ -2736,6 +2816,8 @@ export function CashierDashboardPage({
   const operationalQueue = operationalQueueView.rows[visibleQueueTab];
   const currentQueue = QUEUE_PRESENTATION[visibleQueueTab];
   const expectedCash = activeShift?.expected_cash ?? 0;
+  const eligibleIncomingCashiers = cashierColleagues.filter((cashier) => cashier.id !== activeShift?.opened_by);
+  const incomingHandovers = cashHandovers.filter((handover) => handover.incoming_cashier_id === activeShift?.opened_by && handover.status === "awaiting_confirmation");
   const actualCashNumber = Number(actualCash || 0);
   const variance = actualCash === "" ? 0 : actualCashNumber - expectedCash;
   const needsVarianceReason = variance !== 0;
@@ -3321,6 +3403,8 @@ export function CashierDashboardPage({
                     <button type="button" onClick={() => setQueueTab("pending")}>⌕ Search Order</button>
                     <button type="button" onClick={() => setQueueTab("ready")}>▤ Reprint Receipt</button>
                     <button type="button" onClick={() => setQueueTab("paid")}>↩ Refund</button>
+                    <button type="button" disabled={!activeShift} onClick={() => setExpenseModalOpen(true)}>Record Expense</button>
+                    <button type="button" disabled={!activeShift} onClick={() => setHandoverModalOpen(true)}>{incomingHandovers.length ? `Confirm Handover (${incomingHandovers.length})` : "Cash Handover"}</button>
                     <button className="danger" type="button" onClick={() => activeShift ? setReconcileOpen(true) : setOpenShiftModal(true)}>{activeShift ? "Close Shift" : "Open Shift"}</button>
                   </div>
                 </div>
@@ -3818,10 +3902,41 @@ export function CashierDashboardPage({
         </div>
       )}
 
+      {expenseModalOpen && activeShift && (
+        <div className="cd-modal-overlay">
+          <div className="cd-modal cd-cash-expense-modal" role="dialog" aria-modal="true" aria-label="Record cash expense">
+            <div className="cd-modal-header"><div><h2>Record Expense</h2><p>Submit cash removed from this drawer for manager review.</p></div><button type="button" aria-label="Close expense form" onClick={() => setExpenseModalOpen(false)}>x</button></div>
+            <label className="cd-field"><span>Amount</span><input type="number" min="0.01" step="0.01" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} autoFocus /></label>
+            <label className="cd-field"><span>Reason</span><input value={expenseReason} onChange={(event) => setExpenseReason(event.target.value)} placeholder="What was cash spent on?" required /></label>
+            <label className="cd-field"><span>Optional Note</span><textarea value={expenseNote} onChange={(event) => setExpenseNote(event.target.value)} placeholder="Additional operational context" /></label>
+            <div className="cd-modal-actions split"><button type="button" onClick={() => setExpenseModalOpen(false)}>Cancel</button><button type="button" className="cd-primary-action" disabled={expenseWorking || !expenseReason.trim() || Number(expenseAmount) <= 0} onClick={() => void handleRecordExpense()}>{expenseWorking ? "Submitting..." : "Submit for Approval"}</button></div>
+          </div>
+        </div>
+      )}
+
+      {handoverModalOpen && activeShift && (
+        <div className="cd-modal-overlay">
+          <div className="cd-modal cd-cash-expense-modal" role="dialog" aria-modal="true" aria-label="Cash handover">
+            <div className="cd-modal-header"><div><h2>Cash Handover</h2><p>{incomingHandovers.length ? "Count the cash received before confirming." : "The incoming cashier must independently confirm the amount."}</p></div><button type="button" aria-label="Close handover form" onClick={() => setHandoverModalOpen(false)}>x</button></div>
+            {incomingHandovers.length ? incomingHandovers.map((handover) => <div className="cd-handover-confirm" key={handover.id}>
+              <div className="cd-reconcile-panel"><div className="cd-reconcile-row"><span>Expected Amount</span><strong>{fmtMoney(handover.expected_amount)}</strong></div><div className="cd-reconcile-row"><span>Outgoing Declared</span><strong>{fmtMoney(handover.declared_amount)}</strong></div></div>
+              <label className="cd-field"><span>Cash You Counted</span><input type="number" min="0" step="0.01" value={handoverReceived} onChange={(event) => setHandoverReceived(event.target.value)} /></label>
+              <label className="cd-field"><span>Note (required for a difference)</span><textarea value={handoverNote} onChange={(event) => setHandoverNote(event.target.value)} placeholder="Explain any difference from expected cash" /></label>
+              <div className="cd-modal-actions split"><button type="button" onClick={() => setHandoverModalOpen(false)}>Cancel</button><button type="button" className="cd-primary-action" disabled={handoverWorking || handoverReceived === ""} onClick={() => void handleConfirmHandover(handover.id)}>{handoverWorking ? "Confirming..." : "Confirm Count"}</button></div>
+            </div>) : <>
+              <label className="cd-field"><span>Incoming Cashier</span><select value={handoverIncomingId} onChange={(event) => setHandoverIncomingId(event.target.value)}><option value="">Select cashier</option>{eligibleIncomingCashiers.map((cashier) => <option value={cashier.id} key={cashier.id}>{cashier.display_name}</option>)}</select></label>
+              <label className="cd-field"><span>Cash You Declare</span><input type="number" min="0" step="0.01" value={handoverDeclared} onChange={(event) => setHandoverDeclared(event.target.value)} /></label>
+              <label className="cd-field"><span>Optional Note</span><textarea value={handoverNote} onChange={(event) => setHandoverNote(event.target.value)} placeholder="Handover context" /></label>
+              <div className="cd-modal-actions split"><button type="button" onClick={() => setHandoverModalOpen(false)}>Cancel</button><button type="button" className="cd-primary-action" disabled={handoverWorking || !handoverIncomingId || handoverDeclared === ""} onClick={() => void handleInitiateHandover()}>{handoverWorking ? "Starting..." : "Start Handover"}</button></div>
+            </>}
+          </div>
+        </div>
+      )}
+
       {openShiftModal && (
         <div className="cd-modal-overlay">
           <div
-            className="cd-modal"
+            className="cd-modal cd-open-shift-modal"
             role="dialog"
             aria-modal="true"
             aria-label="Open shift"

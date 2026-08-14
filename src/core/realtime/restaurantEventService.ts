@@ -5,6 +5,7 @@ import { realtimeStateFromStatus, type RealtimeConnectionState } from "./realtim
 export const RESTAURANT_REALTIME_TABLES = [
   "orders", "order_items", "order_invoices", "restaurant_tables",
   "restaurant_staff", "cashier_shifts", "cash_reconciliations", "shift_activity_logs",
+  "cashier_shift_expenses", "cashier_cash_handovers",
   "kitchen_order_station_progress", "restaurant_table_waiter_assignments",
   "kitchen_inventory_requests", "inventory_items", "manager_customer_complaints",
   "menu_items", "kitchen_stations", "restaurants",

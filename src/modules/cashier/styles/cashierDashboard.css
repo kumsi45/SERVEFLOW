@@ -1885,6 +1885,29 @@
   min-height: 104px;
   resize: vertical;
 }
+
+/* Keep opening cash and notes readable on the light Open Shift surface. */
+.cd-open-shift-modal .cd-field input,
+.cd-open-shift-modal .cd-field textarea {
+  background: #ffffff;
+  color: #14251d;
+  -webkit-text-fill-color: #14251d;
+  caret-color: #087a48;
+  color-scheme: light;
+}
+.cd-open-shift-modal .cd-field input::placeholder,
+.cd-open-shift-modal .cd-field textarea::placeholder {
+  color: #62756b;
+  -webkit-text-fill-color: #62756b;
+  opacity: 1;
+}
+.cd-open-shift-modal .cd-field input:focus,
+.cd-open-shift-modal .cd-field textarea:focus {
+  background: #ffffff;
+  color: #14251d;
+  -webkit-text-fill-color: #14251d;
+}
+.cd-cash-expense-modal{color:#14251d;background:#fff}.cd-cash-expense-modal .cd-field input,.cd-cash-expense-modal .cd-field textarea,.cd-cash-expense-modal .cd-field select{width:100%;min-height:46px;padding:10px 13px;border:1px solid #9aafa4;border-radius:9px;background:#fff;color:#14251d;-webkit-text-fill-color:#14251d;caret-color:#087a48;color-scheme:light;font:inherit}.cd-cash-expense-modal .cd-field input::placeholder,.cd-cash-expense-modal .cd-field textarea::placeholder{color:#62756b;-webkit-text-fill-color:#62756b;opacity:1}.cd-cash-expense-modal .cd-modal-actions button{min-height:44px;padding:0 16px;border:1px solid #c8d8d0;border-radius:9px;background:#fff;color:#344b40;font:inherit;font-weight:800}.cd-cash-expense-modal .cd-modal-actions .cd-primary-action{border-color:#087a48;background:#087a48;color:#fff}.cd-cash-expense-modal .cd-modal-actions button:disabled{cursor:not-allowed;opacity:.55}.cd-handover-confirm{display:grid;gap:12px}
 .cd-modal-actions {
   display: flex;
   justify-content: flex-end;

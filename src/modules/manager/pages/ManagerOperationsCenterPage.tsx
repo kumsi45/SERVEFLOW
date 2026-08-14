@@ -5,6 +5,7 @@ import { fetchManagerDashboardSnapshot, releaseManagerDiningSession } from "../s
 import { assignWaiterTables, loadManagerStaffOperations, type ManagerStaffMember, type ManagerStaffOperationsSnapshot } from "../services/managerStaffOperationsService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
 import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { loadManagerCashierOperations, reviewManagerCashierExpense, type ManagerCashierExpense, type ManagerCashierOperationsSnapshot } from "../services/managerCashierOperationsService";
 import "../styles/managerOperationsCenter.css";
 
 type Props = { restaurantId: string; currency?: CurrencyConfig };
@@ -13,6 +14,7 @@ type LocationFilter = "all" | "active" | "free" | "attention";
 type ActionPriority = "critical" | "attention" | "normal";
 type ManagerAction = { id: string; title: string; detail: string; age: string; priority: ActionPriority; category: "approvals" | "service"; tableId?: string; destination?: string };
 type RecentOperation = { id: string; at: string; label: string };
+type OperationsView = "service" | "cashier";
 
 function elapsed(minutes: number | null) {
   if (minutes == null) return "";
@@ -89,10 +91,95 @@ function buildRecentOperations(tables: ManagerFloorTable[], inventoryRequests: I
   return [...requests, ...sessions].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 8);
 }
 
+function CashierOperationsView({ snapshot, currency, onRefresh, onError, onNotice }: {
+  snapshot: ManagerCashierOperationsSnapshot | null;
+  currency?: CurrencyConfig;
+  onRefresh: () => Promise<void>;
+  onError: (message: string) => void;
+  onNotice: (message: string) => void;
+}) {
+  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
+  const [workingExpenseId, setWorkingExpenseId] = useState<string | null>(null);
+  const shifts = snapshot?.activeShifts ?? [];
+  const expenses = snapshot?.expenses ?? [];
+  const handovers = snapshot?.handovers ?? [];
+  const reconciliations = snapshot?.reconciliations ?? [];
+  const pendingExpenses = expenses.filter((expense) => expense.status === "pending");
+  const pendingHandovers = handovers.filter((handover) => handover.status === "awaiting_confirmation");
+  const discrepancies = [
+    ...handovers.filter((handover) => handover.status === "discrepancy"),
+    ...reconciliations.filter((reconciliation) => reconciliation.variance !== 0),
+  ];
+  const selectedShift = shifts.find((shift) => shift.id === selectedShiftId) ?? null;
+  const selectedExpenses = expenses.filter((expense) => expense.shiftId === selectedShiftId);
+  const actionCount = pendingExpenses.length + pendingHandovers.length + discrepancies.length;
+
+  async function reviewExpense(expense: ManagerCashierExpense, decision: "approved" | "rejected") {
+    const reason = decision === "rejected" ? window.prompt("Rejection reason (required):")?.trim() : undefined;
+    if (decision === "rejected" && !reason) return;
+    try {
+      setWorkingExpenseId(expense.id);
+      await reviewManagerCashierExpense(expense.id, decision, reason);
+      onNotice(`Expense ${decision}.`);
+      await onRefresh();
+    } catch (reviewError) {
+      onError(reviewError instanceof Error ? reviewError.message : "Expense review failed.");
+    } finally { setWorkingExpenseId(null); }
+  }
+
+  return <div className="moc-cashier-workspace">
+    <section className="moc-cashier-kpis" aria-label="Cashier operations summary">
+      <article><span>Cashiers on shift</span><strong>{shifts.length}</strong></article>
+      <article><span>Open drawers</span><strong>{shifts.length}</strong></article>
+      <article><span>Cash collected today</span><strong>{formatCurrency(snapshot?.cashCollectedToday ?? 0, currency)}</strong></article>
+      <article className={pendingExpenses.length ? "attention" : ""}><span>Expense approvals</span><strong>{pendingExpenses.length}</strong></article>
+      <article className={discrepancies.length ? "critical" : ""}><span>Reconciliation issues</span><strong>{discrepancies.length}</strong></article>
+    </section>
+
+    <section className="moc-panel moc-cash-actions" aria-labelledby="cashier-actions-title">
+      <div className="moc-section-head"><div><span>Exceptions first</span><h2 id="cashier-actions-title">Cashier Actions <b>{actionCount}</b></h2></div></div>
+      <div className="moc-cash-action-list">
+        {pendingExpenses.map((expense) => <article key={expense.id} className="moc-cash-action attention">
+          <i /><div><strong>Expense approval required</strong><span>{expense.cashierName} · {formatCurrency(expense.amount, currency)} · {expense.reason}</span></div><time>{elapsed(minutesSince(expense.createdAt))}</time>
+          <div className="moc-cash-action-buttons"><button type="button" disabled={workingExpenseId === expense.id} onClick={() => void reviewExpense(expense, "approved")}>Approve</button><button type="button" className="danger" disabled={workingExpenseId === expense.id} onClick={() => void reviewExpense(expense, "rejected")}>Reject</button></div>
+        </article>)}
+        {pendingHandovers.map((handover) => <article key={handover.id} className="moc-cash-action attention"><i /><div><strong>Handover awaiting confirmation</strong><span>{handover.outgoingName} → {handover.incomingName} · {formatCurrency(handover.expectedAmount, currency)}</span></div><time>{elapsed(minutesSince(handover.initiatedAt))}</time><span className="moc-status amber">Pending incoming count</span></article>)}
+        {handovers.filter((handover) => handover.status === "discrepancy").map((handover) => <article key={handover.id} className="moc-cash-action critical"><i /><div><strong>Cash handover discrepancy</strong><span>{handover.outgoingName} → {handover.incomingName} · Difference {formatCurrency(handover.difference ?? 0, currency)}</span></div><time>{handover.confirmedAt ? elapsed(minutesSince(handover.confirmedAt)) : ""}</time><span className="moc-status red">Review</span></article>)}
+        {reconciliations.filter((item) => item.variance !== 0).map((item) => <article key={item.id} className="moc-cash-action critical"><i /><div><strong>Shift cash difference</strong><span>{item.cashierName} · Expected {formatCurrency(item.expectedCash, currency)} · Actual {formatCurrency(item.actualCash, currency)}</span></div><time>{elapsed(minutesSince(item.closedAt))}</time><span className="moc-status red">{item.variance > 0 ? "Over" : "Short"} {formatCurrency(Math.abs(item.variance), currency)}</span></article>)}
+        {actionCount === 0 && <div className="moc-empty"><strong>✓ Cashier operation is under control</strong><span>No approvals, handovers, or cash differences require manager action.</span></div>}
+      </div>
+    </section>
+
+    <section className="moc-panel moc-active-cashiers" aria-labelledby="active-cashiers-title">
+      <div className="moc-section-head"><div><span>Live drawers</span><h2 id="active-cashiers-title">Active Cashiers</h2></div></div>
+      <div className="moc-cashier-table" role="table" aria-label="Active cashier shifts">
+        <div className="moc-cashier-table-head" role="row"><span>Cashier</span><span>Shift start</span><span>Opening</span><span>Cash sales</span><span>Expenses</span><span>Expected drawer</span><span>Status</span></div>
+        {shifts.map((shift) => <button type="button" role="row" key={shift.id} onClick={() => setSelectedShiftId(shift.id)}>
+          <span data-label="Cashier"><strong>{shift.cashierName}</strong><small>{shift.employeeId || "Staff ID unavailable"}</small></span><span data-label="Shift start">{timeLabel(shift.openedAt)}</span><span data-label="Opening">{formatCurrency(shift.openingCash, currency)}</span><span data-label="Cash sales">{formatCurrency(shift.cashCollected, currency)}</span><span data-label="Expenses">{formatCurrency(shift.approvedExpenses, currency)}</span><span data-label="Expected drawer"><strong>{formatCurrency(shift.expectedCash, currency)}</strong></span><span data-label="Status"><em className="moc-status green">Active</em></span>
+        </button>)}
+        {shifts.length === 0 && <div className="moc-empty"><strong>No cashier currently has an open shift.</strong></div>}
+      </div>
+    </section>
+
+    <div className="moc-cash-secondary">
+      <section className="moc-panel"><div className="moc-section-head"><div><span>Two-party control</span><h2>Recent Handovers</h2></div></div><div className="moc-cash-compact-list">{handovers.slice(0, 6).map((handover) => <p key={handover.id}><span><strong>{handover.outgoingName} → {handover.incomingName}</strong><small>{formatCurrency(handover.expectedAmount, currency)} expected</small></span><em className={`moc-status ${handover.status === "confirmed" ? "green" : handover.status === "discrepancy" ? "red" : "amber"}`}>{handover.status.replace("_", " ")}</em></p>)}{handovers.length === 0 && <div className="moc-empty"><strong>No recent cash handovers.</strong></div>}</div></section>
+      <section className="moc-panel"><div className="moc-section-head"><div><span>Operational history</span><h2>Recent Cashier Events</h2></div></div><div className="moc-cash-compact-list">{(snapshot?.recentEvents ?? []).slice(0, 8).map((event) => <p key={event.id}><span><strong>{event.message}</strong><small>{event.actorName || "ServeFlow"} · {timeLabel(event.createdAt)}</small></span>{event.amount != null && <b>{formatCurrency(event.amount, currency)}</b>}</p>)}{(snapshot?.recentEvents ?? []).length === 0 && <div className="moc-empty"><strong>No recent cashier activity.</strong></div>}</div></section>
+    </div>
+
+    {selectedShift && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedShiftId(null); }}><aside className="moc-inspector moc-cashier-inspector" role="dialog" aria-modal="true" aria-labelledby="cashier-shift-title">
+      <header><div><span>Cashier Shift</span><h2 id="cashier-shift-title">{selectedShift.cashierName}</h2><time>Started {timeLabel(selectedShift.openedAt)}</time></div><button type="button" aria-label="Close cashier shift details" onClick={() => setSelectedShiftId(null)}>×</button></header>
+      <section><h3>Drawer</h3><dl><div><dt>Opening cash</dt><dd>{formatCurrency(selectedShift.openingCash, currency)}</dd></div><div><dt>Cash collected</dt><dd>{formatCurrency(selectedShift.cashCollected, currency)}</dd></div><div><dt>Non-cash collected</dt><dd>{formatCurrency(selectedShift.nonCashCollected, currency)}</dd></div><div><dt>Approved expenses</dt><dd>{formatCurrency(selectedShift.approvedExpenses, currency)}</dd></div><div><dt>Expected cash</dt><dd>{formatCurrency(selectedShift.expectedCash, currency)}</dd></div></dl></section>
+      <section><h3>Shift Expenses</h3><div className="moc-cash-compact-list">{selectedExpenses.map((expense) => <p key={expense.id}><span><strong>{expense.reason}</strong><small>{formatCurrency(expense.amount, currency)} · {timeLabel(expense.createdAt)}</small></span><em className={`moc-status ${expense.status === "approved" ? "green" : expense.status === "rejected" ? "red" : "amber"}`}>{expense.status}</em></p>)}{selectedExpenses.length === 0 && <div className="moc-empty"><strong>No expenses recorded for this shift.</strong></div>}</div></section>
+    </aside></div>}
+  </div>;
+}
+
 export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
+  const [operationsView, setOperationsView] = useState<OperationsView>("service");
   const [dashboard, setDashboard] = useState<ManagerDashboardSnapshot | null>(null);
   const [staffOps, setStaffOps] = useState<ManagerStaffOperationsSnapshot | null>(null);
   const [inventoryRequests, setInventoryRequests] = useState<InventoryRequest[]>([]);
+  const [cashierOps, setCashierOps] = useState<ManagerCashierOperationsSnapshot | null>(null);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
   const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
@@ -106,10 +193,11 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextDashboard, nextStaffOps, nextInventoryRequests] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId)]);
+      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId), loadManagerCashierOperations(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
       setInventoryRequests(nextInventoryRequests);
+      setCashierOps(nextCashierOps);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Live Operations is unavailable.");
@@ -118,7 +206,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { setShowAllOrderItems(false); }, [selectedTableId]);
-  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests"], refresh });
+  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"], refresh });
 
   const serviceLocations = useMemo(() => (dashboard?.floorTables ?? []).filter((table) => table.active), [dashboard]);
   const waiters = useMemo(() => (staffOps?.staff ?? []).filter((member): member is ManagerStaffMember => member.role === "waiter" && member.active), [staffOps]);
@@ -188,6 +276,13 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   return <main className="moc-page">
     {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
 
+    <nav className="moc-workspace-tabs" aria-label="Live Operations workspace">
+      <button type="button" className={operationsView === "service" ? "is-active" : ""} aria-current={operationsView === "service" ? "page" : undefined} onClick={() => setOperationsView("service")}>Service</button>
+      <button type="button" className={operationsView === "cashier" ? "is-active" : ""} aria-current={operationsView === "cashier" ? "page" : undefined} onClick={() => setOperationsView("cashier")}>Cashier <span>{(cashierOps?.expenses ?? []).filter((item) => item.status === "pending").length}</span></button>
+    </nav>
+
+    {operationsView === "cashier" ? <CashierOperationsView snapshot={cashierOps} currency={currency} onRefresh={refresh} onError={(message) => { setError(message); setNotice(null); }} onNotice={(message) => { setNotice(message); setError(null); }} /> : <>
+
     <section className="moc-panel moc-actions" aria-labelledby="manager-actions-title">
       <div className="moc-section-head"><div><span>Intervention queue</span><h2 id="manager-actions-title">Manager Actions <b>{managerActions.length}</b></h2></div><div className="moc-filter-row" aria-label="Filter manager actions">{(["all", "urgent", "approvals", "service"] as const).map((filter) => <button key={filter} type="button" className={actionFilter === filter ? "is-active" : ""} onClick={() => setActionFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)} <span>{actionCounts[filter]}</span></button>)}</div></div>
       <div className="moc-action-list">{visibleActions.map((action) => <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>{action.destination ? "Open Inventory" : "Review"}</button></article>)}{visibleActions.length === 0 && <div className="moc-empty"><strong>✓ No manager actions pending</strong><span>Current service is operating normally.</span></div>}</div>
@@ -220,5 +315,6 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
       <div className="moc-waiter-list">{waiters.map((waiter) => { const status = waiter.breakStatus === "on_break" ? "On break" : waiter.online ? waiter.currentWorkload > 0 ? "Busy" : "Available" : "Offline"; return <label key={waiter.id} className={pendingWaiterId === waiter.id ? "selected" : ""}><input type="radio" name="waiter-assignment" checked={pendingWaiterId === waiter.id} onChange={() => setPendingWaiterId(waiter.id)} /><span><strong>{waiter.fullName}</strong><small>{waiter.assignedTables.length} table{waiter.assignedTables.length === 1 ? "" : "s"} · {waiter.activeOrders} active order{waiter.activeOrders === 1 ? "" : "s"}</small></span><em className={status.toLowerCase().replace(" ", "-")}>{status}</em></label>; })}{waiters.length === 0 && <div className="moc-empty"><strong>No eligible waiters available.</strong></div>}</div>
       <footer><button type="button" className="secondary" onClick={() => setAssigningTableId(null)}>Cancel</button><button type="button" disabled={!pendingWaiterId} onClick={confirmWaiterAssignment}>{assigningTable.assignedWaiterName ? "Reassign" : "Assign"}</button></footer>
     </section></div>}
+    </>}
   </main>;
 }
