@@ -20,6 +20,25 @@ describe("Manager Reports V1 final UI and exports",()=>{
     for(const label of ["Overview","Menu Performance","Sales & Payments","Cashier & Shifts","Kitchen","Staff Operations","Inventory","Guests & Tables","Exceptions & Incidents"]) expect(page).toContain(`label:\"${label}\"`);
     expect(page).not.toContain("Staff Performance Score"); expect(page).not.toContain("Guests served");
   });
+  it("keeps the Overview concise without changing report contracts",()=>{
+    expect(page).toContain('label="Average Paid Bill"');
+    expect(page).toContain('note={`Across ${f.collectedInvoiceCount} paid ${f.collectedInvoiceCount===1?"bill":"bills"}`}');
+    expect(page).toContain("<h2>Attention Required</h2>");
+    expect(page).toContain('${openShifts.length===1?"shift requires":"shifts require"} reconciliation');
+    expect(page).toContain("<h2>Manager Notes</h2>");
+    expect(page).toContain('placeholder="Add note for this period..."');
+    expect(page).not.toContain("A concise manager-authored note associated with this reporting period.");
+    expect(page).not.toContain("<Quality");
+    expect(page).not.toContain("Historical VAT");
+    expect(page).not.toContain("Financial history");
+    expect(page).not.toContain("Kitchen history");
+    expect(page).not.toContain("Staff attribution");
+    expect(page).not.toContain("History scope");
+    expect(page).not.toContain("Guest identity");
+    expect(page).not.toContain("Historical availability");
+    expect(page).not.toContain("Incident provenance");
+    expect(page).not.toContain("Average Paid Invoice");
+  });
   it("reuses the R1 period contract and blocks invalid custom queries",()=>{
     expect(page).toContain("reportingPeriodWindow(period,timezone,customStart,customEnd)");
     expect(page).toContain("if(!periodResult.window)"); expect(page).toContain("setReport(null)");
@@ -41,5 +60,19 @@ describe("Manager Reports V1 final UI and exports",()=>{
   it("converts report tables to mobile cards and prevents page-level overflow",()=>{
     expect(css).toContain("@media(max-width:780px)"); expect(css).toContain(".mor-table,.mor-table thead,.mor-table tbody,.mor-table tr,.mor-table td{display:block}");
     expect(css).toContain("max-width:100%"); expect(css).toContain("overflow-x:auto");
+  });
+  it("presents Menu Performance by quantity with a six-column table and mobile cards",()=>{
+    expect(page).toContain('const rankedItems=[...menu.items].sort(byQuantity)');
+    expect(page).toContain('right.currentQuantity-left.currentQuantity');
+    expect(page).toContain('["Rank","Item","Qty Sold","Sales Value","Orders","Current Status"]');
+    expect(page).not.toContain('["Item","Quantity","Sales value","Orders","Change","Current status"]');
+    expect(page).toContain('ranking(menu.topByQuantity,byQuantity)');
+    expect(page).toContain('ranking(menu.topBySales,bySales)');
+    expect(page).toContain('className="mor-menu-cards"');
+    expect(page).toContain('item.currentQuantity.toLocaleString()} sold');
+    expect(page).toContain('[item.menuItemName,"0 sold",formatCurrency(0,currency),status(item)]');
+    expect(page).not.toContain("frozen line sales");
+    expect(css).toContain("@media(max-width:560px)");
+    expect(css).toContain(".mor-full-menu .mor-table-wrap{display:none}");
   });
 });
