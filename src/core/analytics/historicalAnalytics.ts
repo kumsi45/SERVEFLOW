@@ -2,6 +2,12 @@ import { supabase } from "../database";
 
 export type AnalyticsPeriod = "today" | "yesterday" | "week" | "last_week" | "month" | "last_month" | "custom";
 export type AnalyticsWindow = { rangeStart: string; rangeEnd: string; timezone: string };
+export type ReportingPeriod = "today" | "week" | "month" | "custom";
+export type ReportingPeriodWindow = AnalyticsWindow & {
+  period: ReportingPeriod;
+  comparisonRangeStart: string;
+  comparisonRangeEnd: string;
+};
 export type CanonicalHistoricalSummary = {
   revenue: number;
   orderVolume: number;
@@ -45,6 +51,23 @@ function parseInput(value: string): DateParts | null {
   return match ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) } : null;
 }
 
+function validInput(value: string): DateParts | null {
+  const parts = parseInput(value);
+  if (!parts) return null;
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  return date.getUTCFullYear() === parts.year && date.getUTCMonth() + 1 === parts.month && date.getUTCDate() === parts.day
+    ? parts
+    : null;
+}
+
+function assertTimezone(timezone: string) {
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+  } catch {
+    throw new Error("A valid restaurant timezone is required.");
+  }
+}
+
 export function analyticsWindow(period: AnalyticsPeriod, timezone: string, customStart = "", customEnd = "", now = new Date()): AnalyticsWindow {
   const today = partsAt(now, timezone);
   let start = today;
@@ -65,6 +88,42 @@ export function analyticsWindow(period: AnalyticsPeriod, timezone: string, custo
     end = addDays(parseInput(customEnd) ?? start, 1);
   }
   return { rangeStart: zonedMidnight(start, timezone).toISOString(), rangeEnd: zonedMidnight(end, timezone).toISOString(), timezone };
+}
+
+export function reportingPeriodWindow(
+  period: ReportingPeriod,
+  timezone: string,
+  customStart = "",
+  customEnd = "",
+  now = new Date(),
+): ReportingPeriodWindow {
+  assertTimezone(timezone);
+  let comparison: AnalyticsWindow;
+  if (period === "custom") {
+    const start = validInput(customStart);
+    const end = validInput(customEnd);
+    if (!start || !end) throw new Error("Custom reports require valid start and end dates.");
+    const startDay = Date.UTC(start.year, start.month - 1, start.day);
+    const endDay = Date.UTC(end.year, end.month - 1, end.day);
+    if (startDay > endDay) throw new Error("The report start date must not be after the end date.");
+    const dayCount = Math.floor((endDay - startDay) / 86_400_000) + 1;
+    const comparisonStart = addDays(start, -dayCount);
+    comparison = {
+      rangeStart: zonedMidnight(comparisonStart, timezone).toISOString(),
+      rangeEnd: zonedMidnight(start, timezone).toISOString(),
+      timezone,
+    };
+  } else {
+    const comparisonPeriod: AnalyticsPeriod = period === "today" ? "yesterday" : period === "week" ? "last_week" : "last_month";
+    comparison = analyticsWindow(comparisonPeriod, timezone, "", "", now);
+  }
+  const current = analyticsWindow(period, timezone, customStart, customEnd, now);
+  return {
+    ...current,
+    period,
+    comparisonRangeStart: comparison.rangeStart,
+    comparisonRangeEnd: comparison.rangeEnd,
+  };
 }
 
 export function completedDaysWindow(days: number, timezone: string, now = new Date()): AnalyticsWindow {

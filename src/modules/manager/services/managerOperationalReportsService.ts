@@ -1,5 +1,5 @@
 import { supabase } from "../../../core/database";
-import { analyticsWindow, loadCanonicalHistoricalSummary } from "../../../core/analytics/historicalAnalytics";
+import { loadCanonicalHistoricalSummary, reportingPeriodWindow } from "../../../core/analytics/historicalAnalytics";
 
 export type ManagerReportRange = "today" | "week" | "month" | "custom";
 
@@ -71,7 +71,7 @@ export function managerReportDateRange(
   customEnd: string,
   timezone = "Africa/Nairobi",
 ) {
-  return analyticsWindow(range, timezone, customStart, customEnd);
+  return reportingPeriodWindow(range, timezone, customStart, customEnd);
 }
 
 export async function loadRestaurantAnalyticsTimezone(restaurantId: string) {

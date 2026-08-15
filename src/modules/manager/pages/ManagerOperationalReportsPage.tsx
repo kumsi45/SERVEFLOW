@@ -1,122 +1,165 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
+import { AlertTriangle, Download, FileText, RefreshCw } from "lucide-react";
+import { reportingPeriodWindow, type ReportingPeriod } from "../../../core/analytics/historicalAnalytics";
 import { formatCurrency, type CurrencyConfig } from "../../../core/format/currency";
-import {
-  exportOperationalReportCsv,
-  exportOperationalReportExcel,
-  loadManagerOperationalReport,
-  loadRestaurantAnalyticsTimezone,
-  managerReportDateRange,
-  type ChartRow,
-  type ManagerOperationalReport,
-  type ManagerReportRange,
-} from "../services/managerOperationalReportsService";
+import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
+import { loadRestaurantAnalyticsTimezone } from "../services/managerOperationalReportsService";
+import { createManagerOperationalNote, createManagerReportIncident, recordManagerIncidentDecision } from "../services/managerR4ReportsService";
+import { downloadManagerReportsCsv, downloadManagerReportsPdf, loadManagerReportsV1, type ManagerReportsV1Bundle } from "../services/managerReportsV1Service";
 import "../styles/managerOperationalReports.css";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string; currency?: CurrencyConfig };
+type ReportTab = "overview"|"menu"|"sales"|"cashier"|"kitchen"|"staff"|"inventory"|"guests"|"incidents";
+const tabs: Array<{ id: ReportTab; label: string }> = [
+  { id:"overview",label:"Overview" }, { id:"menu",label:"Menu Performance" }, { id:"sales",label:"Sales & Payments" },
+  { id:"cashier",label:"Cashier & Shifts" }, { id:"kitchen",label:"Kitchen" }, { id:"staff",label:"Staff Operations" },
+  { id:"inventory",label:"Inventory" }, { id:"guests",label:"Guests & Tables" }, { id:"incidents",label:"Exceptions & Incidents" },
+];
+const rec = (value: unknown) => value && typeof value === "object" ? value as Record<string, unknown> : {};
+const txt = (value: unknown, fallback = "—") => typeof value === "string" && value ? value : fallback;
+const num = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
+const nowDate = () => new Date().toISOString().slice(0,10);
+const monthStart = () => { const date=new Date(); date.setDate(1); return date.toISOString().slice(0,10); };
+const dateTime = (value: unknown) => typeof value === "string" && value ? new Date(value).toLocaleString() : "—";
+const minutes = (value: number|null|undefined) => value == null ? "Unavailable" : value < 60 ? `${Math.round(value)} min` : `${Math.floor(value/60)} hr ${Math.round(value%60)} min`;
+const qualityLabel = (value: unknown) => txt(value,"Unavailable").replace(/_/g," ").replace(/\b\w/g,(letter:string)=>letter.toUpperCase());
 
-function todayInput() { return new Date().toISOString().slice(0, 10); }
-function monthStartInput() { const date = new Date(); date.setDate(1); return date.toISOString().slice(0, 10); }
-function fmtMinutes(value: number) { return value < 60 ? `${Math.round(value)}m` : `${Math.floor(value / 60)}h ${Math.round(value % 60)}m`; }
-function bestRow(rows: ChartRow[]) { return rows.reduce<ChartRow | null>((best, row) => !best || row.value > best.value ? row : best, null); }
-
-function LineChart({ rows, suffix = "" }: { rows: ChartRow[]; suffix?: string }) {
-  const values = rows.length ? rows : [{ label: "No data", value: 0 }];
-  const max = Math.max(1, ...values.map((row) => row.value));
-  const points = values.map((row, index) => `${values.length === 1 ? 50 : (index / (values.length - 1)) * 100},${92 - (row.value / max) * 78}`).join(" ");
-  return <div className="mor-line"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Trend line"><line x1="0" y1="92" x2="100" y2="92" /><polyline points={points} /></svg><div>{values.filter((_, index) => index === 0 || index === values.length - 1 || index === Math.floor(values.length / 2)).map((row) => <span key={row.label}>{row.label}<b>{row.value}{suffix}</b></span>)}</div></div>;
+function StatePanel({ kind, children }: { kind:"loading"|"error"|"empty"|"denied"; children: React.ReactNode }) {
+  return <div className={`mor-state is-${kind}`} role={kind==="error"||kind==="denied"?"alert":"status"}>{children}</div>;
+}
+function Metric({ label, value, note, tone }: { label:string; value:React.ReactNode; note?:string; tone?:"good"|"attention"|"danger" }) {
+  return <article className={`mor-metric ${tone?`is-${tone}`:""}`}><span>{label}</span><strong>{value}</strong>{note&&<small>{note}</small>}</article>;
+}
+function SectionTitle({ eyebrow, title, description, action }: { eyebrow:string; title:string; description:string; action?:React.ReactNode }) {
+  return <header className="mor-section-title"><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>{action}</header>;
+}
+function Quality({ label, value }: { label:string; value:unknown }) { return <span className="mor-quality"><b>{label}</b>{qualityLabel(value)}</span>; }
+function Delta({ current, comparison, suffix="" }: { current:number; comparison:number; suffix?:string }) {
+  const difference=current-comparison; return <small className={difference>0?"is-up":difference<0?"is-down":""}>{difference>0?"+":""}{difference.toLocaleString()}{suffix} vs prior</small>;
+}
+function DataTable({ headers, rows, empty }: { headers:string[]; rows:React.ReactNode[][]; empty:string }) {
+  if (!rows.length) return <StatePanel kind="empty">{empty}</StatePanel>;
+  return <div className="mor-table-wrap"><table className="mor-table"><thead><tr>{headers.map((header)=><th key={header}>{header}</th>)}</tr></thead><tbody>{rows.map((row,index)=><tr key={index}>{row.map((cell,cellIndex)=><td key={cellIndex} data-label={headers[cellIndex]}>{cell}</td>)}</tr>)}</tbody></table></div>;
 }
 
-function HorizontalBars({ rows, suffix = "" }: { rows: ChartRow[]; suffix?: string }) {
-  const max = Math.max(1, ...rows.map((row) => row.value));
-  return <div className="mor-horizontal">{rows.slice(0, 8).map((row) => <div key={row.label}><span>{row.label}</span><i><b style={{ width: `${(row.value / max) * 100}%` }} /></i><strong>{row.value}{suffix}</strong></div>)}{rows.length === 0 && <p className="mor-empty">No activity in this period.</p>}</div>;
-}
-
-function InsightCard({ eyebrow, question, story, children, wide = false }: { eyebrow: string; question: string; story: string; children: React.ReactNode; wide?: boolean }) {
-  return <article className={`mor-insight ${wide ? "is-wide" : ""}`}><header><span>{eyebrow}</span><h2>{question}</h2><p>{story}</p></header>{children}</article>;
-}
-
-function hourNumber(label: string) { const value = Number.parseInt(label.slice(0, 2), 10); return Number.isFinite(value) ? value : 0; }
-function displayHour(label: string) { const hour = hourNumber(label); return `${hour % 12 || 12}:00 ${hour >= 12 ? "PM" : "AM"}`; }
-function servicePeriod(label: string) { const hour = hourNumber(label); return hour < 11 ? "Breakfast" : hour < 16 ? "Lunch" : "Dinner"; }
-
-function CustomerTrafficReport({ report }: { report: ManagerOperationalReport | null }) {
-  const [selectedHour, setSelectedHour] = useState<ChartRow | null>(null);
-  const rows = useMemo(() => {
-    const byHour = new Map<string, number>();
-    for (const row of report?.ordersPerHour ?? []) byHour.set(row.label, (byHour.get(row.label) ?? 0) + row.value);
-    return Array.from(byHour, ([label, value]) => ({ label, value })).sort((a, b) => hourNumber(a.label) - hourNumber(b.label));
-  }, [report?.ordersPerHour]);
-  const activeRows = rows.filter((row) => row.value > 0);
-  const peak = bestRow(rows);
-  const slowest = activeRows.reduce<ChartRow | null>((result, row) => !result || row.value < result.value ? row : result, null);
-  const average = activeRows.length ? Math.round(activeRows.reduce((sum, row) => sum + row.value, 0) / activeRows.length) : 0;
-  const max = Math.max(1, ...rows.map((row) => row.value));
-  const rushHours = peak ? rows.filter((row) => row.value >= peak.value * .7).length : 0;
-  const recent = activeRows.slice(-3).reduce((sum, row) => sum + row.value, 0);
-  const previous = activeRows.slice(-6, -3).reduce((sum, row) => sum + row.value, 0);
-  const trend = previous === 0 ? "Establishing" : recent > previous * 1.1 ? "Increasing" : recent < previous * .9 ? "Decreasing" : "Stable";
-  return <section className="mor-traffic">
-    <header className="mor-traffic-title"><div><span>Customer Traffic Report</span><h2>When did customers arrive?</h2><p>Historical arrival demand is represented by orders because the current report does not record party size by hour.</p></div><em>{trend}</em></header>
-    <div className="mor-traffic-summary">
-      <article><span>Peak Hour</span><strong>{peak ? displayHour(peak.label) : "—"}</strong><small>{peak ? `${peak.value} orders` : "No arrivals"}</small></article>
-      <article><span>Average per Active Hour</span><strong>{average}</strong><small>Orders</small></article>
-      <article><span>Slowest Active Hour</span><strong>{slowest ? displayHour(slowest.label) : "—"}</strong><small>{slowest ? `${slowest.value} orders` : "No arrivals"}</small></article>
-      <article><span>Current Trend</span><strong>{trend}</strong><small>Latest active hours</small></article>
-    </div>
-    <div className="mor-traffic-layout">
-      <article className="mor-traffic-chart"><div className="mor-chart-caption"><div><strong>Arrival Orders by Hour</strong><span>Tap an hour to inspect it</span></div><div><i />Breakfast <i />Lunch <i />Dinner</div></div><div className="mor-vertical-bars">{rows.map((row) => <button key={row.label} type="button" className={`is-${servicePeriod(row.label).toLowerCase()}`} onClick={() => setSelectedHour(row)} aria-label={`${displayHour(row.label)}: ${row.value} orders`}><b style={{ height: `${Math.max(row.value ? 5 : 1, (row.value / max) * 100)}%` }}><span>{row.value || ""}</span></b><small>{displayHour(row.label).replace(":00 ", "")}</small></button>)}</div></article>
-      <aside className="mor-traffic-actions"><section><span>Period Summary</span><p>{peak ? `${servicePeriod(peak.label)} contained the strongest arrival period, peaking at ${displayHour(peak.label)}.` : "No customer-flow pattern was recorded for this period."}</p><p>{trend === "Establishing" ? "More active hours are needed to describe the period direction." : `Arrival pace was ${trend.toLowerCase()} across the latest active hours.`}</p><p>Recommendations and forecasts are available in Restaurant Intelligence.</p></section></aside>
-    </div>
-    <div className="mor-traffic-indicators"><span><b>{peak ? displayHour(peak.label) : "—"}</b>Peak hour</span><span><b>{rushHours ? `${rushHours}h` : "—"}</b>Rush duration</span><span><b>{fmtMinutes(report?.summary.averageCustomerWaitMinutes ?? 0)}</b>Avg wait</span></div>
-    {selectedHour && <div className="mor-drill-layer" role="presentation" onClick={() => setSelectedHour(null)}><aside className="mor-drill" role="dialog" aria-modal="true" aria-label={`${displayHour(selectedHour.label)} traffic details`} onClick={(event) => event.stopPropagation()}><header><div><span>{servicePeriod(selectedHour.label)}</span><h2>{displayHour(selectedHour.label)}</h2></div><button type="button" onClick={() => setSelectedHour(null)}>Close</button></header><dl><div><dt>Orders</dt><dd>{selectedHour.value}</dd></div></dl></aside></div>}
+function ManagerNotePanel({ report, restaurantId, onSaved }: { report:ManagerReportsV1Bundle; restaurantId:string; onSaved:()=>Promise<void> }) {
+  const [note,setNote]=useState(""); const [saving,setSaving]=useState(false); const [message,setMessage]=useState<string|null>(null);
+  const save=async()=>{ if(!note.trim()) return; setSaving(true); setMessage(null); try { await createManagerOperationalNote(restaurantId,note.trim(),report.window.rangeStart.slice(0,10),report.window.rangeStart,report.window.rangeEnd); setNote(""); await onSaved(); setMessage("Manager note saved."); } catch(error){ setMessage(error instanceof Error?error.message:"Unable to save note."); } finally { setSaving(false); } };
+  return <section className="mor-panel mor-notes"><SectionTitle eyebrow="Manager notes" title="Period note" description="A concise manager-authored note associated with this reporting period." />
+    <div className="mor-note-compose"><textarea value={note} maxLength={4000} placeholder="Record what happened and any follow-up requested…" onChange={(event)=>setNote(event.target.value)} /><button type="button" disabled={saving||!note.trim()} onClick={()=>void save()}>{saving?"Saving…":"Save note"}</button></div>
+    {message&&<p className="mor-form-message">{message}</p>}
+    <div className="mor-note-list">{report.operations.managerRecords.notes.length===0?<StatePanel kind="empty">No manager notes for this period.</StatePanel>:report.operations.managerRecords.notes.map((value)=>{const row=rec(value);return <article key={txt(row.id)}><p>{txt(row.note_text)}</p><small>{txt(row.note_date)} · {dateTime(row.created_at)} · Manager</small></article>;})}</div>
   </section>;
 }
 
-export function ManagerOperationalReportsPage({ restaurantId, restaurantName, managerName, currency }: Props) {
-  const [range, setRange] = useState<ManagerReportRange>("today");
-  const [customStart, setCustomStart] = useState(monthStartInput());
-  const [customEnd, setCustomEnd] = useState(todayInput());
-  const [report, setReport] = useState<ManagerOperationalReport | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [timezone, setTimezone] = useState("Africa/Nairobi");
-  const dateRange = useMemo(() => managerReportDateRange(range, customStart, customEnd, timezone), [range, customStart, customEnd, timezone]);
-  useEffect(() => { void loadRestaurantAnalyticsTimezone(restaurantId).then(setTimezone).catch(() => undefined); }, [restaurantId]);
-  const refresh = useCallback(async () => { try { setReport(await loadManagerOperationalReport(restaurantId, dateRange.rangeStart, dateRange.rangeEnd, timezone)); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operational reports unavailable."); } }, [restaurantId, dateRange.rangeStart, dateRange.rangeEnd, timezone]);
+function Overview({ report, currency, restaurantId, refresh }: { report:ManagerReportsV1Bundle; currency?:CurrencyConfig; restaurantId:string; refresh:()=>Promise<void> }) {
+  const f=report.financial.current, kitchen=report.operations.kitchen.current;
+  const incidents=report.operations.exceptions.manual.filter((value)=>txt(rec(value).status,"")!=="resolved");
+  const complaints=report.operations.guests.unresolvedComplaints; const openShifts=report.cashier.shifts.filter((shift)=>shift.status==="open"||shift.reconciliationStatus==="missing_reconciliation");
+  const discrepancy=report.cashier.shifts.filter((shift)=>shift.variance!==null&&shift.variance!==0);
+  const attention=[
+    ...incidents.map((value)=>({ label:txt(rec(value).title,"Open incident"),detail:`${qualityLabel(rec(value).severity)} · ${qualityLabel(rec(value).status)}`,tone:"danger" })),
+    ...(complaints?[{label:"Unresolved complaints",detail:`${complaints} require review`,tone:"attention"}]:[]),
+    ...(openShifts.length?[{label:"Cashier reconciliation",detail:`${openShifts.length} shifts open or missing reconciliation`,tone:"attention"}]:[]),
+    ...(discrepancy.length?[{label:"Cash discrepancy",detail:`${discrepancy.length} shifts have recorded variance`,tone:"danger"}]:[]),
+    ...((kitchen.delayedItems??0)>0?[{label:"Kitchen delay",detail:`${kitchen.delayedItems} items reached the 25-minute threshold`,tone:"attention"}]:[]),
+    ...((report.operations.inventory.current.wasteSpoilage??0)>0?[{label:"Inventory loss",detail:`${report.operations.inventory.current.wasteSpoilage} recorded as waste/spoilage`,tone:"attention"}]:[]),
+  ];
+  return <div className="mor-flow"><section className="mor-metrics is-overview">
+    <Metric label="Collected" value={formatCurrency(f.collectedAmount,currency)} note={`${f.collectedInvoiceCount} paid invoices`} tone="good" />
+    <Metric label="Outstanding" value={formatCurrency(f.outstandingAmount,currency)} note={`${f.outstandingInvoiceCount} current invoices`} tone={f.outstandingAmount?"attention":undefined} />
+    <Metric label="Refunds" value={formatCurrency(f.refundAmount,currency)} note={`${f.refundedInvoiceCount} refund events`} tone={f.refundAmount?"danger":undefined} />
+    <Metric label="Net Collection" value={formatCurrency(f.netCollection,currency)} note="Collected minus refunds" />
+    <Metric label="VAT / Tax" value={formatCurrency(f.vatAmount,currency)} note={qualityLabel(f.dataQuality.taxHistory)} />
+    <Metric label="Orders Created" value={f.ordersCreated.toLocaleString()} note="Demand / workload" />
+    <Metric label="Average Paid Invoice" value={f.averagePaidInvoice==null?"Unavailable":formatCurrency(f.averagePaidInvoice,currency)} note="Per collected invoice" />
+    <Metric label="Open Incidents" value={incidents.length} note="Explicit incident records" tone={incidents.length?"attention":undefined} />
+  </section>
+  <section className="mor-panel"><SectionTitle eyebrow="Attention required" title="What requires review?" description="Only unresolved or discrepant records supported by the selected-period reports." />
+    {attention.length===0?<StatePanel kind="empty">No unresolved operational exceptions for this period.</StatePanel>:<div className="mor-attention">{attention.slice(0,8).map((item,index)=><article className={`is-${item.tone}`} key={`${item.label}-${index}`}><AlertTriangle size={18}/><div><strong>{item.label}</strong><span>{item.detail}</span></div></article>)}</div>}
+  </section>
+  <section className="mor-quality-row"><Quality label="Historical VAT" value={f.dataQuality.taxHistory}/><Quality label="Inventory" value={report.operations.dataQuality.inventory_history_scope}/><Quality label="Guest count" value={report.operations.dataQuality.party_size_quality}/><Quality label="Menu availability" value={report.menu.dataQuality.availabilityHistoryQuality}/></section>
+  <ManagerNotePanel report={report} restaurantId={restaurantId} onSaved={refresh}/></div>;
+}
 
-  useEffect(() => { void refresh(); }, [refresh]);
-  useTenantRealtime({ channelName: "manager-operational-reports", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "restaurant_staff"], refresh });
+function MenuReport({ report, currency }: { report:ManagerReportsV1Bundle; currency?:CurrencyConfig }) {
+  const menu=report.menu;
+  const row=(item:typeof menu.items[number])=>[<strong>{item.menuItemName}</strong>,item.currentQuantity,formatCurrency(item.currentSales,currency),item.currentOrders,<Delta current={item.currentQuantity} comparison={item.comparisonQuantity}/>,<span className={`mor-badge is-${item.currentStatus.toLowerCase().replace(/ /g,"-")}`}>{item.currentStatus}</span>];
+  return <div className="mor-flow"><div className="mor-split"><section className="mor-panel"><SectionTitle eyebrow="Most ordered" title="Quantity ranking" description="Ranked by qualifying quantity sold."/><DataTable headers={["Item","Quantity","Sales value","Orders","Change","Current status"]} rows={menu.topByQuantity.map(row)} empty="No qualifying item sales for this period."/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Highest sales value" title="Frozen line value ranking" description="Ranked separately using historical order-item price × quantity."/><DataTable headers={["Item","Quantity","Sales value","Orders","Change","Current status"]} rows={menu.topBySales.map(row)} empty="No qualifying item sales for this period."/></section></div>
+  <section className="mor-panel"><SectionTitle eyebrow="Full menu" title="Item performance" description="Quantity, frozen line sales, distinct orders, comparison, and current availability context."/><DataTable headers={["Item","Quantity","Sales value","Orders","Change","Current status"]} rows={menu.items.map(row)} empty="No menu items are available to report."/></section>
+  <div className="mor-split"><section className="mor-panel"><SectionTitle eyebrow="Low selling" title="Lowest positive recorded sales" description="Recorded outcomes only; no cause is inferred."/><DataTable headers={["Item","Quantity","Sales value"]} rows={menu.lowSelling.map((item)=>[item.menuItemName,item.currentQuantity,formatCurrency(item.currentSales,currency)])} empty="No positive qualifying sales."/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Zero Recorded Sales" title="No qualifying sale records" description="Current availability is context only; historical availability is unavailable."/><DataTable headers={["Item","Current status"]} rows={menu.zeroRecordedSales.map((item)=>[item.menuItemName,item.currentStatus])} empty="Every current menu item has qualifying recorded sales."/></section></div>
+  <section className="mor-quality-row"><Quality label="Historical price" value={menu.dataQuality.historicalPriceQuality}/><Quality label="Historical identity" value={menu.dataQuality.itemIdentityHistoryQuality}/><Quality label="Historical availability" value={menu.dataQuality.availabilityHistoryQuality}/></section></div>;
+}
 
-  const peak = bestRow(report?.ordersPerHour ?? []);
-  const busiestWaiter = [...(report?.waiterPerformance ?? [])].sort((a, b) => b.orders - a.orders)[0];
-  const slowestTable = [...(report?.tableTurnover ?? [])].sort((a, b) => b.averageStayMinutes - a.averageStayMinutes)[0];
-  const slowestStation = [...(report?.kitchenEfficiency ?? [])].sort((a, b) => b.averagePrepMinutes - a.averagePrepMinutes)[0];
-  const tableRows = (report?.tableTurnover ?? []).map((row) => ({ label: `Table ${row.tableNumber}`, value: row.averageStayMinutes, secondary: row.sessions }));
-  const waiterRows = (report?.waiterPerformance ?? []).map((row) => ({ label: row.waiter, value: row.orders, secondary: row.delayedOrders }));
-  const kitchenRows = (report?.kitchenEfficiency ?? []).map((row) => ({ label: row.station, value: row.averagePrepMinutes, secondary: row.delayed }));
+function SalesReport({ report, currency }: { report:ManagerReportsV1Bundle; currency?:CurrencyConfig }) { const f=report.financial.current,c=report.financial.comparison;
+  return <div className="mor-flow"><section className="mor-metrics"><Metric label="Collected" value={formatCurrency(f.collectedAmount,currency)} note={`${f.collectedInvoiceCount} invoices`}/><Metric label="Outstanding" value={formatCurrency(f.outstandingAmount,currency)} note="Current state, created in period"/><Metric label="Refunded" value={formatCurrency(f.refundAmount,currency)} note="Full-invoice refund events"/><Metric label="Net Collection" value={formatCurrency(f.netCollection,currency)} note="Collected minus refunded"/><Metric label="VAT / Tax" value={formatCurrency(f.vatAmount,currency)} note={qualityLabel(f.dataQuality.taxHistory)}/><Metric label="Discounts" value={formatCurrency(f.discountAmount,currency)}/><Metric label="Service Charges" value={formatCurrency(f.serviceChargeAmount,currency)} note={qualityLabel(f.dataQuality.serviceChargeHistory)}/><Metric label="Average Paid Invoice" value={f.averagePaidInvoice==null?"Unavailable":formatCurrency(f.averagePaidInvoice,currency)} note={`${f.ordersCreated} orders created`}/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Payment methods" title="Collected payment breakdown" description="Paid invoice collection events, grouped by canonical normalized method."/><DataTable headers={["Method","Collected","Invoices","Compared with prior"]} rows={f.paymentMethods.map((method)=>{const prior=c.paymentMethods.find((entry)=>entry.paymentMethod===method.paymentMethod);return [method.paymentMethod,formatCurrency(method.collectedAmount,currency),method.invoiceCount,<Delta current={method.collectedAmount} comparison={prior?.collectedAmount??0}/>];})} empty="No collected payments for this period."/></section>
+  <section className="mor-quality-row"><Quality label="Financial history" value={f.dataQuality.financialHistory}/><Quality label="VAT history" value={f.dataQuality.taxHistory}/><Quality label="Service charge history" value={f.dataQuality.serviceChargeHistory}/><Quality label="Refund history" value={f.dataQuality.refundHistory}/></section></div>;
+}
 
-  return <main className="mor-page">
-    <header className="mor-header"><div><span>Operational Intelligence</span><h1>Reports</h1><p>{restaurantName} · insights for {managerName}</p></div><details className="mor-export manager-actions-menu"><summary>Export report</summary><div><button type="button" onClick={() => void refresh()}>Refresh</button><button type="button" onClick={() => window.print()}>PDF</button>{report && <button type="button" onClick={() => exportOperationalReportExcel(report)}>Excel</button>}{report && <button type="button" onClick={() => exportOperationalReportCsv(report)}>CSV</button>}</div></details></header>
-    <section className="mor-range" aria-label="Report period">{(["today", "week", "month", "custom"] as ManagerReportRange[]).map((option) => <button key={option} type="button" className={range === option ? "active" : ""} onClick={() => setRange(option)}>{option}</button>)}{range === "custom" && <><label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} onChange={(event) => setCustomEnd(event.target.value)} /></label></>}</section>
-    {error && <div className="mor-error">{error}</div>}
-    <section className="mor-summary">
-      <article><span>Revenue</span><strong>{formatCurrency(report?.summary.revenue ?? 0, currency)}</strong><small>Selected period</small></article>
-      <article><span>Orders</span><strong>{report?.summary.orders ?? 0}</strong><small>{peak ? `Peak ${peak.label}` : "No peak yet"}</small></article>
-      <article><span>Avg Prep Time</span><strong>{fmtMinutes(report?.summary.averagePreparationMinutes ?? 0)}</strong><small>{report?.summary.delayedOrders ?? 0} delayed</small></article>
-      <article><span>Table Turnover</span><strong>{report?.summary.tableTurnover ?? 0}</strong><small>Dining sessions</small></article>
-      <article><span>Cancelled</span><strong>{report?.summary.cancelledOrders ?? 0}</strong><small>Orders lost</small></article>
-      <article><span>Collected</span><strong>{formatCurrency(report?.summary.collected ?? 0, currency)}</strong><small>Paid invoices</small></article>
-      <article><span>Payment Due</span><strong>{formatCurrency(report?.summary.paymentDue ?? 0, currency)}</strong><small>Outstanding held invoices</small></article>
-      <article><span>Refunds</span><strong>{formatCurrency(report?.summary.refunds ?? 0, currency)}</strong><small>Selected period</small></article>
-      <article><span>Payment Conversion</span><strong>{Math.round(report?.summary.paymentConversionRate ?? 0)}%</strong><small>{fmtMinutes(report?.summary.averagePaymentDelayMinutes ?? 0)} average delay</small></article>
-    </section>
-    <section className="mor-intelligence">
-      <CustomerTrafficReport report={report} />
-      <InsightCard eyebrow="Orders by hour" question="When are we busiest?" story={peak ? `Peak hour was ${peak.label}, handling ${peak.value} orders.` : "Order volume has not established a peak yet."}><LineChart rows={report?.ordersPerHour ?? []} /></InsightCard>
-      <InsightCard eyebrow="Kitchen performance" question="Is the kitchen slowing down?" story={slowestStation ? `${slowestStation.station} has the longest average prep time at ${fmtMinutes(slowestStation.averagePrepMinutes)}.` : "No kitchen tickets were completed in this period."}><HorizontalBars rows={kitchenRows} suffix="m" /></InsightCard>
-      <InsightCard eyebrow="Staff productivity" question="Who handled the most tables?" story={busiestWaiter ? `${busiestWaiter.waiter} handled the most orders (${busiestWaiter.orders}).` : "No waiter activity is available for this period."}><HorizontalBars rows={waiterRows} /></InsightCard>
-      <InsightCard eyebrow="Table turnover" question="Which tables stay occupied longest?" story={slowestTable ? `Table ${slowestTable.tableNumber} has the longest average stay at ${fmtMinutes(slowestTable.averageStayMinutes)}.` : "No completed table sessions are available."}><HorizontalBars rows={tableRows} suffix="m" /></InsightCard>
-      <InsightCard eyebrow="Cancelled orders" question="When are we losing orders?" story={(report?.summary.cancelledOrders ?? 0) ? `${report?.summary.cancelledOrders} orders were cancelled. Cancellation reasons are not currently recorded in this report.` : "No cancelled orders were recorded in this period."} wide><LineChart rows={report?.cancelledOrders ?? []} /></InsightCard>
-    </section>
+function CashierReport({ report, currency }: { report:ManagerReportsV1Bundle; currency?:CurrencyConfig }) { const data=report.cashier;
+  return <div className="mor-flow"><section className="mor-panel"><SectionTitle eyebrow="Cash controls" title="Cashier shifts" description="Canonical drawer and immutable reconciliation values. Open shifts never receive invented closing values."/>
+  <div className="mor-card-list">{data.shifts.length===0?<StatePanel kind="empty">No shifts overlap this period.</StatePanel>:data.shifts.map((shift)=><details className={`mor-shift ${shift.variance?"has-variance":""}`} key={shift.id}><summary><div><strong>{shift.cashierName}</strong><span>{dateTime(shift.openedAt)} → {shift.closedAt?dateTime(shift.closedAt):"Open"}</span></div><div><span className={`mor-badge is-${shift.status}`}>{shift.status==="open"?"Open":"Closed"}</span><b>{shift.reconciliationStatus==="not_yet_reconciled"?"Not Yet Reconciled":qualityLabel(shift.reconciliationStatus)}</b></div></summary><dl className="mor-facts"><div><dt>Opening Cash</dt><dd>{formatCurrency(shift.openingCash,currency)}</dd></div><div><dt>Cash Sales</dt><dd>{formatCurrency(shift.cashSales,currency)}</dd></div><div><dt>Approved Expenses</dt><dd>{formatCurrency(shift.approvedExpenses,currency)}</dd></div><div><dt>Expected Closing</dt><dd>{formatCurrency(shift.expectedCash,currency)}</dd></div><div><dt>Actual Closing</dt><dd>{shift.actualCash==null?"Not Yet Reconciled":formatCurrency(shift.actualCash,currency)}</dd></div><div><dt>Variance</dt><dd className={shift.variance?"is-danger":""}>{shift.variance==null?"Unavailable":formatCurrency(shift.variance,currency)}</dd></div></dl></details>)}</div></section>
+  <div className="mor-split"><section className="mor-panel"><SectionTitle eyebrow="Expense drill-down" title="Recorded expenses" description="Reason, review decision, and reviewer evidence."/><DataTable headers={["Reason","Amount","Status","Cashier","Reviewer","Recorded"]} rows={data.expenses.map((value)=>{const row=rec(value);return [txt(row.reason),formatCurrency(num(row.amount),currency),qualityLabel(row.status),txt(row.cashier_name),txt(row.reviewer_name,"Not reviewed"),dateTime(row.created_at)];})} empty="No expense records in this period."/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Handover drill-down" title="Cash handovers" description="Declared, received, and signed discrepancy facts."/><DataTable headers={["Outgoing → Incoming","Expected","Declared","Received","Difference","Status"]} rows={data.handovers.map((value)=>{const row=rec(value);return [`${txt(row.outgoing_cashier_name)} → ${txt(row.incoming_cashier_name)}`,formatCurrency(num(row.expected_amount),currency),formatCurrency(num(row.declared_amount),currency),row.received_amount==null?"Awaiting":formatCurrency(num(row.received_amount),currency),row.difference==null?"—":formatCurrency(num(row.difference),currency),qualityLabel(row.status)];})} empty="No handovers in this period."/></section></div></div>;
+}
+
+function KitchenReport({ report }: { report:ManagerReportsV1Bundle }) { const k=report.operations.kitchen, c=k.current;
+  return <div className="mor-flow"><section className="mor-metrics"><Metric label="Items received" value={c.itemsReceived??0}/><Metric label="Started" value={c.itemsStarted??0}/><Metric label="Completed" value={c.itemsCompleted??0}/><Metric label="Average prep" value={minutes(c.avgMinutes)}/><Metric label="Median prep" value={minutes(c.medianMinutes)}/><Metric label="Longest prep" value={minutes(c.longestMinutes)}/><Metric label="Delayed" value={c.delayedItems??0} note={`${k.delayThresholdMinutes}-minute threshold`} tone={(c.delayedItems??0)>0?"attention":undefined}/></section>
+  <div className="mor-split"><section className="mor-panel"><SectionTitle eyebrow="Station workload" title="Preparation by station" description="Strict completed-item timing; no employee score."/><DataTable headers={["Station","Completed","Average prep","Delayed"]} rows={k.stations.map((value)=>{const row=rec(value);return [txt(row.station_name),num(row.completed_items),minutes(num(row.avg_minutes)),num(row.delayed_items)];})} empty="No strictly timed completed kitchen items."/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Menu workload" title="Preparation by menu item" description="Items repeatedly reaching the operational threshold appear first."/><DataTable headers={["Menu item","Completed","Average prep","Longest","Delayed"]} rows={k.menuItems.map((value)=>{const row=rec(value);return [txt(row.menu_item_name),num(row.completed_items),minutes(num(row.avg_minutes)),minutes(num(row.longest_minutes)),num(row.delayed_items)];})} empty="No strictly timed menu-item preparation facts."/></section></div><section className="mor-quality-row"><Quality label="Kitchen history" value={report.operations.dataQuality.kitchen_history_quality}/></section></div>;
+}
+
+function StaffReport({ report }: { report:ManagerReportsV1Bundle }) { const activity=(row:Record<string,unknown>)=>num(row.orders_created)+num(row.table_assignments)+num(row.assistance_resolved)+num(row.cancellations_requested)+num(row.cashier_shifts_opened)+num(row.payments_verified)+num(row.expenses_recorded)+num(row.handovers_involved)+num(row.reconciliations_closed)+num(row.kitchen_items_completed)+num(row.inventory_movements)+num(row.inventory_request_events);
+  return <div className="mor-flow"><section className="mor-panel"><SectionTitle eyebrow="Recorded workload" title="Staff Operations" description="Attributed activity facts only. Managers interpret the facts; ServeFlow does not rank or score people."/><DataTable headers={["Staff","Role","Orders / assignments","Requests / cancellations","Cashier activity","Kitchen activity","Inventory activity","Recorded total"]} rows={report.operations.staff.facts.map((value)=>{const row=rec(value);return [txt(row.display_name),qualityLabel(row.role),`${num(row.orders_created)} / ${num(row.table_assignments)}`,`${num(row.assistance_resolved)} / ${num(row.cancellations_requested)}`,`${num(row.cashier_shifts_opened)} shifts · ${num(row.payments_verified)} payments`,`${num(row.kitchen_items_completed)} completed`,`${num(row.inventory_movements)} movements · ${num(row.inventory_request_events)} requests`,activity(row)];})} empty="No operational staff records are available."/></section><section className="mor-quality-row"><Quality label="Staff attribution" value={report.operations.dataQuality.staff_attribution_quality}/></section></div>;
+}
+
+function InventoryReport({ report }: { report:ManagerReportsV1Bundle }) { const i=report.operations.inventory,c=i.current;
+  return <div className="mor-flow"><section className="mor-metrics"><Metric label="Received" value={c.quantityIn??0}/><Metric label="Deductions" value={c.quantityOut??0}/><Metric label="Waste / spoilage" value={c.wasteSpoilage??0} tone={(c.wasteSpoilage??0)>0?"attention":undefined}/><Metric label="Movement count" value={c.movementCount??0}/><Metric label="Requests" value={i.requests.length}/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Movement ledger" title="Historical inventory movements" description="Immutable recorded movements only; current stock is never used to reconstruct history." action={<a className="mor-link" href="/manager/inventory">Open Inventory</a>}/><DataTable headers={["Item","Movement","Quantity","Direction","Unit","Recorded"]} rows={i.movements.map((value)=>{const row=rec(value);return [txt(row.item_name),qualityLabel(row.movement_type),num(row.quantity),qualityLabel(row.quantity_effect),txt(row.unit_name),dateTime(row.movement_date)];})} empty="No inventory movements for this period."/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Kitchen requests" title="Request and fulfillment" description="Recorded request state and timestamps."/><DataTable headers={["Item","Quantity","Urgency","Status","Requested","Delivered"]} rows={i.requests.map((value)=>{const row=rec(value);return [txt(row.item_name),`${num(row.quantity)} ${txt(row.unit,"")}`,qualityLabel(row.urgency),qualityLabel(row.status),dateTime(row.requested_at),dateTime(row.delivered_at)];})} empty="No inventory requests for this period."/></section><section className="mor-quality-row"><Quality label="History quality" value={report.operations.dataQuality.inventory_history_quality}/><Quality label="History scope" value={report.operations.dataQuality.inventory_history_scope}/></section></div>;
+}
+
+function GuestsReport({ report }: { report:ManagerReportsV1Bundle }) { const g=report.operations.guests,c=g.current;
+  return <div className="mor-flow"><section className="mor-metrics"><Metric label="Sessions opened" value={c.sessionsOpened??0}/><Metric label="Sessions closed" value={c.sessionsClosed??0}/><Metric label="Tables served" value={c.tablesServed??0}/><Metric label="Average session" value={minutes(c.avgSessionMinutes)}/><Metric label="Longest session" value={minutes(c.longestSessionMinutes)}/><Metric label="Assistance requests" value={g.assistanceRequests}/><Metric label="Complaints" value={g.complaints} tone={g.unresolvedComplaints?"attention":undefined}/><Metric label="Feedback" value={g.feedbackCount} note={g.averageFeedbackRating==null?"No rating":"Average rating "+g.averageFeedbackRating.toFixed(1)}/></section>
+  <section className="mor-panel"><SectionTitle eyebrow="Open service issues" title="Unresolved guest and table attention" description="Separate service-request and complaint records; this is not a guest count."/><div className="mor-attention"><article className={g.unresolvedAssistanceRequests?"is-attention":"is-good"}><div><strong>Assistance requests</strong><span>{g.unresolvedAssistanceRequests} unresolved</span></div></article><article className={g.unresolvedComplaints?"is-attention":"is-good"}><div><strong>Complaints</strong><span>{g.unresolvedComplaints} unresolved</span></div></article></div></section><section className="mor-quality-row"><Quality label="Guest identity" value={report.operations.dataQuality.guest_identity_quality}/><Quality label="Guest / party size" value={report.operations.dataQuality.party_size_quality}/></section></div>;
+}
+
+function IncidentsReport({ report, restaurantId, refresh }: { report:ManagerReportsV1Bundle; restaurantId:string; refresh:()=>Promise<void> }) {
+  const [selected,setSelected]=useState<Record<string,unknown>|null>(null); const [showCreate,setShowCreate]=useState(false); const [message,setMessage]=useState<string|null>(null); const [saving,setSaving]=useState(false);
+  const [incident,setIncident]=useState({type:"operational_issue",severity:"attention" as "info"|"attention"|"high"|"critical",title:"",summary:""});
+  const [decision,setDecision]=useState({type:"reviewed",status:"reviewed" as "reviewed"|"in_progress"|"resolved",note:"",resolution:""});
+  const manual=report.operations.exceptions.manual.map(rec), native=report.operations.exceptions.native.map(rec), decisions=report.operations.managerRecords.decisions.map(rec);
+  const incidentRows: Array<Record<string,unknown>>=[...manual.map((row)=>({...row,record_kind:"incident"})),...native.map((row)=>({...row,record_kind:"source"}))];
+  const create=async()=>{setSaving(true);setMessage(null);try{await createManagerReportIncident(restaurantId,{incidentType:incident.type,severity:incident.severity,title:incident.title,summary:incident.summary,occurredAt:new Date().toISOString()});setIncident({...incident,title:"",summary:""});setShowCreate(false);await refresh();setMessage("Incident recorded.");}catch(error){setMessage(error instanceof Error?error.message:"Unable to record incident.");}finally{setSaving(false);}};
+  const decide=async()=>{if(!selected)return;setSaving(true);setMessage(null);try{await recordManagerIncidentDecision(txt(selected.id,""),decision.type,decision.note,decision.status,null,decision.status==="resolved"?decision.resolution:null);setSelected(null);setDecision({...decision,note:"",resolution:""});await refresh();setMessage("Manager decision recorded.");}catch(error){setMessage(error instanceof Error?error.message:"Unable to record decision.");}finally{setSaving(false);}};
+  return <div className="mor-flow"><section className="mor-panel"><SectionTitle eyebrow="Operational exceptions" title="Exceptions & Incidents" description="Explicit incidents plus native exception evidence with source provenance." action={<button className="mor-primary" type="button" onClick={()=>setShowCreate((value)=>!value)}>{showCreate?"Cancel":"Record incident"}</button>}/>
+  {showCreate&&<div className="mor-form-grid"><label>Type<input value={incident.type} onChange={(e)=>setIncident({...incident,type:e.target.value})}/></label><label>Severity<select value={incident.severity} onChange={(e)=>setIncident({...incident,severity:e.target.value as typeof incident.severity})}><option>info</option><option>attention</option><option>high</option><option>critical</option></select></label><label className="is-wide">Title<input value={incident.title} maxLength={160} onChange={(e)=>setIncident({...incident,title:e.target.value})}/></label><label className="is-wide">Summary<textarea value={incident.summary} maxLength={2000} onChange={(e)=>setIncident({...incident,summary:e.target.value})}/></label><button className="mor-primary" type="button" disabled={saving||!incident.title.trim()||!incident.summary.trim()} onClick={()=>void create()}>{saving?"Saving…":"Save incident"}</button></div>}
+  {message&&<p className="mor-form-message">{message}</p>}
+  <div className="mor-incident-list">{incidentRows.length===0?<StatePanel kind="empty">No operational exceptions for this period.</StatePanel>:incidentRows.map((row,index)=><button type="button" key={txt(row.id,txt(row.source_id,String(index)))} onClick={()=>setSelected(row)}><i className={`is-${txt(row.severity,"attention")}`}/><div><strong>{txt(row.title,qualityLabel(row.source_type))}</strong><span>{txt(row.summary)}</span><small>{qualityLabel(row.status)} · {qualityLabel(row.source_entity_type??row.source_type)} · {dateTime(row.occurred_at)}</small></div></button>)}</div></section>
+  {selected&&<div className="mor-modal-layer" role="presentation" onClick={()=>setSelected(null)}><aside className="mor-modal" role="dialog" aria-modal="true" aria-label="Incident details" onClick={(event)=>event.stopPropagation()}><header><div><span>{qualityLabel(selected.severity)}</span><h2>{txt(selected.title,qualityLabel(selected.source_type))}</h2></div><button type="button" onClick={()=>setSelected(null)}>Close</button></header><p>{txt(selected.summary)}</p><dl className="mor-facts"><div><dt>Status</dt><dd>{qualityLabel(selected.status)}</dd></div><div><dt>Occurred</dt><dd>{dateTime(selected.occurred_at)}</dd></div><div><dt>Source</dt><dd>{qualityLabel(selected.source_entity_type??selected.source_type)}</dd></div><div><dt>Resolved</dt><dd>{dateTime(selected.resolved_at)}</dd></div></dl>
+  {decisions.filter((row)=>row.incident_id===selected.id).map((row)=><article className="mor-decision" key={txt(row.id)}><strong>{qualityLabel(row.decision_type)}</strong><p>{txt(row.decision_note)}</p><small>Manager · {dateTime(row.created_at)} · {qualityLabel(row.resulting_status)}</small></article>)}
+  {selected.record_kind==="incident"&&selected.status!=="resolved"&&<div className="mor-decision-form"><h3>Record manager decision</h3><label>Decision<input value={decision.type} onChange={(e)=>setDecision({...decision,type:e.target.value})}/></label><label>Status<select value={decision.status} onChange={(e)=>setDecision({...decision,status:e.target.value as typeof decision.status})}><option value="reviewed">Reviewed</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option></select></label><label>Decision note<textarea value={decision.note} onChange={(e)=>setDecision({...decision,note:e.target.value})}/></label>{decision.status==="resolved"&&<label>Resolution note<textarea value={decision.resolution} onChange={(e)=>setDecision({...decision,resolution:e.target.value})}/></label>}<button className="mor-primary" type="button" disabled={saving||!decision.note.trim()||(decision.status==="resolved"&&!decision.resolution.trim())} onClick={()=>void decide()}>{saving?"Saving…":"Save decision"}</button></div>}</aside></div>}
+  <section className="mor-quality-row"><Quality label="Incident provenance" value={report.operations.dataQuality.incident_provenance_quality}/></section></div>;
+}
+
+export function ManagerOperationalReportsPage({restaurantId,restaurantName,managerName,currency}:Props){
+  const [period,setPeriod]=useState<ReportingPeriod>("today"),[customStart,setCustomStart]=useState(monthStart()),[customEnd,setCustomEnd]=useState(nowDate()),[timezone,setTimezone]=useState("Africa/Nairobi"),[activeTab,setActiveTab]=useState<ReportTab>("overview");
+  const [report,setReport]=useState<ManagerReportsV1Bundle|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null),[exporting,setExporting]=useState<"pdf"|"csv"|null>(null);
+  const periodResult=useMemo(()=>{try{return{window:reportingPeriodWindow(period,timezone,customStart,customEnd),error:null};}catch(cause){return{window:null,error:cause instanceof Error?cause.message:"The report period is invalid."};}},[period,timezone,customStart,customEnd]);
+  useEffect(()=>{void loadRestaurantAnalyticsTimezone(restaurantId).then(setTimezone).catch(()=>undefined);},[restaurantId]);
+  const refresh=useCallback(async()=>{if(!periodResult.window){setError(periodResult.error);setReport(null);setLoading(false);return;}setLoading(true);setError(null);try{setReport(await loadManagerReportsV1(restaurantId,periodResult.window));}catch(cause){setReport(null);setError(cause instanceof Error?cause.message:"Unable to load report.");}finally{setLoading(false);}},[restaurantId,periodResult.window,periodResult.error]);
+  useEffect(()=>{void refresh();},[refresh]);
+  useTenantRealtime({channelName:"manager-reports-v1",restaurantId,tables:["orders","order_items","order_invoices","cashier_shifts","cash_reconciliations","cashier_shift_expenses","cashier_cash_handovers","inventory_movements","kitchen_inventory_requests","manager_customer_complaints","waiter_assistance_requests","manager_report_incidents","manager_report_incident_decisions","manager_operational_notes"],refresh});
+  const exportPdf=async()=>{if(!report)return;setExporting("pdf");try{await downloadManagerReportsPdf(report,restaurantName,managerName);}finally{setExporting(null);}};
+  const exportCsv=()=>{if(!report)return;setExporting("csv");try{downloadManagerReportsCsv(report);}finally{setExporting(null);}};
+  const denied=error?.toLowerCase().includes("permission")||error?.toLowerCase().includes("authorized");
+  return <main className="mor-page"><header className="mor-header"><div><span>Historical operational truth</span><h1>Manager Reports</h1><p>{restaurantName} · prepared for {managerName}</p></div><div className="mor-header-actions"><button type="button" onClick={()=>void refresh()} disabled={loading}><RefreshCw size={16}/><span>Refresh</span></button><button type="button" onClick={()=>void exportPdf()} disabled={!report||!!exporting}><FileText size={16}/><span>{exporting==="pdf"?"Preparing…":"Download PDF"}</span></button><button type="button" onClick={exportCsv} disabled={!report||!!exporting}><Download size={16}/><span>Export CSV</span></button></div></header>
+  <section className="mor-period" aria-label="Report period"><div className="mor-period-buttons">{(["today","week","month","custom"] as ReportingPeriod[]).map((value)=><button key={value} type="button" className={period===value?"active":""} onClick={()=>setPeriod(value)}>{value}</button>)}</div>{period==="custom"&&<div className="mor-custom-dates"><label>From<input type="date" value={customStart} onChange={(event)=>setCustomStart(event.target.value)}/></label><label>Through<input type="date" value={customEnd} onChange={(event)=>setCustomEnd(event.target.value)}/></label></div>}<p>{periodResult.window?`${new Date(periodResult.window.rangeStart).toLocaleDateString()} – ${new Date(new Date(periodResult.window.rangeEnd).getTime()-1).toLocaleDateString()} · ${timezone}`:periodResult.error}</p></section>
+  <nav className="mor-tabs" aria-label="Report sections">{tabs.map((tab)=><button type="button" key={tab.id} className={activeTab===tab.id?"active":""} aria-current={activeTab===tab.id?"page":undefined} onClick={()=>setActiveTab(tab.id)}>{tab.label}</button>)}</nav>
+  {loading&&<StatePanel kind="loading">Loading report…</StatePanel>}{!loading&&error&&<StatePanel kind={denied?"denied":"error"}>{denied?"Not authorized.":"Unable to load report."}<small>{error}</small></StatePanel>}
+  {!loading&&!error&&report&&<section className="mor-report-content" aria-live="polite">{activeTab==="overview"&&<Overview report={report} currency={currency} restaurantId={restaurantId} refresh={refresh}/>} {activeTab==="menu"&&<MenuReport report={report} currency={currency}/>} {activeTab==="sales"&&<SalesReport report={report} currency={currency}/>} {activeTab==="cashier"&&<CashierReport report={report} currency={currency}/>} {activeTab==="kitchen"&&<KitchenReport report={report}/>} {activeTab==="staff"&&<StaffReport report={report}/>} {activeTab==="inventory"&&<InventoryReport report={report}/>} {activeTab==="guests"&&<GuestsReport report={report}/>} {activeTab==="incidents"&&<IncidentsReport report={report} restaurantId={restaurantId} refresh={refresh}/>}</section>}
   </main>;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyticsWindow, completedDaysWindow } from "../../src/core/analytics/historicalAnalytics";
+import { analyticsWindow, completedDaysWindow, reportingPeriodWindow } from "../../src/core/analytics/historicalAnalytics";
 
 describe("historical analytics windows", () => {
   const now = new Date("2026-07-16T12:00:00.000Z");
@@ -37,5 +37,31 @@ describe("historical analytics windows", () => {
   it("builds completed-day history by calendar boundaries", () => {
     const range = completedDaysWindow(7, "Africa/Nairobi", now);
     expect((Date.parse(range.rangeEnd) - Date.parse(range.rangeStart)) / 86_400_000).toBe(7);
+  });
+
+  it("defines one Manager Reports period with the immediately preceding comparison period", () => {
+    const range = reportingPeriodWindow("week", "Africa/Nairobi", "", "", now);
+    expect(range).toMatchObject({
+      period: "week",
+      rangeStart: "2026-07-12T21:00:00.000Z",
+      rangeEnd: "2026-07-19T21:00:00.000Z",
+      comparisonRangeStart: "2026-07-05T21:00:00.000Z",
+      comparisonRangeEnd: "2026-07-12T21:00:00.000Z",
+      timezone: "Africa/Nairobi",
+    });
+  });
+
+  it("uses an equal local-calendar span for custom comparisons", () => {
+    const range = reportingPeriodWindow("custom", "Africa/Nairobi", "2026-07-10", "2026-07-12", now);
+    expect(range.rangeStart).toBe("2026-07-09T21:00:00.000Z");
+    expect(range.rangeEnd).toBe("2026-07-12T21:00:00.000Z");
+    expect(range.comparisonRangeStart).toBe("2026-07-06T21:00:00.000Z");
+    expect(range.comparisonRangeEnd).toBe("2026-07-09T21:00:00.000Z");
+  });
+
+  it("rejects invalid custom ranges and invalid restaurant timezones", () => {
+    expect(() => reportingPeriodWindow("custom", "Africa/Nairobi", "2026-02-30", "2026-03-01", now)).toThrow("valid start and end dates");
+    expect(() => reportingPeriodWindow("custom", "Africa/Nairobi", "2026-07-12", "2026-07-10", now)).toThrow("must not be after");
+    expect(() => reportingPeriodWindow("today", "Not/A_Timezone", "", "", now)).toThrow("valid restaurant timezone");
   });
 });
