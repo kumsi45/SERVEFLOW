@@ -18,6 +18,7 @@ export type RecipePage = { items: Recipe[]; total: number; page: number; page_si
 export type RecipeIngredient = {
   id: string; restaurant_id: string; recipe_id: string; inventory_item_id: string;
   inventory_item_name: string; quantity_required: number; unit_id: string; unit_name: string;
+  inventory_item_status?: string; unit_status?: string;
   optional_notes: string | null; sort_order: number; created_at: string; updated_at: string;
 };
 export type IngredientInventoryItem = {

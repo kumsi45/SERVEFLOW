@@ -48,7 +48,8 @@ describe("Manager Recipes operational workspace", () => {
   });
 
   it("does not duplicate Inventory or expose owner profitability", () => {
-    expect(page).toContain("Select Inventory item...");
+    expect(page).toContain("Search inventory by item name");
+    expect(page).not.toContain("Select Inventory item...");
     expect(page).not.toContain("Create Inventory");
     for (const forbidden of ["Net Profit", "Bank Balance", "Owner Withdrawals", "Payroll", "Profit Margin"]) expect(page).not.toContain(forbidden);
   });

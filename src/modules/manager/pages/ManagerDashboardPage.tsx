@@ -150,6 +150,13 @@ export function ManagerDashboardPage({
     void loadSnapshot();
   }, [loadSnapshot]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadSnapshot();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [loadSnapshot]);
+
   useTenantRealtime({
     channelName: "manager-dashboard",
     restaurantId,

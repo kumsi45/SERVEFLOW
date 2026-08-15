@@ -15,12 +15,18 @@ import type {
 } from "../types";
 
 const ALERT_THRESHOLDS = {
-  waitingMinutes: 10,
+  waitingMinutes: 30,
   kitchenDelayMinutes: 20,
   waitingPaymentMinutes: 10,
   waitingPickupMinutes: 8,
   longSessionMinutes: 120,
 };
+
+export function customerWaitingAlertLabel(minutes: number) {
+  return minutes >= 60
+    ? "Waiting more than 1 hour"
+    : "Waiting more than 30 minutes";
+}
 
 type RestaurantRow = {
   id: string;
@@ -486,6 +492,7 @@ function buildAlerts(
 ): ManagerOperationAlert[] {
   const alerts: ManagerOperationAlert[] = [];
   const createdMinutes = minutesSince(order.created_at, now) ?? 0;
+  const customerWaitingMinutes = sessionMinutes ?? createdMinutes;
   const latestReadyMinutes = minutesSince(
     latestDate(
       items
@@ -506,12 +513,12 @@ function buildAlerts(
 
   if (
     kitchenStatus === "waiting" &&
-    createdMinutes >= ALERT_THRESHOLDS.waitingMinutes
+    customerWaitingMinutes >= ALERT_THRESHOLDS.waitingMinutes
   ) {
     alerts.push({
       type: "waiting",
-      label: "Waiting more than X minutes",
-      minutes: createdMinutes,
+      label: customerWaitingAlertLabel(customerWaitingMinutes),
+      minutes: customerWaitingMinutes,
     });
   }
   if (
