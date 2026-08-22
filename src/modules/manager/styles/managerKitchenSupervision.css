@@ -87,7 +87,7 @@
 
 .mks-summary article {
   min-width: 0;
-  padding: 13px 14px;
+  padding: 5px 14px;
   border-left: 1px solid #eef1f5;
 }
 
@@ -276,7 +276,9 @@
 .mks-request-inspector > header em { max-width: 190px; text-align: center; white-space: normal; }
 .mks-request-inspector > header em.accepted,
 .mks-request-inspector > header em.delivered { color: #027a48; background: #ecfdf3; }
-.mks-request-inspector > header em.rejected { color: #b42318; background: #fef3f2; }
+.mks-request-inspector > header em.issued { color: #175cd3; background: #eff4ff; }
+.mks-request-inspector > header em.rejected,
+.mks-request-inspector > header em.unable_to_fulfill { color: #b42318; background: #fef3f2; }
 .mks-request-inspector dd { max-width: 62%; text-align: right; overflow-wrap: anywhere; }
 .mks-request-reason-section { padding-bottom: 12px !important; }
 .mks-request-reason { margin: 0; color: #344054; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
@@ -286,7 +288,10 @@
 .mks-request-inventory dl > div.incompatible dd { color: #b42318; }
 .mks-inventory-unavailable { margin: 0; color: #667085; font-size: 13px; }
 .mks-request-outcome { display: grid; gap: 5px; margin: 0; padding: 12px; border: 1px solid #abefc6; border-radius: 10px; background: #ecfdf3; }
-.mks-request-outcome.rejected { border-color: #fecdca; background: #fef3f2; }
+.mks-request-outcome.issued { border-color: #b2ccff; background: #eff4ff; }
+.mks-request-outcome.rejected,
+.mks-request-outcome.unable { border-color: #fecdca; background: #fef3f2; }
+.mks-request-outcome dl { margin: 5px 0 0; }
 .mks-request-outcome p,
 .mks-request-outcome small { margin: 0; color: #344054; font-size: 12px; overflow-wrap: anywhere; }
 .mks-request-decision { display: grid; gap: 10px; border-bottom: 0 !important; }

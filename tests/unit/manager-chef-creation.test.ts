@@ -18,6 +18,14 @@ const manageStaff = read("supabase/functions/manage-staff/index.ts");
 const kitchenAuth = read("src/modules/staff-auth/services/staffAuthService.ts");
 const kitchenPage = read("src/modules/kitchen/pages/KitchenDashboardPage.tsx");
 const migration = read("supabase/migrations/241_manager_chef_creation_without_station.sql");
+const queueFunction = migration.slice(
+  migration.indexOf("create or replace function public.get_station_kitchen_orders"),
+  migration.indexOf("create or replace function public.resolve_kitchen_action_context"),
+);
+const actionContextFunction = migration.slice(
+  migration.indexOf("create or replace function public.resolve_kitchen_action_context"),
+  migration.indexOf("comment on function public.get_kitchen_dashboard_context"),
+);
 
 const valid = (role: "waiter" | "cashier" | "kitchen" | "inventory_officer", email = "staff@example.com") => ({
   fullName: "Test Staff",
@@ -55,6 +63,33 @@ describe("Manager Chef creation without station assignment", () => {
     expect(migration).toContain("and role in ('kitchen', 'owner')");
     expect(migration).not.toContain("set assigned_kitchen_station_id");
     expect(kitchenPage).toContain('context.role === "kitchen" && !context.assignedStation');
+  });
+
+  it("removes the database trigger that forced null Chef assignments to Main Kitchen", () => {
+    expect(migration).toContain("drop trigger if exists assign_default_kitchen_station_to_staff on public.restaurant_staff");
+    expect(migration).not.toContain("new.assigned_kitchen_station_id :=");
+    expect(migration).not.toContain("create trigger assign_default_kitchen_station_to_staff");
+  });
+
+  it("rejects station queue access for an unassigned Chef without exposing all stations", () => {
+    expect(queueFunction).toContain("if acting_staff.assigned_kitchen_station_id is null then");
+    expect(queueFunction).toContain("raise exception 'Kitchen station assignment required.'");
+    expect(queueFunction).not.toContain("set assigned_kitchen_station_id");
+    expect(queueFunction).not.toContain("ensure_main_kitchen_station_for_restaurant");
+  });
+
+  it("rejects station-dependent mutations for an unassigned Chef without persisting a fallback", () => {
+    expect(actionContextFunction).toContain("station_id := staff.assigned_kitchen_station_id");
+    expect(actionContextFunction).toContain("raise exception 'Kitchen station assignment required.'");
+    expect(actionContextFunction).not.toContain("set assigned_kitchen_station_id");
+    expect(actionContextFunction).not.toContain("ensure_main_kitchen_station_for_restaurant");
+  });
+
+  it("preserves explicit tenant-scoped Manager Kitchen assignment", () => {
+    expect(page).not.toContain("assignedKitchenStationId");
+    expect(service).toContain("assignedKitchenStationId: string | null");
+    expect(manageStaff).toContain("nextStation = await requireActiveKitchenStation(nextStationId)");
+    expect(manageStaff).toContain('.eq("restaurant_id", restaurantId)');
   });
 
   it("keeps waiter email optional", () => {

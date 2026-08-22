@@ -12,8 +12,8 @@ const drawer = page.slice(page.indexOf("{selectedRequest &&"), page.indexOf("{se
 
 describe("Manager Kitchen material request drawer cleanup", () => {
   it("shows concise status once in the header and not again in request details", () => {
-    expect(page).toContain('if (status === "pending") return "Pending review"');
-    expect(drawer.match(/requestStatusLabel\(selectedRequest\.status\)/g)).toHaveLength(1);
+    expect(service).toContain('if(status==="pending")return "Pending Review"');
+    expect(drawer.match(/inventoryRequestStatusLabel\(selectedRequest\.status\)/g)).toHaveLength(1);
     expect(drawer).not.toContain("<dt>Status</dt>");
     expect(drawer).not.toContain("Pending Manager Review");
   });
@@ -34,8 +34,9 @@ describe("Manager Kitchen material request drawer cleanup", () => {
   });
 
   it("uses a compact truthful missing-reason state", () => {
-    expect(drawer).toContain('selectedRequest.comment || "Not provided"');
-    expect(drawer).not.toContain("Reason not recorded.");
+    const requestReason = drawer.slice(drawer.indexOf('className="mks-request-reason-section"'), drawer.indexOf('className="mks-request-inventory"'));
+    expect(requestReason).toContain('selectedRequest.comment || "Not provided"');
+    expect(requestReason).not.toContain("Reason not recorded.");
     expect(workflow).toContain("target_comment text default null");
   });
 

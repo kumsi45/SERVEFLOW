@@ -15,7 +15,7 @@ const markup = `
   </main>
   <div class="mks-inspector-layer">
     <aside class="mks-inspector mks-request-inspector" role="dialog" aria-label="Kitchen request review">
-      <header><div><span>Kitchen material request</span><h2>Extra Fine Imported Brown Sugar With A Very Long Item Name</h2></div><div><em>Pending review</em><button aria-label="Close request review">×</button></div></header>
+      <header><div><span>Kitchen material request</span><h2>Extra Fine Imported Brown Sugar With A Very Long Item Name</h2></div><div><em>Pending Review</em><button aria-label="Close request review">×</button></div></header>
       <section><h3>Request details</h3><dl><div><dt>Requested item</dt><dd>Extra Fine Imported Brown Sugar With A Very Long Item Name</dd></div><div><dt>Quantity</dt><dd>25 kilograms</dd></div><div><dt>Station</dt><dd>Cold Drinks and Beverage Preparation</dd></div><div><dt>Requested by</dt><dd>Chef With A Very Long Display Name</dd></div><div><dt>Priority</dt><dd>High</dd></div><div><dt>Requested</dt><dd>Aug 14, 2026 · 2:40 AM</dd></div><div><dt>Waiting</dt><dd>8 days</dd></div></dl></section>
       <section class="mks-request-reason-section"><h3>Request reason</h3><p class="mks-request-reason">Low stock for juice preparation during unexpected customer demand across several service locations.</p></section>
       <section class="mks-request-inventory"><h3>Inventory</h3><dl><div><dt>Available</dt><dd>7 kilograms</dd></div><div><dt>Requested</dt><dd>25 kilograms</dd></div><div class="short"><dt>Short by</dt><dd>18 kilograms</dd></div><div><dt>Reorder level</dt><dd>0 kilograms</dd></div></dl></section>
@@ -40,7 +40,7 @@ for (const viewport of [
     await expect(page.getByText("3 waiting · 2 preparing · 1 delayed")).toBeAttached();
     await expect(page.getByText("IDLE", { exact: true })).toHaveCount(0);
     await expect(page.locator(".mks-request-inspector dt", { hasText: "Status" })).toHaveCount(0);
-    await expect(page.getByText("Pending review", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("Pending Review", { exact: true })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Close", exact: true })).toHaveCount(0);
 
     const inspector = page.locator(".mks-request-inspector");

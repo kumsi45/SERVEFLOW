@@ -19,9 +19,9 @@ describe("Live Operations kitchen material request workflow",()=>{
   });
 
   it("renders canonical item, quantity, station, requester, reason, time, age and status",()=>{
-    for(const value of ["request.itemName","request.quantity","request.unit","request.stationName","request.requesterName","request.comment","request.requestedAt","action.age","requestStatus(request.status)"]) expect(page).toContain(value);
+    for(const value of ["request.itemName","request.quantity","request.unit","request.stationName","request.requesterName","request.comment","request.requestedAt","action.age","inventoryRequestStatusLabel(request.status)"]) expect(page).toContain(value);
     expect(page).toContain("Reason not recorded");
-    expect(page).toContain("Pending Manager Review");
+    expect(service).toContain("Pending Review");
   });
 
   it("shows only unique pending requests in the approval queue",()=>{

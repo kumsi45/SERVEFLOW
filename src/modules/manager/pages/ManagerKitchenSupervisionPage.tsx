@@ -3,6 +3,7 @@ import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
   loadInventoryItems,
   loadInventoryRequests,
+  inventoryRequestStatusLabel,
   processInventoryRequest,
   type InventoryItem,
   type InventoryRequest,
@@ -81,13 +82,6 @@ function stationChefLabel(station: ManagerKitchenStationSummary) {
   return `${assigned} ${assigned === 1 ? "Chef" : "Chefs"}`;
 }
 
-function requestStatusLabel(status: InventoryRequest["status"]) {
-  if (status === "pending") return "Pending review";
-  if (status === "accepted") return "Awaiting Inventory";
-  if (status === "rejected") return "Rejected";
-  return "Fulfilled";
-}
-
 function requestDateTime(value: string, timezone: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not recorded";
@@ -146,6 +140,8 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerKitchenSupervisionSnapshot | null>(null);
   const [requests, setRequests] = useState<InventoryRequest[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [operationsState, setOperationsState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [requestsState, setRequestsState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [inventoryState, setInventoryState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [restaurantTimezone, setRestaurantTimezone] = useState("Africa/Nairobi");
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -163,22 +159,27 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextSnapshot, nextRequests, nextInventoryResult, nextTimezone] = await Promise.all([
+      const [nextSnapshot, nextRequestsResult, nextInventoryResult, nextTimezone] = await Promise.all([
         loadManagerKitchenSupervision(restaurantId),
-        loadInventoryRequests(restaurantId),
+        loadInventoryRequests(restaurantId)
+          .then((items) => ({ items, available: true as const }))
+          .catch(() => ({ items: [] as InventoryRequest[], available: false as const })),
         loadInventoryItems(restaurantId)
           .then((items) => ({ items, available: true as const }))
           .catch(() => ({ items: [] as InventoryItem[], available: false as const })),
         loadRestaurantAnalyticsTimezone(restaurantId).catch(() => "Africa/Nairobi"),
       ]);
       setSnapshot(nextSnapshot);
-      setRequests(nextRequests);
+      setOperationsState("ready");
+      setRequests(nextRequestsResult.items);
+      setRequestsState(nextRequestsResult.available ? "ready" : "unavailable");
       setInventoryItems(nextInventoryResult.items);
       setInventoryState(nextInventoryResult.available ? "ready" : "unavailable");
       setRestaurantTimezone(nextTimezone);
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load kitchen supervision.");
+      setOperationsState("unavailable");
+      setError("Unable to load Kitchen operations.");
     }
   }, [restaurantId]);
 
@@ -230,6 +231,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
     return Array.from(byStation.values());
   }, [snapshot]);
   const urgentRequests = pendingRequests.filter((request) => request.urgency === "critical" || request.urgency === "high");
+  const regularPendingRequests = pendingRequests.filter((request) => request.urgency !== "critical" && request.urgency !== "high");
   const attentionCount = attentionStations.length + urgentRequests.length;
 
   async function runAction(action: () => Promise<void>, success: string) {
@@ -267,7 +269,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       setNotice(null);
       setReviewingRequestId(request.id);
       await processInventoryRequest(restaurantId, request.id, action, action === "reject" ? reason : undefined);
-      setNotice(action === "accept" ? "Request approved. Awaiting Inventory fulfillment." : "Kitchen request rejected.");
+      setNotice(action === "accept" ? "Request approved. Awaiting Inventory." : "Kitchen request rejected.");
       setRejectingRequest(false);
       setRejectionReason("");
       await refresh();
@@ -306,12 +308,16 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
     </button>;
   }
 
+  if (operationsState === "loading" && !snapshot) return <main className="mks-page"><div className="mks-message" role="status">Loading Kitchen operations...</div></main>;
+  if (operationsState === "unavailable") return <main className="mks-page"><div className="mks-message error" role="alert">Unable to load Kitchen operations.</div></main>;
+
   return <main className="mks-page">
     <nav className="mks-nav" aria-label="Manager Kitchen sections">
       {(["overview", "orders", "performance"] as const).map((view) => <button key={view} type="button" className={activeView === view ? "active" : ""} onClick={() => setActiveView(view)}>{view.charAt(0).toUpperCase() + view.slice(1)}</button>)}
     </nav>
 
     {(notice || error) && <div className={`mks-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
+    {requestsState === "unavailable" && <div className="mks-message error" role="alert">Kitchen requests unavailable.</div>}
 
     {activeView === "overview" && <>
       <section className="mks-summary" aria-label="Kitchen command summary">
@@ -350,9 +356,9 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
         </div>
       </section>
 
-      {pendingRequests.length > 0 && <section className="mks-panel" aria-labelledby="mks-requests-title">
-        <header><div><span>Inventory handoff</span><h2 id="mks-requests-title">Kitchen Requests <b>{pendingRequests.length}</b></h2></div></header>
-        <div className="mks-request-list">{pendingRequests.slice(0, 6).map((request) => <button key={request.id} type="button" onClick={() => openRequest(request.id)}><span><strong>{request.itemName}</strong><small>{request.stationName || "Kitchen"} · {requestStatusLabel(request.status)}</small></span><em className={request.urgency}>{request.urgency}</em><time>{fmtMinutes(minutesSince(request.requestedAt))}</time><b>Review ›</b></button>)}</div>
+      {regularPendingRequests.length > 0 && <section className="mks-panel" aria-labelledby="mks-requests-title">
+        <header><div><span>Inventory handoff</span><h2 id="mks-requests-title">Kitchen Requests <b>{regularPendingRequests.length}</b></h2></div></header>
+        <div className="mks-request-list">{regularPendingRequests.slice(0, 6).map((request) => <button key={request.id} type="button" onClick={() => openRequest(request.id)}><span><strong>{request.itemName}</strong><small>{request.stationName || "Kitchen"} · {inventoryRequestStatusLabel(request.status)}</small></span><em className={request.urgency}>{request.urgency}</em><time>{fmtMinutes(minutesSince(request.requestedAt))}</time><b>Review ›</b></button>)}</div>
       </section>}
 
       <section className="mks-panel" aria-labelledby="mks-current-orders-title">
@@ -379,7 +385,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
     </>}
 
     {selectedRequest && <div className="mks-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequestId(null); }}><aside className="mks-inspector mks-request-inspector" role="dialog" aria-modal="true" aria-labelledby="mks-request-title">
-      <header><div><span>Kitchen Material Request</span><h2 id="mks-request-title">{selectedRequest.itemName}</h2></div><div><em className={`mks-request-status ${selectedRequest.status}`}>{requestStatusLabel(selectedRequest.status)}</em><button type="button" aria-label="Close kitchen request" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
+      <header><div><span>Kitchen Material Request</span><h2 id="mks-request-title">{selectedRequest.itemName}</h2></div><div><em className={`mks-request-status ${selectedRequest.status}`}>{inventoryRequestStatusLabel(selectedRequest.status)}</em><button type="button" aria-label="Close kitchen request" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
       <section><h3>Request details</h3><dl>
         <div><dt>Requested item</dt><dd>{selectedRequest.itemName}</dd></div>
         <div><dt>Quantity</dt><dd>{formatQuantity(selectedRequest.quantity, selectedRequest.unit)}</dd></div>
@@ -404,9 +410,11 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
           <div><dt>Reorder level</dt><dd>{formatQuantity(selectedInventoryItem.reorderLevel, selectedInventoryItem.unit)}</dd></div>
         </dl>}
       </section>
-      {selectedRequest.status === "accepted" && <section className="mks-request-outcome"><h3>Awaiting Inventory</h3><p>Request approved. Inventory fulfillment is still pending.</p>{selectedRequest.reviewerName && <small>Reviewed by {selectedRequest.reviewerName}</small>}</section>}
-      {selectedRequest.status === "rejected" && <section className="mks-request-outcome rejected"><h3>Request rejected</h3><p>{selectedRequest.rejectionReason || "Rejection reason not recorded."}</p>{selectedRequest.reviewerName && <small>Reviewed by {selectedRequest.reviewerName}</small>}</section>}
-      {selectedRequest.status === "delivered" && <section className="mks-request-outcome"><h3>Fulfilled</h3><p>Inventory fulfillment is complete.</p>{selectedRequest.fulfillerName && <small>Fulfilled by {selectedRequest.fulfillerName}</small>}</section>}
+      {selectedRequest.status === "accepted" && <section className="mks-request-outcome"><h3>Awaiting Inventory</h3><p>Inventory has not issued this request yet.</p><dl>{selectedRequest.reviewerName && <div><dt>Approved by</dt><dd>{selectedRequest.reviewerName}</dd></div>}{selectedRequest.acceptedAt && <div><dt>Approved at</dt><dd>{requestDateTime(selectedRequest.acceptedAt, restaurantTimezone)}</dd></div>}</dl></section>}
+      {selectedRequest.status === "issued" && <section className="mks-request-outcome issued"><h3>Issued · Awaiting Kitchen Confirmation</h3><p>Waiting for Kitchen to confirm receipt.</p><dl>{selectedRequest.issuedQuantity != null && <div><dt>Issued quantity</dt><dd>{formatQuantity(selectedRequest.issuedQuantity, selectedRequest.unit)}</dd></div>}{selectedRequest.issuerName && <div><dt>Issued by</dt><dd>{selectedRequest.issuerName}</dd></div>}{selectedRequest.issuedAt && <div><dt>Issued at</dt><dd>{requestDateTime(selectedRequest.issuedAt, restaurantTimezone)}</dd></div>}</dl></section>}
+      {selectedRequest.status === "delivered" && <section className="mks-request-outcome"><h3>Fulfilled</h3><p>Received by Kitchen.</p><dl>{selectedRequest.confirmerName && <div><dt>Confirmed by</dt><dd>{selectedRequest.confirmerName}</dd></div>}{selectedRequest.confirmedAt && <div><dt>Confirmed at</dt><dd>{requestDateTime(selectedRequest.confirmedAt, restaurantTimezone)}</dd></div>}</dl></section>}
+      {selectedRequest.status === "unable_to_fulfill" && <section className="mks-request-outcome unable"><h3>Unable to Fulfill</h3><p>{selectedRequest.unableToFulfillReason || "Reason not recorded."}</p><dl>{selectedRequest.unableToFulfillByName && <div><dt>Inventory Officer</dt><dd>{selectedRequest.unableToFulfillByName}</dd></div>}{selectedRequest.unableToFulfillAt && <div><dt>Recorded at</dt><dd>{requestDateTime(selectedRequest.unableToFulfillAt, restaurantTimezone)}</dd></div>}</dl></section>}
+      {selectedRequest.status === "rejected" && <section className="mks-request-outcome rejected"><h3>Rejected</h3><p>{selectedRequest.rejectionReason || "Rejection reason not recorded."}</p><dl>{selectedRequest.reviewerName && <div><dt>Rejected by</dt><dd>{selectedRequest.reviewerName}</dd></div>}{selectedRequest.rejectedAt && <div><dt>Rejected at</dt><dd>{requestDateTime(selectedRequest.rejectedAt, restaurantTimezone)}</dd></div>}</dl></section>}
       {selectedRequest.status === "pending" ? <section className="mks-request-decision"><h3>Manager decision</h3>{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div className="mks-request-actions"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button><button type="button" className="secondary" disabled={reviewingRequestId === selectedRequest.id} onClick={() => { setRejectingRequest(false); setRejectionReason(""); }}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id || !rejectionReason.trim()} onClick={() => void reviewRequest(selectedRequest, "reject")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Confirm rejection"}</button></div></> : <div className="mks-request-actions"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id} onClick={() => setRejectingRequest(true)}>Reject</button><button type="button" className="primary" disabled={reviewingRequestId === selectedRequest.id} onClick={() => void reviewRequest(selectedRequest, "accept")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Approve Request"}</button></div>}</section> : <section className="mks-request-navigation"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button></section>}
     </aside></div>}
 

@@ -700,8 +700,10 @@ function requestStatus(value: InventoryRequestStatus) {
   return {
     pending: "Pending",
     accepted: "Approved · waiting fulfillment",
+    issued: "Issued · awaiting Kitchen confirmation",
     delivered: "Completed",
     rejected: "Rejected",
+    unable_to_fulfill: "Unable to fulfill",
   }[value];
 }
 function stockLabel(value: ManagerStockItem["status"]) {

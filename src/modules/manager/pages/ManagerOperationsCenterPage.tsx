@@ -4,7 +4,7 @@ import { formatCurrency, type CurrencyConfig } from "../../../core/format/curren
 import { fetchManagerDashboardSnapshot, releaseManagerDiningSession } from "../services/managerDashboardService";
 import { assignWaiterTables, loadManagerStaffOperations, type ManagerStaffMember, type ManagerStaffOperationsSnapshot } from "../services/managerStaffOperationsService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
-import { loadInventoryRequests, processInventoryRequest, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { inventoryRequestStatusLabel, loadInventoryRequests, processInventoryRequest, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
 import { loadInventoryCurrentStock } from "../../inventory/services/inventoryStockRepository";
 import type { InventoryCurrentStockRow } from "../../inventory/types";
 import { loadManagerCashierOperations, reviewManagerCashierExpense, type ManagerCashierExpense, type ManagerCashierOperationsSnapshot } from "../services/managerCashierOperationsService";
@@ -41,11 +41,11 @@ function requestedLabel(value: string) {
   return `${sameDay ? "Today" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)}, ${timeLabel(value)}`;
 }
 
-function requestStatus(status: InventoryRequest["status"]) {
-  if (status === "pending") return "Pending Manager Review";
-  if (status === "accepted") return "Approved · Awaiting Inventory";
-  if (status === "delivered") return "Fulfilled";
-  return "Rejected";
+function requestStatusTone(status: InventoryRequest["status"]) {
+  if (status === "pending" || status === "accepted") return "amber";
+  if (status === "rejected" || status === "unable_to_fulfill") return "red";
+  if (status === "issued") return "blue";
+  return "green";
 }
 
 function quantity(value: number) {
@@ -207,6 +207,8 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [operationsState, setOperationsState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [requestsUnavailable, setRequestsUnavailable] = useState(false);
   const [reviewingRequestId, setReviewingRequestId] = useState<string | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -224,15 +226,18 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const refresh = useCallback(async () => {
     setRequestsLoading(true);
     try {
-      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextInventoryStock, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId), loadInventoryCurrentStock(restaurantId), loadManagerCashierOperations(restaurantId)]);
+      const [nextDashboard, nextStaffOps, nextInventoryRequestsResult, nextInventoryStock, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId).then((items) => ({ items, available: true as const })).catch(() => ({ items: [] as InventoryRequest[], available: false as const })), loadInventoryCurrentStock(restaurantId), loadManagerCashierOperations(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
-      setInventoryRequests(nextInventoryRequests);
+      setInventoryRequests(nextInventoryRequestsResult.items);
+      setRequestsUnavailable(!nextInventoryRequestsResult.available);
       setInventoryStock(nextInventoryStock);
       setCashierOps(nextCashierOps);
+      setOperationsState("ready");
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Live Operations is unavailable.");
+      setOperationsState("unavailable");
+      setError("Unable to load Live Operations.");
     } finally { setRequestsLoading(false); }
   }, [restaurantId]);
 
@@ -280,7 +285,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     try {
       setReviewingRequestId(request.id); setRequestActionError(null); setError(null); setNotice(null);
       await processInventoryRequest(restaurantId, request.id, action, action === "reject" ? reason : undefined);
-      setNotice(action === "accept" ? "Request approved and sent to Inventory." : "Request rejected.");
+      setNotice(action === "accept" ? "Request approved. Awaiting Inventory." : "Request rejected.");
       setRejectingRequest(false); setRejectionReason("");
       await refresh();
     } catch (actionError) {
@@ -331,8 +336,12 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     finally { setReleasingOrderId(null); }
   }
 
+  if (operationsState === "loading" && !dashboard) return <main className="moc-page"><div className="moc-message" role="status">Loading Live Operations...</div></main>;
+  if (operationsState === "unavailable") return <main className="moc-page"><div className="moc-message error" role="alert">Unable to load Live Operations.</div></main>;
+
   return <main className="moc-page">
     {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
+    {requestsUnavailable && <div className="moc-message error" role="alert">Kitchen requests unavailable.</div>}
 
     <nav className="moc-workspace-tabs" aria-label="Live Operations workspace">
       <button type="button" className={operationsView === "service" ? "is-active" : ""} aria-current={operationsView === "service" ? "page" : undefined} onClick={() => setOperationsView("service")}>Service</button>
@@ -346,11 +355,11 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
       <div className="moc-action-list">
         {requestsLoading && inventoryRequests.length === 0 && <div className="moc-empty" role="status"><strong>Loading requests...</strong></div>}
         {visibleActions.map((action) => { const request=action.requestId ? inventoryRequests.find((item)=>item.id===action.requestId) : null; return request ? <article className={`moc-request-action ${action.priority}`} key={action.id}>
-          <header><div><span>Kitchen Material Request</span><h3>{request.itemName}</h3></div><span className={`moc-status ${request.urgency === "critical" ? "red" : request.urgency === "high" ? "amber" : ""}`}>{requestStatus(request.status)}</span></header>
+          <header><div><span>Kitchen Material Request</span><h3>{request.itemName}</h3></div><span className={`moc-status ${request.urgency === "critical" ? "red" : request.urgency === "high" ? "amber" : ""}`}>{inventoryRequestStatusLabel(request.status)}</span></header>
           <dl><div><dt>Quantity</dt><dd>{quantity(request.quantity)} {request.unit}</dd></div><div><dt>Station</dt><dd>{request.stationName || "Station not recorded"}</dd></div><div><dt>Requested by</dt><dd>{request.requesterName || "Requester not recorded"}</dd></div><div className="is-wide"><dt>Reason</dt><dd>{request.comment || "Reason not recorded"}</dd></div><div><dt>Requested</dt><dd>{requestedLabel(request.requestedAt)}</dd></div><div><dt>Waiting</dt><dd>{action.age || "Just now"}</dd></div></dl>
           <footer><button type="button" onClick={() => reviewAction(action)}>Review Request</button><button type="button" className="secondary" onClick={checkInventory}>Check Inventory</button></footer>
         </article> : <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>Review</button></article>; })}
-        {!requestsLoading && visibleActions.length === 0 && <div className="moc-empty"><strong>{actionFilter === "approvals" ? "No kitchen requests require attention." : "No manager actions require attention."}</strong><span>Current service is operating normally.</span></div>}
+        {!requestsLoading && !requestsUnavailable && visibleActions.length === 0 && <div className="moc-empty"><strong>{actionFilter === "approvals" ? "No kitchen requests require attention." : "No manager actions require attention."}</strong><span>Current service is operating normally.</span></div>}
       </div>
     </section>
 
@@ -367,12 +376,16 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     <section className="moc-panel moc-recent" aria-labelledby="recent-operations-title"><div className="moc-section-head"><div><span>Live context</span><h2 id="recent-operations-title">Recent Operations</h2></div></div><div className="moc-timeline">{recentOperations.map((operation) => <p key={operation.id}><time>{timeLabel(operation.at)}</time><span>{operation.label}</span></p>)}{recentOperations.length === 0 && <div className="moc-empty"><strong>No recent operational activity.</strong></div>}</div></section>
 
     {selectedRequest && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequestId(null); }}><aside className="moc-inspector moc-request-inspector" role="dialog" aria-modal="true" aria-labelledby="request-inspector-title">
-      <header><div><span>Kitchen Material Request</span><h2 id="request-inspector-title">{selectedRequest.itemName}</h2><time>Waiting {elapsed(minutesSince(selectedRequest.requestedAt)) || "less than a minute"}</time></div><div className="moc-inspector-head-actions"><span className={`moc-status ${selectedRequest.status === "pending" ? "amber" : selectedRequest.status === "rejected" ? "red" : "green"}`}>{requestStatus(selectedRequest.status)}</span><button type="button" aria-label="Close request details" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
+      <header><div><span>Kitchen Material Request</span><h2 id="request-inspector-title">{selectedRequest.itemName}</h2><time>Waiting {elapsed(minutesSince(selectedRequest.requestedAt)) || "less than a minute"}</time></div><div className="moc-inspector-head-actions"><span className={`moc-status ${requestStatusTone(selectedRequest.status)}`}>{inventoryRequestStatusLabel(selectedRequest.status)}</span><button type="button" aria-label="Close request details" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
       <section><h3>Request details</h3><dl><div><dt>Requested item</dt><dd>{selectedRequest.itemName}</dd></div><div><dt>Quantity</dt><dd>{quantity(selectedRequest.quantity)} {selectedRequest.unit}</dd></div><div><dt>Station</dt><dd>{selectedRequest.stationName || "Station not recorded"}</dd></div><div><dt>Requested by</dt><dd>{selectedRequest.requesterName || "Requester not recorded"}</dd></div><div><dt>Requested</dt><dd>{requestedLabel(selectedRequest.requestedAt)}</dd></div><div><dt>Urgency</dt><dd>{selectedRequest.urgency}</dd></div></dl></section>
       <section><h3>Reason</h3><p className="moc-request-reason">{selectedRequest.comment || "Reason not recorded"}</p></section>
-      <section><h3>Inventory context</h3><dl><div><dt>Current stock</dt><dd>{selectedRequestStock.length ? `${quantity(selectedRequestStockQuantity)} ${selectedRequestStock[0].unitName}` : "Inventory link unavailable"}</dd></div><div><dt>Requested</dt><dd>{quantity(selectedRequest.quantity)} {selectedRequest.unit}</dd></div></dl><button type="button" className="moc-inventory-link" onClick={checkInventory}>Check Inventory</button></section>
-      {(selectedRequest.reviewedAt || selectedRequest.reviewerName || selectedRequest.deliveredAt || selectedRequest.fulfillerName || selectedRequest.rejectionReason) && <section><h3>Request history</h3><dl>{selectedRequest.reviewerName && <div><dt>Reviewed by</dt><dd>{selectedRequest.reviewerName}</dd></div>}{selectedRequest.reviewedAt && <div><dt>Reviewed</dt><dd>{requestedLabel(selectedRequest.reviewedAt)}</dd></div>}{selectedRequest.fulfillerName && <div><dt>Fulfilled by</dt><dd>{selectedRequest.fulfillerName}</dd></div>}{selectedRequest.deliveredAt && <div><dt>Fulfilled</dt><dd>{requestedLabel(selectedRequest.deliveredAt)}</dd></div>}</dl>{selectedRequest.rejectionReason && <div className="moc-request-rejection"><strong>Rejection reason</strong><p>{selectedRequest.rejectionReason}</p></div>}</section>}
-      {selectedRequest.status === "pending" && <section className="moc-request-decision"><h3>Manager decision</h3>{requestActionError && <p className="moc-request-error" role="alert">{requestActionError}</p>}{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event)=>setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div><button type="button" className="secondary" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>{setRejectingRequest(false);setRejectionReason("");setRequestActionError(null);}}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id||!rejectionReason.trim()} onClick={()=>void reviewInventoryRequest(selectedRequest,"reject")}>Confirm rejection</button></div></> : <div><button type="button" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>void reviewInventoryRequest(selectedRequest,"accept")}>{reviewingRequestId===selectedRequest.id?"Saving...":"Approve"}</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>setRejectingRequest(true)}>Reject</button></div>}</section>}
+      <section><h3>Inventory context</h3><dl><div><dt>Current stock</dt><dd>{selectedRequestStock.length ? `${quantity(selectedRequestStockQuantity)} ${selectedRequestStock[0].unitName}` : "Inventory link unavailable"}</dd></div><div><dt>Requested</dt><dd>{quantity(selectedRequest.quantity)} {selectedRequest.unit}</dd></div></dl><button type="button" className="moc-inventory-link" onClick={checkInventory}>Open Inventory</button></section>
+      {selectedRequest.status === "accepted" && <section className="moc-request-outcome"><h3>Awaiting Inventory</h3><p>Inventory has not issued this request yet.</p></section>}
+      {selectedRequest.status === "issued" && <section className="moc-request-outcome"><h3>Issued · Awaiting Kitchen Confirmation</h3><p>Waiting for Kitchen to confirm receipt.</p></section>}
+      {selectedRequest.status === "delivered" && <section className="moc-request-outcome"><h3>Fulfilled</h3><p>Received by Kitchen.</p></section>}
+      {selectedRequest.status === "unable_to_fulfill" && <section className="moc-request-outcome unable"><h3>Unable to Fulfill</h3><p>{selectedRequest.unableToFulfillReason || "Reason not recorded."}</p></section>}
+      {(selectedRequest.reviewedAt || selectedRequest.reviewerName || selectedRequest.issuedAt || selectedRequest.issuerName || selectedRequest.confirmedAt || selectedRequest.confirmerName || selectedRequest.rejectedAt || selectedRequest.rejectionReason || selectedRequest.unableToFulfillAt || selectedRequest.unableToFulfillByName) && <section><h3>Request history</h3><dl>{selectedRequest.reviewerName && <div><dt>{selectedRequest.status === "rejected" ? "Rejected by" : "Approved by"}</dt><dd>{selectedRequest.reviewerName}</dd></div>}{selectedRequest.status === "accepted" && selectedRequest.acceptedAt && <div><dt>Approved at</dt><dd>{requestedLabel(selectedRequest.acceptedAt)}</dd></div>}{selectedRequest.status === "rejected" && selectedRequest.rejectedAt && <div><dt>Rejected at</dt><dd>{requestedLabel(selectedRequest.rejectedAt)}</dd></div>}{selectedRequest.issuedQuantity != null && <div><dt>Issued quantity</dt><dd>{quantity(selectedRequest.issuedQuantity)} {selectedRequest.unit}</dd></div>}{selectedRequest.issuerName && <div><dt>Issued by</dt><dd>{selectedRequest.issuerName}</dd></div>}{selectedRequest.issuedAt && <div><dt>Issued at</dt><dd>{requestedLabel(selectedRequest.issuedAt)}</dd></div>}{selectedRequest.confirmerName && <div><dt>Confirmed by</dt><dd>{selectedRequest.confirmerName}</dd></div>}{selectedRequest.confirmedAt && <div><dt>Confirmed at</dt><dd>{requestedLabel(selectedRequest.confirmedAt)}</dd></div>}{selectedRequest.unableToFulfillByName && <div><dt>Inventory Officer</dt><dd>{selectedRequest.unableToFulfillByName}</dd></div>}{selectedRequest.unableToFulfillAt && <div><dt>Recorded at</dt><dd>{requestedLabel(selectedRequest.unableToFulfillAt)}</dd></div>}</dl>{selectedRequest.rejectionReason && <div className="moc-request-rejection"><strong>Rejection reason</strong><p>{selectedRequest.rejectionReason}</p></div>}</section>}
+      {selectedRequest.status === "pending" && <section className="moc-request-decision"><h3>Manager decision</h3>{requestActionError && <p className="moc-request-error" role="alert">{requestActionError}</p>}{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event)=>setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div><button type="button" className="secondary" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>{setRejectingRequest(false);setRejectionReason("");setRequestActionError(null);}}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id||!rejectionReason.trim()} onClick={()=>void reviewInventoryRequest(selectedRequest,"reject")}>Confirm rejection</button></div></> : <div><button type="button" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>void reviewInventoryRequest(selectedRequest,"accept")}>{reviewingRequestId===selectedRequest.id?"Saving...":"Approve Request"}</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>setRejectingRequest(true)}>Reject</button></div>}</section>}
     </aside></div>}
     {selectedRequestId && !selectedRequest && !requestsLoading && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedRequestId(null);}}><aside className="moc-inspector moc-request-inspector" role="dialog" aria-modal="true" aria-label="Request details unavailable"><header><div><span>Kitchen Material Request</span><h2>Request details unavailable.</h2></div><button type="button" aria-label="Close request details" onClick={()=>setSelectedRequestId(null)}>×</button></header></aside></div>}
 
