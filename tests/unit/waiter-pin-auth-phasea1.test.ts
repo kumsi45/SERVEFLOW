@@ -50,7 +50,8 @@ describe("Phase A1 waiter PIN authentication", () => {
   it("enrolls waiter creation and reset without storing plaintext PINs", () => {
     expect(manageStaff).toContain("prepareWaiterPinFingerprint");
     expect(manageStaff).toContain("saveWaiterPinCredential");
-    expect(manageStaff).toContain("generateAvailableWaiterPin");
+    expect(manageStaff).toContain('action === "set-waiter-pin"');
+    expect(manageStaff).not.toContain("generateAvailableWaiterPin");
     expect(manageStaff).toContain("waiterSupabasePassword");
     expect(manageStaff).toContain("This PIN is already used by another active waiter in this restaurant.");
     expect(manageStaff).toContain('targetStaff.role === "waiter"');

@@ -1,6 +1,7 @@
 import { supabase } from "../../../core/database";
 
 export type ManagedStaffRole = "owner" | "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer";
+export type StaffCredentialReadiness = "legacy_credential" | "reset_required" | "password_ready" | "waiter_pin_ready";
 
 export type ManagedStaffMember = {
   id: string;
@@ -17,6 +18,7 @@ export type ManagedStaffMember = {
   last_login_at: string | null;
   staff_session_active: boolean | null;
   waiter_session_active: boolean | null;
+  credential_readiness: StaffCredentialReadiness | null;
 };
 
 export type StaffActivityAction =
@@ -75,7 +77,6 @@ export type UpdateStaffInput = {
 type StaffFunctionResponse = {
   ok?: boolean;
   staffId?: string;
-  temporaryPassword?: string;
   error?: string;
 };
 
@@ -130,18 +131,20 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 }
 
 export async function loadManagedStaff(restaurantId: string) {
-  const { data, error } = await supabase
-    .from("restaurant_staff")
-    .select("id,user_id,display_name,email,username,employee_id,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
-    .eq("restaurant_id", restaurantId)
-    .neq("role", "owner")
-    .order("created_at", { ascending: true });
+  const [staffResult, readinessResult] = await Promise.all([
+    supabase.from("restaurant_staff")
+      .select("id,user_id,display_name,email,username,employee_id,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active")
+      .eq("restaurant_id", restaurantId)
+      .neq("role", "owner")
+      .order("created_at", { ascending: true }),
+    supabase.from("staff_credential_readiness").select("staff_id,readiness").eq("restaurant_id", restaurantId),
+  ]);
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (staffResult.error) throw new Error(staffResult.error.message);
+  if (readinessResult.error) throw new Error(readinessResult.error.message);
 
-  return (data ?? []) as ManagedStaffMember[];
+  const readiness = new Map((readinessResult.data ?? []).map((row) => [row.staff_id, row.readiness as StaffCredentialReadiness]));
+  return (staffResult.data ?? []).map((row) => ({ ...row, credential_readiness: readiness.get(row.id) ?? null })) as ManagedStaffMember[];
 }
 
 export async function loadStaffActivityLog(restaurantId: string) {
@@ -196,8 +199,8 @@ export async function sendStaffPasswordReset(restaurantId: string, staffId: stri
   return invokeManageStaff({ action: "send-password-reset", restaurantId, staffId });
 }
 
-export async function generateStaffTemporaryPassword(restaurantId: string, staffId: string) {
-  return invokeManageStaff({ action: "generate-temporary-password", restaurantId, staffId });
+export async function setStaffWaiterPin(restaurantId: string, staffId: string, pin: string) {
+  return invokeManageStaff({ action: "set-waiter-pin", restaurantId, staffId, pinPassword: pin });
 }
 
 export async function deleteStaff(restaurantId: string, staffId: string) {

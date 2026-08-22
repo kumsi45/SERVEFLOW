@@ -40,10 +40,10 @@ import {
   createStaff,
   deleteStaff,
   deactivateStaff,
-  generateStaffTemporaryPassword,
   loadStaffActivityLog,
   reactivateStaff,
   sendStaffPasswordReset,
+  setStaffWaiterPin,
   updateStaff,
   type ManagedStaffMember,
   type StaffActivityLog,
@@ -3728,22 +3728,18 @@ function StaffPage({
   }
 
   async function runStaffAction(
-    action: () => Promise<{ temporaryPassword?: string } | void>,
+    action: () => Promise<unknown>,
     success: string,
   ) {
     try {
       setIsWorking(true);
       setStaffError(null);
       setNotice(null);
-      const result = await action();
+      await action();
       await onStaffChanged();
       const rows = await loadStaffActivityLog(restaurantId);
       setActivity(rows);
-      setNotice(
-        result?.temporaryPassword
-          ? `${success} Temporary password: ${result.temporaryPassword}`
-          : success,
-      );
+      setNotice(success);
     } catch (actionError) {
       setStaffError(
         actionError instanceof Error
@@ -4014,7 +4010,7 @@ function StaffPage({
                               <div className="od-staff-email">
                                 {member.email ||
                                   member.username ||
-                                  "Staff account"}
+                                  "Staff account"} · {member.credential_readiness === "password_ready" ? "Password ready" : member.credential_readiness === "waiter_pin_ready" ? "Waiter PIN ready" : member.role === "waiter" ? "Waiter PIN setup required" : "Password setup required"}
                               </div>
                             </div>
                           </div>
@@ -4119,40 +4115,6 @@ function StaffPage({
                                 Reactivate
                               </button>
                             )}
-                            <button
-                              className="od-btn-ghost compact"
-                              onClick={() =>
-                                runStaffAction(
-                                  () =>
-                                    sendStaffPasswordReset(
-                                      restaurantId,
-                                      member.id,
-                                    ),
-                                  "Password reset link sent.",
-                                )
-                              }
-                              disabled={isWorking || !member.email}
-                            >
-                              Reset Password
-                            </button>
-                            <button
-                              className="od-btn-ghost compact"
-                              onClick={() =>
-                                runStaffAction(
-                                  () =>
-                                    generateStaffTemporaryPassword(
-                                      restaurantId,
-                                      member.id,
-                                    ),
-                                  "Temporary password generated.",
-                                )
-                              }
-                              disabled={isWorking}
-                            >
-                              {member.role === "waiter"
-                                ? "Reset PIN"
-                                : "Temp Password"}
-                            </button>
                             {member.role === "waiter" && (
                               <button
                                 className="od-btn-ghost compact danger"
@@ -4336,6 +4298,8 @@ function StaffPage({
                   </strong>
                   <span>Last Active</span>
                   <strong>{fmtLastActive(modal.member.last_login_at)}</strong>
+                  <span>Credential readiness</span>
+                  <strong>{modal.member.credential_readiness === "password_ready" ? "Password ready" : modal.member.credential_readiness === "waiter_pin_ready" ? "Waiter PIN ready" : modal.member.role === "waiter" ? "Waiter PIN setup required" : "Password setup required"}</strong>
                   <span>Station</span>
                   <strong>
                     {modal.member.role === "kitchen" &&
@@ -4346,6 +4310,18 @@ function StaffPage({
                       : "-"}
                   </strong>
                 </div>
+              )}
+
+              {modal.mode !== "create" && modal.member.role === "waiter" && (
+                <label>
+                  {modal.member.credential_readiness === "waiter_pin_ready" ? "Reset Waiter PIN" : "Set Waiter PIN"}
+                  <input type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={formPin} onChange={(event) => setFormPin(event.target.value.replace(/\D/g, "").slice(0, 4))} disabled={isWorking} autoComplete="new-password" />
+                  <button type="button" className="od-btn-ghost" disabled={isWorking || formPin.length !== 4} onClick={() => void runStaffAction(() => setStaffWaiterPin(restaurantId, modal.member.id, formPin), "Waiter PIN updated.")}>Set/Reset Waiter PIN</button>
+                </label>
+              )}
+
+              {modal.mode !== "create" && modal.member.role !== "waiter" && (
+                <button type="button" className="od-btn-ghost" disabled={isWorking || !modal.member.email || modal.member.credential_readiness === "password_ready"} onClick={() => void runStaffAction(() => sendStaffPasswordReset(restaurantId, modal.member.id), "Password setup link sent.")}>Send password setup link</button>
               )}
 
               <div className="od-modal-actions">

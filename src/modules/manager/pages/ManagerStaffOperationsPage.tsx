@@ -8,6 +8,7 @@ import {
   loadManagerStaffOperations,
   markManagerStaffBreak,
   resetManagerStaffPassword,
+  setManagerWaiterPin,
   sendManagerStaffMessage,
   suspendManagerStaff,
   type ManagerStaffMember,
@@ -90,6 +91,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [filters, setFilters] = useState<StaffFilters>({ search: "", role: "all", status: "all", shift: "all" });
   const [message, setMessage] = useState("");
+  const [waiterPin, setWaiterPin] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
   useTenantRealtime({
     channelName: "manager-staff-operations",
     restaurantId,
-    tables: ["restaurant_staff", "restaurant_table_waiter_assignments", "kitchen_stations", "orders", "order_items", "staff_activity_log"],
+    tables: ["restaurant_staff", "staff_credential_readiness", "restaurant_table_waiter_assignments", "kitchen_stations", "orders", "order_items", "staff_activity_log"],
     refresh,
   });
 
@@ -123,6 +125,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [selectedStaffId]);
+  useEffect(() => { setWaiterPin(""); }, [selectedStaffId]);
 
   const staff = snapshot?.staff ?? [];
   const selectedStaff = staff.find((member) => member.id === selectedStaffId) ?? null;
@@ -148,9 +151,8 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
     setNotice(null);
     setError(null);
     try {
-      const response = await action();
-      const temporaryPassword = response && typeof response === "object" ? (response as { temporaryPassword?: string }).temporaryPassword : null;
-      setNotice(temporaryPassword ? `${success} Temporary password: ${temporaryPassword}` : success);
+      await action();
+      setNotice(success);
       await refresh();
       return true;
     } catch (actionError) {
@@ -293,7 +295,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
           <header><div><p>Staff Profile</p><h2 id="mso-inspector-title">{selectedStaff.fullName}</h2><span>{roleLabel(selectedStaff.role)} · ID: {selectedStaff.employeeId}</span></div><button type="button" aria-label="Close staff details" onClick={() => setSelectedStaffId(null)}>×</button></header>
           <div className="mso-inspector-body">
             <div className="mso-inspector-summary"><span className={`mso-role-badge ${selectedStaff.role}`}>{roleLabel(selectedStaff.role)}</span><StatusPill member={selectedStaff} /></div>
-            <section><h3>Account</h3><dl><div><dt>Account status</dt><dd>{selectedStaff.active ? "Active" : "Inactive"}</dd></div><div><dt>Access</dt><dd>{selectedStaff.active ? "Enabled" : "Disabled"}</dd></div></dl></section>
+            <section><h3>Account</h3><dl><div><dt>Account status</dt><dd>{selectedStaff.active ? "Active" : "Inactive"}</dd></div><div><dt>Access</dt><dd>{selectedStaff.active ? "Enabled" : "Disabled"}</dd></div><div><dt>Credential readiness</dt><dd>{selectedStaff.credentialReadiness === "password_ready" ? "Password ready" : selectedStaff.credentialReadiness === "waiter_pin_ready" ? "Waiter PIN ready" : selectedStaff.role === "waiter" ? "Waiter PIN setup required" : "Password setup required"}</dd></div></dl></section>
             <section><h3>Current Status</h3><dl><div><dt>Shift</dt><dd><ShiftValue /></dd></div><div><dt>Status</dt><dd>{operationalStatus(selectedStaff).label}</dd></div></dl></section>
             <section><h3>Shift</h3><dl><div><dt>Started</dt><dd><ShiftValue /></dd></div><div><dt>Duration</dt><dd>Not recorded</dd></div><div><dt>Break</dt><dd>{selectedStaff.online && selectedStaff.breakStatus === "on_break" ? "On break" : selectedStaff.breakStatus === "not_on_break" ? "Not on break" : "Not recorded"}</dd></div></dl></section>
             <section><h3>Current Work</h3><p className="mso-inspector-work">{currentWork(selectedStaff)}</p>{selectedStaff.role === "waiter" && <dl className="mso-inspector-work-meta"><div><dt>Active orders</dt><dd>{selectedStaff.activeOrders}</dd></div></dl>}</section>
@@ -305,10 +307,11 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
                 {selectedStaff.online && selectedStaff.breakStatus === "on_break" ? <button type="button" disabled={actionPending} onClick={() => void runAction(() => endManagerStaffBreak(restaurantId, selectedStaff.id), "Break ended.")}>End Break</button> : <button type="button" disabled={actionPending || !selectedStaff.online} onClick={() => void runAction(() => markManagerStaffBreak(restaurantId, selectedStaff.id), "Break started.")}>Start Break</button>}
                 {(selectedStaff.role === "waiter" || selectedStaff.role === "kitchen") && <button type="button" onClick={() => openRelated(selectedStaff)}>Open {selectedStaff.role === "waiter" ? "Live Operations" : "Kitchen"} →</button>}
               </div>
+              {selectedStaff.role === "waiter" && <form onSubmit={async (event) => { event.preventDefault(); if (!/^\d{4}$/.test(waiterPin)) { setError("Enter a 4-digit PIN."); return; } if (await runAction(() => setManagerWaiterPin(restaurantId, selectedStaff.id, waiterPin), "Waiter PIN updated.")) setWaiterPin(""); }}><label><span>{selectedStaff.credentialReadiness === "waiter_pin_ready" ? "Reset Waiter PIN" : "Set Waiter PIN"}</span><input type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={waiterPin} onChange={(event) => setWaiterPin(event.target.value.replace(/\D/g, "").slice(0, 4))} autoComplete="new-password" /></label><button type="submit" disabled={actionPending || waiterPin.length !== 4}>Set/Reset Waiter PIN</button></form>}
               <details><summary>More Actions</summary><div>
                 {!selectedStaff.active ? <button type="button" disabled={actionPending} onClick={() => void runAction(() => activateManagerStaff(restaurantId, selectedStaff.id), "Staff account activated.")}>Activate</button> : <button type="button" disabled={actionPending} onClick={() => { if (window.confirm(`Deactivate ${selectedStaff.fullName}?`)) void runAction(() => deactivateManagerStaff(restaurantId, selectedStaff.id), "Staff account deactivated."); }}>Deactivate</button>}
                 {selectedStaff.active && <button type="button" disabled={actionPending} onClick={() => { if (window.confirm(`Suspend ${selectedStaff.fullName}?`)) void runAction(() => suspendManagerStaff(restaurantId, selectedStaff.id), "Staff account suspended."); }}>Suspend</button>}
-                <button type="button" disabled={actionPending} onClick={() => { if (window.confirm(`Generate a temporary password for ${selectedStaff.fullName}?`)) void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), "Password reset."); }}>Reset Password</button>
+                {selectedStaff.role !== "waiter" && <button type="button" disabled={actionPending || selectedStaff.credentialReadiness === "password_ready"} onClick={() => { if (window.confirm(`Send a password setup link to ${selectedStaff.fullName}?`)) void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), "Password setup link sent."); }}>Send password setup link</button>}
               </div></details>
             </section>
           </div>

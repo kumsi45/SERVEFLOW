@@ -20,6 +20,7 @@ type StaffAction =
   | "send-announcement"
   | "send-notification"
   | "send-password-reset"
+  | "set-waiter-pin"
   | "generate-temporary-password"
   | "delete-staff";
 
@@ -51,6 +52,7 @@ const STAFF_ACTIONS: StaffAction[] = [
   "send-announcement",
   "send-notification",
   "send-password-reset",
+  "set-waiter-pin",
   "generate-temporary-password",
   "delete-staff",
 ];
@@ -166,6 +168,14 @@ function normalizePinPassword(value: unknown) {
   return pin;
 }
 
+function normalizeLegacyPassword(value: unknown) {
+  const password = requireString(value, "Password");
+  if (password.length < 4 || password.length > 64) {
+    throw new Error("Password must be 4-64 characters during the credential transition.");
+  }
+  return password;
+}
+
 async function prepareWaiterPinFingerprint(
   serviceClient: SupabaseClient,
   restaurantId: string,
@@ -217,6 +227,26 @@ async function saveWaiterPinCredential(
   }
 }
 
+async function setCredentialReadiness(
+  serviceClient: SupabaseClient,
+  restaurantId: string,
+  staffId: string,
+  readiness: "legacy_credential" | "reset_required" | "password_ready" | "waiter_pin_ready",
+  updatedByStaffId: string | null,
+) {
+  const now = new Date().toISOString();
+  const { error } = await serviceClient.from("staff_credential_readiness").upsert({
+    restaurant_id: restaurantId,
+    staff_id: staffId,
+    readiness,
+    setup_requested_at: readiness === "reset_required" ? now : null,
+    ready_at: readiness === "password_ready" || readiness === "waiter_pin_ready" ? now : null,
+    updated_by_staff_id: updatedByStaffId,
+    updated_at: now,
+  }, { onConflict: "restaurant_id,staff_id" });
+  if (error) throw new Error(error.message);
+}
+
 function normalizeOptionalEmail(email: unknown) {
   if (email === undefined || email === null || String(email).trim() === "") return null;
   return normalizeEmail(email);
@@ -242,35 +272,6 @@ function staffAuthEmail(restaurantId: string, username: string, role: StaffRole)
 function employeeAuthEmail(restaurantId: string, employeeId: string, role: StaffRole) {
   const restaurantPart = restaurantId.replace(/-/g, "");
   return `${employeeId.toLowerCase()}.${restaurantPart}@${role}.serveflow.local`;
-}
-
-function generateWaiterPin() {
-  const bytes = new Uint8Array(2);
-  crypto.getRandomValues(bytes);
-  const value = ((bytes[0] << 8) + bytes[1]) % 10000;
-  return String(value).padStart(4, "0");
-}
-
-async function generateAvailableWaiterPin(
-  serviceClient: SupabaseClient,
-  restaurantId: string,
-  staffId: string,
-) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const pin = generateWaiterPin();
-    try {
-      const fingerprint = await prepareWaiterPinFingerprint(
-        serviceClient,
-        restaurantId,
-        pin,
-        staffId,
-      );
-      return { pin, fingerprint };
-    } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("already used")) throw error;
-    }
-  }
-  throw new Error("Could not generate an available waiter PIN. Try again.");
 }
 
 function normalizeResetBaseUrl(value: string | null) {
@@ -303,35 +304,6 @@ function getResetRedirectUrl(request: Request) {
   }
 
   return `${baseUrl}/reset-password`;
-}
-
-function twoDigitSuffix() {
-  const bytes = new Uint8Array(1);
-  crypto.getRandomValues(bytes);
-  return String(bytes[0] % 100).padStart(2, "0");
-}
-
-function passwordNameBase(displayName: string) {
-  const firstName = displayName.trim().split(/\s+/)[0] ?? "";
-  const lettersAndNumbers = firstName.replace(/[^\p{L}\p{N}]/gu, "");
-  const readableBase = lettersAndNumbers || "Staff";
-  const normalizedBase = readableBase.charAt(0).toUpperCase() + readableBase.slice(1);
-
-  return Array.from(normalizedBase).length >= 4
-    ? normalizedBase
-    : `${normalizedBase}User`.slice(0, 4);
-}
-
-function generateTemporaryPassword(displayName: string) {
-  return `${passwordNameBase(displayName)}${twoDigitSuffix()}`;
-}
-
-function normalizeTemporaryPassword(value: unknown) {
-  const password = requireString(value, "Temporary password");
-  if (password.length < 4 || password.length > 64) {
-    throw new Error("Temporary password must be 4-64 characters.");
-  }
-  return password;
 }
 
 function logInfo(requestId: string, message: string, details: Record<string, unknown> = {}) {
@@ -559,11 +531,11 @@ Deno.serve(async (request) => {
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const contactEmail = staffCreationEmailRequired(role) ? normalizeEmail(payload.email) : normalizeOptionalEmail(payload.email);
       const shift = normalizeOptionalShift(payload.shift);
-      const temporaryPassword = role === "waiter" || actingStaff.role === "manager"
+      const creationCredential = role === "waiter" || actingStaff.role === "manager"
         ? normalizePinPassword(payload.pinPassword)
-        : normalizeTemporaryPassword(payload.pinPassword);
+        : normalizeLegacyPassword(payload.pinPassword);
       const waiterPinFingerprintValue = role === "waiter"
-        ? await prepareWaiterPinFingerprint(serviceClient, restaurantId, temporaryPassword)
+        ? await prepareWaiterPinFingerprint(serviceClient, restaurantId, creationCredential)
         : null;
       const { data: employeeId, error: employeeIdError } = await serviceClient.rpc(
         "next_restaurant_employee_id",
@@ -578,7 +550,7 @@ Deno.serve(async (request) => {
         : requireString(contactEmail, "Email");
       const authenticationPassword = role === "waiter"
         ? await waiterSupabasePassword(requireWaiterPinPepper(), restaurantId, employeeId)
-        : temporaryPassword;
+        : creationCredential;
       const requestedKitchenStationId = initialKitchenStationId(
         actingStaff.role as "owner" | "manager",
         role,
@@ -704,6 +676,22 @@ Deno.serve(async (request) => {
           await serviceClient.auth.admin.deleteUser(authData.user.id);
           throw credentialError;
         }
+      }
+
+      try {
+        await setCredentialReadiness(
+          serviceClient,
+          restaurantId,
+          staffData.id,
+          role === "waiter" ? "waiter_pin_ready" : "legacy_credential",
+          actingStaff.id,
+        );
+      } catch (readinessError) {
+        await serviceClient.from("waiter_pin_credentials").delete().eq("restaurant_id", restaurantId).eq("staff_id", staffData.id);
+        await serviceClient.from("restaurant_staff").delete().eq("id", staffData.id).eq("restaurant_id", restaurantId);
+        await serviceClient.from("users").delete().eq("id", authData.user.id);
+        await serviceClient.auth.admin.deleteUser(authData.user.id);
+        throw readinessError;
       }
 
       await audit(role === "waiter" ? "waiter_created" : "staff_created", staffData.id, email, {
@@ -1039,6 +1027,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === "send-password-reset") {
+      if (targetStaff.role === "waiter") {
+        return jsonResponse(400, { error: "Use Set/Reset Waiter PIN for waiter accounts." });
+      }
       const email = requireString(targetStaff.email, "Target staff email");
       const redirectTo = getResetRedirectUrl(request);
 
@@ -1056,6 +1047,8 @@ Deno.serve(async (request) => {
 
       if (error) throw new Error(error.message);
 
+      await setCredentialReadiness(serviceClient, restaurantId, staffId, "reset_required", actingStaff.id);
+
       await audit("password_reset_sent", staffId, email, {
         target_staff_name: targetStaff.display_name,
         redirect_to_origin: new URL(redirectTo).origin,
@@ -1065,64 +1058,57 @@ Deno.serve(async (request) => {
       return jsonResponse(200, { ok: true });
     }
 
-    if (action === "generate-temporary-password") {
-      const waiterCredential = targetStaff.role === "waiter"
-        ? await generateAvailableWaiterPin(serviceClient, restaurantId, staffId)
-        : null;
-      const temporaryPassword = waiterCredential?.pin ?? generateTemporaryPassword(targetStaff.display_name);
-      const waiterPinFingerprintValue = waiterCredential?.fingerprint ?? null;
-      const authenticationPassword = targetStaff.role === "waiter"
-        ? await waiterSupabasePassword(
-          requireWaiterPinPepper(),
-          restaurantId,
-          requireString(targetStaff.employee_id, "Employee ID"),
-        )
-        : temporaryPassword;
-      const { data: previousCredential, error: previousCredentialError } = targetStaff.role === "waiter"
-        ? await serviceClient
-          .from("waiter_pin_credentials")
-          .select("pin_fingerprint,active,failed_attempt_count,locked_until,last_failed_at")
-          .eq("restaurant_id", restaurantId)
-          .eq("staff_id", staffId)
-          .maybeSingle()
-        : { data: null, error: null };
+    if (action === "set-waiter-pin") {
+      if (targetStaff.role !== "waiter" || targetStaff.active !== true) {
+        return jsonResponse(400, { error: "Only an active Waiter can receive a waiter PIN." });
+      }
+      const pin = normalizePinPassword(payload.pinPassword);
+      const pinFingerprint = await prepareWaiterPinFingerprint(serviceClient, restaurantId, pin, staffId);
+      const { data: previousCredential, error: previousCredentialError } = await serviceClient
+        .from("waiter_pin_credentials")
+        .select("pin_fingerprint,active,failed_attempt_count,locked_until,last_failed_at")
+        .eq("restaurant_id", restaurantId)
+        .eq("staff_id", staffId)
+        .maybeSingle();
       if (previousCredentialError) throw new Error(previousCredentialError.message);
 
-      if (waiterPinFingerprintValue) {
-        await saveWaiterPinCredential(
-          serviceClient,
-          restaurantId,
-          staffId,
-          waiterPinFingerprintValue,
-        );
-      }
-      const { error } = await serviceClient.auth.admin.updateUserById(targetStaff.user_id, {
+      await saveWaiterPinCredential(serviceClient, restaurantId, staffId, pinFingerprint);
+      const authenticationPassword = await waiterSupabasePassword(
+        requireWaiterPinPepper(),
+        restaurantId,
+        requireString(targetStaff.employee_id, "Employee ID"),
+      );
+      const { error: authUpdateError } = await serviceClient.auth.admin.updateUserById(targetStaff.user_id, {
         password: authenticationPassword,
       });
-
-      if (error) {
-        if (targetStaff.role === "waiter") {
-          if (previousCredential) {
-            await serviceClient.from("waiter_pin_credentials").update({
-              ...previousCredential,
-              updated_at: new Date().toISOString(),
-            }).eq("restaurant_id", restaurantId).eq("staff_id", staffId);
-          } else {
-            await serviceClient.from("waiter_pin_credentials").delete().eq("restaurant_id", restaurantId).eq("staff_id", staffId);
-          }
+      if (authUpdateError) {
+        if (previousCredential) {
+          await serviceClient.from("waiter_pin_credentials").update({
+            ...previousCredential,
+            updated_at: new Date().toISOString(),
+          }).eq("restaurant_id", restaurantId).eq("staff_id", staffId);
+        } else {
+          await serviceClient.from("waiter_pin_credentials").delete().eq("restaurant_id", restaurantId).eq("staff_id", staffId);
         }
-        throw new Error(error.message);
+        throw new Error(authUpdateError.message);
       }
 
-      await audit(targetStaff.role === "waiter" ? "waiter_pin_reset" : "temporary_password_generated", staffId, targetStaff.email, {
+      await setCredentialReadiness(serviceClient, restaurantId, staffId, "waiter_pin_ready", actingStaff.id);
+      await audit("waiter_pin_reset", staffId, targetStaff.email, {
         target_staff_name: targetStaff.display_name,
         username: targetStaff.username ?? null,
         previous_values: null,
-        new_values: targetStaff.role === "waiter"
-          ? { pin_reset: true, employee_id: targetStaff.employee_id ?? null }
-          : { temporary_password_generated: true, employee_id: targetStaff.employee_id ?? null },
+        new_values: { pin_reset: true, employee_id: targetStaff.employee_id ?? null },
       });
-      return jsonResponse(200, { temporaryPassword });
+      return jsonResponse(200, { ok: true });
+    }
+
+    if (action === "generate-temporary-password") {
+      return jsonResponse(400, {
+        error: targetStaff.role === "waiter"
+          ? "Use Set/Reset Waiter PIN instead."
+          : "Send a password setup link instead.",
+      });
     }
 
     if (action === "delete-staff") {

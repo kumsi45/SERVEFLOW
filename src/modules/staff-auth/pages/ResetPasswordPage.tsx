@@ -188,10 +188,16 @@ export function ResetPasswordPage() {
         throw new Error("Your password reset link has expired. Please request a new one.");
       }
 
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const { data: setupData, error: updateError } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>(
+        "complete-staff-password-setup",
+        { body: { password } },
+      );
 
       if (updateError) {
         throw new Error(updateError.message);
+      }
+      if (setupData?.error || !setupData?.ok) {
+        throw new Error(setupData?.error || "Password setup could not be completed.");
       }
 
       await supabase.auth.signOut({ scope: "local" });

@@ -2,6 +2,7 @@ import { supabase } from "../../../core/database";
 
 export type ManagerStaffRole = "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 export type ManagerDirectoryRole = ManagerStaffRole | "supervisor";
+export type StaffCredentialReadiness = "legacy_credential" | "reset_required" | "password_ready" | "waiter_pin_ready";
 
 export type ManagerKitchenStation = {
   id: string;
@@ -37,6 +38,7 @@ export type ManagerStaffMember = {
   lastActivity: string | null;
   online: boolean;
   active: boolean;
+  credentialReadiness: StaffCredentialReadiness | null;
 };
 
 export type ManagerStaffActivity = {
@@ -96,7 +98,6 @@ type ActivityRow = {
 type StaffFunctionResponse = {
   ok?: boolean;
   staffId?: string;
-  temporaryPassword?: string;
   error?: string;
 };
 
@@ -125,7 +126,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
 }
 
 export async function loadManagerStaffOperations(restaurantId: string): Promise<ManagerStaffOperationsSnapshot> {
-  const [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult] = await Promise.all([
+  const [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult, readinessResult] = await Promise.all([
     supabase.from("restaurant_staff").select("id,user_id,display_name,employee_id,contact_email,phone_number,shift_label,role,assigned_kitchen_station_id,active,last_login_at,last_logout_at,staff_session_active,waiter_session_active").eq("restaurant_id", restaurantId).not("role", "in", "(owner,manager)").order("display_name", { ascending: true }),
     supabase.from("kitchen_stations").select("id,name,active").eq("restaurant_id", restaurantId).order("priority", { ascending: true }),
     supabase.from("restaurant_tables").select("id,label,table_number").eq("restaurant_id", restaurantId).eq("active", true).order("table_number", { ascending: true }),
@@ -133,9 +134,10 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
     supabase.from("orders").select("id,status,created_by_waiter_id,payment_verified_by").eq("restaurant_id", restaurantId).eq("dining_session_status", "open"),
     supabase.from("order_items").select("id,kitchen_status,kitchen_station_id").eq("restaurant_id", restaurantId).in("kitchen_status", ["accepted", "preparing", "ready"]),
     supabase.from("staff_activity_log").select("id,action,target_staff_id,target_staff_email,details,created_at").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(80),
+    supabase.from("staff_credential_readiness").select("staff_id,readiness").eq("restaurant_id", restaurantId),
   ]);
 
-  for (const result of [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult]) {
+  for (const result of [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult, readinessResult]) {
     if (result.error) throw new Error(result.error.message);
   }
 
@@ -168,6 +170,7 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
   }
 
   const latestActivityByStaff = new Map<string, string>();
+  const readinessByStaff = new Map((readinessResult.data ?? []).map((row) => [row.staff_id, row.readiness as StaffCredentialReadiness]));
   const latestBreakStateByStaff = new Map<string, "on_break" | "not_on_break">();
   const activity = ((activityResult.data ?? []) as ActivityRow[]).map((entry) => {
     if (entry.target_staff_id && !latestActivityByStaff.has(entry.target_staff_id)) latestActivityByStaff.set(entry.target_staff_id, entry.created_at);
@@ -206,6 +209,7 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
           lastActivity: latestActivityByStaff.get(member.id) ?? member.last_login_at,
           online,
           active: member.active,
+          credentialReadiness: readinessByStaff.get(member.id) ?? null,
         };
       }),
     stations,
@@ -235,7 +239,11 @@ export function suspendManagerStaff(restaurantId: string, staffId: string) {
 }
 
 export function resetManagerStaffPassword(restaurantId: string, staffId: string) {
-  return invokeManageStaff({ action: "generate-temporary-password", restaurantId, staffId });
+  return invokeManageStaff({ action: "send-password-reset", restaurantId, staffId });
+}
+
+export function setManagerWaiterPin(restaurantId: string, staffId: string, pin: string) {
+  return invokeManageStaff({ action: "set-waiter-pin", restaurantId, staffId, pinPassword: pin });
 }
 
 export function assignWaiterTables(restaurantId: string, staffId: string, tableIds: string[]) {
