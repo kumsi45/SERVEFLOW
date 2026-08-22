@@ -31,12 +31,12 @@ test("waiter assignment is compact on desktop and full-screen on mobile", async 
   }
 });
 
-test("kitchen staff selector is responsive and preserves readable workload context", async ({ page }) => {
+test("chef selector is responsive and preserves readable workload context", async ({ page }) => {
   await page.setContent(`
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>${kitchenStyles}html,body{margin:0}</style>
-    <main class="mks-page"><section class="mks-panel"><div class="mks-station-list"><button class="mks-station-row critical"><span class="mks-station-name"><strong>Beverages</strong><em>Critical</em></span><span class="mks-station-load">Queue 5 · Preparing 0</span><span class="mks-station-meta">Staff 0 <b>· No active kitchen staff</b></span><b>›</b></button></div></section></main>
-    <div class="mks-staffing-layer"><section class="mks-staffing-dialog"><header><div><span>Station Staff</span><h2>Beverages</h2><p>Current active staff: None</p></div><button>×</button></header><div class="mks-kitchen-staff-list"><article><span><strong>Alemu With A Very Long Staff Name</strong><small>KT-00004 · Main Kitchen</small></span><em class="on-shift">On shift</em><button>Move here</button></article><article><span><strong>Hana</strong><small>KT-00005 · No station</small></span><em>Offline</em><button>Assign</button></article></div><footer><button>Close</button></footer></section></div>
+    <main class="mks-page"><section class="mks-panel"><div class="mks-station-list"><button class="mks-station-row critical"><span class="mks-station-name"><strong>Beverages</strong><em>Critical</em></span><span class="mks-station-load">Queue 5 · Preparing 0</span><span class="mks-station-meta">Chefs 0 <b>· No active chefs</b></span><b>›</b></button></div></section></main>
+    <div class="mks-staffing-layer"><section class="mks-staffing-dialog"><header><div><span>Station Chefs</span><h2>Beverages</h2><p>Current chefs: None</p></div><button>×</button></header><div class="mks-kitchen-staff-list"><article><span><strong>Alemu With A Very Long Staff Name</strong><small>Chef · KT-00004 · Main Kitchen</small></span><em class="on-shift">On shift</em><button>Move here</button></article><article><span><strong>Hana</strong><small>Chef · KT-00005 · No station</small></span><em>Offline</em><button>Assign</button></article></div><footer><button>Close</button></footer></section></div>
   `);
 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {

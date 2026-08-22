@@ -267,7 +267,7 @@ export async function fetchKitchenRestaurant(
   }
 
   if (!userData.user) {
-    throw new Error("Sign in as kitchen staff or owner to view the dashboard.");
+    throw new Error("Sign in as a chef or owner to view the dashboard.");
   }
 
   const { data, error } = await supabase

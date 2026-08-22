@@ -4,7 +4,9 @@ import { formatCurrency, type CurrencyConfig } from "../../../core/format/curren
 import { fetchManagerDashboardSnapshot, releaseManagerDiningSession } from "../services/managerDashboardService";
 import { assignWaiterTables, loadManagerStaffOperations, type ManagerStaffMember, type ManagerStaffOperationsSnapshot } from "../services/managerStaffOperationsService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
-import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { loadInventoryRequests, processInventoryRequest, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
+import { loadInventoryCurrentStock } from "../../inventory/services/inventoryStockRepository";
+import type { InventoryCurrentStockRow } from "../../inventory/types";
 import { loadManagerCashierOperations, reviewManagerCashierExpense, type ManagerCashierExpense, type ManagerCashierOperationsSnapshot } from "../services/managerCashierOperationsService";
 import "../styles/managerOperationsCenter.css";
 
@@ -12,7 +14,7 @@ type Props = { restaurantId: string; currency?: CurrencyConfig };
 type ActionFilter = "all" | "urgent" | "approvals" | "service";
 type LocationFilter = "all" | "active" | "free" | "attention";
 type ActionPriority = "critical" | "attention" | "normal";
-type ManagerAction = { id: string; title: string; detail: string; age: string; priority: ActionPriority; category: "approvals" | "service"; tableId?: string; destination?: string };
+type ManagerAction = { id: string; title: string; detail: string; age: string; priority: ActionPriority; category: "approvals" | "service"; tableId?: string; requestId?: string };
 type RecentOperation = { id: string; at: string; label: string };
 type OperationsView = "service" | "cashier";
 
@@ -29,6 +31,25 @@ function minutesSince(value: string) {
 
 function timeLabel(value: string) {
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+function requestedLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+  const today = new Date();
+  const sameDay = date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+  return `${sameDay ? "Today" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)}, ${timeLabel(value)}`;
+}
+
+function requestStatus(status: InventoryRequest["status"]) {
+  if (status === "pending") return "Pending Manager Review";
+  if (status === "accepted") return "Approved · Awaiting Inventory";
+  if (status === "delivered") return "Fulfilled";
+  return "Rejected";
+}
+
+function quantity(value: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value);
 }
 
 function locationState(table: ManagerFloorTable) {
@@ -66,10 +87,12 @@ function navigateTo(href: string, restaurantId: string) {
 }
 
 function buildManagerActions(tables: ManagerFloorTable[], inventoryRequests: InventoryRequest[]): ManagerAction[] {
-  const inventoryActions = inventoryRequests.filter((request) => request.status === "pending").map((request) => {
+  const uniqueRequests = Array.from(new Map(inventoryRequests.map((request) => [request.id, request])).values());
+  const inventoryActions = uniqueRequests.filter((request) => request.status === "pending").map((request) => {
     const minutes = minutesSince(request.requestedAt);
     const context = [request.stationName || "Kitchen", request.requesterName, `${request.quantity} ${request.unit}`].filter(Boolean).join(" · ");
-    return { id: `inventory-${request.id}`, title: "Kitchen Material Request", detail: `${request.itemName} · ${context}`, age: elapsed(minutes), priority: actionPriority(minutes, request.urgency === "critical"), category: "approvals" as const, destination: "/inventory/dashboard" };
+    const priority: ActionPriority = request.urgency === "critical" ? "critical" : request.urgency === "high" ? "attention" : "normal";
+    return { id: `inventory-${request.id}`, title: "Kitchen Material Request", detail: `${request.itemName} · ${context}`, age: elapsed(minutes), priority, category: "approvals" as const, requestId: request.id };
   });
   const serviceActions = tables.flatMap<ManagerAction>((table) => {
     if (!table.activeOrderId) return [];
@@ -179,8 +202,15 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [dashboard, setDashboard] = useState<ManagerDashboardSnapshot | null>(null);
   const [staffOps, setStaffOps] = useState<ManagerStaffOperationsSnapshot | null>(null);
   const [inventoryRequests, setInventoryRequests] = useState<InventoryRequest[]>([]);
+  const [inventoryStock, setInventoryStock] = useState<InventoryCurrentStockRow[]>([]);
   const [cashierOps, setCashierOps] = useState<ManagerCashierOperationsSnapshot | null>(null);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [reviewingRequestId, setReviewingRequestId] = useState<string | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [requestActionError, setRequestActionError] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
   const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
   const [search, setSearch] = useState("");
@@ -192,25 +222,30 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    setRequestsLoading(true);
     try {
-      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId), loadManagerCashierOperations(restaurantId)]);
+      const [nextDashboard, nextStaffOps, nextInventoryRequests, nextInventoryStock, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadManagerStaffOperations(restaurantId), loadInventoryRequests(restaurantId), loadInventoryCurrentStock(restaurantId), loadManagerCashierOperations(restaurantId)]);
       setDashboard(nextDashboard);
       setStaffOps(nextStaffOps);
       setInventoryRequests(nextInventoryRequests);
+      setInventoryStock(nextInventoryStock);
       setCashierOps(nextCashierOps);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Live Operations is unavailable.");
-    }
+    } finally { setRequestsLoading(false); }
   }, [restaurantId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { setShowAllOrderItems(false); }, [selectedTableId]);
-  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"], refresh });
+  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_table_waiter_assignments", "restaurant_staff", "kitchen_inventory_requests", "inventory_items", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"], refresh });
 
   const serviceLocations = useMemo(() => (dashboard?.floorTables ?? []).filter((table) => table.active), [dashboard]);
   const waiters = useMemo(() => (staffOps?.staff ?? []).filter((member): member is ManagerStaffMember => member.role === "waiter" && member.active), [staffOps]);
   const selectedTable = serviceLocations.find((table) => table.id === selectedTableId) ?? null;
+  const selectedRequest = inventoryRequests.find((request) => request.id === selectedRequestId) ?? null;
+  const selectedRequestStock = selectedRequest?.inventoryItemId ? inventoryStock.filter((item) => item.inventoryItemId === selectedRequest.inventoryItemId) : [];
+  const selectedRequestStockQuantity = selectedRequestStock.reduce((total,item)=>total+item.currentQuantity,0);
   const assigningTable = serviceLocations.find((table) => table.id === assigningTableId) ?? null;
   const managerActions = useMemo(() => buildManagerActions(serviceLocations, inventoryRequests), [serviceLocations, inventoryRequests]);
   const actionCounts = useMemo(() => ({ all: managerActions.length, urgent: managerActions.filter((item) => item.priority === "critical").length, approvals: managerActions.filter((item) => item.category === "approvals").length, service: managerActions.filter((item) => item.category === "service").length }), [managerActions]);
@@ -232,7 +267,30 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   function reviewAction(action: ManagerAction) {
     if (action.tableId) { setSelectedTableId(action.tableId); setNotice(null); }
-    else if (action.destination) navigateTo(action.destination, restaurantId);
+    else if (action.requestId) { setSelectedRequestId(action.requestId); setRejectingRequest(false); setRejectionReason(""); setRequestActionError(null); setNotice(null); }
+  }
+
+  function checkInventory() {
+    navigateTo("/manager/inventory", restaurantId);
+  }
+
+  async function reviewInventoryRequest(request: InventoryRequest, action: "accept" | "reject") {
+    const reason = rejectionReason.trim();
+    if (action === "reject" && !reason) { setRequestActionError("Rejection reason is required."); return; }
+    try {
+      setReviewingRequestId(request.id); setRequestActionError(null); setError(null); setNotice(null);
+      await processInventoryRequest(restaurantId, request.id, action, action === "reject" ? reason : undefined);
+      setNotice(action === "accept" ? "Request approved and sent to Inventory." : "Request rejected.");
+      setRejectingRequest(false); setRejectionReason("");
+      await refresh();
+    } catch (actionError) {
+      const message = actionError instanceof Error ? actionError.message : "Request details unavailable.";
+      if (message.toLowerCase().includes("already handled")) setRequestActionError("Request was already handled by another Manager.");
+      else if (message.toLowerCase().includes("access denied") || message.toLowerCase().includes("permission")) setRequestActionError("You no longer have permission to review this request.");
+      else if (message.toLowerCase().includes("not found")) setRequestActionError("Request details unavailable.");
+      else setRequestActionError(message);
+      await refresh();
+    } finally { setReviewingRequestId(null); }
   }
 
   async function assignWaiter(tableId: string, waiterId: string) {
@@ -285,7 +343,15 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
     <section className="moc-panel moc-actions" aria-labelledby="manager-actions-title">
       <div className="moc-section-head"><div><span>Intervention queue</span><h2 id="manager-actions-title">Manager Actions <b>{managerActions.length}</b></h2></div><div className="moc-filter-row" aria-label="Filter manager actions">{(["all", "urgent", "approvals", "service"] as const).map((filter) => <button key={filter} type="button" className={actionFilter === filter ? "is-active" : ""} onClick={() => setActionFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)} <span>{actionCounts[filter]}</span></button>)}</div></div>
-      <div className="moc-action-list">{visibleActions.map((action) => <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>{action.destination ? "Open Inventory" : "Review"}</button></article>)}{visibleActions.length === 0 && <div className="moc-empty"><strong>✓ No manager actions pending</strong><span>Current service is operating normally.</span></div>}</div>
+      <div className="moc-action-list">
+        {requestsLoading && inventoryRequests.length === 0 && <div className="moc-empty" role="status"><strong>Loading requests...</strong></div>}
+        {visibleActions.map((action) => { const request=action.requestId ? inventoryRequests.find((item)=>item.id===action.requestId) : null; return request ? <article className={`moc-request-action ${action.priority}`} key={action.id}>
+          <header><div><span>Kitchen Material Request</span><h3>{request.itemName}</h3></div><span className={`moc-status ${request.urgency === "critical" ? "red" : request.urgency === "high" ? "amber" : ""}`}>{requestStatus(request.status)}</span></header>
+          <dl><div><dt>Quantity</dt><dd>{quantity(request.quantity)} {request.unit}</dd></div><div><dt>Station</dt><dd>{request.stationName || "Station not recorded"}</dd></div><div><dt>Requested by</dt><dd>{request.requesterName || "Requester not recorded"}</dd></div><div className="is-wide"><dt>Reason</dt><dd>{request.comment || "Reason not recorded"}</dd></div><div><dt>Requested</dt><dd>{requestedLabel(request.requestedAt)}</dd></div><div><dt>Waiting</dt><dd>{action.age || "Just now"}</dd></div></dl>
+          <footer><button type="button" onClick={() => reviewAction(action)}>Review Request</button><button type="button" className="secondary" onClick={checkInventory}>Check Inventory</button></footer>
+        </article> : <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>Review</button></article>; })}
+        {!requestsLoading && visibleActions.length === 0 && <div className="moc-empty"><strong>{actionFilter === "approvals" ? "No kitchen requests require attention." : "No manager actions require attention."}</strong><span>Current service is operating normally.</span></div>}
+      </div>
     </section>
 
     <div className="moc-command-layout">
@@ -299,6 +365,16 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     </div>
 
     <section className="moc-panel moc-recent" aria-labelledby="recent-operations-title"><div className="moc-section-head"><div><span>Live context</span><h2 id="recent-operations-title">Recent Operations</h2></div></div><div className="moc-timeline">{recentOperations.map((operation) => <p key={operation.id}><time>{timeLabel(operation.at)}</time><span>{operation.label}</span></p>)}{recentOperations.length === 0 && <div className="moc-empty"><strong>No recent operational activity.</strong></div>}</div></section>
+
+    {selectedRequest && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequestId(null); }}><aside className="moc-inspector moc-request-inspector" role="dialog" aria-modal="true" aria-labelledby="request-inspector-title">
+      <header><div><span>Kitchen Material Request</span><h2 id="request-inspector-title">{selectedRequest.itemName}</h2><time>Waiting {elapsed(minutesSince(selectedRequest.requestedAt)) || "less than a minute"}</time></div><div className="moc-inspector-head-actions"><span className={`moc-status ${selectedRequest.status === "pending" ? "amber" : selectedRequest.status === "rejected" ? "red" : "green"}`}>{requestStatus(selectedRequest.status)}</span><button type="button" aria-label="Close request details" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
+      <section><h3>Request details</h3><dl><div><dt>Requested item</dt><dd>{selectedRequest.itemName}</dd></div><div><dt>Quantity</dt><dd>{quantity(selectedRequest.quantity)} {selectedRequest.unit}</dd></div><div><dt>Station</dt><dd>{selectedRequest.stationName || "Station not recorded"}</dd></div><div><dt>Requested by</dt><dd>{selectedRequest.requesterName || "Requester not recorded"}</dd></div><div><dt>Requested</dt><dd>{requestedLabel(selectedRequest.requestedAt)}</dd></div><div><dt>Urgency</dt><dd>{selectedRequest.urgency}</dd></div></dl></section>
+      <section><h3>Reason</h3><p className="moc-request-reason">{selectedRequest.comment || "Reason not recorded"}</p></section>
+      <section><h3>Inventory context</h3><dl><div><dt>Current stock</dt><dd>{selectedRequestStock.length ? `${quantity(selectedRequestStockQuantity)} ${selectedRequestStock[0].unitName}` : "Inventory link unavailable"}</dd></div><div><dt>Requested</dt><dd>{quantity(selectedRequest.quantity)} {selectedRequest.unit}</dd></div></dl><button type="button" className="moc-inventory-link" onClick={checkInventory}>Check Inventory</button></section>
+      {(selectedRequest.reviewedAt || selectedRequest.reviewerName || selectedRequest.deliveredAt || selectedRequest.fulfillerName || selectedRequest.rejectionReason) && <section><h3>Request history</h3><dl>{selectedRequest.reviewerName && <div><dt>Reviewed by</dt><dd>{selectedRequest.reviewerName}</dd></div>}{selectedRequest.reviewedAt && <div><dt>Reviewed</dt><dd>{requestedLabel(selectedRequest.reviewedAt)}</dd></div>}{selectedRequest.fulfillerName && <div><dt>Fulfilled by</dt><dd>{selectedRequest.fulfillerName}</dd></div>}{selectedRequest.deliveredAt && <div><dt>Fulfilled</dt><dd>{requestedLabel(selectedRequest.deliveredAt)}</dd></div>}</dl>{selectedRequest.rejectionReason && <div className="moc-request-rejection"><strong>Rejection reason</strong><p>{selectedRequest.rejectionReason}</p></div>}</section>}
+      {selectedRequest.status === "pending" && <section className="moc-request-decision"><h3>Manager decision</h3>{requestActionError && <p className="moc-request-error" role="alert">{requestActionError}</p>}{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event)=>setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div><button type="button" className="secondary" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>{setRejectingRequest(false);setRejectionReason("");setRequestActionError(null);}}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id||!rejectionReason.trim()} onClick={()=>void reviewInventoryRequest(selectedRequest,"reject")}>Confirm rejection</button></div></> : <div><button type="button" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>void reviewInventoryRequest(selectedRequest,"accept")}>{reviewingRequestId===selectedRequest.id?"Saving...":"Approve"}</button><button type="button" className="danger" disabled={reviewingRequestId===selectedRequest.id} onClick={()=>setRejectingRequest(true)}>Reject</button></div>}</section>}
+    </aside></div>}
+    {selectedRequestId && !selectedRequest && !requestsLoading && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedRequestId(null);}}><aside className="moc-inspector moc-request-inspector" role="dialog" aria-modal="true" aria-label="Request details unavailable"><header><div><span>Kitchen Material Request</span><h2>Request details unavailable.</h2></div><button type="button" aria-label="Close request details" onClick={()=>setSelectedRequestId(null)}>×</button></header></aside></div>}
 
     {selectedTable && <div className="moc-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTableId(null); }}><aside className="moc-inspector" role="dialog" aria-modal="true" aria-labelledby="location-inspector-title">
       <header><div><span>Service Location</span><h2 id="location-inspector-title">{selectedTable.label}</h2>{selectedTable.activeOrderId && selectedTable.sessionDurationMinutes != null && <time>{elapsed(selectedTable.sessionDurationMinutes)}</time>}</div><div className="moc-inspector-head-actions"><span className={`moc-location-state ${locationState(selectedTable)}`}><i />{stateLabel(selectedTable)}</span><button type="button" aria-label="Close service location inspector" onClick={() => setSelectedTableId(null)}>×</button></div></header>

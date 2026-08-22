@@ -614,6 +614,10 @@ export function KitchenDashboardPage({
   ) {
     const context = contextRef.current;
     if (!context) return;
+    if (context.role === "kitchen" && !context.assignedStation) {
+      applyKitchenOrders([], notifyNewTickets);
+      return;
+    }
 
     const selection = selectedStationRef.current;
     const includeAllStations = context.role === "owner" && selection === "all";
@@ -646,6 +650,10 @@ export function KitchenDashboardPage({
         contextRef.current = context;
         selectedStationRef.current = nextSelection;
         skipNextStationLoadRef.current = true;
+        if (context.role === "kitchen" && !context.assignedStation) {
+          applyKitchenOrders([], false);
+          return;
+        }
         const includeAllStations =
           context.role === "owner" && nextSelection === "all";
         const stationId = nextSelection === "all" ? null : nextSelection;
@@ -681,6 +689,10 @@ export function KitchenDashboardPage({
     async function loadOrdersForStation() {
       try {
         setError(null);
+        if (context.role === "kitchen" && !context.assignedStation) {
+          if (mounted) applyKitchenOrders([], false);
+          return;
+        }
         const includeAllStations =
           context.role === "owner" && selectedStationId === "all";
         const stationId = selectedStationId === "all" ? null : selectedStationId;

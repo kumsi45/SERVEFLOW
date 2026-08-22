@@ -226,7 +226,7 @@ export async function loadManagerKitchenSupervision(restaurantId: string): Promi
   }
   const kitchenStaff = ((staffResult.data ?? []) as StaffRow[]).map((staff) => ({
     id: staff.id,
-    name: staff.display_name || "Kitchen staff",
+    name: staff.display_name || "Chef",
     employeeId: staff.employee_id || "Not recorded",
     assignedStationId: staff.assigned_kitchen_station_id,
     online: Boolean(staff.staff_session_active),

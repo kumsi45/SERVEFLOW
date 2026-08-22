@@ -29,6 +29,17 @@ describe("Manager Staff workspace redesign", () => {
     expect(page).not.toContain("Move Chef");
   });
 
+  it("displays the canonical kitchen role as Chef without changing the filter value", () => {
+    expect(page).toContain('if (role === "kitchen") return "Chef"');
+    expect(page).toContain('<option value="kitchen">Chef</option>');
+    expect(page).not.toContain("Kitchen Staff");
+  });
+
+  it("keeps server authorization details out of the staff creation form", () => {
+    expect(page).not.toContain("Access is role-based.");
+    expect(page).not.toContain("The server validates manager authority and tenant membership before creating the account.");
+  });
+
   it("uses one aligned directory grid without bulk selection", () => {
     expect(page).toContain('className="mso-directory-row"');
     expect(page).not.toContain("selectedIds");

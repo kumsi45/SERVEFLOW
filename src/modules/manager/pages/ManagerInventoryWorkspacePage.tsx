@@ -571,14 +571,8 @@ function RequestDrawer({
           )}
           {request.status === "pending" && (
             <div className="miw-contract-note">
-              <strong>
-                Manager action is not enabled by the current server contract.
-              </strong>
-              <p>
-                The existing secure RPC limits approval and rejection to
-                Inventory Officer or Owner. Partial approval is not an existing
-                request state.
-              </p>
+              <strong>Pending Manager review.</strong>
+              <p>Approve or reject this request from Live Operations. Inventory fulfillment begins only after approval.</p>
             </div>
           )}
         </div>

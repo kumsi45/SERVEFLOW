@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canCreateStaffRole } from "./authorization.ts";
+import { initialKitchenStationId, staffCreationEmailRequired } from "./creationPolicy.ts";
 import {
   requireWaiterPinPepper,
   waiterPinFingerprint,
@@ -556,9 +557,9 @@ Deno.serve(async (request) => {
         return jsonResponse(403, { error: "Permission denied." });
       }
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
-      const contactEmail = role === "waiter" ? normalizeOptionalEmail(payload.email) : normalizeEmail(payload.email);
+      const contactEmail = staffCreationEmailRequired(role) ? normalizeEmail(payload.email) : normalizeOptionalEmail(payload.email);
       const shift = normalizeOptionalShift(payload.shift);
-      const temporaryPassword = role === "waiter"
+      const temporaryPassword = role === "waiter" || actingStaff.role === "manager"
         ? normalizePinPassword(payload.pinPassword)
         : normalizeTemporaryPassword(payload.pinPassword);
       const waiterPinFingerprintValue = role === "waiter"
@@ -578,8 +579,13 @@ Deno.serve(async (request) => {
       const authenticationPassword = role === "waiter"
         ? await waiterSupabasePassword(requireWaiterPinPepper(), restaurantId, employeeId)
         : temporaryPassword;
-      const assignedKitchenStationId = role === "kitchen"
-        ? requireUuid(payload.assignedKitchenStationId, "Kitchen station")
+      const requestedKitchenStationId = initialKitchenStationId(
+        actingStaff.role as "owner" | "manager",
+        role,
+        payload.assignedKitchenStationId,
+      );
+      const assignedKitchenStationId = requestedKitchenStationId
+        ? requireUuid(requestedKitchenStationId, "Kitchen station")
         : null;
       const assignedStation = assignedKitchenStationId ? await requireActiveKitchenStation(assignedKitchenStationId) : null;
 

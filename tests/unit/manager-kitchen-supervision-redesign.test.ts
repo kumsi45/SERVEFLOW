@@ -19,7 +19,7 @@ describe("Manager Kitchen supervision redesign", () => {
   });
 
   it("provides the compact command summary without giant KPI cards", () => {
-    for (const metric of ["Waiting", "Preparing", "Delayed", "Ready", "Avg prep", "Active staff", "Station coverage"]) expect(page).toContain(metric);
+    for (const metric of ["Waiting", "Preparing", "Delayed", "Ready", "Avg prep", "Active chefs", "Station coverage"]) expect(page).toContain(metric);
     expect(styles).toContain("grid-template-columns: repeat(7, minmax(0, 1fr))");
     expect(styles).not.toContain("min-height: 104px");
   });
@@ -29,6 +29,15 @@ describe("Manager Kitchen supervision redesign", () => {
     expect(page).toContain("station.queueLength > 0 && station.activeStaff === 0");
     expect(page).toContain("Kitchen operating normally — no manager intervention required.");
     expect(page).not.toContain("station.activeStaff === 0 && station.queueLength === 0");
+  });
+
+  it("uses Chef terminology for kitchen-worker presentation without renaming authority", () => {
+    for (const label of ["Chefs", "Manage Chefs", "No Chefs assigned", "Call Chef"]) expect(page).toContain(label);
+    expect(page).toContain("Chef · {member.employeeId}");
+    expect(page).not.toContain("Kitchen Staff");
+    expect(page).not.toContain("kitchen staff");
+    expect(service).not.toContain('"Kitchen staff"');
+    expect(service).toContain('.eq("role", "kitchen")');
   });
 
   it("uses compact station rows and a contextual overlay inspector", () => {
@@ -51,11 +60,14 @@ describe("Manager Kitchen supervision redesign", () => {
     expect(authority).toContain("manager_set_kitchen_station_paused");
   });
 
-  it("integrates tenant-scoped requests as an Inventory handoff", () => {
+  it("reviews tenant-scoped requests before the secondary Inventory handoff", () => {
     expect(page).toContain("loadInventoryRequests(restaurantId)");
     expect(page).toContain('"kitchen_inventory_requests"');
+    expect(page).toContain("openRequest(request.id)");
+    expect(page).toContain("processInventoryRequest(restaurantId, request.id, action");
+    expect(page).toContain("Approve for Inventory");
+    expect(page).toContain("Reject request");
     expect(page).toContain("navigateToInventory(restaurantId)");
-    expect(page).not.toContain("processInventoryRequest");
     expect(inventory).toContain('.eq("restaurant_id",restaurantId)');
   });
 

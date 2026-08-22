@@ -4,7 +4,7 @@
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\user\\ServeFlow\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "tests/e2e/waiter-tables-phasea2.spec.ts"
+      "tests/e2e/manager-kitchen-request-review-drawer-responsive.spec.ts"
     ],
     "configFile": "C:\\Users\\user\\ServeFlow\\playwright.config.ts",
     "rootDir": "C:/Users/user/ServeFlow/tests/e2e",
@@ -94,13 +94,13 @@
   },
   "suites": [
     {
-      "title": "waiter-tables-phasea2.spec.ts",
-      "file": "waiter-tables-phasea2.spec.ts",
+      "title": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+      "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "assigned tables render as a prioritized compact operational grid",
+          "title": "Manager Kitchen request review and stations fit desktop",
           "ok": true,
           "tags": [],
           "tests": [
@@ -115,12 +115,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3673,
+                  "duration": 1749,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:27:38.825Z",
+                  "startTime": "2026-08-22T11:04:59.785Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -128,13 +128,13 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-b143e543df633e5cfdb3",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 122,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-02dcc13c880296fa0436",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         },
         {
-          "title": "free and active cards keep their existing one-tap destinations without reload",
+          "title": "Manager Kitchen request review and stations fit tablet",
           "ok": true,
           "tags": [],
           "tests": [
@@ -149,12 +149,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3327,
+                  "duration": 1145,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:28:00.158Z",
+                  "startTime": "2026-08-22T11:05:01.758Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -162,13 +162,13 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-2db4cc411b5883f4ceef",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 145,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-9d82eb1c2a2edd779809",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         },
         {
-          "title": "zero authoritative rows show the assignment empty state and logout remains immediate",
+          "title": "Manager Kitchen request review and stations fit mobile",
           "ok": true,
           "tags": [],
           "tests": [
@@ -183,12 +183,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2966,
+                  "duration": 1063,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:28:03.531Z",
+                  "startTime": "2026-08-22T11:05:02.931Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -196,115 +196,13 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-454edc18c0c55ba2f436",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 159,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-bdb7d491b75548ca2cc0",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         },
         {
-          "title": "table grid uses four, three, and two columns across required tablet and mobile widths",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "desktop-chromium",
-              "projectName": "desktop-chromium",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 5446,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:06.527Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-71243c9739aa9215da65",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 169,
-          "column": 1
-        },
-        {
-          "title": "active table A4 shows simple order, kitchen ready state, total, and bill confirmation",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "desktop-chromium",
-              "projectName": "desktop-chromium",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 3838,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:12.015Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-4984d6df8e856a97c358",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 180,
-          "column": 1
-        },
-        {
-          "title": "active table A4 stays readable across requested responsive sizes",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "desktop-chromium",
-              "projectName": "desktop-chromium",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 14657,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:15.886Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-af8841eb63027a3374f3",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 210,
-          "column": 1
-        },
-        {
-          "title": "assigned tables render as a prioritized compact operational grid",
+          "title": "Manager Kitchen request review and stations fit desktop",
           "ok": true,
           "tags": [],
           "tests": [
@@ -319,12 +217,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 3832,
+                  "duration": 3646,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:27:38.791Z",
+                  "startTime": "2026-08-22T11:04:59.813Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -332,13 +230,13 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-c955d9397ed43fa4155f",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 122,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-a7b45f46b5b8266ce565",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         },
         {
-          "title": "free and active cards keep their existing one-tap destinations without reload",
+          "title": "Manager Kitchen request review and stations fit tablet",
           "ok": true,
           "tags": [],
           "tests": [
@@ -353,12 +251,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 3342,
+                  "duration": 3288,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:28:00.313Z",
+                  "startTime": "2026-08-22T11:05:03.740Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -366,13 +264,13 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-a099a862b691f5b5e04e",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 145,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-807bebb1f02d242c0d21",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         },
         {
-          "title": "zero authoritative rows show the assignment empty state and logout remains immediate",
+          "title": "Manager Kitchen request review and stations fit mobile",
           "ok": true,
           "tags": [],
           "tests": [
@@ -387,12 +285,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 3460,
+                  "duration": 1410,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-10T11:28:03.684Z",
+                  "startTime": "2026-08-22T11:05:07.052Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -400,121 +298,19 @@
               "status": "expected"
             }
           ],
-          "id": "8f42ceb5507911be6c40-5e49eca4c6e95d8686c4",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 159,
-          "column": 1
-        },
-        {
-          "title": "table grid uses four, three, and two columns across required tablet and mobile widths",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "mobile-chromium",
-              "projectName": "mobile-chromium",
-              "results": [
-                {
-                  "workerIndex": 1,
-                  "parallelIndex": 1,
-                  "status": "passed",
-                  "duration": 6149,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:07.194Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-97460ed247b6a7fd711d",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 169,
-          "column": 1
-        },
-        {
-          "title": "active table A4 shows simple order, kitchen ready state, total, and bill confirmation",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "mobile-chromium",
-              "projectName": "mobile-chromium",
-              "results": [
-                {
-                  "workerIndex": 1,
-                  "parallelIndex": 1,
-                  "status": "passed",
-                  "duration": 3152,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:13.393Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-889f50fd385c48cf220b",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 180,
-          "column": 1
-        },
-        {
-          "title": "active table A4 stays readable across requested responsive sizes",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "mobile-chromium",
-              "projectName": "mobile-chromium",
-              "results": [
-                {
-                  "workerIndex": 1,
-                  "parallelIndex": 1,
-                  "status": "passed",
-                  "duration": 15533,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-08-10T11:28:16.573Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "8f42ceb5507911be6c40-1c3b17de26dd68672236",
-          "file": "waiter-tables-phasea2.spec.ts",
-          "line": 210,
-          "column": 1
+          "id": "df87e19d65e6709bedd0-0b24b2b117c028237bee",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-10T11:27:35.585Z",
-    "duration": 57111.389,
-    "expected": 12,
+    "startTime": "2026-08-22T11:04:56.696Z",
+    "duration": 12348.197,
+    "expected": 6,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

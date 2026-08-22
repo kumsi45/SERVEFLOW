@@ -13,7 +13,7 @@ describe("Manager Live Operations redesign", () => {
   it("uses the intervention architecture without duplicate workspaces", () => {
     for (const label of ["Live Operations", "Manager Actions", "Live Service", "Shift Health", "Recent Operations", "Service Location"]) expect(page).toContain(label);
     for (const removed of ["Current Revenue", "Staff Online", "Requests & Critical Stock", "Cashier Status", "Table Assignment", "moc-kpis", "moc-task-board"]) expect(page).not.toContain(removed);
-    expect(page).not.toContain("loadInventoryItems");
+    expect(page).toContain("loadInventoryCurrentStock");
   });
 
   it("keeps free locations minimal and derives presentation state from authoritative data", () => {
@@ -70,6 +70,7 @@ describe("Manager Live Operations redesign", () => {
   it("retains tenant-scoped realtime and route contracts", () => {
     expect(page).toContain("useTenantRealtime");
     expect(page).toContain('"kitchen_inventory_requests"');
+    expect(page).toContain('"inventory_items"');
     expect(layout).toContain('label: "Live Operations"');
     expect(layout).toContain('href: "/manager/tables"');
   });

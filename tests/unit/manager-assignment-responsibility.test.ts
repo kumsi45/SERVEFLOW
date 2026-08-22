@@ -28,7 +28,7 @@ describe("Manager operational assignment ownership", () => {
 
   it("owns chef assignment in Kitchen and preserves ticket ownership", () => {
     expect(kitchen).toContain("updateManagerStaff");
-    expect(kitchen).toContain("Manage Staff");
+    expect(kitchen).toContain("Manage Chefs");
     expect(kitchen).toContain("Station coverage");
     expect(kitchen).toContain("Existing kitchen tickets and order state will remain unchanged.");
     expect(kitchenService).toContain('.eq("role", "kitchen")');

@@ -214,7 +214,7 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
   };
 }
 
-export function createManagerStaff(restaurantId: string, input: { fullName: string; email?: string; pinPassword: string; phoneNumber?: string; shift?: string; role: ManagerStaffRole; assignedKitchenStationId?: string | null }) {
+export function createManagerStaff(restaurantId: string, input: { fullName: string; email?: string; pinPassword: string; phoneNumber?: string; shift?: string; role: ManagerStaffRole }) {
   return invokeManageStaff({ action: "create-staff", restaurantId, ...input });
 }
 

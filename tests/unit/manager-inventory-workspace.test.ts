@@ -11,7 +11,7 @@ const service = read(
   "src/modules/manager/services/managerInventoryWorkspaceService.ts",
 );
 const requestMigration = read(
-  "supabase/migrations/122_kitchen_inventory_request_workflow.sql",
+  "supabase/migrations/240_live_operations_kitchen_request_review.sql",
 );
 
 describe("Manager Inventory workspace", () => {
@@ -33,11 +33,11 @@ describe("Manager Inventory workspace", () => {
     expect(page).toContain('"kitchen_inventory_requests"');
   });
 
-  it("does not invent unsupported partial request states or manager mutations", () => {
+  it("keeps request decisions in Live Operations without inventing partial states", () => {
     expect(page).not.toContain("processInventoryRequest(");
     expect(page).not.toContain('"partially_fulfilled"');
-    expect(requestMigration).toContain("role::text in ('inventory','owner')");
-    expect(page).toMatch(/Partial\s+approval is not an existing\s+request state\./);
+    expect(requestMigration).toContain("target_action in ('accept','reject') and role::text in ('manager','owner')");
+    expect(page).toContain("Approve or reject this request from Live Operations.");
   });
 
   it("provides compact responsive stock and request views", () => {

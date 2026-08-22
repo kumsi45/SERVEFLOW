@@ -14,6 +14,7 @@ import {
   type ManagerStaffOperationsSnapshot,
   type ManagerStaffRole,
 } from "../services/managerStaffOperationsService";
+import { managerStaffEmailRequired, validateManagerStaffCreation } from "../services/managerStaffCreationValidation";
 import "../styles/managerStaffOperations.css";
 
 type Props = {
@@ -34,12 +35,12 @@ const STAFF_TABS: Array<[StaffTab, string]> = [
 const CREATE_ROLES: Array<{ role: ManagerStaffRole; label: string; available: boolean }> = [
   { role: "waiter", label: "Waiter", available: true },
   { role: "cashier", label: "Cashier", available: true },
-  { role: "kitchen", label: "Kitchen Staff", available: false },
+  { role: "kitchen", label: "Chef", available: true },
   { role: "inventory_officer", label: "Inventory Officer", available: true },
 ];
 
 function roleLabel(role: ManagerStaffRole) {
-  if (role === "kitchen") return "Kitchen Staff";
+  if (role === "kitchen") return "Chef";
   if (role === "inventory_officer") return "Inventory Officer";
   if (role === "inventory") return "Inventory Staff";
   return role.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -59,7 +60,7 @@ function currentWork(member: ManagerStaffMember, compact = false) {
     if (compact) return `${member.assignedTables.length} table${member.assignedTables.length === 1 ? "" : "s"}`;
     return member.assignedTables.map((table) => table.label).join(", ");
   }
-  if (member.role === "kitchen") return member.assignedKitchenStationName ?? "No active station";
+  if (member.role === "kitchen") return member.assignedKitchenStationName ?? "Unassigned";
   if (member.role === "cashier") return member.online ? "Cashier terminal" : "No active work";
   if (member.role === "inventory" || member.role === "inventory_officer") return member.online ? "Inventory workspace" : "No active work";
   return "No active work";
@@ -163,6 +164,17 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
   async function submitCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!CREATE_ROLES.some((option) => option.role === form.role && option.available)) return;
+    const validationError = validateManagerStaffCreation({
+      fullName: form.fullName,
+      email: form.email,
+      pin: form.pinPassword,
+      role: form.role,
+    });
+    if (validationError) {
+      setNotice(null);
+      setError(validationError);
+      return;
+    }
     const created = await runAction(() => createManagerStaff(restaurantId, {
       fullName: form.fullName,
       email: form.email || undefined,
@@ -226,7 +238,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
               <div className="mso-section-heading"><div><p>People and access</p><h2>Directory</h2></div><span>{filteredStaff.length} results</span></div>
               <div className="mso-directory-toolbar">
                 <label className="mso-search"><span aria-hidden="true">⌕</span><input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search staff…" aria-label="Search staff" /></label>
-                <select aria-label="Filter by role" value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="all">All roles</option><option value="waiter">Waiter</option><option value="cashier">Cashier</option><option value="kitchen">Kitchen Staff</option><option value="inventory_officer">Inventory Officer</option><option value="inventory">Inventory Staff</option></select>
+                <select aria-label="Filter by role" value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="all">All roles</option><option value="waiter">Waiter</option><option value="cashier">Cashier</option><option value="kitchen">Chef</option><option value="inventory_officer">Inventory Officer</option><option value="inventory">Inventory Staff</option></select>
                 <select aria-label="Filter by status" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="all">All statuses</option><option value="available">Available</option><option value="busy">Busy</option><option value="on_break">On break</option><option value="offline">Offline</option><option value="inactive">Inactive</option></select>
                 <select aria-label="Filter by shift" value={filters.shift} onChange={(event) => setFilters((current) => ({ ...current, shift: event.target.value }))}><option value="all">All shifts</option><option value="not_recorded">Not recorded</option></select>
               </div>
@@ -255,21 +267,20 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
           {activeTab === "create" && (
             <section className="mso-panel mso-create-panel">
               <div className="mso-section-heading"><div><p>Secure account setup</p><h2>Create Staff</h2></div><span>Employee ID generated automatically</span></div>
-              <form className="mso-create-form" onSubmit={submitCreate}>
+              <form className="mso-create-form" onSubmit={submitCreate} noValidate>
                 <fieldset><legend>Role</legend><div className="mso-role-options">
                   <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "waiter" }))}>Waiter</button>
                   <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "cashier" }))}>Cashier</button>
-                  <button type="button" disabled title="Kitchen staff creation currently requires a station assignment in the backend contract.">Kitchen Staff</button>
+                  <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "kitchen" }))}>Chef</button>
                   <button type="button" className={form.role === "inventory_officer" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "inventory_officer" }))}>Inventory Officer</button>
-                </div><p className="mso-inline-limitation">Kitchen staff creation is unavailable here because the existing create contract requires a station assignment. Station assignment remains outside Staff.</p></fieldset>
+                </div></fieldset>
                 <div className="mso-form-grid">
                   <label><span>Full Name *</span><input required value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} autoComplete="name" /></label>
                   <label><span>Phone</span><input value={form.phoneNumber} onChange={(event) => setForm((current) => ({ ...current, phoneNumber: event.target.value }))} autoComplete="tel" /></label>
-                  <label><span>{form.role === "waiter" ? "Email (optional)" : "Email / Username *"}</span><input type="email" required={form.role !== "waiter"} value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} autoComplete="email" /></label>
-                  <label><span>{form.role === "waiter" ? "4-digit PIN *" : "Temporary password *"}</span><input required type="password" inputMode={form.role === "waiter" ? "numeric" : undefined} pattern={form.role === "waiter" ? "[0-9]{4}" : undefined} minLength={4} maxLength={64} value={form.pinPassword} onChange={(event) => setForm((current) => ({ ...current, pinPassword: event.target.value }))} autoComplete="new-password" /></label>
+                  <label><span>{managerStaffEmailRequired(form.role) ? "Email *" : "Email (optional)"}</span><input type="email" required={managerStaffEmailRequired(form.role)} value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} autoComplete="email" /></label>
+                  <label><span>4-digit PIN *</span><input required type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={form.pinPassword} onChange={(event) => setForm((current) => ({ ...current, pinPassword: event.target.value.replace(/\D/g, "").slice(0, 4) }))} autoComplete="new-password" /></label>
                 </div>
-                <div className="mso-form-note"><strong>Access is role-based.</strong><span>The server validates manager authority and tenant membership before creating the account.</span></div>
-                <div className="mso-form-actions"><button type="button" onClick={() => setActiveTab("overview")}>Cancel</button><button type="submit" className="mso-primary-action" disabled={actionPending}>{actionPending ? "Creating…" : "Create Staff"}</button></div>
+                <div className="mso-form-actions"><button type="button" onClick={() => setActiveTab("overview")}>Cancel</button><button type="submit" className="mso-primary-action" disabled={actionPending}>{actionPending ? "Creating…" : `Create ${roleLabel(form.role)}`}</button></div>
               </form>
             </section>
           )}
