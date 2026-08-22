@@ -65,8 +65,8 @@ describe("Manager Kitchen supervision redesign", () => {
     expect(page).toContain('"kitchen_inventory_requests"');
     expect(page).toContain("openRequest(request.id)");
     expect(page).toContain("processInventoryRequest(restaurantId, request.id, action");
-    expect(page).toContain("Approve for Inventory");
-    expect(page).toContain("Reject request");
+    expect(page).toContain("Approve Request");
+    expect(page).toContain(">Reject</button>");
     expect(page).toContain("navigateToInventory(restaurantId)");
     expect(inventory).toContain('.eq("restaurant_id",restaurantId)');
   });

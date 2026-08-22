@@ -19,6 +19,7 @@ import {
   type ManagerKitchenStationSummary,
   type ManagerKitchenSupervisionSnapshot,
 } from "../services/managerKitchenSupervisionService";
+import { loadRestaurantAnalyticsTimezone } from "../services/managerOperationalReportsService";
 import "../styles/managerKitchenSupervision.css";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string };
@@ -81,15 +82,48 @@ function stationChefLabel(station: ManagerKitchenStationSummary) {
 }
 
 function requestStatusLabel(status: InventoryRequest["status"]) {
-  if (status === "pending") return "Pending Manager Review";
-  if (status === "accepted") return "Approved for Inventory";
+  if (status === "pending") return "Pending review";
+  if (status === "accepted") return "Awaiting Inventory";
   if (status === "rejected") return "Rejected";
   return "Fulfilled";
 }
 
-function requestDateTime(value: string) {
+function requestDateTime(value: string, timezone: string) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  if (Number.isNaN(date.getTime())) return "Not recorded";
+  const dateLabel = new Intl.DateTimeFormat("en-US", { timeZone: timezone, month: "short", day: "numeric", year: "numeric" }).format(date);
+  const timeLabel = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", minute: "2-digit" }).format(date);
+  return `${dateLabel} · ${timeLabel}`;
+}
+
+function requestWaitingDuration(value: string) {
+  const minutes = minutesSince(value);
+  if (minutes < 1) return "Less than a minute";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
+function normalizeUnit(unit: string) {
+  return unit.trim().toLocaleLowerCase();
+}
+
+function formatQuantity(quantity: number, unit: string) {
+  const value = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(quantity);
+  return `${value} ${normalizeUnit(unit)}`;
+}
+
+function inventoryDecision(request: InventoryRequest, item: InventoryItem) {
+  const compatible = normalizeUnit(request.unit) === normalizeUnit(item.unit)
+    && Number.isFinite(request.quantity)
+    && Number.isFinite(item.currentQuantity);
+  if (!compatible) return { afterFulfillment: null, shortBy: null };
+  const difference = item.currentQuantity - request.quantity;
+  return difference >= 0
+    ? { afterFulfillment: difference, shortBy: null }
+    : { afterFulfillment: null, shortBy: Math.abs(difference) };
 }
 
 function batchItems(batch: ManagerKitchenBatch, limit = 3) {
@@ -112,6 +146,8 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerKitchenSupervisionSnapshot | null>(null);
   const [requests, setRequests] = useState<InventoryRequest[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryState, setInventoryState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [restaurantTimezone, setRestaurantTimezone] = useState("Africa/Nairobi");
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<KitchenView>("overview");
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
@@ -127,14 +163,19 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextSnapshot, nextRequests, nextInventoryItems] = await Promise.all([
+      const [nextSnapshot, nextRequests, nextInventoryResult, nextTimezone] = await Promise.all([
         loadManagerKitchenSupervision(restaurantId),
         loadInventoryRequests(restaurantId),
-        loadInventoryItems(restaurantId),
+        loadInventoryItems(restaurantId)
+          .then((items) => ({ items, available: true as const }))
+          .catch(() => ({ items: [] as InventoryItem[], available: false as const })),
+        loadRestaurantAnalyticsTimezone(restaurantId).catch(() => "Africa/Nairobi"),
       ]);
       setSnapshot(nextSnapshot);
       setRequests(nextRequests);
-      setInventoryItems(nextInventoryItems);
+      setInventoryItems(nextInventoryResult.items);
+      setInventoryState(nextInventoryResult.available ? "ready" : "unavailable");
+      setRestaurantTimezone(nextTimezone);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load kitchen supervision.");
@@ -157,6 +198,9 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
   const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? null;
   const selectedInventoryItem = selectedRequest?.inventoryItemId
     ? inventoryItems.find((item) => item.id === selectedRequest.inventoryItemId) ?? null
+    : null;
+  const selectedInventoryDecision = selectedRequest && selectedInventoryItem
+    ? inventoryDecision(selectedRequest, selectedInventoryItem)
     : null;
   const kitchenStaff = snapshot?.kitchenStaff ?? [];
   const allBatches = useMemo(
@@ -223,7 +267,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       setNotice(null);
       setReviewingRequestId(request.id);
       await processInventoryRequest(restaurantId, request.id, action, action === "reject" ? reason : undefined);
-      setNotice(action === "accept" ? "Kitchen request approved for Inventory." : "Kitchen request rejected.");
+      setNotice(action === "accept" ? "Request approved. Awaiting Inventory fulfillment." : "Kitchen request rejected.");
       setRejectingRequest(false);
       setRejectionReason("");
       await refresh();
@@ -338,21 +382,32 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       <header><div><span>Kitchen Material Request</span><h2 id="mks-request-title">{selectedRequest.itemName}</h2></div><div><em className={`mks-request-status ${selectedRequest.status}`}>{requestStatusLabel(selectedRequest.status)}</em><button type="button" aria-label="Close kitchen request" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
       <section><h3>Request details</h3><dl>
         <div><dt>Requested item</dt><dd>{selectedRequest.itemName}</dd></div>
-        <div><dt>Quantity</dt><dd>{selectedRequest.quantity} {selectedRequest.unit}</dd></div>
+        <div><dt>Quantity</dt><dd>{formatQuantity(selectedRequest.quantity, selectedRequest.unit)}</dd></div>
         <div><dt>Station</dt><dd>{selectedRequest.stationName || "Kitchen — station not recorded"}</dd></div>
         <div><dt>Requested by</dt><dd>{selectedRequest.requesterName || "Chef not recorded"}</dd></div>
         <div><dt>Priority</dt><dd>{selectedRequest.urgency}</dd></div>
-        <div><dt>Status</dt><dd>{requestStatusLabel(selectedRequest.status)}</dd></div>
-        <div><dt>Requested</dt><dd>{requestDateTime(selectedRequest.requestedAt)}</dd></div>
-        <div><dt>Request age</dt><dd>{fmtMinutes(minutesSince(selectedRequest.requestedAt))}</dd></div>
+        <div><dt>Requested</dt><dd>{requestDateTime(selectedRequest.requestedAt, restaurantTimezone)}</dd></div>
+        <div><dt>Waiting</dt><dd>{requestWaitingDuration(selectedRequest.requestedAt)}</dd></div>
       </dl></section>
-      <section><h3>Request reason</h3><p className="mks-request-reason">{selectedRequest.comment || "Reason not recorded."}</p></section>
-      {selectedInventoryItem && <section><h3>Current inventory</h3><dl><div><dt>Available</dt><dd>{selectedInventoryItem.currentQuantity} {selectedInventoryItem.unit}</dd></div><div><dt>Reorder level</dt><dd>{selectedInventoryItem.reorderLevel} {selectedInventoryItem.unit}</dd></div></dl><p className="mks-inspector-note">Current tenant-scoped inventory record. Inventory remains responsible for fulfillment and stock movement.</p></section>}
-      {selectedRequest.status === "accepted" && <section className="mks-request-outcome"><h3>Approved for Inventory</h3><p>Manager review is complete. Inventory must perform the authorized fulfillment and stock movement.</p>{selectedRequest.reviewerName && <small>Reviewed by {selectedRequest.reviewerName}</small>}</section>}
+      <section className="mks-request-reason-section"><h3>Request reason</h3><p className={`mks-request-reason ${selectedRequest.comment ? "" : "empty"}`}>{selectedRequest.comment || "Not provided"}</p></section>
+      <section className="mks-request-inventory"><h3>Inventory</h3>
+        {inventoryState === "loading" && <p className="mks-inventory-unavailable">Checking current inventory…</p>}
+        {inventoryState === "unavailable" && <p className="mks-inventory-unavailable">Current inventory is unavailable.</p>}
+        {inventoryState === "ready" && !selectedRequest.inventoryItemId && <p className="mks-inventory-unavailable">No inventory item is linked to this request.</p>}
+        {inventoryState === "ready" && selectedRequest.inventoryItemId && !selectedInventoryItem && <p className="mks-inventory-unavailable">The linked inventory item is unavailable.</p>}
+        {selectedInventoryItem && <dl>
+          <div><dt>Available</dt><dd>{formatQuantity(selectedInventoryItem.currentQuantity, selectedInventoryItem.unit)}</dd></div>
+          <div><dt>Requested</dt><dd>{formatQuantity(selectedRequest.quantity, selectedRequest.unit)}</dd></div>
+          {selectedInventoryDecision?.afterFulfillment != null && <div className="positive"><dt>After fulfillment</dt><dd>{formatQuantity(selectedInventoryDecision.afterFulfillment, selectedInventoryItem.unit)}</dd></div>}
+          {selectedInventoryDecision?.shortBy != null && <div className="short"><dt>Short by</dt><dd>{formatQuantity(selectedInventoryDecision.shortBy, selectedInventoryItem.unit)}</dd></div>}
+          {selectedInventoryDecision?.afterFulfillment == null && selectedInventoryDecision?.shortBy == null && <div className="incompatible"><dt>Availability check</dt><dd>Units differ</dd></div>}
+          <div><dt>Reorder level</dt><dd>{formatQuantity(selectedInventoryItem.reorderLevel, selectedInventoryItem.unit)}</dd></div>
+        </dl>}
+      </section>
+      {selectedRequest.status === "accepted" && <section className="mks-request-outcome"><h3>Awaiting Inventory</h3><p>Request approved. Inventory fulfillment is still pending.</p>{selectedRequest.reviewerName && <small>Reviewed by {selectedRequest.reviewerName}</small>}</section>}
       {selectedRequest.status === "rejected" && <section className="mks-request-outcome rejected"><h3>Request rejected</h3><p>{selectedRequest.rejectionReason || "Rejection reason not recorded."}</p>{selectedRequest.reviewerName && <small>Reviewed by {selectedRequest.reviewerName}</small>}</section>}
       {selectedRequest.status === "delivered" && <section className="mks-request-outcome"><h3>Fulfilled</h3><p>Inventory fulfillment is complete.</p>{selectedRequest.fulfillerName && <small>Fulfilled by {selectedRequest.fulfillerName}</small>}</section>}
-      {selectedRequest.status === "pending" && <section className="mks-request-review"><h3>Manager review</h3>{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div><button type="button" className="secondary" disabled={reviewingRequestId === selectedRequest.id} onClick={() => { setRejectingRequest(false); setRejectionReason(""); }}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id || !rejectionReason.trim()} onClick={() => void reviewRequest(selectedRequest, "reject")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Confirm rejection"}</button></div></> : <div><button type="button" disabled={reviewingRequestId === selectedRequest.id} onClick={() => void reviewRequest(selectedRequest, "accept")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Approve for Inventory"}</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id} onClick={() => setRejectingRequest(true)}>Reject request</button></div>}</section>}
-      <footer className="mks-request-footer"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button><button type="button" onClick={() => setSelectedRequestId(null)}>Close</button></footer>
+      {selectedRequest.status === "pending" ? <section className="mks-request-decision"><h3>Manager decision</h3>{rejectingRequest ? <><label>Rejection reason<textarea value={rejectionReason} maxLength={500} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Explain why this request is being rejected..." /></label><div className="mks-request-actions"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button><button type="button" className="secondary" disabled={reviewingRequestId === selectedRequest.id} onClick={() => { setRejectingRequest(false); setRejectionReason(""); }}>Cancel</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id || !rejectionReason.trim()} onClick={() => void reviewRequest(selectedRequest, "reject")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Confirm rejection"}</button></div></> : <div className="mks-request-actions"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button><button type="button" className="danger" disabled={reviewingRequestId === selectedRequest.id} onClick={() => setRejectingRequest(true)}>Reject</button><button type="button" className="primary" disabled={reviewingRequestId === selectedRequest.id} onClick={() => void reviewRequest(selectedRequest, "accept")}>{reviewingRequestId === selectedRequest.id ? "Saving..." : "Approve Request"}</button></div>}</section> : <section className="mks-request-navigation"><button type="button" className="secondary" onClick={() => navigateToInventory(restaurantId)}>Open Inventory</button></section>}
     </aside></div>}
 
     {selectedStation && <div className="mks-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedStationId(null); }}><aside className="mks-inspector" role="dialog" aria-modal="true" aria-labelledby="mks-inspector-title">

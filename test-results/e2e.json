@@ -115,12 +115,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1749,
+                  "duration": 1720,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:04:59.785Z",
+                  "startTime": "2026-08-22T11:18:23.165Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -129,6 +129,40 @@
             }
           ],
           "id": "df87e19d65e6709bedd0-02dcc13c880296fa0436",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
+        },
+        {
+          "title": "Manager Kitchen request review and stations fit laptop",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1217,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-22T11:18:25.236Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "df87e19d65e6709bedd0-c7615d77cee9045516d8",
           "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
           "line": 32,
           "column": 3
@@ -149,12 +183,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1145,
+                  "duration": 1267,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:05:01.758Z",
+                  "startTime": "2026-08-22T11:18:26.498Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -183,12 +217,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1063,
+                  "duration": 1289,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:05:02.931Z",
+                  "startTime": "2026-08-22T11:18:27.813Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -217,12 +251,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 3646,
+                  "duration": 4495,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:04:59.813Z",
+                  "startTime": "2026-08-22T11:18:23.165Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -231,6 +265,40 @@
             }
           ],
           "id": "df87e19d65e6709bedd0-a7b45f46b5b8266ce565",
+          "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
+          "line": 32,
+          "column": 3
+        },
+        {
+          "title": "Manager Kitchen request review and stations fit laptop",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2996,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-22T11:18:27.996Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "df87e19d65e6709bedd0-4f467b2bd764c8f614e8",
           "file": "manager-kitchen-request-review-drawer-responsive.spec.ts",
           "line": 32,
           "column": 3
@@ -251,12 +319,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 3288,
+                  "duration": 2642,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:05:03.740Z",
+                  "startTime": "2026-08-22T11:18:31.102Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -285,12 +353,12 @@
                   "workerIndex": 1,
                   "parallelIndex": 1,
                   "status": "passed",
-                  "duration": 1410,
+                  "duration": 1884,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-08-22T11:05:07.052Z",
+                  "startTime": "2026-08-22T11:18:33.778Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -308,9 +376,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-22T11:04:56.696Z",
-    "duration": 12348.197,
-    "expected": 6,
+    "startTime": "2026-08-22T11:18:19.202Z",
+    "duration": 17019.371,
+    "expected": 8,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
