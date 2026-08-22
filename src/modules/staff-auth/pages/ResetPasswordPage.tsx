@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "../../../core/database";
+import { validateStaffPasswordConfirmation } from "../../../../supabase/functions/_shared/staffAuthPolicy";
 import "../styles/staffLogin.css";
 
 type PageState = "loading" | "form" | "success" | "invalid" | "expired";
@@ -168,13 +169,9 @@ export function ResetPasswordPage() {
     event.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    const validationError = validateStaffPasswordConfirmation(password, confirmPassword);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 

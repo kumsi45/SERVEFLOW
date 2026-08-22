@@ -19,6 +19,36 @@ function normalizeHttpOrigin(value: string | undefined | null) {
   }
 }
 
+function isLoopbackOrigin(origin: string) {
+  const hostname = new URL(origin).hostname.toLowerCase();
+  return hostname === "localhost" || hostname === "::1" || hostname === "[::1]" || hostname.startsWith("127.");
+}
+
+export type PasswordRecoveryUrlConfig = {
+  publicAppUrl?: string | null;
+  legacyAppUrl?: string | null;
+  browserOrigin?: string | null;
+  production: boolean;
+};
+
+export function resolvePasswordRecoveryRedirectUrl(config: PasswordRecoveryUrlConfig) {
+  const configuredOrigin = normalizeHttpOrigin(config.publicAppUrl) ?? normalizeHttpOrigin(config.legacyAppUrl);
+
+  if (configuredOrigin) {
+    if (config.production && isLoopbackOrigin(configuredOrigin)) {
+      throw new Error("Password recovery is temporarily unavailable. Please contact your administrator.");
+    }
+    return `${configuredOrigin}/reset-password`;
+  }
+
+  if (!config.production) {
+    const developmentOrigin = normalizeHttpOrigin(config.browserOrigin);
+    if (developmentOrigin) return `${developmentOrigin}/reset-password`;
+  }
+
+  throw new Error("Password recovery is temporarily unavailable. Please contact your administrator.");
+}
+
 function getConfiguredPublicOrigin() {
   return (
     normalizeHttpOrigin(import.meta.env.VITE_PUBLIC_APP_URL) ??
@@ -62,5 +92,10 @@ export function assertAbsoluteQrPayload(payload: string) {
 }
 
 export function getPasswordResetRedirectUrl() {
-  return `${getAppOrigin()}/reset-password`;
+  return resolvePasswordRecoveryRedirectUrl({
+    publicAppUrl: import.meta.env.VITE_PUBLIC_APP_URL,
+    legacyAppUrl: import.meta.env.VITE_APP_URL,
+    browserOrigin: typeof window === "undefined" ? null : window.location.origin,
+    production: import.meta.env.PROD,
+  });
 }

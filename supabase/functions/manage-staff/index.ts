@@ -287,6 +287,10 @@ function normalizeResetBaseUrl(value: string | null) {
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return null;
     }
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === "localhost" || hostname === "::1" || hostname === "[::1]" || hostname.startsWith("127.")) {
+      return null;
+    }
 
     return url.origin;
   } catch {
@@ -294,17 +298,9 @@ function normalizeResetBaseUrl(value: string | null) {
   }
 }
 
-function getResetRedirectUrl(request: Request) {
-  const origin = request.headers.get("Origin");
-  const originUrl = normalizeResetBaseUrl(origin);
+function getResetRedirectUrl() {
   const configuredUrl = normalizeResetBaseUrl(Deno.env.get("APP_URL"));
-  const baseUrl = configuredUrl ?? originUrl;
-
-  if (!baseUrl) {
-    return null;
-  }
-
-  return `${baseUrl}/reset-password`;
+  return configuredUrl ? `${configuredUrl}/reset-password` : null;
 }
 
 function logInfo(requestId: string, message: string, details: Record<string, unknown> = {}) {
@@ -1033,11 +1029,10 @@ Deno.serve(async (request) => {
         return jsonResponse(400, { error: "Use Set/Reset Waiter PIN for waiter accounts." });
       }
       const email = requireString(targetStaff.email, "Target staff email");
-      const redirectTo = getResetRedirectUrl(request);
+      const redirectTo = getResetRedirectUrl();
 
       if (!redirectTo) {
         logError(requestId, "password reset redirect unavailable", {
-          origin: request.headers.get("Origin"),
           hasConfiguredAppUrl: Boolean(Deno.env.get("APP_URL")?.trim()),
         });
         return jsonResponse(400, { error: "Password reset redirect URL is not configured for this request." });
