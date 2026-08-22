@@ -37,6 +37,13 @@ import {
 } from "../../menu-recipes/services/menuRecipeService";
 import { createRecipe, softDeleteRecipe } from "../../recipes/services/recipeService";
 import {
+  staffAuthEmailRequired,
+  staffAuthRoleLabel,
+  usesWaiterPin,
+  validateStaffPasswordConfirmation,
+  validateWaiterPin,
+} from "../../../../supabase/functions/_shared/staffAuthPolicy";
+import {
   createStaff,
   deleteStaff,
   deactivateStaff,
@@ -3598,6 +3605,7 @@ function StaffPage({
   const [formEmail, setFormEmail] = useState("");
   const [formUsername, setFormUsername] = useState("");
   const [formPin, setFormPin] = useState("");
+  const [formConfirmPassword, setFormConfirmPassword] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formRole, setFormRole] = useState<
     "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer"
@@ -3629,7 +3637,7 @@ function StaffPage({
   );
 
   useEffect(() => {
-    if (!modal || modal.mode === "view") return;
+    if (!modal || modal.mode !== "edit") return;
     if (formRole !== "kitchen") {
       if (formStationId) setFormStationId("");
       return;
@@ -3692,9 +3700,10 @@ function StaffPage({
     setFormEmail("");
     setFormUsername("");
     setFormPin("");
+    setFormConfirmPassword("");
     setFormPhone("");
     setFormRole("cashier");
-    setFormStationId(activeStations.length === 1 ? activeStations[0].id : "");
+    setFormStationId("");
     setModal({ mode: "create" });
   }
 
@@ -3705,6 +3714,7 @@ function StaffPage({
     setFormEmail(member.email ?? "");
     setFormUsername(member.username ?? "");
     setFormPin("");
+    setFormConfirmPassword("");
     setFormPhone(member.phone_number ?? "");
     setFormRole(
       member.role === "manager"
@@ -3757,19 +3767,22 @@ function StaffPage({
     if (!modal || modal.mode === "view") return;
 
     const assignedKitchenStationId =
-      formRole === "kitchen" ? formStationId : null;
-    if (formRole === "kitchen" && !assignedKitchenStationId) {
-      setStaffError("Choose a kitchen station for kitchen staff.");
+      modal.mode === "edit" && formRole === "kitchen" ? formStationId || null : null;
+    if (!formName.trim()) {
+      setStaffError("Enter the staff member's full name.");
       return;
     }
 
     if (modal.mode === "create") {
-      if (formRole === "waiter" && !/^\d{4}$/.test(formPin)) {
-        setStaffError("Enter a 4-digit waiter PIN.");
+      if (staffAuthEmailRequired(formRole) && !formEmail.trim()) {
+        setStaffError(`Email is required for ${staffAuthRoleLabel(formRole)} accounts.`);
         return;
       }
-      if (formRole !== "waiter" && (formPin.length < 4 || !formEmail.trim())) {
-        setStaffError("Enter a work email and password of at least 4 characters.");
+      const credentialError = usesWaiterPin(formRole)
+        ? validateWaiterPin(formPin)
+        : validateStaffPasswordConfirmation(formPin, formConfirmPassword);
+      if (credentialError) {
+        setStaffError(credentialError);
         return;
       }
     }
@@ -3781,7 +3794,8 @@ function StaffPage({
             restaurantId,
             fullName: formName,
             email: formEmail,
-            pinPassword: formPin,
+            password: usesWaiterPin(formRole) ? undefined : formPin,
+            pin: usesWaiterPin(formRole) ? formPin : undefined,
             phoneNumber: formPhone,
             role: formRole,
             assignedKitchenStationId,
@@ -4219,19 +4233,24 @@ function StaffPage({
                   required
                 />
               </label>
-              {formRole !== "waiter" && <label>
-                Email
+              <label>
+                {staffAuthEmailRequired(formRole) ? "Email *" : "Email (optional)"}
                 <input
                   type="email"
                   value={formEmail}
                   onChange={(event) => setFormEmail(event.target.value)}
                   disabled={modal.mode !== "create" || isWorking}
-                  placeholder="Required work email"
-                  required={modal.mode === "create"}
+                  placeholder={staffAuthEmailRequired(formRole) ? "Required work email" : "Optional contact email"}
+                  required={modal.mode === "create" && staffAuthEmailRequired(formRole)}
                 />
-              </label>}
+              </label>
               {modal.mode === "create" && (
-                <label>{formRole === "waiter" ? "4-digit PIN" : "Password"}<input type="password" inputMode={formRole === "waiter" ? "numeric" : "text"} pattern={formRole === "waiter" ? "[0-9]{4}" : undefined} maxLength={formRole === "waiter" ? 4 : 64} value={formPin} onChange={(event) => setFormPin(formRole === "waiter" ? event.target.value.replace(/\D/g, "").slice(0, 4) : event.target.value)} disabled={isWorking} required /></label>
+                usesWaiterPin(formRole) ? (
+                  <label>4-digit PIN *<input type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={formPin} onChange={(event) => setFormPin(event.target.value.replace(/\D/g, "").slice(0, 4))} disabled={isWorking} autoComplete="new-password" required /></label>
+                ) : <>
+                  <label>Password *<input type="password" minLength={8} maxLength={128} value={formPin} onChange={(event) => setFormPin(event.target.value)} disabled={isWorking} autoComplete="new-password" required /></label>
+                  <label>Confirm Password *<input type="password" minLength={8} maxLength={128} value={formConfirmPassword} onChange={(event) => setFormConfirmPassword(event.target.value)} disabled={isWorking} autoComplete="new-password" required /></label>
+                </>
               )}
               {(
                 <label>
@@ -4249,29 +4268,30 @@ function StaffPage({
                 Role
                 <select
                   value={formRole}
-                  onChange={(event) =>
-                    setFormRole(
-                      event.target.value as
-                        "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer",
-                    )
-                  }
+                  onChange={(event) => {
+                    setFormRole(event.target.value as "manager" | "cashier" | "kitchen" | "waiter" | "inventory" | "inventory_officer");
+                    if (modal.mode === "create") {
+                      setFormPin("");
+                      setFormConfirmPassword("");
+                    }
+                  }}
                   disabled={modal.mode === "view" || isWorking}
                 >
                   <option value="manager">Manager</option>
                   <option value="cashier">Cashier</option>
-                  <option value="kitchen">Kitchen</option>
+                  <option value="kitchen">Chef</option>
                   <option value="waiter">Waiter</option>
                   <option value="inventory_officer">Inventory Officer</option>
                   <option value="inventory" disabled>Inventory Staff (Legacy)</option>
                 </select>
               </label>
-              {formRole === "kitchen" && (
+              {modal.mode === "edit" && formRole === "kitchen" && (
                 <label>
                   Kitchen Station *
                   <select
                     value={formStationId}
                     onChange={(event) => setFormStationId(event.target.value)}
-                    disabled={modal.mode === "view" || isWorking}
+                    disabled={isWorking}
                     required
                   >
                     <option value="">Select station</option>
@@ -4321,7 +4341,7 @@ function StaffPage({
               )}
 
               {modal.mode !== "create" && modal.member.role !== "waiter" && (
-                <button type="button" className="od-btn-ghost" disabled={isWorking || !modal.member.email || modal.member.credential_readiness === "password_ready"} onClick={() => void runStaffAction(() => sendStaffPasswordReset(restaurantId, modal.member.id), "Password setup link sent.")}>Send password setup link</button>
+                <button type="button" className="od-btn-ghost" disabled={isWorking || !modal.member.email || modal.member.credential_readiness === "password_ready"} onClick={() => void runStaffAction(() => sendStaffPasswordReset(restaurantId, modal.member.id), "Password setup link sent.")}>{modal.member.credential_readiness === "reset_required" ? "Resend setup link" : "Send password setup link"}</button>
               )}
 
               <div className="od-modal-actions">
@@ -4341,7 +4361,7 @@ function StaffPage({
                     {isWorking
                       ? "Saving..."
                       : modal.mode === "create"
-                        ? "Create Staff"
+                        ? `Create ${staffAuthRoleLabel(formRole)}`
                         : "Save Changes"}
                   </button>
                 )}

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateStaffPassword } from "../_shared/staffAuthPolicy.ts";
 
 const PRIVILEGED_ROLES = ["owner", "manager", "cashier", "kitchen", "inventory", "inventory_officer"] as const;
 const corsHeaders = {
@@ -18,9 +19,9 @@ function requireEnvironment(name: string) {
 }
 
 function normalizePassword(value: unknown) {
-  if (typeof value !== "string" || value.length < 8 || value.length > 128) {
-    throw new Error("Create a password with at least 8 characters.");
-  }
+  if (typeof value !== "string") throw new Error("Create a stronger password.");
+  const error = validateStaffPassword(value);
+  if (error) throw new Error(error);
   return value;
 }
 
@@ -72,7 +73,7 @@ Deno.serve(async (request) => {
   } catch (error) {
     // Passwords and request bodies must never be logged.
     console.error("complete-staff-password-setup failed", error instanceof Error ? error.message : "unknown error");
-    const safeMessage = error instanceof Error && error.message === "Create a password with at least 8 characters."
+    const safeMessage = error instanceof Error && error.message === "Create a stronger password."
       ? error.message
       : "Password setup could not be completed. Request a new setup link and try again.";
     return response(400, { error: safeMessage });

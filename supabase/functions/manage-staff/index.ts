@@ -6,6 +6,7 @@ import {
   waiterPinFingerprint,
   waiterSupabasePassword,
 } from "../_shared/waiterPin.ts";
+import { validateStaffPassword } from "../_shared/staffAuthPolicy.ts";
 
 type StaffRole = "manager" | "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 type StaffAction =
@@ -31,7 +32,8 @@ type ManageStaffPayload = {
   fullName?: string;
   email?: string;
   username?: string;
-  pinPassword?: string;
+  password?: string;
+  pin?: string;
   phoneNumber?: string;
   shift?: string;
   role?: StaffRole;
@@ -168,11 +170,10 @@ function normalizePinPassword(value: unknown) {
   return pin;
 }
 
-function normalizeLegacyPassword(value: unknown) {
+function normalizeStaffPassword(value: unknown) {
   const password = requireString(value, "Password");
-  if (password.length < 4 || password.length > 64) {
-    throw new Error("Password must be 4-64 characters during the credential transition.");
-  }
+  const error = validateStaffPassword(password);
+  if (error) throw new Error(error);
   return password;
 }
 
@@ -350,6 +351,7 @@ Deno.serve(async (request) => {
       return jsonResponse(401, { error: "Authentication required." });
     }
 
+    // Passwords and credential material are never logged, returned, or written to staff/audit rows.
     const payload = (await request.json()) as ManageStaffPayload;
     const action = normalizeAction(payload.action);
     const restaurantId = requireUuid(payload.restaurantId, "Restaurant ID");
@@ -531,9 +533,9 @@ Deno.serve(async (request) => {
       const phoneNumber = normalizeOptionalPhone(payload.phoneNumber);
       const contactEmail = staffCreationEmailRequired(role) ? normalizeEmail(payload.email) : normalizeOptionalEmail(payload.email);
       const shift = normalizeOptionalShift(payload.shift);
-      const creationCredential = role === "waiter" || actingStaff.role === "manager"
-        ? normalizePinPassword(payload.pinPassword)
-        : normalizeLegacyPassword(payload.pinPassword);
+      const creationCredential = role === "waiter"
+        ? normalizePinPassword(payload.pin)
+        : normalizeStaffPassword(payload.password);
       const waiterPinFingerprintValue = role === "waiter"
         ? await prepareWaiterPinFingerprint(serviceClient, restaurantId, creationCredential)
         : null;
@@ -683,7 +685,7 @@ Deno.serve(async (request) => {
           serviceClient,
           restaurantId,
           staffData.id,
-          role === "waiter" ? "waiter_pin_ready" : "legacy_credential",
+          role === "waiter" ? "waiter_pin_ready" : "password_ready",
           actingStaff.id,
         );
       } catch (readinessError) {
@@ -1062,7 +1064,7 @@ Deno.serve(async (request) => {
       if (targetStaff.role !== "waiter" || targetStaff.active !== true) {
         return jsonResponse(400, { error: "Only an active Waiter can receive a waiter PIN." });
       }
-      const pin = normalizePinPassword(payload.pinPassword);
+      const pin = normalizePinPassword(payload.pin);
       const pinFingerprint = await prepareWaiterPinFingerprint(serviceClient, restaurantId, pin, staffId);
       const { data: previousCredential, error: previousCredentialError } = await serviceClient
         .from("waiter_pin_credentials")

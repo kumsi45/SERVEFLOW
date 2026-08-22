@@ -96,7 +96,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionPending, setActionPending] = useState(false);
-  const [form, setForm] = useState({ fullName: "", email: "", phoneNumber: "", pinPassword: "", role: "waiter" as ManagerStaffRole });
+  const [form, setForm] = useState({ fullName: "", email: "", phoneNumber: "", password: "", confirmPassword: "", pin: "", role: "waiter" as ManagerStaffRole });
 
   const refresh = useCallback(async () => {
     try {
@@ -169,7 +169,9 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
     const validationError = validateManagerStaffCreation({
       fullName: form.fullName,
       email: form.email,
-      pin: form.pinPassword,
+      password: form.password,
+      confirmPassword: form.confirmPassword,
+      pin: form.pin,
       role: form.role,
     });
     if (validationError) {
@@ -181,12 +183,17 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
       fullName: form.fullName,
       email: form.email || undefined,
       phoneNumber: form.phoneNumber || undefined,
-      pinPassword: form.pinPassword,
+      password: form.role === "waiter" ? undefined : form.password,
+      pin: form.role === "waiter" ? form.pin : undefined,
       role: form.role,
     }), "Staff account created.");
     if (!created) return;
-    setForm({ fullName: "", email: "", phoneNumber: "", pinPassword: "", role: "waiter" });
+    setForm({ fullName: "", email: "", phoneNumber: "", password: "", confirmPassword: "", pin: "", role: "waiter" });
     setActiveTab("directory");
+  }
+
+  function selectCreateRole(role: ManagerStaffRole) {
+    setForm((current) => ({ ...current, role, password: "", confirmPassword: "", pin: "" }));
   }
 
   function openRelated(member: ManagerStaffMember) {
@@ -271,16 +278,21 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
               <div className="mso-section-heading"><div><p>Secure account setup</p><h2>Create Staff</h2></div><span>Employee ID generated automatically</span></div>
               <form className="mso-create-form" onSubmit={submitCreate} noValidate>
                 <fieldset><legend>Role</legend><div className="mso-role-options">
-                  <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "waiter" }))}>Waiter</button>
-                  <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "cashier" }))}>Cashier</button>
-                  <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "kitchen" }))}>Chef</button>
-                  <button type="button" className={form.role === "inventory_officer" ? "selected" : ""} onClick={() => setForm((current) => ({ ...current, role: "inventory_officer" }))}>Inventory Officer</button>
+                  <button type="button" className={form.role === "waiter" ? "selected" : ""} onClick={() => selectCreateRole("waiter")}>Waiter</button>
+                  <button type="button" className={form.role === "cashier" ? "selected" : ""} onClick={() => selectCreateRole("cashier")}>Cashier</button>
+                  <button type="button" className={form.role === "kitchen" ? "selected" : ""} onClick={() => selectCreateRole("kitchen")}>Chef</button>
+                  <button type="button" className={form.role === "inventory_officer" ? "selected" : ""} onClick={() => selectCreateRole("inventory_officer")}>Inventory Officer</button>
                 </div></fieldset>
                 <div className="mso-form-grid">
                   <label><span>Full Name *</span><input required value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} autoComplete="name" /></label>
                   <label><span>Phone</span><input value={form.phoneNumber} onChange={(event) => setForm((current) => ({ ...current, phoneNumber: event.target.value }))} autoComplete="tel" /></label>
                   <label><span>{managerStaffEmailRequired(form.role) ? "Email *" : "Email (optional)"}</span><input type="email" required={managerStaffEmailRequired(form.role)} value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} autoComplete="email" /></label>
-                  <label><span>4-digit PIN *</span><input required type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={form.pinPassword} onChange={(event) => setForm((current) => ({ ...current, pinPassword: event.target.value.replace(/\D/g, "").slice(0, 4) }))} autoComplete="new-password" /></label>
+                  {form.role === "waiter" ? (
+                    <label><span>4-digit PIN *</span><input required type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={form.pin} onChange={(event) => setForm((current) => ({ ...current, pin: event.target.value.replace(/\D/g, "").slice(0, 4), password: "", confirmPassword: "" }))} autoComplete="new-password" /></label>
+                  ) : <>
+                    <label><span>Password *</span><input required type="password" minLength={8} maxLength={128} value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value, pin: "" }))} autoComplete="new-password" /></label>
+                    <label><span>Confirm Password *</span><input required type="password" minLength={8} maxLength={128} value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} autoComplete="new-password" /></label>
+                  </>}
                 </div>
                 <div className="mso-form-actions"><button type="button" onClick={() => setActiveTab("overview")}>Cancel</button><button type="submit" className="mso-primary-action" disabled={actionPending}>{actionPending ? "Creating…" : `Create ${roleLabel(form.role)}`}</button></div>
               </form>
@@ -311,7 +323,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
               <details><summary>More Actions</summary><div>
                 {!selectedStaff.active ? <button type="button" disabled={actionPending} onClick={() => void runAction(() => activateManagerStaff(restaurantId, selectedStaff.id), "Staff account activated.")}>Activate</button> : <button type="button" disabled={actionPending} onClick={() => { if (window.confirm(`Deactivate ${selectedStaff.fullName}?`)) void runAction(() => deactivateManagerStaff(restaurantId, selectedStaff.id), "Staff account deactivated."); }}>Deactivate</button>}
                 {selectedStaff.active && <button type="button" disabled={actionPending} onClick={() => { if (window.confirm(`Suspend ${selectedStaff.fullName}?`)) void runAction(() => suspendManagerStaff(restaurantId, selectedStaff.id), "Staff account suspended."); }}>Suspend</button>}
-                {selectedStaff.role !== "waiter" && <button type="button" disabled={actionPending || selectedStaff.credentialReadiness === "password_ready"} onClick={() => { if (window.confirm(`Send a password setup link to ${selectedStaff.fullName}?`)) void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), "Password setup link sent."); }}>Send password setup link</button>}
+                {selectedStaff.role !== "waiter" && <button type="button" disabled={actionPending || selectedStaff.credentialReadiness === "password_ready"} onClick={() => { if (window.confirm(`${selectedStaff.credentialReadiness === "reset_required" ? "Resend" : "Send"} a password setup link to ${selectedStaff.fullName}?`)) void runAction(() => resetManagerStaffPassword(restaurantId, selectedStaff.id), "Password setup link sent."); }}>{selectedStaff.credentialReadiness === "reset_required" ? "Resend setup link" : "Send password setup link"}</button>}
               </div></details>
             </section>
           </div>

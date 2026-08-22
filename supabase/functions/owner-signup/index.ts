@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateStaffPassword } from "../_shared/staffAuthPolicy.ts";
 
 type OwnerSignupPayload = {
   ownerName?: string;
@@ -48,9 +49,8 @@ function normalizeEmail(value: unknown) {
 function normalizePassword(value: unknown) {
   const password = requireString(value, "Password");
 
-  if (password.length < 8 || password.length > 128) {
-    throw new Error("Password must be between 8 and 128 characters.");
-  }
+  const error = validateStaffPassword(password);
+  if (error) throw new Error(error);
 
   return password;
 }

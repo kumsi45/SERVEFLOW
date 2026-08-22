@@ -59,7 +59,8 @@ export type CreateStaffInput = {
   restaurantId: string;
   fullName: string;
   email?: string;
-  pinPassword?: string;
+  password?: string;
+  pin?: string;
   phoneNumber?: string;
   role: Exclude<ManagedStaffRole, "owner">;
   assignedKitchenStationId?: string | null;
@@ -168,7 +169,8 @@ export async function createStaff(input: CreateStaffInput) {
     restaurantId: input.restaurantId,
     fullName: input.fullName,
     email: input.email,
-    pinPassword: input.pinPassword,
+    password: input.password,
+    pin: input.pin,
     phoneNumber: input.phoneNumber,
     role: input.role,
     assignedKitchenStationId: input.assignedKitchenStationId ?? null,
@@ -200,7 +202,7 @@ export async function sendStaffPasswordReset(restaurantId: string, staffId: stri
 }
 
 export async function setStaffWaiterPin(restaurantId: string, staffId: string, pin: string) {
-  return invokeManageStaff({ action: "set-waiter-pin", restaurantId, staffId, pinPassword: pin });
+  return invokeManageStaff({ action: "set-waiter-pin", restaurantId, staffId, pin });
 }
 
 export async function deleteStaff(restaurantId: string, staffId: string) {

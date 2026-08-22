@@ -30,6 +30,8 @@ const actionContextFunction = migration.slice(
 const valid = (role: "waiter" | "cashier" | "kitchen" | "inventory_officer", email = "staff@example.com") => ({
   fullName: "Test Staff",
   email,
+  password: role === "waiter" ? "" : "StrongPass1",
+  confirmPassword: role === "waiter" ? "" : "StrongPass1",
   pin: "1234",
   role,
 });
@@ -111,11 +113,14 @@ describe("Manager Chef creation without station assignment", () => {
     expect(manageStaff).toContain("normalizeEmail(payload.email)");
   });
 
-  it("requires exactly four PIN digits for Manager Staff creation", () => {
-    expect(validateManagerStaffCreation({ ...valid("kitchen"), pin: "12ab" })).toBe("PIN must be exactly 4 digits.");
-    expect(validateManagerStaffCreation({ ...valid("kitchen"), pin: "12345" })).toBe("PIN must be exactly 4 digits.");
+  it("uses a PIN only for Waiter creation and strong confirmed passwords for privileged roles", () => {
+    expect(validateManagerStaffCreation({ ...valid("waiter"), pin: "12ab" })).toBe("Enter a 4-digit PIN.");
+    expect(validateManagerStaffCreation({ ...valid("kitchen"), password: "1234", confirmPassword: "1234", pin: "" })).toBe("Create a stronger password.");
+    expect(validateManagerStaffCreation({ ...valid("kitchen"), confirmPassword: "Different1", pin: "" })).toBe("Passwords do not match.");
     expect(page).toContain('<span>4-digit PIN *</span>');
-    expect(manageStaff).toContain('role === "waiter" || actingStaff.role === "manager"');
+    expect(page).toContain('<span>Confirm Password *</span>');
+    expect(manageStaff).toContain('? normalizePinPassword(payload.pin)');
+    expect(manageStaff).toContain(': normalizeStaffPassword(payload.password)');
   });
 
   it("denies cross-tenant creation through server-derived membership", () => {
@@ -143,9 +148,9 @@ describe("Manager Chef creation without station assignment", () => {
     expect(page).not.toContain("Main Kitchen");
   });
 
-  it("preserves Owner station-aware creation without changing Owner UI", () => {
+  it("keeps Owner Chef creation unassigned too", () => {
     const stationId = "00000000-0000-4000-8000-000000000001";
-    expect(initialKitchenStationId("owner", "kitchen", stationId)).toBe(stationId);
+    expect(initialKitchenStationId("owner", "kitchen", stationId)).toBeNull();
   });
 
   it("uses role-specific labels and primary actions in the simple Staff form", () => {

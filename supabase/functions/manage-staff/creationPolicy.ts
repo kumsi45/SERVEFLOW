@@ -1,3 +1,5 @@
+import { staffAuthEmailRequired } from "../_shared/staffAuthPolicy.ts";
+
 export type StaffCreationRole =
   | "manager"
   | "cashier"
@@ -8,16 +10,15 @@ export type StaffCreationRole =
   | "inventory_officer";
 
 export function staffCreationEmailRequired(role: StaffCreationRole) {
-  return role !== "waiter";
+  return staffAuthEmailRequired(role);
 }
 
 export function initialKitchenStationId(
-  actorRole: "owner" | "manager",
-  targetRole: StaffCreationRole,
-  requestedStationId: unknown,
+  _actorRole: "owner" | "manager",
+  _targetRole: StaffCreationRole,
+  _requestedStationId: unknown,
 ) {
-  if (targetRole !== "kitchen" || actorRole === "manager") return null;
-  return typeof requestedStationId === "string" && requestedStationId.trim()
-    ? requestedStationId.trim()
-    : null;
+  // Account creation and station assignment are separate workflows.
+  // New Chefs must remain explicitly unassigned.
+  return null;
 }

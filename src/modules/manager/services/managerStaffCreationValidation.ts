@@ -1,20 +1,23 @@
 import type { ManagerStaffRole } from "./managerStaffOperationsService";
+import {
+  staffAuthEmailRequired,
+  staffAuthRoleLabel,
+  usesWaiterPin,
+  validateStaffPasswordConfirmation,
+  validateWaiterPin,
+} from "../../../../supabase/functions/_shared/staffAuthPolicy";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function creationRoleLabel(role: ManagerStaffRole) {
-  if (role === "kitchen") return "Chef";
-  if (role === "inventory_officer") return "Inventory Officer";
-  return role.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 export function managerStaffEmailRequired(role: ManagerStaffRole) {
-  return role !== "waiter";
+  return staffAuthEmailRequired(role);
 }
 
 export function validateManagerStaffCreation(input: {
   fullName: string;
   email: string;
+  password: string;
+  confirmPassword: string;
   pin: string;
   role: ManagerStaffRole;
 }) {
@@ -23,11 +26,11 @@ export function validateManagerStaffCreation(input: {
 
   if (fullName.length < 2) return "Enter the staff member's full name.";
   if (managerStaffEmailRequired(input.role) && !email) {
-    return `${creationRoleLabel(input.role)} email is required.`;
+    return `Email is required for ${staffAuthRoleLabel(input.role)} accounts.`;
   }
   if (email && (!EMAIL_PATTERN.test(email) || email.length > 254)) {
     return "Enter a valid email address.";
   }
-  if (!/^\d{4}$/.test(input.pin)) return "PIN must be exactly 4 digits.";
-  return null;
+  if (usesWaiterPin(input.role)) return validateWaiterPin(input.pin);
+  return validateStaffPasswordConfirmation(input.password, input.confirmPassword);
 }

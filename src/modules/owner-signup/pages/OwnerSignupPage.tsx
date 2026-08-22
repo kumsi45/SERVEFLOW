@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../../../core/database";
 import { AuthButton, AuthCard, AuthDivider, AuthFooter, AuthHeader, AuthInput, AuthShell, ErrorCard, PasswordStrength, SocialLoginButton, SuccessCard } from "../../auth-experience/components/AuthExperience";
+import { validateStaffPasswordConfirmation } from "../../../../supabase/functions/_shared/staffAuthPolicy";
 
 type Step = 1 | 2 | 3;
 function toSlug(name: string) { return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
@@ -11,6 +12,7 @@ export function OwnerSignupPage() {
   const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +20,10 @@ export function OwnerSignupPage() {
 
   function continueToAccount(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setError(null); if (ownerName.trim().length < 2 || restaurantName.trim().length < 2) { setError("Please enter your name and business name."); return; } setStep(2); }
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(null); setIsSubmitting(true);
+    event.preventDefault(); setError(null);
+    const passwordError = validateStaffPasswordConfirmation(password, confirmPassword);
+    if (passwordError) { setError(passwordError); return; }
+    setIsSubmitting(true);
     try {
       const trimmedOwnerName = ownerName.trim(); const trimmedRestaurantName = restaurantName.trim(); const trimmedEmail = email.trim().toLowerCase();
       const { data, error: signupError } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>("owner-signup", { body: { ownerName: trimmedOwnerName, email: trimmedEmail, password, restaurantName: trimmedRestaurantName, restaurantSlug: toSlug(trimmedRestaurantName), tableCount: null } });
@@ -44,6 +49,7 @@ export function OwnerSignupPage() {
         <AuthInput label="Work email" icon="@" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@business.com" required disabled={isSubmitting} autoComplete="email" inputMode="email" autoFocus />
         <AuthInput label="Password" icon="•" type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 8 characters" minLength={8} maxLength={128} required disabled={isSubmitting} autoComplete="new-password" action={<button type="button" className="auth-inline-action" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button>} />
         {password && <PasswordStrength password={password} />}
+        <AuthInput label="Confirm password" icon="•" type={showPassword ? "text" : "password"} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Repeat your password" minLength={8} maxLength={128} required disabled={isSubmitting} autoComplete="new-password" />
         <div className="auth-row"><button type="button" className="auth-link" style={{border:0,background:"none",padding:0,cursor:"pointer"}} onClick={() => { setStep(1); setError(null); }}>Back</button><span>Your account is secured by Supabase</span></div>
         <AuthButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating workspace…" : "Create my workspace"}</AuthButton>
       </form>}

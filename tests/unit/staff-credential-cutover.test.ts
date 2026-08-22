@@ -11,6 +11,7 @@ const staffLogin = read("src/modules/staff-auth/pages/StaffLoginPage.tsx");
 const waiterLogin = read("supabase/functions/waiter-pin-login/index.ts");
 const ownerPage = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
 const managerPage = read("src/modules/manager/pages/ManagerStaffOperationsPage.tsx");
+const terminalMigration = read("supabase/migrations/244_isolate_legacy_privileged_terminal_login.sql");
 
 describe("production credential migration and auth cutover", () => {
   it("tracks explicit tenant-scoped readiness without storing authentication secrets", () => {
@@ -42,10 +43,12 @@ describe("production credential migration and auth cutover", () => {
     expect(resetPage).not.toContain("supabase.auth.updateUser({ password })");
   });
 
-  it("keeps privileged legacy PIN login during the transitional gate", () => {
+  it("isolates privileged legacy PIN login from password-ready new accounts", () => {
     expect(staffLogin).toContain('loginMode === "terminal"');
     expect(staffLogin).toContain("signInOperationalStaff");
     expect(staffLogin).toContain("Enter your 4-digit PIN");
+    expect(terminalMigration).toContain("readiness.readiness in ('legacy_credential', 'reset_required')");
+    expect(terminalMigration).toContain("s.role::text = 'waiter'");
   });
 
   it("repairs waiter PIN enrollment without generating or returning a PIN", () => {
@@ -58,17 +61,19 @@ describe("production credential migration and auth cutover", () => {
     expect(waiterLogin).toContain("staff.restaurant_id !== restaurant.id");
   });
 
-  it("uses setup links and readiness labels without redesigning creation forms", () => {
+  it("uses setup links, role-specific creation credentials, and readiness labels", () => {
     for (const page of [ownerPage, managerPage]) {
       expect(page).toContain("Password setup required");
       expect(page).toContain("Password ready");
       expect(page).toContain("Waiter PIN setup required");
       expect(page).toContain("Waiter PIN ready");
       expect(page).toContain("Send password setup link");
+      expect(page).toContain("Resend setup link");
       expect(page).toContain("Set/Reset Waiter PIN");
     }
     expect(managerPage).toContain("<span>4-digit PIN *</span>");
-    expect(ownerPage).toContain('formRole === "waiter" ? "4-digit PIN" : "Password"');
+    expect(managerPage).toContain("<span>Confirm Password *</span>");
+    expect(ownerPage).toContain("Confirm Password *");
   });
 
   it("preserves server-side tenant and role authority", () => {
