@@ -13,6 +13,7 @@ import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCh
 import { InventoryOverviewDashboard } from "../components/InventoryOverviewDashboard";
 import { InventoryOperationalDashboard } from "../components/InventoryOperationalDashboard";
 import { StockMovementWorkspace, TransferWorkspace } from "../components/StockOperationWorkspaces";
+import { StockMovementsWorkspace } from "../components/StockMovementsWorkspace";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import {
   calculateInventoryDashboardKpis,
@@ -83,6 +84,7 @@ import type {
 } from "../types";
 import "../styles/inventoryDashboard.css";
 import "../styles/inventoryStockOperations.css";
+import "../styles/inventoryStockMovements.css";
 
 type Props = {
   restaurantId: string;
@@ -994,70 +996,13 @@ export function InventoryDashboardPage({
     />
   );
 
-  const ledgerRows = ledger.filter((entry) => {
-    const search = filters.search.trim().toLowerCase();
-    if (filters.storageLocationId && entry.storageLocationId !== filters.storageLocationId) return false;
-    if (!search) return true;
-    return [
-      entry.itemName,
-      entry.storageLocationName,
-      entry.supplierName,
-      entry.referenceNumber,
-      entry.invoiceNumber,
-      entry.reason,
-      movementLabel(entry.movementType),
-    ].some((value) => (value ?? "").toLowerCase().includes(search));
-  });
-
   const ledgerView = (
-    <div className="ia-stack">
-      <section className="ia-toolbar">
-        <label className="ia-search">
-          <span>Search</span>
-          <input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Search item, reference, reason, storage" />
-        </label>
-        <div className="ia-actions">
-          <button type="button" onClick={() => void reload()}>Refresh</button>
-        </div>
-      </section>
-      <details className="ia-collapsible-filters"><summary>Filters <span aria-hidden="true">▼</span></summary><section className="ia-filters" aria-label="Ledger filters">
-        <select value={filters.storageLocationId} onChange={(event) => setFilter("storageLocationId", event.target.value)}>
-          <option value="">All storage</option>
-          {activeLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
-        </select>
-      </section></details>
-      <section className="ia-table-wrap">
-        <table className="ia-table ledger">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Movement</th>
-              <th>Ingredient</th>
-              <th>Storage</th>
-              <th>Qty</th>
-              <th>Reference</th>
-              <th>Reason</th>
-              <th>Staff</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ledgerRows.map((entry) => (
-              <tr key={entry.id}>
-                <td data-label="Date">{dateLabel(entry.movementDate)}</td>
-                <td data-label="Movement">{movementLabel(entry.movementType)}</td>
-                <td data-label="Item"><strong>{entry.itemName}</strong><small>{entry.supplierName ?? "No supplier"}</small></td>
-                <td data-label="Storage">{entry.storageLocationName}</td>
-                <td data-label="Quantity"><strong className={entry.quantityEffect === "in" ? "ia-positive" : "ia-negative"}>{entry.quantityEffect === "in" ? "+" : "-"}{quantityLabel(entry.quantity, entry.unitName)}</strong></td>
-                <td data-label="Reference">{entry.referenceNumber ?? entry.invoiceNumber ?? "None"}</td>
-                <td data-label="Reason">{entry.reason ?? entry.notes ?? "None"}</td>
-                <td data-label="Staff">{entry.staffName ?? "Staff"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {ledgerRows.length === 0 && <div className="ia-empty">No ledger entries match the current filters.</div>}
-      </section>
-    </div>
+    <StockMovementsWorkspace
+      entries={ledger}
+      loading={activityLoading}
+      error={activityError}
+      onReload={() => void reload()}
+    />
   );
 
   const movements = (
@@ -1460,9 +1405,9 @@ export function InventoryDashboardPage({
 
       <section className="ia-workspace">
         <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>
-        {error && section !== "dashboard" && section !== "current-stock" && <div className="ia-alert error" role="alert">{error}</div>}
+        {error && section !== "dashboard" && section !== "current-stock" && section !== "ledger" && <div className="ia-alert error" role="alert">{error}</div>}
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
-        {loading && section !== "dashboard" && section !== "current-stock" ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
+        {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
 
       {detailIngredientId && (() => {

@@ -1,0 +1,101 @@
+/* Inventory V1 Phase 3B: mobile-first operational movement history */
+.ia-sm-page { display: grid; width: 100%; max-width: 1480px; min-width: 0; gap: 10px; margin-inline: auto; }
+.ia-sm-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ia-sm-heading > div { display: grid; min-width: 0; gap: 2px; }
+.ia-sm-heading span,
+.ia-sm-detail header span { color: #64748b; font-size: 9px; font-weight: 900; letter-spacing: .09em; }
+.ia-sm-heading h2 { margin: 0; color: #0f172a; font-size: 20px; line-height: 1.15; }
+.ia-sm-heading p { margin: 1px 0 0; color: #64748b; font-size: 11px; }
+.ia-sm-heading > button { min-height: 40px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #475569; font-weight: 800; cursor: pointer; }
+.ia-sm-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.ia-sm-tools > label { min-width: 0; }
+.ia-sm-tools > label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.ia-sm-tools input[type="search"] { width: 100%; min-height: 46px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; font: inherit; }
+.ia-sm-tools > button { display: flex; min-height: 46px; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #334155; font-weight: 850; cursor: pointer; }
+.ia-sm-tools > button strong { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 10px; }
+.ia-sm-mobile-list { display: grid; gap: 6px; }
+.ia-sm-mobile-list > button { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 9px; padding: 10px; border: 1px solid #dbe3ee; border-radius: 11px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-sm-main { display: grid; min-width: 0; gap: 2px; }
+.ia-sm-main strong { overflow-wrap: anywhere; font-size: 13px; }
+.ia-sm-main span { overflow-wrap: anywhere; color: #64748b; font-size: 10px; }
+.ia-sm-quantity { align-self: start; font-size: 14px; white-space: nowrap; }
+.ia-sm-quantity.in { color: #047857; }
+.ia-sm-quantity.out { color: #b91c1c; }
+.ia-sm-quantity.transfer { color: #1d4ed8; }
+.ia-sm-route { display: flex; min-width: 0; grid-column: 1 / -1; align-items: center; gap: 6px; color: #334155; font-size: 10px; font-weight: 800; }
+.ia-sm-route span { overflow-wrap: anywhere; }
+.ia-sm-route b { color: #1d4ed8; }
+.ia-sm-source { width: fit-content; grid-column: 1 / -1; padding: 3px 6px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 9px; font-weight: 850; }
+.ia-sm-meta { display: flex; min-width: 0; grid-column: 1 / -1; justify-content: space-between; gap: 8px; color: #64748b; font-size: 9px; }
+.ia-sm-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-sm-desktop-table { display: none; min-width: 0; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.ia-sm-desktop-table table { width: 100%; border-collapse: collapse; }
+.ia-sm-desktop-table th,
+.ia-sm-desktop-table td { padding: 9px; border-bottom: 1px solid #edf2f7; color: #334155; font-size: 10px; text-align: left; vertical-align: middle; }
+.ia-sm-desktop-table th { background: #f8fafc; color: #64748b; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.ia-sm-desktop-table td > strong,
+.ia-sm-desktop-table td > span { display: block; }
+.ia-sm-desktop-table td small { display: block; margin-top: 2px; color: #64748b; }
+.ia-sm-desktop-table td > button { min-height: 38px; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; font-weight: 850; cursor: pointer; }
+.ia-sm-table-route { max-width: 230px; overflow-wrap: anywhere; }
+.ia-sm-state,
+.ia-sm-error { display: grid; gap: 5px; padding: 24px 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #64748b; text-align: center; }
+.ia-sm-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.ia-sm-state button,
+.ia-sm-error button { min-height: 42px; margin: 4px auto 0; padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; font-weight: 850; cursor: pointer; }
+.ia-sm-load-more { display: flex; align-items: center; justify-content: center; gap: 10px; color: #64748b; font-size: 10px; }
+.ia-sm-load-more button { min-height: 42px; padding: 7px 13px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #1d4ed8; font-weight: 850; cursor: pointer; }
+.ia-sm-backdrop { position: fixed; z-index: 92; inset: 0; display: grid; align-items: end; background: #0f172a8a; }
+.ia-sm-sheet { display: grid; width: 100%; max-height: min(90dvh, 740px); gap: 12px; overflow-y: auto; padding: 15px; border-radius: 16px 16px 0 0; background: #fff; box-shadow: 0 -18px 50px #0f172a26; }
+.ia-sm-sheet > header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ia-sm-sheet h3 { margin: 0; color: #0f172a; font-size: 18px; }
+.ia-sm-sheet header > button { width: 42px; height: 42px; flex: 0 0 42px; border: 1px solid #dbe3ee; border-radius: 9px; background: #fff; color: #334155; font-size: 20px; cursor: pointer; }
+.ia-sm-filter-fields { display: grid; gap: 9px; }
+.ia-sm-filter-fields > label,
+.ia-sm-custom-dates label { display: grid; min-width: 0; gap: 5px; color: #334155; font-size: 11px; font-weight: 850; }
+.ia-sm-filter-fields select,
+.ia-sm-filter-fields input[type="date"] { width: 100%; min-height: 46px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; font: inherit; }
+.ia-sm-filter-fields fieldset { min-width: 0; margin: 0; padding: 9px; border: 1px solid #e2e8f0; border-radius: 9px; }
+.ia-sm-filter-fields legend { padding-inline: 4px; color: #334155; font-size: 11px; font-weight: 850; }
+.ia-sm-date-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.ia-sm-date-options label { display: flex; min-height: 38px; align-items: center; gap: 5px; padding: 6px 8px; border-radius: 8px; background: #f8fafc; font-size: 10px; font-weight: 800; }
+.ia-sm-custom-dates { display: grid; gap: 8px; }
+.ia-sm-sheet > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ia-sm-sheet > footer button { min-height: 46px; padding: 9px 12px; border: 1px solid #1d4ed8; border-radius: 9px; background: #1d4ed8; color: #fff; font-weight: 900; cursor: pointer; }
+.ia-sm-sheet > footer button.secondary { border-color: #cbd5e1; background: #fff; color: #334155; }
+.ia-sm-detail dl { display: grid; gap: 0; margin: 0; }
+.ia-sm-detail dl div { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1.3fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid #edf2f7; }
+.ia-sm-detail dt { color: #64748b; font-size: 10px; }
+.ia-sm-detail dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #0f172a; font-size: 11px; font-weight: 800; }
+.ia-sm-page button:focus-visible,
+.ia-sm-page input:focus-visible,
+.ia-sm-page select:focus-visible,
+.ia-sm-sheet button:focus-visible,
+.ia-sm-sheet input:focus-visible,
+.ia-sm-sheet select:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+@media (min-width: 700px) {
+  .ia-sm-mobile-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-sm-filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-sm-filter-fields fieldset,
+  .ia-sm-custom-dates { grid-column: 1 / -1; }
+  .ia-sm-custom-dates { grid-template-columns: 1fr 1fr; }
+  .ia-sm-sheet { width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 32px); margin: auto; border-radius: 14px; }
+  .ia-sm-backdrop { place-items: center; }
+}
+
+@media (min-width: 1024px) {
+  .ia-sm-mobile-list { display: none; }
+  .ia-sm-desktop-table { display: block; }
+  .ia-sm-heading h2 { font-size: 22px; }
+  .ia-sm-tools { max-width: 760px; }
+}
+
+@media (max-width: 390px) {
+  .ia-sm-heading p { display: none; }
+  .ia-sm-meta { display: grid; justify-content: start; gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-sm-page *, .ia-sm-sheet { scroll-behavior: auto; transition: none; }
+}
