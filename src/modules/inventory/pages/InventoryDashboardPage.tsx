@@ -9,6 +9,7 @@ import { loadPurchaseHistory } from "../../purchasing/services/purchaseHistorySe
 import type { PurchaseHistoryRecord } from "../../purchasing/purchaseHistoryTypes";
 import { fetchRecipes } from "../../recipes/services/recipeService";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
+import { InventoryOverviewDashboard } from "../components/InventoryOverviewDashboard";
 import { InventoryOperationalDashboard } from "../components/InventoryOperationalDashboard";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import {
@@ -413,6 +414,10 @@ export function InventoryDashboardPage({
   const [ingredientMenuUsage, setIngredientMenuUsage] = useState<Record<string, IngredientMenuUsage>>({});
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [stockSummaryLoading, setStockSummaryLoading] = useState(true);
+  const [stockSummaryError, setStockSummaryError] = useState<string | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [kitchenRequests, setKitchenRequests] = useState<InventoryKitchenQueueRequest[]>([]);
   const [kitchenRequestsLoading, setKitchenRequestsLoading] = useState(true);
   const [kitchenRequestsError, setKitchenRequestsError] = useState<string | null>(null);
@@ -439,21 +444,32 @@ export function InventoryDashboardPage({
   const reload = useCallback(async () => {
     try {
       setLoading(true);
-      const [next, nextStock, nextLedger, nextMovementHistory] = await Promise.all([
+      setStockSummaryLoading(true);
+      setActivityLoading(true);
+      const [adminResult, stockResult, ledgerResult, movementResult] = await Promise.allSettled([
         loadInventoryAdminData(restaurantId),
         loadCurrentStock(restaurantId),
         loadLedger(restaurantId, { limit: 200 }),
         loadInventoryMovementHistory(restaurantId),
       ]);
-      setData(next);
-      setCurrentStock(nextStock);
-      setLedger(nextLedger);
-      setMovementHistory(nextMovementHistory);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Inventory is unavailable.");
+      if (adminResult.status === "fulfilled") setData(adminResult.value);
+      if (stockResult.status === "fulfilled") setCurrentStock(stockResult.value);
+      if (ledgerResult.status === "fulfilled") setLedger(ledgerResult.value);
+      if (movementResult.status === "fulfilled") setMovementHistory(movementResult.value);
+
+      const failures = [adminResult, stockResult, ledgerResult, movementResult]
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected");
+      setError(failures.length
+        ? failures[0].reason instanceof Error ? failures[0].reason.message : "Inventory is unavailable."
+        : null);
+      setStockSummaryError(adminResult.status === "rejected" || stockResult.status === "rejected"
+        ? "Unable to load stock summary."
+        : null);
+      setActivityError(ledgerResult.status === "rejected" ? "Unable to load recent activity." : null);
     } finally {
       setLoading(false);
+      setStockSummaryLoading(false);
+      setActivityLoading(false);
     }
   }, [restaurantId]);
 
@@ -476,12 +492,7 @@ export function InventoryDashboardPage({
     if (purchasesResult.status === "fulfilled") setPurchaseHistory(purchasesResult.value);
     if (adjustmentsResult.status === "fulfilled") setDashboardAdjustments(adjustmentsResult.value);
     if (recipesResult.status === "fulfilled") setRecipeCount(recipesResult.value.total);
-    const unavailable = [
-      purchasesResult.status === "rejected" ? "purchases" : null,
-      adjustmentsResult.status === "rejected" ? "adjustments" : null,
-      recipesResult.status === "rejected" ? "recipes" : null,
-    ].filter(Boolean);
-    setInsightsError(unavailable.length ? `Some dashboard activity is temporarily unavailable: ${unavailable.join(", ")}.` : null);
+    setInsightsError(purchasesResult.status === "rejected" ? "Unable to load purchase summary." : null);
     setInsightsLoading(false);
   }, [restaurantId]);
 
@@ -557,6 +568,8 @@ export function InventoryDashboardPage({
     setLedger(nextLedger);
     setMovementHistory(nextMovementHistory);
     setError(null);
+    setStockSummaryError(null);
+    setActivityError(null);
     await loadKitchenRequests();
   }, [loadKitchenRequests, restaurantId]);
 
@@ -880,7 +893,7 @@ export function InventoryDashboardPage({
     );
   }
 
-  const dashboard = (
+  const dashboard = kitchenRequestsActive ? (
     <InventoryOperationalDashboard
       requests={kitchenRequests}
       requestsLoading={kitchenRequestsLoading}
@@ -909,6 +922,25 @@ export function InventoryDashboardPage({
         () => markInventoryKitchenRequestUnable(restaurantId, request.id, reason),
         `${request.itemName} marked unable to fulfill. No stock was deducted.`,
       )}
+    />
+  ) : (
+    <InventoryOverviewDashboard
+      requests={kitchenRequests}
+      requestsLoading={kitchenRequestsLoading}
+      requestsError={kitchenRequestsError}
+      stockLoading={stockSummaryLoading}
+      stockError={stockSummaryError}
+      activityLoading={activityLoading}
+      activityError={activityError}
+      purchasesLoading={insightsLoading}
+      purchasesError={insightsError}
+      outOfStockCount={dashboardKpis.outOfStockItems}
+      lowStockCount={dashboardKpis.lowStockItems}
+      pendingPurchaseCount={dashboardKpis.pendingPurchaseOrders}
+      totalActiveMaterials={data.items.filter((item) => item.status === "active").length}
+      recentLedger={recentLedger}
+      onNavigate={navigate}
+      onOpenRequests={openKitchenRequests}
     />
   );
 
@@ -1448,9 +1480,9 @@ export function InventoryDashboardPage({
 
       <section className="ia-workspace">
         <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>
-        {error && <div className="ia-alert error" role="alert">{error}</div>}
+        {error && section !== "dashboard" && <div className="ia-alert error" role="alert">{error}</div>}
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
-        {loading ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
+        {loading && section !== "dashboard" ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
 
       {detailIngredientId && (() => {
