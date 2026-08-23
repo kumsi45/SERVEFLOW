@@ -11,6 +11,7 @@ import type {
   InventoryRequest,
   InventoryRequestStatus,
 } from "../../kitchen/services/inventoryRequestService";
+import { materialRequestTypeLabel } from "../../kitchen/services/inventoryRequestService";
 import {
   loadManagerInventoryWorkspace,
   type ManagerInventorySnapshot,
@@ -278,7 +279,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
                 <span data-label="Item">
                   <strong>{request.itemName}</strong>
                   <small>
-                    {formatQuantity(request.quantity)} {request.unit}
+                    {materialRequestTypeLabel(request.requestType)} · {formatQuantity(request.quantity)} {request.unit}
                     {request.comment ? ` · ${request.comment}` : ""}
                   </small>
                 </span>
@@ -526,6 +527,10 @@ function RequestDrawer({
         </header>
         <div className="miw-drawer-body">
           <dl>
+            <div>
+              <dt>Request type</dt>
+              <dd>{materialRequestTypeLabel(request.requestType)}</dd>
+            </div>
             <div>
               <dt>Quantity</dt>
               <dd>

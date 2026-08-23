@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { getRestaurantEventStream } from "../../../core/realtime/restaurantEventService";
 import { formatCurrency } from "../../../core/format/currency";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
@@ -19,10 +19,12 @@ import {
   confirmKitchenStockReceipt,
   createInventoryRequest,
   kitchenReceiptErrorMessage,
-  loadInventoryItems,
   loadKitchenStockReceipts,
+  materialRequestErrorMessage,
+  searchInventoryItems,
   type InventoryItem,
   type KitchenStockReceipt,
+  type MaterialRequestType,
 } from "../services/inventoryRequestService";
 import { KitchenStockRequestsPanel } from "../components/KitchenStockRequestsPanel";
 import {
@@ -168,6 +170,24 @@ function kitchenTicketKey(order: KitchenOrder) {
 type KitchenServiceType = "dine-in" | "takeaway" | "delivery";
 type KitchenServiceFilter = "all" | KitchenServiceType;
 type KitchenStateFilter = "all" | "accepted" | "preparing" | "ready";
+
+const materialRequestTypes: { value: MaterialRequestType; label: string }[] = [
+  { value: "ingredient", label: "Ingredient / Food Material" },
+  { value: "supply", label: "Kitchen Supply" },
+  { value: "tool", label: "Tool / Equipment" },
+  { value: "cleaning", label: "Cleaning / Consumable" },
+  { value: "other", label: "Other" },
+];
+
+const emptyMaterialRequest = () => ({
+  requestType: "ingredient" as MaterialRequestType,
+  inventoryItemId: "",
+  itemName: "",
+  quantity: "",
+  unit: "",
+  urgency: "normal" as "normal" | "high" | "critical",
+  comment: "",
+});
 
 function kitchenServiceType(order: KitchenOrder): KitchenServiceType {
   if (order.serviceType) return order.serviceType;
@@ -512,26 +532,33 @@ export function KitchenDashboardPage({
   restaurant: initialRestaurant,
 }: KitchenDashboardPageProps) {
   const [requestOpen, setRequestOpen] = useState(false);
-  const [requestForm, setRequestForm] = useState({
-    inventoryItemId: "",
-    itemName: "",
-    quantity: "",
-    unit: "",
-    urgency: "normal",
-    comment: "",
-  });
+  const [requestForm, setRequestForm] = useState(emptyMaterialRequest);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
+  const [linkExistingItem, setLinkExistingItem] = useState(false);
+  const [inventorySearchLoading, setInventorySearchLoading] = useState(false);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [requestNotice, setRequestNotice] = useState<string | null>(null);
   const [stockRequestsOpen, setStockRequestsOpen] = useState(false);
   const [stockReceipts, setStockReceipts] = useState<KitchenStockReceipt[]>([]);
   const [stockReceiptsLoading, setStockReceiptsLoading] = useState(true);
   const [stockReceiptsError, setStockReceiptsError] = useState<string | null>(null);
   const [confirmingReceiptId, setConfirmingReceiptId] = useState<string | null>(null);
+  const usesInventorySelector=requestForm.requestType === "ingredient" || linkExistingItem;
   useEffect(() => {
-    void loadInventoryItems(restaurantId)
-      .then(setInventoryItems)
-      .catch(() => setInventoryItems([]));
-  }, [restaurantId]);
+    if (!requestOpen || !usesInventorySelector) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setInventorySearchLoading(true);
+      void searchInventoryItems(restaurantId, inventorySearch)
+        .then((items) => { if (active) setInventoryItems(items); })
+        .catch(() => { if (active) setInventoryItems([]); })
+        .finally(() => { if (active) setInventorySearchLoading(false); });
+    }, 180);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [inventorySearch, requestOpen, restaurantId, usesInventorySelector]);
   const now = useNow();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [restaurant, setRestaurant] =
@@ -938,6 +965,83 @@ export function KitchenDashboardPage({
     }
   }
 
+  function resetMaterialRequest() {
+    setRequestForm(emptyMaterialRequest());
+    setInventorySearch("");
+    setInventoryItems([]);
+    setSelectedInventoryItem(null);
+    setLinkExistingItem(false);
+    setRequestError(null);
+  }
+
+  function closeMaterialRequest() {
+    if (requestSubmitting) return;
+    setRequestOpen(false);
+    resetMaterialRequest();
+  }
+
+  function chooseInventoryItem(item: InventoryItem) {
+    setSelectedInventoryItem(item);
+    setInventorySearch(item.name);
+    setRequestForm((current) => ({
+      ...current,
+      inventoryItemId: item.id,
+      itemName: item.name,
+      unit: item.unit,
+    }));
+    setRequestError(null);
+  }
+
+  async function handleCreateRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRequestError(null);
+    const inventoryBacked = requestForm.requestType === "ingredient" || linkExistingItem;
+    const quantity = Number(requestForm.quantity);
+    if (inventoryBacked && !selectedInventoryItem) {
+      setRequestError("Select an item.");
+      return;
+    }
+    if (!inventoryBacked && !requestForm.itemName.trim()) {
+      setRequestError("Enter a material name.");
+      return;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setRequestError("Enter a quantity greater than 0.");
+      return;
+    }
+    if (!requestForm.unit.trim()) {
+      setRequestError("Select a unit.");
+      return;
+    }
+    if (dashboardContext?.role === "kitchen" && !dashboardContext.assignedStation) {
+      setRequestError("Your Kitchen station is unavailable.");
+      return;
+    }
+
+    setRequestSubmitting(true);
+    try {
+      await createInventoryRequest(restaurantId, {
+        requestType: requestForm.requestType,
+        inventoryItemId: selectedInventoryItem?.id ?? null,
+        itemName: selectedInventoryItem?.name ?? requestForm.itemName.trim(),
+        quantity,
+        unit: selectedInventoryItem?.unit ?? requestForm.unit.trim(),
+        urgency: requestForm.urgency,
+        stationId:
+          dashboardContext?.assignedStation?.id ??
+          (selectedStationId !== "all" ? selectedStationId : null),
+        comment: requestForm.comment.trim(),
+      });
+      setRequestNotice("Request submitted.");
+      setRequestOpen(false);
+      resetMaterialRequest();
+    } catch (cause) {
+      setRequestError(materialRequestErrorMessage(cause));
+    } finally {
+      setRequestSubmitting(false);
+    }
+  }
+
   // ── derived ────────────────────────────────────────────────────────────────
   const filteredByContext = useMemo(
     () =>
@@ -1274,148 +1378,173 @@ export function KitchenDashboardPage({
         </main>
       )}
       {requestOpen && (
-        <div className="kd-request-layer" onClick={() => setRequestOpen(false)}>
+        <div className="kd-request-layer" onClick={closeMaterialRequest}>
           <form
             className="kd-request-form"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kitchen-create-request-title"
             onClick={(event) => event.stopPropagation()}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void createInventoryRequest(restaurantId, {
-                inventoryItemId: requestForm.inventoryItemId || null,
-                itemName: requestForm.itemName,
-                quantity: Number(requestForm.quantity),
-                unit: requestForm.unit,
-                urgency: requestForm.urgency as "normal" | "high" | "critical",
-                stationId:
-                  dashboardContext?.assignedStation?.id ??
-                  (selectedStationId !== "all" ? selectedStationId : null),
-                comment: requestForm.comment,
-              })
-                .then(() => {
-                  setRequestNotice("Inventory request created.");
-                  setRequestOpen(false);
-                  setRequestForm({
-                    inventoryItemId: "",
-                    itemName: "",
-                    quantity: "",
-                    unit: "",
-                    urgency: "normal",
-                    comment: "",
-                  });
-                })
-                .catch((e) =>
-                  setError(e instanceof Error ? e.message : "Request failed."),
-                );
-            }}
+            onSubmit={handleCreateRequest}
           >
-            <header>
+            <header className="kd-request-header">
               <div>
-                <span>Kitchen Inventory</span>
-                <h2>Create Request</h2>
+                <h2 id="kitchen-create-request-title">Create Request</h2>
+                <p>Request a material for {stationLabel}.</p>
               </div>
-              <button type="button" onClick={() => setRequestOpen(false)}>
-                Close
+              <button type="button" aria-label="Close Create Request" onClick={closeMaterialRequest}>
+                ×
               </button>
             </header>
-            {inventoryItems.length > 0 && (
-              <label>
-                Catalog Item
+
+            <div className="kd-request-scroll">
+              <label className="kd-request-field kd-request-wide">
+                <span>Request Type</span>
                 <select
-                  value={requestForm.inventoryItemId}
-                  onChange={(e) => {
-                    const item = inventoryItems.find(
-                      (i) => i.id === e.target.value,
-                    );
-                    setRequestForm({
-                      ...requestForm,
-                      inventoryItemId: e.target.value,
-                      itemName: item?.name ?? "",
-                      unit: item?.unit ?? "",
-                    });
+                  value={requestForm.requestType}
+                  onChange={(event) => {
+                    const requestType=event.target.value as MaterialRequestType;
+                    setRequestForm({ ...emptyMaterialRequest(), requestType });
+                    setSelectedInventoryItem(null);
+                    setInventorySearch("");
+                    setLinkExistingItem(false);
+                    setRequestError(null);
                   }}
                 >
-                  <option value="">Choose catalog item</option>
-                  {inventoryItems.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} · {item.currentQuantity} {item.unit}
-                    </option>
+                  {materialRequestTypes.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
               </label>
-            )}
-            <label>
-              Need
-              <input
-                required
-                value={requestForm.itemName}
-                onChange={(e) =>
-                  setRequestForm({
-                    ...requestForm,
-                    itemName: e.target.value,
-                    inventoryItemId: "",
-                  })
-                }
-                placeholder="Milk"
-              />
-            </label>
-            <div>
-              <label>
-                Quantity
+
+              {requestForm.requestType !== "ingredient" ? (
+                <label className="kd-request-link-toggle kd-request-wide">
+                  <input
+                    type="checkbox"
+                    checked={linkExistingItem}
+                    onChange={(event) => {
+                      const checked=event.target.checked;
+                      setLinkExistingItem(checked);
+                      setSelectedInventoryItem(null);
+                      setInventorySearch("");
+                      setRequestForm((current) => ({ ...current, inventoryItemId: "", itemName: "", unit: "" }));
+                    }}
+                  />
+                  <span>Use an existing inventory item <small>Optional</small></span>
+                </label>
+              ) : null}
+
+              {usesInventorySelector ? (
+                <div className="kd-request-field kd-request-wide">
+                  <span>Item</span>
+                  {selectedInventoryItem ? (
+                    <div className="kd-request-selected-item">
+                      <div><strong>{selectedInventoryItem.name}</strong><small>{selectedInventoryItem.unit}</small></div>
+                      <button type="button" onClick={() => {
+                        setSelectedInventoryItem(null);
+                        setInventorySearch("");
+                        setRequestForm((current) => ({ ...current, inventoryItemId: "", itemName: "", unit: "" }));
+                      }}>Change</button>
+                    </div>
+                  ) : (
+                    <div className="kd-request-item-search">
+                      <input
+                        type="search"
+                        value={inventorySearch}
+                        onChange={(event) => setInventorySearch(event.target.value)}
+                        placeholder="Search inventory..."
+                        aria-label="Search inventory items"
+                        autoComplete="off"
+                      />
+                      <div className="kd-request-item-results" role="listbox" aria-label="Inventory items">
+                        {inventorySearchLoading ? <span>Searching…</span> : inventoryItems.length ? inventoryItems.map((item) => (
+                          <button type="button" role="option" aria-selected="false" key={item.id} onClick={() => chooseInventoryItem(item)}>
+                            <strong>{item.name}</strong><small>{item.currentQuantity} {item.unit} available</small>
+                          </button>
+                        )) : <span>No matching items.</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <label className="kd-request-field kd-request-wide">
+                  <span>Material name</span>
+                  <input
+                    value={requestForm.itemName}
+                    onChange={(event) => setRequestForm({ ...requestForm, itemName: event.target.value })}
+                    placeholder="e.g. metal tray, gloves, detergent"
+                    maxLength={120}
+                  />
+                </label>
+              )}
+
+              <label className="kd-request-field">
+                <span>Quantity</span>
                 <input
-                  required
                   min="0.001"
                   step="0.001"
+                  inputMode="decimal"
                   type="number"
                   value={requestForm.quantity}
-                  onChange={(e) =>
-                    setRequestForm({ ...requestForm, quantity: e.target.value })
-                  }
+                  onChange={(event) => setRequestForm({ ...requestForm, quantity: event.target.value })}
+                  placeholder="2"
                 />
               </label>
-              <label>
-                Unit
-                <input
-                  required
-                  value={requestForm.unit}
-                  onChange={(e) =>
-                    setRequestForm({
-                      ...requestForm,
-                      unit: e.target.value,
-                      inventoryItemId: "",
-                    })
-                  }
-                  placeholder="L"
+              <label className="kd-request-field">
+                <span>Unit</span>
+                {selectedInventoryItem ? (
+                  <div className="kd-request-readonly">{selectedInventoryItem.unit}</div>
+                ) : (
+                  <>
+                    <input
+                      list="kitchen-material-units"
+                      value={requestForm.unit}
+                      onChange={(event) => setRequestForm({ ...requestForm, unit: event.target.value })}
+                      placeholder="Select or enter unit"
+                      maxLength={24}
+                    />
+                    <datalist id="kitchen-material-units">
+                      {["piece", "pcs", "box", "pack", "roll", "bottle", "kg", "g", "L", "ml"].map((unit) => <option key={unit} value={unit} />)}
+                    </datalist>
+                  </>
+                )}
+              </label>
+
+              <label className="kd-request-field">
+                <span>Urgency</span>
+                <select
+                  value={requestForm.urgency}
+                  onChange={(event) => setRequestForm({ ...requestForm, urgency: event.target.value as "normal" | "high" | "critical" })}
+                >
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </label>
+              <div className="kd-request-field">
+                <span>Station</span>
+                <div className="kd-request-readonly">{stationLabel}</div>
+              </div>
+
+              <label className="kd-request-field kd-request-wide">
+                <span>Reason / Note <small>Optional</small></span>
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  value={requestForm.comment}
+                  onChange={(event) => setRequestForm({ ...requestForm, comment: event.target.value })}
+                  placeholder="Add a short note..."
                 />
               </label>
+              {requestError ? <div className="kd-request-error kd-request-wide" role="alert">{requestError}</div> : null}
             </div>
-            <label>
-              Urgency
-              <select
-                value={requestForm.urgency}
-                onChange={(e) =>
-                  setRequestForm({ ...requestForm, urgency: e.target.value })
-                }
-              >
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </label>
-            <label>
-              Station
-              <input disabled value={stationLabel} />
-            </label>
-            <label>
-              Comment
-              <textarea
-                maxLength={500}
-                value={requestForm.comment}
-                onChange={(e) =>
-                  setRequestForm({ ...requestForm, comment: e.target.value })
-                }
-              />
-            </label>
-            <button type="submit">Submit Request</button>
+
+            <footer className="kd-request-actions">
+              <button type="button" onClick={closeMaterialRequest} disabled={requestSubmitting}>Cancel</button>
+              <button type="submit" disabled={requestSubmitting}>
+                {requestSubmitting ? "Submitting…" : "Submit Request"}
+              </button>
+            </footer>
           </form>
         </div>
       )}

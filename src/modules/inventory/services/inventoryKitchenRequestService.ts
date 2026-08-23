@@ -24,7 +24,8 @@ export function partitionInventoryKitchenRequests(requests: InventoryKitchenQueu
 type QueueRow = {
   request_id: string;
   restaurant_id: string;
-  inventory_item_id: string;
+  request_type: InventoryRequest["requestType"];
+  inventory_item_id: string | null;
   item_name: string;
   requested_quantity: number | string;
   unit: string;
@@ -39,13 +40,20 @@ type QueueRow = {
   approved_by_name: string;
   approved_at: string;
   request_status: "accepted";
-  current_quantity: number | string;
-  reorder_level: number | string;
+  current_quantity: number | string | null;
+  reorder_level: number | string | null;
+};
+
+type RequestContextRow = {
+  request_id: string;
+  station_name: string | null;
+  requested_by_name: string;
 };
 
 const mapQueueRow = (row: QueueRow): InventoryKitchenQueueRequest => ({
   id: row.request_id,
   restaurantId: row.restaurant_id,
+  requestType: row.request_type,
   inventoryItemId: row.inventory_item_id,
   stationId: row.station_id,
   itemName: row.item_name,
@@ -72,8 +80,8 @@ const mapQueueRow = (row: QueueRow): InventoryKitchenQueueRequest => ({
   issuerName: null,
   confirmerName: null,
   unableToFulfillByName: null,
-  currentQuantity: Number(row.current_quantity),
-  reorderLevel: Number(row.reorder_level),
+  currentQuantity: row.current_quantity == null ? null : Number(row.current_quantity),
+  reorderLevel: row.reorder_level == null ? null : Number(row.reorder_level),
 });
 
 export async function loadInventoryKitchenRequests(
@@ -81,6 +89,12 @@ export async function loadInventoryKitchenRequests(
   staffRole: "owner" | "manager" | "inventory_officer",
 ): Promise<InventoryKitchenQueueRequest[]> {
   const historyPromise = loadInventoryRequests(restaurantId);
+  const contextPromise = supabase.rpc("get_inventory_kitchen_request_context", {
+    target_restaurant_id: restaurantId,
+  }).then(({ data, error }) => {
+    if (error) throw new Error(error.message);
+    return (data ?? []) as RequestContextRow[];
+  });
   const queuePromise = staffRole === "manager"
     ? Promise.resolve([] as InventoryKitchenQueueRequest[])
     : supabase.rpc("get_inventory_kitchen_request_queue", {
@@ -90,12 +104,18 @@ export async function loadInventoryKitchenRequests(
       return ((data ?? []) as QueueRow[]).map(mapQueueRow);
     });
 
-  const [history, queue] = await Promise.all([historyPromise, queuePromise]);
+  const [history, queue, context] = await Promise.all([historyPromise, queuePromise, contextPromise]);
   const queueById = new Map(queue.map((request) => [request.id, request]));
-  return history.map((request) => queueById.get(request.id) ?? {
-    ...request,
-    currentQuantity: null,
-    reorderLevel: null,
+  const contextById = new Map(context.map((row) => [row.request_id, row]));
+  return history.map((request) => {
+    const authoritativeContext = contextById.get(request.id);
+    return queueById.get(request.id) ?? {
+      ...request,
+      stationName: authoritativeContext?.station_name ?? request.stationName,
+      requesterName: authoritativeContext?.requested_by_name ?? request.requesterName,
+      currentQuantity: null,
+      reorderLevel: null,
+    };
   });
 }
 

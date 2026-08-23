@@ -4,6 +4,7 @@ import {
   loadInventoryItems,
   loadInventoryRequests,
   inventoryRequestStatusLabel,
+  materialRequestTypeLabel,
   processInventoryRequest,
   type InventoryItem,
   type InventoryRequest,
@@ -338,7 +339,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
             const oldest = station?.activeBatches.reduce((age, batch) => Math.max(age, batchAge(batch)), 0) ?? 0;
             return <button key={alert.id} type="button" className={alert.severity} onClick={() => openStation(alert.stationId)}><i /><span><strong>{alert.stationName}</strong><small>{alert.message}{oldest > 0 ? ` · oldest ${fmtMinutes(oldest)}` : ""}{station ? ` · chefs ${station.activeStaff}` : ""}</small></span><b>View ›</b></button>;
           })}
-          {urgentRequests.map((request) => <button key={request.id} type="button" className={request.urgency === "critical" ? "critical" : "warning"} onClick={() => openRequest(request.id)}><i /><span><strong>{request.stationName || "Kitchen"}</strong><small>{request.urgency} material request · {request.itemName} · {fmtMinutes(minutesSince(request.requestedAt))}</small></span><b>Review ›</b></button>)}
+          {urgentRequests.map((request) => <button key={request.id} type="button" className={request.urgency === "critical" ? "critical" : "warning"} onClick={() => openRequest(request.id)}><i /><span><strong>{request.stationName || "Kitchen"}</strong><small>{materialRequestTypeLabel(request.requestType)} · {request.itemName} · {fmtMinutes(minutesSince(request.requestedAt))}</small></span><b>Review ›</b></button>)}
           {attentionCount === 0 && <p className="mks-calm">✓ Kitchen operating normally — no manager intervention required.</p>}
         </div>
       </section>
@@ -387,6 +388,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
     {selectedRequest && <div className="mks-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequestId(null); }}><aside className="mks-inspector mks-request-inspector" role="dialog" aria-modal="true" aria-labelledby="mks-request-title">
       <header><div><span>Kitchen Material Request</span><h2 id="mks-request-title">{selectedRequest.itemName}</h2></div><div><em className={`mks-request-status ${selectedRequest.status}`}>{inventoryRequestStatusLabel(selectedRequest.status)}</em><button type="button" aria-label="Close kitchen request" onClick={() => setSelectedRequestId(null)}>×</button></div></header>
       <section><h3>Request details</h3><dl>
+        <div><dt>Request type</dt><dd>{materialRequestTypeLabel(selectedRequest.requestType)}</dd></div>
         <div><dt>Requested item</dt><dd>{selectedRequest.itemName}</dd></div>
         <div><dt>Quantity</dt><dd>{formatQuantity(selectedRequest.quantity, selectedRequest.unit)}</dd></div>
         <div><dt>Station</dt><dd>{selectedRequest.stationName || "Kitchen — station not recorded"}</dd></div>

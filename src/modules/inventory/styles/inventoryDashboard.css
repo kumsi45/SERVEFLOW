@@ -2302,6 +2302,7 @@
 .ia-i1-request-card.unavailable { border-left-color: #d97706; background: #fffdf7; }
 .ia-i1-request-card > header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .ia-i1-request-primary { display: grid; min-width: 0; gap: 1px; }
+.ia-i1-request-primary > small { color: #1d4ed8; font-size: 9px; font-weight: 900; letter-spacing: .03em; text-transform: uppercase; }
 .ia-i1-request-primary > strong { overflow: hidden; color: #0f172a; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .ia-i1-request-primary > b { color: #334155; font-size: 13px; }
 .ia-i1-priority { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 9px; font-weight: 900; }
