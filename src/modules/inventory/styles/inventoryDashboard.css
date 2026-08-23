@@ -2040,6 +2040,191 @@
     transform: none;
   }
 }
+
+/* Phase I3: mobile-first Inventory navigation */
+.ia-sidebar-nav,
+.ia-mobile-menu-nav,
+.ia-nav-sequence {
+  display: grid;
+  gap: 4px;
+}
+
+.ia-kitchen-request-link {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ia-kitchen-request-link strong {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding-inline: 7px;
+  border-radius: 999px;
+  color: #174ea6;
+  background: #dbeafe;
+  font-size: 12px;
+}
+
+.ia-kitchen-request-link.active strong {
+  color: #1457d9;
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .ia-shell {
+    display: block;
+    padding-bottom: 0;
+  }
+
+  .ia-sidebar,
+  .ia-mobile-bottom-nav {
+    display: none;
+  }
+
+  .ia-mobile-header {
+    display: flex;
+  }
+
+  .ia-mobile-menu {
+    display: flex;
+  }
+
+  .ia-mobile-menu-scrim {
+    display: block;
+  }
+
+  .ia-mobile-menu-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-inline: 6px;
+  }
+
+  .ia-mobile-menu-heading > div {
+    min-width: 0;
+  }
+
+  .ia-mobile-menu-heading > div strong,
+  .ia-mobile-menu-heading > div span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ia-mobile-menu-heading > button {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #d9dee8;
+    border-radius: 11px;
+    color: #17202f;
+    background: #fff;
+    font: inherit;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .ia-mobile-menu-nav {
+    padding: 12px 0;
+  }
+
+  .ia-mobile-menu-nav > button,
+  .ia-mobile-menu-nav .ia-sidebar-group-toggle,
+  .ia-mobile-menu-nav .ia-sidebar-subnav button,
+  .ia-mobile-menu-nav .ia-kitchen-request-link {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: #17202f;
+    background: transparent;
+    font: inherit;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .ia-mobile-menu-nav .ia-sidebar-group-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .ia-mobile-menu-nav .ia-sidebar-group-toggle.group-active:not([aria-expanded="true"]) {
+    color: #174ea6;
+    background: #eef5ff;
+  }
+
+  .ia-mobile-menu-nav .ia-sidebar-subnav {
+    display: grid;
+    gap: 2px;
+    margin: 2px 0 4px 14px;
+    padding-left: 8px;
+    border-left: 2px solid #e2e7ef;
+  }
+
+  .ia-mobile-menu-nav .ia-sidebar-subnav button {
+    min-height: 44px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .ia-mobile-menu-nav button.active {
+    border-color: #b9d2ff;
+    color: #174ea6;
+    background: #eef5ff;
+  }
+
+  .ia-workspace {
+    padding-bottom: 14px;
+  }
+}
+
+@media (min-width: 901px) {
+  .ia-shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .ia-sidebar {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .ia-sidebar-nav > button,
+  .ia-sidebar-nav .ia-sidebar-group-toggle,
+  .ia-sidebar-nav .ia-kitchen-request-link {
+    min-height: 42px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .ia-shell {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .ia-sidebar {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 430px) {
+  .ia-mobile-menu {
+    width: min(88vw, 336px);
+    padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .ia-mobile-header-title span {
+    max-width: 220px;
+  }
+}
 .ia-menu-usage{display:grid;gap:10px}.ia-menu-usage>div{display:flex!important;flex-wrap:wrap;align-items:center;gap:7px}.ia-menu-usage>div>strong{width:100%;color:#475569;font-size:12px;text-transform:uppercase}.ia-menu-usage>div>span{padding:6px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:800}.ia-menu-usage>div+div>span{background:#ecfdf5;color:#047857}
 
 /* Phase W.3.2: final operational dashboard */

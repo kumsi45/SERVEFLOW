@@ -6,15 +6,17 @@ const page = readFileSync("src/modules/inventory/pages/InventoryDashboardPage.ts
 const types = readFileSync("src/modules/inventory/types.ts", "utf8");
 
 describe("inventory hamburger routing", () => {
-  const menu = page.slice(page.indexOf("const MOBILE_MENU_NAV"), page.indexOf("const MOBILE_PRIMARY_NAV"));
-
-  it("maps every hamburger entry to a real inventory section", () => {
-    for (const section of ["inventory-reports", "suppliers", "items", "inventory-settings", "export", "help"]) {
-      expect(menu).toContain(`section: "${section}"`);
-      expect(types).toContain(`| "${section}"`);
-      expect(router).toContain(`"${section}"`);
+  it("uses the shared I3 destination tree in the mobile drawer", () => {
+    for (const label of ["Dashboard", "Stock", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchasing", "Purchase Orders", "Suppliers", "Setup", "Materials", "Storage", "Reports", "Settings"]) {
+      expect(page).toContain(label);
     }
-    expect(page).toContain("onClick={() => navigate(item.section)}");
+    expect(page).toContain("{navigationItems(true)}");
+    expect(page).toContain('aria-label="Close inventory navigation"');
+    expect(page).toContain("setMobileMenuOpen(false)");
+  });
+
+  it("keeps management utilities out of the Inventory Officer drawer", () => {
+    expect(page).toContain('{staffRole !== "inventory_officer" && <>');
   });
 
   it("allows every inventory report URL through the application router", () => {
@@ -29,5 +31,12 @@ describe("inventory hamburger routing", () => {
     expect(page).toContain('section === "export"');
     expect(page).toContain('section === "help"');
     expect(page).toContain("Inventory Reports</h2>");
+  });
+
+  it("keeps hidden operational and setup routes URL-compatible", () => {
+    for (const section of ["stock-in", "stock-out", "transfers", "adjustments", "waste", "purchase-history", "categories", "units"]) {
+      expect(types).toContain(`| "${section}"`);
+      expect(router).toContain(`"${section}"`);
+    }
   });
 });

@@ -128,65 +128,38 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "units", label: "Units" },
 ];
 
-type InventoryNavGroup = "master" | "operations" | "purchasing" | "reports" | "stock" | "records";
-type InventoryUtilityView = "reports" | "settings";
+type InventoryNavGroup = "stock" | "purchasing" | "setup";
 
-const OPERATIONS_NAV: Array<{ key: InventorySection; label: string }> = [
+const STOCK_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "current-stock", label: "Current Stock" },
-  { key: "stock-in", label: "Receive Stock" },
-  { key: "stock-out", label: "Issue Stock" },
-  { key: "transfers", label: "Transfers" },
-  { key: "adjustments", label: "Adjustments" },
-  { key: "waste", label: "Waste" },
-  { key: "ledger", label: "Ledger" },
+  { key: "ledger", label: "Stock Movements" },
 ];
 
-const MASTER_DATA_NAV: Array<{ key: InventorySection; label: string }> = [
-  { key: "items", label: "Ingredients" },
-  { key: "categories", label: "Ingredient Categories" },
-  { key: "units", label: "Units" },
+const SETUP_NAV: Array<{ key: InventorySection; label: string }> = [
+  { key: "items", label: "Materials" },
   { key: "storage-locations", label: "Storage" },
-  { key: "suppliers", label: "Suppliers" },
 ];
 
 const PURCHASING_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "purchase-orders", label: "Purchase Orders" },
-  { key: "purchase-history", label: "Purchase History" },
-];
-
-const REPORTS_NAV: Array<{ key: InventorySection; label: string }> = [
-  { key: "inventory-reports", label: "All Reports" },
-  { key: "inventory-value", label: "Inventory Value" },
-  { key: "low-stock-assistant", label: "Low Stock" },
-  { key: "consumption", label: "Consumption" },
-  { key: "waste-report", label: "Waste Report" },
+  { key: "suppliers", label: "Suppliers" },
 ];
 
 const NAV_GROUPS: Array<{ key: InventoryNavGroup; label: string; items: Array<{ key: InventorySection; label: string }> }> = [
-  { key: "master", label: "Inventory Setup", items: MASTER_DATA_NAV },
-  { key: "operations", label: "Operations", items: OPERATIONS_NAV },
+  { key: "stock", label: "Stock", items: STOCK_NAV },
   { key: "purchasing", label: "Purchasing", items: PURCHASING_NAV },
-  { key: "reports", label: "Reports", items: REPORTS_NAV },
+  { key: "setup", label: "Setup", items: SETUP_NAV },
 ];
 
-const STOCK_MANAGEMENT_NAV = OPERATIONS_NAV;
-const INVENTORY_RECORDS_NAV = MASTER_DATA_NAV;
-
-const MOBILE_MENU_NAV: Array<{ key: string; label: string; section: InventorySection; group?: InventoryNavGroup }> = [
-  { key: "reports", label: "Inventory Reports", section: "inventory-reports", group: "reports" },
-  { key: "suppliers", label: "Suppliers", section: "suppliers", group: "master" },
-  { key: "setup", label: "Inventory Setup", section: "items", group: "master" },
-  { key: "settings", label: "Settings", section: "inventory-settings" },
-  { key: "export", label: "Export", section: "export" },
-  { key: "help", label: "Help", section: "help" },
-];
-
-const MOBILE_PRIMARY_NAV: Array<{ key: string; label: string; icon: string; section?: InventorySection; group?: InventoryNavGroup }> = [
-  { key: "home", label: "Home", icon: "⌂", section: "dashboard" },
-  { key: "stock", label: "Stock", icon: "▦", section: "current-stock", group: "operations" },
-  { key: "add", label: "Add", icon: "+", section: "stock-in", group: "operations" },
-  { key: "purchasing", label: "Purchasing", icon: "PO", section: "purchase-orders", group: "purchasing" },
-];
+const STOCK_CONTEXT_SECTIONS = new Set<InventorySection>([
+  "current-stock", "movements", "stock-in", "stock-out", "transfers", "adjustments", "waste", "ledger",
+]);
+const PURCHASING_CONTEXT_SECTIONS = new Set<InventorySection>(["purchase-orders", "purchase-history", "suppliers"]);
+const SETUP_CONTEXT_SECTIONS = new Set<InventorySection>(["items", "categories", "units", "storage-locations"]);
+const REPORT_CONTEXT_SECTIONS = new Set<InventorySection>([
+  "inventory-reports", "inventory-value", "low-stock-assistant", "consumption", "waste-report", "movement-history", "export",
+]);
+const SETTINGS_CONTEXT_SECTIONS = new Set<InventorySection>(["inventory-settings", "help"]);
 
 const DEFAULT_FILTERS: InventoryFilters = {
   search: "",
@@ -203,6 +176,13 @@ const ITEM_PAGE_SIZE = 10;
 
 function isInventorySection(value: string | undefined): value is InventorySection {
   return INVENTORY_NAV.some((item) => item.key === value);
+}
+
+function parentNavGroup(section: InventorySection): InventoryNavGroup | null {
+  if (STOCK_CONTEXT_SECTIONS.has(section)) return "stock";
+  if (PURCHASING_CONTEXT_SECTIONS.has(section)) return "purchasing";
+  if (SETUP_CONTEXT_SECTIONS.has(section)) return "setup";
+  return null;
 }
 
 function dateLabel(value: string) {
@@ -419,11 +399,10 @@ export function InventoryDashboardPage({
     isInventorySection(initialSection) ? initialSection : "dashboard",
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const [kitchenRequestsActive, setKitchenRequestsActive] = useState(() => window.location.hash === "#kitchen-requests");
   const [inlineMasterTarget, setInlineMasterTarget] = useState<"category" | "unit" | "storage" | "supplier" | null>(null);
   const [detailIngredientId, setDetailIngredientId] = useState<string | null>(null);
   const [expandedNavGroup, setExpandedNavGroup] = useState<InventoryNavGroup | null>(null);
-  const [utilityView, setUtilityView] = useState<InventoryUtilityView | null>(null);
   const [data, setData] = useState<InventoryAdminData>(EMPTY_DATA);
   const [currentStock, setCurrentStock] = useState<InventoryCurrentStockRow[]>([]);
   const [ledger, setLedger] = useState<InventoryLedgerEntry[]>([]);
@@ -453,6 +432,7 @@ export function InventoryDashboardPage({
   const [movementForm, setMovementForm] = useState<StockMovementDraft>(stockMovementDraft("stock_in"));
   const [transferForm, setTransferForm] = useState<InventoryTransferDraft>(transferDraft());
   const [openingForm, setOpeningForm] = useState<InventoryOpeningBalanceDraft>(openingBalanceDraft());
+  const canManageMasterLifecycle = staffRole === "owner" || staffRole === "manager";
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -630,9 +610,9 @@ export function InventoryDashboardPage({
   useEffect(() => {
     if (isInventorySection(initialSection)) {
       setSection(initialSection);
-      setUtilityView(null);
-      const group = NAV_GROUPS.find((candidate) => candidate.items.some((item) => item.key === initialSection));
-      if (group) setExpandedNavGroup(group.key);
+      setKitchenRequestsActive(initialSection === "dashboard" && window.location.hash === "#kitchen-requests");
+      const group = parentNavGroup(initialSection);
+      if (group) setExpandedNavGroup(group);
     }
   }, [initialSection]);
 
@@ -649,6 +629,14 @@ export function InventoryDashboardPage({
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const syncKitchenRequestContext = () => setKitchenRequestsActive(
+      window.location.pathname === "/inventory/dashboard" && window.location.hash === "#kitchen-requests",
+    );
+    window.addEventListener("popstate", syncKitchenRequestContext);
+    return () => window.removeEventListener("popstate", syncKitchenRequestContext);
+  }, []);
 
   const activeCategories = useMemo(() => data.categories.filter((row) => row.status === "active"), [data.categories]);
   const activeSuppliers = useMemo(() => data.suppliers.filter((row) => row.status === "active"), [data.suppliers]);
@@ -840,38 +828,34 @@ export function InventoryDashboardPage({
 
   function navigate(next: InventorySection) {
     setSection(next);
-    setUtilityView(null);
+    setKitchenRequestsActive(false);
     setMobileMenuOpen(false);
-    const group = NAV_GROUPS.find((candidate) => candidate.items.some((item) => item.key === next));
-    if (group) setExpandedNavGroup(group.key);
+    const group = parentNavGroup(next);
+    if (group) setExpandedNavGroup(group);
     window.history.pushState({}, "", `/inventory/${next}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
     if (next === "dashboard") void loadDashboardInsights();
+  }
+
+  function openKitchenRequests() {
+    setSection("dashboard");
+    setKitchenRequestsActive(true);
+    setMobileMenuOpen(false);
+    window.history.pushState({}, "", "/inventory/dashboard#kitchen-requests");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.requestAnimationFrame(() => document.getElementById("i1-requests-title")?.scrollIntoView({ block: "start" }));
   }
 
   function openRecipes() {
     window.location.assign("/inventory/recipes");
   }
 
-  function navigateUtility(next: InventoryUtilityView) {
-    setUtilityView(next);
-    setMobileMenuOpen(false);
-  }
-
   function toggleNavGroup(group: InventoryNavGroup) {
     setExpandedNavGroup((current) => current === group ? null : group);
   }
 
-  function mobilePrimaryActive(key: string) {
-    if (key === "reports") return utilityView === "reports";
-    if (utilityView) return false;
-    if (key === "add") return section === "stock-in" || section === "stock-out";
-    return MOBILE_PRIMARY_NAV.find((item) => item.key === key)?.section === section;
-  }
-
   function navGroupActive(group: InventoryNavGroup) {
-    if (utilityView) return false;
-    return NAV_GROUPS.find((candidate) => candidate.key === group)?.items.some((item) => item.key === section) ?? false;
+    return parentNavGroup(section) === group;
   }
 
   function setFilter<Key extends keyof InventoryFilters>(key: Key, value: InventoryFilters[Key]) {
@@ -1161,9 +1145,11 @@ export function InventoryDashboardPage({
         </label>
         <div className="ia-actions">
           <button type="button" onClick={() => setItemForm(itemDraft())}>Create Ingredient</button>
-          <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkArchiveItems(restaurantId, selectedIds), "Selected ingredients archived.")}>Archive Selected</button>
-          <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkRestoreItems(restaurantId, selectedIds), "Selected ingredients restored.")}>Restore Selected</button>
-          <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkSoftDeleteItems(restaurantId, selectedIds), "Selected ingredients soft deleted.")}>Soft Delete</button>
+          {canManageMasterLifecycle && <>
+            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkArchiveItems(restaurantId, selectedIds), "Selected ingredients archived.")}>Archive Selected</button>
+            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkRestoreItems(restaurantId, selectedIds), "Selected ingredients restored.")}>Restore Selected</button>
+            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkSoftDeleteItems(restaurantId, selectedIds), "Selected ingredients soft deleted.")}>Soft Delete</button>
+          </>}
         </div>
       </section>
 
@@ -1217,15 +1203,15 @@ export function InventoryDashboardPage({
                 <td data-label="Actions">
                   <div className="ia-row-actions">
                     <button type="button" onClick={() => setDetailIngredientId(item.id)}>Details</button>
-                    <button type="button" onClick={() => setItemForm(itemDraft(item))}>Edit</button>
+                    {(item.status === "active" || canManageMasterLifecycle) && <button type="button" onClick={() => setItemForm(itemDraft(item))}>Edit</button>}
                     <button type="button" onClick={() => navigate("stock-in")}>Stock In</button>
                     <button type="button" onClick={() => navigate("stock-out")}>Stock Out</button>
                     <button type="button" onClick={() => void run(() => duplicateItem(restaurantId, item, data), "Ingredient duplicated.")}>Duplicate</button>
-                    {item.status === "archived" ? (
+                    {canManageMasterLifecycle && (item.status === "archived" ? (
                       <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, "inventory_items", item.id), "Ingredient restored.")}>Restore</button>
                     ) : (
                       <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, "inventory_items", item.id), "Ingredient archived.")}>Archive</button>
-                    )}
+                    ))}
                   </div>
                 </td>
               </tr>
@@ -1274,13 +1260,13 @@ export function InventoryDashboardPage({
                     <div><dt>{businessMetric.label}</dt><dd>{businessMetric.value}</dd></div>
                   </dl>
                   <footer>
-                    <button type="button" onClick={() => onEdit(row.id)}>Edit</button>
-                    {row.status === "archived" ? (
+                    {(row.status === "active" || canManageMasterLifecycle) && <button type="button" onClick={() => onEdit(row.id)}>Edit</button>}
+                    {canManageMasterLifecycle && (row.status === "archived" ? (
                       <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, table, row.id), "Record restored.")}>Restore</button>
                     ) : (
                       <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, table, row.id), "Record archived.")}>Archive</button>
-                    )}
-                    <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, table, row.id), "Record soft deleted.")}>Soft Delete</button>
+                    ))}
+                    {canManageMasterLifecycle && <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, table, row.id), "Record soft deleted.")}>Soft Delete</button>}
                   </footer>
                 </article>
               );
@@ -1351,13 +1337,13 @@ export function InventoryDashboardPage({
                 <div><dt>Notes</dt><dd>{supplier.notes || "None"}</dd></div>
               </dl>
               <footer>
-                <button type="button" onClick={() => setSupplierForm(supplierDraft(supplier))}>Edit</button>
-                {supplier.status === "archived" ? (
+                {(supplier.status === "active" || canManageMasterLifecycle) && <button type="button" onClick={() => setSupplierForm(supplierDraft(supplier))}>Edit</button>}
+                {canManageMasterLifecycle && (supplier.status === "archived" ? (
                   <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier restored.")}>Restore</button>
                 ) : (
                   <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier archived.")}>Archive</button>
-                )}
-                <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier soft deleted.")}>Soft Delete</button>
+                ))}
+                {canManageMasterLifecycle && <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier soft deleted.")}>Soft Delete</button>}
               </footer>
             </article>
           ))}
@@ -1381,24 +1367,33 @@ export function InventoryDashboardPage({
       (row) => ({ label: "Ingredients", value: countLabel(unitItemCounts.get(row.id) ?? 0, "ingredient") }),
     );
 
-  const utilityContent = utilityView === "reports" ? (
-    <section className="ia-navigation-placeholder" aria-labelledby="inventory-reports-title">
-      <span>Reports</span>
-      <h2 id="inventory-reports-title">Inventory reports are coming in a future phase.</h2>
-      <p>Use Movement History for the current audit trail. No reporting functionality was added in this navigation phase.</p>
-      <button type="button" onClick={() => navigate("ledger")}>Open Movement History</button>
-    </section>
-  ) : utilityView === "settings" && staffRole === "owner" ? (
-    <InventoryIntegrityCheckPanel restaurantId={restaurantId} />
-  ) : utilityView === "settings" ? (
-    <section className="ia-navigation-placeholder" aria-labelledby="inventory-settings-title">
-      <span>Settings</span>
-      <h2 id="inventory-settings-title">Inventory integrity tools are owner-only.</h2>
-      <p>Managers and inventory officers can continue using the read-only stock and movement views.</p>
-      <button type="button" onClick={() => navigate("items")}>Open Inventory Records</button>
-    </section>
-  ) : null;
-  const displayedContent = utilityContent ?? content;
+  const displayedContent = content;
+  const actionableKitchenRequestCount = kitchenRequestsLoading || kitchenRequestsError
+    ? 0
+    : kitchenRequests.filter((request) => request.status === "accepted").length;
+
+  const navigationItems = (mobile = false) => (
+    <nav className={mobile ? "ia-mobile-menu-nav" : "ia-sidebar-nav"} aria-label={mobile ? "Inventory destinations" : undefined}>
+      <button className={!kitchenRequestsActive && section === "dashboard" ? "active" : ""} type="button" aria-current={!kitchenRequestsActive && section === "dashboard" ? "page" : undefined} onClick={() => navigate("dashboard")}>Dashboard</button>
+      {NAV_GROUPS.map((group) => <div className="ia-nav-sequence" key={group.key}>
+        <div className="ia-sidebar-group ia-w2-group">
+          <button className={`ia-sidebar-group-toggle ${navGroupActive(group.key) ? "group-active" : ""}`.trim()} type="button" aria-expanded={expandedNavGroup === group.key} aria-controls={`inventory-${mobile ? "mobile-" : ""}${group.key}-navigation`} onClick={() => toggleNavGroup(group.key)}>
+            <span>{group.label}</span><span className="ia-sidebar-chevron" aria-hidden="true">›</span>
+          </button>
+          {expandedNavGroup === group.key && <div className="ia-sidebar-subnav" id={`inventory-${mobile ? "mobile-" : ""}${group.key}-navigation`}>
+            {group.items.map((item) => <button className={section === item.key ? "active" : ""} type="button" key={item.key} aria-current={section === item.key ? "page" : undefined} onClick={() => navigate(item.key)}>{item.label}</button>)}
+          </div>}
+        </div>
+        {group.key === "stock" && <button className={kitchenRequestsActive ? "active ia-kitchen-request-link" : "ia-kitchen-request-link"} type="button" aria-current={kitchenRequestsActive ? "page" : undefined} onClick={openKitchenRequests}>
+          <span>Kitchen Requests</span>{actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} actionable requests`}>{actionableKitchenRequestCount}</strong>}
+        </button>}
+      </div>)}
+      {staffRole !== "inventory_officer" && <>
+        <button className={REPORT_CONTEXT_SECTIONS.has(section) ? "active" : ""} type="button" aria-current={REPORT_CONTEXT_SECTIONS.has(section) ? "page" : undefined} onClick={() => navigate("inventory-reports")}>Reports</button>
+        <button className={SETTINGS_CONTEXT_SECTIONS.has(section) ? "active" : ""} type="button" aria-current={SETTINGS_CONTEXT_SECTIONS.has(section) ? "page" : undefined} onClick={() => navigate("inventory-settings")}>Settings</button>
+      </>}
+    </nav>
+  );
 
   return (
     <main className="ia-shell">
@@ -1408,9 +1403,6 @@ export function InventoryDashboardPage({
           <span>{restaurantName} · Today&apos;s stock operations</span>
         </div>
         <div className="ia-mobile-header-actions">
-          <button className="ia-theme-placeholder" type="button" aria-label="Theme switcher placeholder" title="Theme options coming later" disabled>
-            <span aria-hidden="true">◐</span>
-          </button>
           <button
             className="ia-menu-button"
             type="button"
@@ -1429,27 +1421,10 @@ export function InventoryDashboardPage({
           <button className="ia-mobile-menu-scrim" type="button" aria-label="Close inventory navigation" onClick={() => setMobileMenuOpen(false)} />
           <aside className="ia-mobile-menu" id="inventory-mobile-menu" aria-label="Inventory mobile navigation">
             <div className="ia-mobile-menu-heading">
-              <strong>Inventory</strong>
-              <span>{restaurantName}</span>
+              <div><strong>Inventory</strong><span>{restaurantName}</span></div>
+              <button type="button" aria-label="Close inventory navigation" onClick={() => setMobileMenuOpen(false)}>×</button>
             </div>
-            <nav>
-              {MOBILE_MENU_NAV.map((item) => {
-                const active = item.group
-                    ? navGroupActive(item.group)
-                    : !utilityView && section === item.section;
-                return (
-                  <button
-                    className={active ? "active" : ""}
-                    type="button"
-                    key={item.key}
-                    aria-current={active ? "page" : undefined}
-                    onClick={() => navigate(item.section)}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </nav>
+            {navigationItems(true)}
             <div className="ia-mobile-menu-user">
               <strong>{staffName}</strong>
               <span>{staffRole === "owner" ? "Owner" : staffRole === "manager" ? "Manager" : "Inventory Officer"}</span>
@@ -1463,74 +1438,7 @@ export function InventoryDashboardPage({
         <div className="ia-brand">
           <ServeFlowBrand variant="compact" />
         </div>
-        <nav className="ia-sidebar-nav">
-          <button className={!utilityView && section === "dashboard" ? "active" : ""} type="button" aria-current={!utilityView && section === "dashboard" ? "page" : undefined} onClick={() => navigate("dashboard")}>
-            Dashboard
-          </button>
-
-          {NAV_GROUPS.map((group) => <div className="ia-sidebar-group ia-w2-group" key={group.key}>
-            <button className={`ia-sidebar-group-toggle ${navGroupActive(group.key) ? "group-active" : ""}`.trim()} type="button" aria-expanded={expandedNavGroup === group.key} aria-controls={`inventory-${group.key}-navigation`} onClick={() => toggleNavGroup(group.key)}>
-              <span>{group.label}</span><span className="ia-sidebar-chevron" aria-hidden="true">›</span>
-            </button>
-            {expandedNavGroup === group.key && <div className="ia-sidebar-subnav" id={`inventory-${group.key}-navigation`}>
-              {group.items.map((item) => <button className={!utilityView && section === item.key ? "active" : ""} type="button" key={item.key} aria-current={!utilityView && section === item.key ? "page" : undefined} onClick={() => navigate(item.key)}>{item.label}</button>)}
-            </div>}
-          </div>)}
-
-          <div className="ia-sidebar-group">
-            <button
-              className={`ia-sidebar-group-toggle ${navGroupActive("stock") ? "group-active" : ""}`.trim()}
-              type="button"
-              aria-expanded={expandedNavGroup === "stock"}
-              aria-controls="inventory-stock-navigation"
-              onClick={() => toggleNavGroup("stock")}
-            >
-              <span>Stock</span>
-              <span className="ia-sidebar-chevron" aria-hidden="true">›</span>
-            </button>
-            {expandedNavGroup === "stock" && (
-              <div className="ia-sidebar-subnav" id="inventory-stock-navigation">
-                {STOCK_MANAGEMENT_NAV.map((item) => (
-                  <button className={!utilityView && section === item.key ? "active" : ""} type="button" key={item.key} aria-current={!utilityView && section === item.key ? "page" : undefined} onClick={() => navigate(item.key)}>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="ia-sidebar-group">
-            <button
-              className={`ia-sidebar-group-toggle ${navGroupActive("records") ? "group-active" : ""}`.trim()}
-              type="button"
-              aria-expanded={expandedNavGroup === "records"}
-              aria-controls="inventory-records-navigation"
-              onClick={() => toggleNavGroup("records")}
-            >
-              <span>Ingredients</span>
-              <span className="ia-sidebar-chevron" aria-hidden="true">›</span>
-            </button>
-            {expandedNavGroup === "records" && (
-              <div className="ia-sidebar-subnav" id="inventory-records-navigation">
-                {INVENTORY_RECORDS_NAV.map((item) => (
-                  <button className={!utilityView && section === item.key ? "active" : ""} type="button" key={item.key} aria-current={!utilityView && section === item.key ? "page" : undefined} onClick={() => navigate(item.key)}>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button className={!utilityView && section === "suppliers" ? "active" : ""} type="button" aria-current={!utilityView && section === "suppliers" ? "page" : undefined} onClick={() => navigate("suppliers")}>
-            Suppliers
-          </button>
-          <button className={utilityView === "reports" ? "active" : ""} type="button" aria-current={utilityView === "reports" ? "page" : undefined} onClick={() => navigateUtility("reports")}>
-            Reports
-          </button>
-          <button className={utilityView === "settings" ? "active" : ""} type="button" aria-current={utilityView === "settings" ? "page" : undefined} onClick={() => navigateUtility("settings")}>
-            Inventory Settings
-          </button>
-        </nav>
+        {navigationItems()}
         <div className="ia-user">
           <strong>{staffName}</strong>
           <span>{staffRole === "owner" ? "Owner" : staffRole === "manager" ? "Manager" : "Inventory Officer"}</span>
@@ -1544,28 +1452,6 @@ export function InventoryDashboardPage({
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
         {loading ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
-
-      <nav className="ia-mobile-bottom-nav" aria-label="Primary inventory actions">
-        {MOBILE_PRIMARY_NAV.map((item) => {
-          const active = mobilePrimaryActive(item.key);
-          return (
-            <button className={`${active ? "active " : ""}${item.key === "add" ? "add" : ""}`.trim()} type="button" key={item.key} aria-current={active ? "page" : undefined} onClick={() => item.key === "add" ? setQuickMenuOpen(true) : item.section && navigate(item.section)}>
-              <span aria-hidden="true">{item.icon}</span>
-              <strong>{item.label}</strong>
-            </button>
-          );
-        })}
-      </nav>
-
-      {quickMenuOpen && <div className="ia-action-sheet-backdrop" role="presentation" onClick={() => setQuickMenuOpen(false)}>
-        <section className="ia-action-sheet" role="dialog" aria-modal="true" aria-label="Quick stock actions" onClick={(event) => event.stopPropagation()}>
-          <header><h2>Quick Actions</h2><button type="button" onClick={() => setQuickMenuOpen(false)}>Close</button></header>
-          {([
-            ["Receive Stock", "stock-in"], ["Issue Stock", "stock-out"], ["Adjust Stock", "adjustments"],
-            ["Record Waste", "waste"], ["Transfer", "transfers"], ["Create Ingredient", "items"],
-          ] as Array<[string, InventorySection]>).map(([label, target]) => <button type="button" key={target} onClick={() => { setQuickMenuOpen(false); navigate(target); if (target === "items") setItemForm(itemDraft()); }}>{label}</button>)}
-        </section>
-      </div>}
 
       {detailIngredientId && (() => {
         const ingredient = data.items.find((row) => row.id === detailIngredientId);

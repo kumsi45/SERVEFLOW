@@ -92,7 +92,7 @@ describe("Phase 8.4.5 read-only integrity diagnostics", () => {
 
 describe("Phase 8.4.5 owner integrity action", () => {
   it("renders the action only for the owner inventory surface", () => {
-    expect(dashboard).toContain('utilityView === "settings" && staffRole === "owner"');
+    expect(dashboard).toContain('section === "inventory-settings" && staffRole === "owner"');
     expect(dashboard).toContain("<InventoryIntegrityCheckPanel restaurantId={restaurantId} />");
     expect(dashboard).toContain("Inventory integrity tools are owner-only.");
   });

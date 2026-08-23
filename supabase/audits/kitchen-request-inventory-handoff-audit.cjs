@@ -61,7 +61,10 @@ async function main() {
 
   try {
     await db.query("begin");
-    if (process.env.AUDIT_APPLY_MIGRATION !== "false") await db.query(migration);
+    // The hosted database now includes later forward migrations that replace
+    // handoff function signatures. Validate deployed definitions by default;
+    // legacy migration replay is available only when explicitly requested.
+    if (process.env.AUDIT_APPLY_MIGRATION === "true") await db.query(migration);
 
     const identities = (await db.query("select distinct user_id from public.restaurant_staff where user_id is not null limit 7")).rows.map((row) => row.user_id);
     if (identities.length < 7) throw new Error("Hosted audit requires seven existing authenticated identities.");
