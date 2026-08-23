@@ -47,10 +47,11 @@ describe("Inventory V1 Phase 3 Current Stock and stock operations", () => {
     expect(page).toContain('fromStorageLocationId: row?.storageLocationId ?? ""');
   });
 
-  it("keeps primary forms compact and moves audit metadata behind progressive disclosure", () => {
+  it("keeps primary forms compact and moves only useful optional fields behind progressive disclosure", () => {
     for (const label of ["Material", "Storage", "Quantity", "From storage", "To storage"]) expect(operations).toContain(label);
     expect(operations).toContain("<summary>Additional details</summary>");
-    for (const label of ["Supplier", "Invoice number", "Document number", "Reason", "Notes", "Movement time"]) expect(operations).toContain(label);
+    for (const label of ["Supplier", "Reason", "Movement time"]) expect(operations).toContain(label);
+    for (const removed of ["Invoice number", "Document number", "Notes"]) expect(operations).not.toContain(removed);
     expect(operations).toContain('inputMode="decimal"');
   });
 

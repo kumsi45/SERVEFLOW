@@ -99,10 +99,7 @@ export function StockMovementWorkspace({
       {item && location && <div className={`ia-so-stock-context ${!incoming && after < 0 ? "warning" : ""}`}><span>{incoming ? "Current stock" : "Available"}</span><strong>{quantityLabel(current, unit)}</strong>{!incoming && movementQuantity > 0 && <small>Remaining after issue: {quantityLabel(after, unit)}</small>}</div>}
       <details className="ia-so-details"><summary>Additional details</summary><div>
         {incoming && <label>Supplier<select value={draft.supplierId} onChange={(event) => update({ ...draft, supplierId: event.target.value })}><option value="">No supplier selected</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>}
-        {incoming && <label>Invoice number<input value={draft.invoiceNumber} onChange={(event) => update({ ...draft, invoiceNumber: event.target.value })} /></label>}
-        <label>Document number<input value={draft.referenceNumber} onChange={(event) => update({ ...draft, referenceNumber: event.target.value })} /></label>
-        <label>Reason<textarea maxLength={500} value={draft.reason} onChange={(event) => update({ ...draft, reason: event.target.value })} /></label>
-        <label>Notes<textarea maxLength={1000} value={draft.notes} onChange={(event) => update({ ...draft, notes: event.target.value })} /></label>
+        <label>Reason<textarea className="ia-so-reason" rows={2} maxLength={500} placeholder="Why is this stock being changed? (optional)" value={draft.reason} onChange={(event) => update({ ...draft, reason: event.target.value })} /></label>
         <label>Movement time<input type="datetime-local" value={draft.movementDate} onChange={(event) => update({ ...draft, movementDate: event.target.value })} /></label>
       </div></details>
       <footer><button disabled={working} type="submit">Review {incoming ? "Stock In" : "Stock Out"}</button></footer>
@@ -177,7 +174,7 @@ export function TransferWorkspace({
         <label>Quantity<input required inputMode="decimal" min="0.001" step="0.001" type="number" value={draft.quantity} aria-describedby={validationError ? "ia-transfer-validation" : undefined} onChange={(event) => update({ ...draft, quantity: event.target.value })} /></label>
       </div>
       {item && source && <div className={`ia-so-stock-context ${remaining < 0 ? "warning" : ""}`}><span>Available in {source.name}</span><strong>{quantityLabel(available, unit)}</strong>{quantity > 0 && <small>Remaining after transfer: {quantityLabel(remaining, unit)}</small>}</div>}
-      <details className="ia-so-details"><summary>Additional details</summary><div><label>Document number<input value={draft.referenceNumber} onChange={(event) => update({ ...draft, referenceNumber: event.target.value })} /></label><label>Reason<textarea maxLength={500} value={draft.reason} onChange={(event) => update({ ...draft, reason: event.target.value })} /></label><label>Notes<textarea maxLength={1000} value={draft.notes} onChange={(event) => update({ ...draft, notes: event.target.value })} /></label><label>Movement time<input type="datetime-local" value={draft.movementDate} onChange={(event) => update({ ...draft, movementDate: event.target.value })} /></label></div></details>
+      <details className="ia-so-details"><summary>Additional details</summary><div><label>Reason<textarea className="ia-so-reason" rows={2} maxLength={500} placeholder="Why is this stock being changed? (optional)" value={draft.reason} onChange={(event) => update({ ...draft, reason: event.target.value })} /></label><label>Movement time<input type="datetime-local" value={draft.movementDate} onChange={(event) => update({ ...draft, movementDate: event.target.value })} /></label></div></details>
       <footer><button disabled={working} type="submit">Review Transfer</button></footer>
     </form>
   </section>;

@@ -58,6 +58,7 @@
 .ia-so-form select,
 .ia-so-form textarea { width: 100%; min-height: 46px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; font: inherit; }
 .ia-so-form textarea { min-height: 78px; resize: vertical; }
+.ia-so-form textarea.ia-so-reason { min-height: 58px; max-height: 110px; }
 .ia-cs-sheet > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ia-cs-sheet > footer button,
 .ia-so-form > footer button,
