@@ -1,0 +1,134 @@
+/* Inventory V1 Phase 3: mobile-first Current Stock and stock operations */
+.ia-cs-page,
+.ia-so-page { display: grid; width: 100%; max-width: 1480px; min-width: 0; gap: 10px; margin-inline: auto; }
+.ia-cs-heading,
+.ia-so-page > header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.ia-cs-heading > div,
+.ia-so-page > header > div { display: grid; min-width: 0; gap: 2px; }
+.ia-cs-heading span,
+.ia-so-page > header span { color: #64748b; font-size: 9px; font-weight: 900; letter-spacing: .09em; }
+.ia-cs-heading h2,
+.ia-so-page > header h2 { margin: 0; color: #0f172a; font-size: 20px; line-height: 1.15; }
+.ia-cs-heading p,
+.ia-so-page > header p { margin: 1px 0 0; color: #64748b; font-size: 11px; }
+.ia-cs-heading > button { min-height: 44px; flex: 0 0 auto; padding: 8px 11px; border: 1px solid #1d4ed8; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; }
+.ia-cs-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.ia-cs-search { min-width: 0; }
+.ia-cs-search > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.ia-cs-search input { width: 100%; min-height: 46px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; font: inherit; }
+.ia-cs-filter-button { display: flex; min-height: 46px; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #334155; font-weight: 850; cursor: pointer; }
+.ia-cs-filter-button strong { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 10px; }
+.ia-cs-state,
+.ia-cs-error { display: grid; gap: 4px; padding: 20px 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #64748b; text-align: center; }
+.ia-cs-error { border-color: #fed7aa; background: #fff7ed; color: #9a3412; }
+.ia-cs-state span,
+.ia-cs-error span { font-size: 12px; }
+.ia-cs-state button,
+.ia-cs-error button { min-height: 42px; margin: 5px auto 0; padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #1d4ed8; font-weight: 850; cursor: pointer; }
+.ia-cs-mobile-list { display: grid; gap: 6px; }
+.ia-cs-mobile-list > button { display: grid; width: 100%; min-width: 0; min-height: 70px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 8px; padding: 9px 10px; border: 1px solid #dbe3ee; border-radius: 11px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-cs-card-main { display: grid; min-width: 0; gap: 2px; }
+.ia-cs-card-main strong { overflow-wrap: anywhere; font-size: 13px; }
+.ia-cs-card-main small { overflow: hidden; color: #64748b; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.ia-cs-quantity { font-size: 14px; white-space: nowrap; }
+.ia-cs-status { display: inline-flex; width: fit-content; min-height: 24px; align-items: center; grid-column: 1 / -1; padding: 3px 7px; border-radius: 999px; background: #ecfdf3; color: #047857; font-size: 9px; font-weight: 900; }
+.ia-cs-status.out_of_stock { background: #fef2f2; color: #b91c1c; }
+.ia-cs-status.low_stock { background: #fff7ed; color: #9a3412; }
+.ia-cs-status.over_stock { background: #eff6ff; color: #1d4ed8; }
+.ia-cs-desktop-table { display: none; min-width: 0; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.ia-cs-desktop-table table { width: 100%; border-collapse: collapse; }
+.ia-cs-desktop-table th,
+.ia-cs-desktop-table td { padding: 10px; border-bottom: 1px solid #edf2f7; color: #334155; font-size: 11px; text-align: left; vertical-align: middle; }
+.ia-cs-desktop-table th { background: #f8fafc; color: #64748b; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.ia-cs-desktop-table td:first-child { display: grid; gap: 2px; }
+.ia-cs-desktop-table td:first-child small { color: #64748b; }
+.ia-cs-desktop-table .ia-cs-status { grid-column: auto; }
+.ia-cs-desktop-table td > button { min-height: 38px; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; font-weight: 850; cursor: pointer; }
+.ia-cs-sheet-backdrop { position: fixed; z-index: 90; inset: 0; display: grid; align-items: end; background: #0f172a8a; }
+.ia-cs-sheet { display: grid; width: 100%; max-height: min(88dvh, 720px); gap: 12px; overflow-y: auto; padding: 15px; border-radius: 16px 16px 0 0; background: #fff; box-shadow: 0 -18px 50px #0f172a26; }
+.ia-cs-sheet > header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ia-cs-sheet > header > div { display: grid; min-width: 0; gap: 2px; }
+.ia-cs-sheet h3 { margin: 0; color: #0f172a; font-size: 18px; }
+.ia-cs-sheet header span { overflow-wrap: anywhere; color: #64748b; font-size: 11px; }
+.ia-cs-sheet header > button { width: 42px; height: 42px; flex: 0 0 42px; border: 1px solid #dbe3ee; border-radius: 9px; background: #fff; color: #334155; font-size: 20px; cursor: pointer; }
+.ia-cs-sheet > label,
+.ia-so-form label { display: grid; min-width: 0; gap: 5px; color: #334155; font-size: 11px; font-weight: 850; }
+.ia-cs-sheet select,
+.ia-so-form input,
+.ia-so-form select,
+.ia-so-form textarea { width: 100%; min-height: 46px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; font: inherit; }
+.ia-so-form textarea { min-height: 78px; resize: vertical; }
+.ia-cs-sheet > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ia-cs-sheet > footer button,
+.ia-so-form > footer button,
+.ia-so-review-actions button { min-height: 46px; padding: 9px 12px; border: 1px solid #1d4ed8; border-radius: 9px; background: #1d4ed8; color: #fff; font-weight: 900; cursor: pointer; }
+.ia-cs-sheet > footer button.secondary,
+.ia-so-review-actions button:first-child { border-color: #cbd5e1; background: #fff; color: #334155; }
+.ia-cs-action-list { display: grid; gap: 7px; }
+.ia-cs-action-list button { display: grid; min-height: 58px; gap: 3px; padding: 10px; border: 1px solid #dbe3ee; border-radius: 10px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-cs-action-list button strong { font-size: 13px; }
+.ia-cs-action-list button span { color: #64748b; font-size: 10px; }
+.ia-so-page { max-width: 920px; }
+.ia-so-form { display: grid; min-width: 0; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.ia-so-primary-fields { display: grid; gap: 9px; }
+.ia-so-stock-context { display: grid; gap: 2px; padding: 11px; border-radius: 9px; background: #eff6ff; color: #1e40af; }
+.ia-so-stock-context span { font-size: 10px; font-weight: 800; }
+.ia-so-stock-context strong { font-size: 18px; }
+.ia-so-stock-context small { font-size: 10px; }
+.ia-so-stock-context.warning { background: #fef2f2; color: #b91c1c; }
+.ia-so-details { border: 1px solid #e2e8f0; border-radius: 9px; }
+.ia-so-details summary { min-height: 44px; padding: 12px; color: #1d4ed8; font-size: 11px; font-weight: 900; cursor: pointer; }
+.ia-so-details > div { display: grid; gap: 9px; padding: 0 11px 11px; }
+.ia-so-form > footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; padding-top: 2px; background: #fff; }
+.ia-so-form > footer button { width: 100%; }
+.ia-so-error { padding: 10px; border: 1px solid #fecaca; border-radius: 9px; background: #fef2f2; color: #991b1b; font-size: 12px; }
+.ia-so-review-card { display: grid; gap: 6px; padding: 14px; border: 1px solid #dbe3ee; border-radius: 12px; background: #fff; }
+.ia-so-review-card > strong { overflow-wrap: anywhere; font-size: 17px; }
+.ia-so-review-card > span,
+.ia-so-review-card > b { color: #475569; }
+.ia-so-review-card dl { display: grid; gap: 0; margin: 8px 0 0; }
+.ia-so-review-card dl div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #edf2f7; }
+.ia-so-review-card dt { color: #64748b; font-size: 11px; }
+.ia-so-review-card dd { margin: 0; font-weight: 900; }
+.ia-so-review-card p { margin: 5px 0 0; color: #475569; font-size: 11px; }
+.ia-so-transfer-route { display: grid; justify-items: start; gap: 4px; margin-top: 5px; }
+.ia-so-transfer-route span { padding: 7px 9px; border-radius: 8px; background: #f1f5f9; font-weight: 800; }
+.ia-so-transfer-route i { margin-left: 14px; color: #1d4ed8; font-style: normal; }
+.ia-so-review-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; padding-top: 8px; background: #f6f8fb; }
+.ia-so-review-actions button:disabled,
+.ia-so-form button:disabled { opacity: .6; cursor: wait; }
+.ia-cs-page button:focus-visible,
+.ia-so-page button:focus-visible,
+.ia-cs-page input:focus-visible,
+.ia-cs-page select:focus-visible,
+.ia-so-page input:focus-visible,
+.ia-so-page select:focus-visible,
+.ia-so-page textarea:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+@media (min-width: 700px) {
+  .ia-cs-mobile-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-so-primary-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-so-details > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-so-form > footer button { width: auto; min-width: 190px; }
+  .ia-cs-sheet { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); margin: auto; border-radius: 14px; }
+  .ia-cs-sheet-backdrop { place-items: center; }
+}
+
+@media (min-width: 1024px) {
+  .ia-cs-mobile-list { display: none; }
+  .ia-cs-desktop-table { display: block; }
+  .ia-cs-heading h2,
+  .ia-so-page > header h2 { font-size: 22px; }
+  .ia-cs-tools { max-width: 760px; }
+  .ia-so-primary-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 390px) {
+  .ia-cs-heading p { display: none; }
+  .ia-cs-heading > button { padding-inline: 9px; }
+  .ia-cs-card-main small { white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-cs-page *, .ia-so-page *, .ia-cs-sheet { scroll-behavior: auto; transition: none; }
+}
