@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRestaurantEventStream } from "../../../core/realtime/restaurantEventService";
 import { formatCurrency } from "../../../core/format/currency";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
+import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import {
   playNotificationTone,
   type RealtimeConnectionState,
@@ -567,6 +568,9 @@ export function KitchenDashboardPage({
   const sortTriggerRef = useRef<HTMLButtonElement | null>(null);
   const sortOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  useOperationalNotice(requestNotice, setRequestNotice);
+  useOperationalNotice(realtimeNotice, setRealtimeNotice);
+
   const refreshStockReceipts = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setStockReceiptsLoading(true);
@@ -1027,7 +1031,8 @@ export function KitchenDashboardPage({
           <span /> {totalActive} Active
         </div>
         <div className="kd-header-actions">
-          <div className="kd-stock-requests-control">
+          <div className="kd-material-actions" aria-label="Kitchen material requests">
+            <div className="kd-stock-requests-control">
             <button
               type="button"
               className="kd-stock-requests-trigger"
@@ -1051,13 +1056,14 @@ export function KitchenDashboardPage({
               onClose={() => setStockRequestsOpen(false)}
               onConfirm={handleConfirmStockReceipt}
             />
+            </div>
+            <button
+              className="kd-signout-btn"
+              onClick={() => setRequestOpen(true)}
+            >
+              Create Request
+            </button>
           </div>
-          <button
-            className="kd-signout-btn"
-            onClick={() => setRequestOpen(true)}
-          >
-            Create Request
-          </button>
           <button
             className="kd-icon-btn"
             aria-label="Notifications"
@@ -1212,14 +1218,6 @@ export function KitchenDashboardPage({
       </div>
 
       {error && <div className="kd-error-banner">⚠️ {error}</div>}
-      {realtimeNotice ? (
-        <div className="kd-realtime-notice" role="status">
-          <strong>{realtimeNotice}</strong>
-          <button type="button" onClick={() => setRealtimeNotice(null)}>
-            Dismiss
-          </button>
-        </div>
-      ) : null}
 
       {loading ? (
         <div className="kd-loading">
@@ -1421,14 +1419,12 @@ export function KitchenDashboardPage({
           </form>
         </div>
       )}
-      {requestNotice && (
-        <div
-          className="kd-request-notice"
-          onClick={() => setRequestNotice(null)}
-        >
-          {requestNotice}
+      {(realtimeNotice || requestNotice) ? (
+        <div className="kd-toast-stack" aria-live="polite" aria-atomic="true">
+          {realtimeNotice ? <div className="kd-operation-toast" role="status"><span>{realtimeNotice}</span><button type="button" aria-label="Dismiss update" onClick={() => setRealtimeNotice(null)}>×</button></div> : null}
+          {requestNotice ? <div className="kd-operation-toast success" role="status"><span>{requestNotice}</span><button type="button" aria-label="Dismiss success message" onClick={() => setRequestNotice(null)}>×</button></div> : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

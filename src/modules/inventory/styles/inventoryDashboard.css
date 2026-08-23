@@ -805,6 +805,44 @@
   font-weight: 700;
 }
 
+.ia-operation-toast {
+  position: fixed;
+  z-index: 950;
+  right: 18px;
+  bottom: 18px;
+  width: min(390px, calc(100vw - 28px));
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px 9px 14px;
+  border: 1px solid #b9e4ce;
+  border-radius: 11px;
+  background: #f0faf5;
+  color: #17633e;
+  box-shadow: 0 12px 32px rgba(16,24,40,.17);
+  font-size: 12px;
+  font-weight: 750;
+}
+.ia-operation-toast > span { min-width: 0; }
+.ia-operation-toast button {
+  min-height: 34px;
+  padding: 0 9px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 620px) {
+  .ia-operation-toast { right: 8px; bottom: 8px; width: calc(100vw - 16px); }
+}
+
 .ia-dashboard-metrics {
   display: grid;
   grid-template-columns: repeat(6, minmax(145px, 1fr));

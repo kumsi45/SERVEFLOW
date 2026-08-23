@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import {
   ADJUSTMENT_TYPE_LABELS,
   confirmInventoryAdjustment,
@@ -57,6 +58,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  useOperationalNotice(message, setMessage);
   const activeItems = useMemo(() => items.filter((item) => item.status === "active"), [items]);
   const canCreate = ["owner", "manager", "inventory_officer"].includes(staffRole);
 
@@ -152,7 +154,8 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
       </header>
 
       {!canCreate && <div className="ia-alert">Adjustment history is read only for your role.</div>}
-      {(error || message) && <div className={`ia-alert ${error ? "error" : ""}`}>{error ?? message}</div>}
+      {error && <div className="ia-alert error" role="alert">{error}</div>}
+      {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
 
       {form && !reviewing && (
         <form className="iad-editor" onSubmit={(event) => { event.preventDefault(); review(); }}>

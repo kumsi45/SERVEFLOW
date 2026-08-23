@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import type { InventoryItem, InventorySupplier, InventoryUnit } from "../../inventory/types";
 import {
   deletePurchaseOrderDraft,
@@ -92,6 +93,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  useOperationalNotice(message, setMessage);
   const receiptEditorRef = useRef<HTMLElement | null>(null);
   const activeSuppliers = suppliers.filter((supplier) => supplier.status === "active");
   const filterSuppliers = suppliers.filter((supplier) => supplier.status !== "deleted");
@@ -219,7 +221,8 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units 
         <div><span>Purchasing</span><h2>Purchase Orders</h2><p>Create drafts, receive partial deliveries, and track remaining quantities.</p></div>
         <button type="button" onClick={() => { setReceipt(null); setForm(emptyForm()); }}>Create Draft</button>
       </header>
-      {(error || message) && <div className={`ia-alert ${error ? "error" : ""}`}>{error ?? message}</div>}
+      {error && <div className="ia-alert error" role="alert">{error}</div>}
+      {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
 
       {form && (
         <section className="po-editor" aria-label={form.id ? "Edit purchase order draft" : "Create purchase order draft"}>

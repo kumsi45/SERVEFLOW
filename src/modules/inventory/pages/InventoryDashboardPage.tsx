@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../../../core/database";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
+import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { PurchaseOrderDraftsPage } from "../../purchasing/pages/PurchaseOrderDraftsPage";
 import { PurchaseHistoryPage } from "../../purchasing/pages/PurchaseHistoryPage";
@@ -443,6 +444,7 @@ export function InventoryDashboardPage({
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useOperationalNotice(message, setMessage);
   const [itemForm, setItemForm] = useState<InventoryItemDraft | null>(null);
   const [categoryForm, setCategoryForm] = useState<InventoryCategoryDraft | null>(null);
   const [supplierForm, setSupplierForm] = useState<InventorySupplierDraft | null>(null);
@@ -1538,7 +1540,8 @@ export function InventoryDashboardPage({
 
       <section className="ia-workspace">
         <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>
-        {(message || error) && <div className={`ia-alert ${error ? "error" : ""}`}>{error ?? message}</div>}
+        {error && <div className="ia-alert error" role="alert">{error}</div>}
+        {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
         {loading ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
 

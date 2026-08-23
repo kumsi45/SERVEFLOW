@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import type { PurchaseOrderDraftForm } from "../../purchasing/types";
 import { purchaseOrderLineTotal, purchaseOrderTotal } from "../../purchasing/services/purchaseOrderDraftService";
 import type {
@@ -72,6 +73,7 @@ export function LowStockAssistantPage({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  useOperationalNotice(message, setMessage);
   const canCreate = canCreateLowStockPurchaseDraft(staffRole);
   const activeSuppliers = useMemo(() => suppliers.filter((supplier) => supplier.status === "active"), [suppliers]);
   const activeItems = useMemo(() => items.filter((item) => item.status === "active"), [items]);
@@ -184,9 +186,11 @@ export function LowStockAssistantPage({
           : <span className="lsa-readonly">Read only</span>}
       </header>
 
-      {(error || message) && <div className={`ia-alert ${error ? "error" : ""}`}>
-        <span>{error ?? message}</span>
-        {message && onOpenPurchaseOrders && <button type="button" onClick={onOpenPurchaseOrders}>View Purchase Orders</button>}
+      {error && <div className="ia-alert error" role="alert">{error}</div>}
+      {message && <div className="ia-operation-toast" role="status" aria-live="polite">
+        <span>{message}</span>
+        {onOpenPurchaseOrders && <button type="button" onClick={onOpenPurchaseOrders}>View Purchase Orders</button>}
+        <button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button>
       </div>}
 
       <section className="lsa-summary" aria-label="Stock classification summary">

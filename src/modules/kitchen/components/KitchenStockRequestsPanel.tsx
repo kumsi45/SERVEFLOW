@@ -111,10 +111,12 @@ export function KitchenStockRequestsPanel({
               {history.length === 0 ? <p className="kd-stock-state">No recent request history.</p> : history.map((receipt) => (
                 <article className="kd-stock-history-row" key={receipt.id}>
                   <div><strong>{receipt.itemName}</strong><b>{formatKitchenReceiptQuantity(receipt.issuedQuantity, receipt.unit)}</b></div>
-                  <p>{historyStatus(receipt)}{receipt.stationName ? ` · ${receipt.stationName}` : ""}</p>
-                  <small>Requested {formatKitchenReceiptTime(receipt.requestedAt)}</small>
-                  {receipt.issuedAt ? <small>Issued {formatKitchenReceiptTime(receipt.issuedAt)}</small> : null}
-                  {receipt.confirmedAt ? <small>Received {formatKitchenReceiptTime(receipt.confirmedAt)}</small> : null}
+                  <p>{receipt.stationName || "Kitchen station"}</p>
+                  {receipt.status === "delivered" ? (
+                    <small className="kd-stock-history-received">Received by {receipt.confirmedByName || "Kitchen staff"} · {formatKitchenReceiptTime(receipt.confirmedAt)}</small>
+                  ) : (
+                    <small>{historyStatus(receipt)} · Requested {formatKitchenReceiptTime(receipt.requestedAt)}</small>
+                  )}
                 </article>
               ))}
             </div>

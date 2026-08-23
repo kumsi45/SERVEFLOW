@@ -640,7 +640,7 @@
   .kd-header { padding-inline: 12px; }
   .kd-header-search { max-width: none; }
   .kd-header-actions .kd-icon-btn,
-  .kd-header-actions .kd-signout-btn:last-child { display: none; }
+  .kd-header-actions > .kd-signout-btn:last-child { display: none; }
   .kd-filter-bar { top: 58px; padding-inline: 12px; }
   .kd-state-filters { padding-left: 0; border-left: 0; }
   .kd-order-workspace { padding-inline: 12px; }
@@ -774,6 +774,7 @@
 .kd-stock-history-row strong,.kd-stock-history-row b { font-size: 12px; }
 .kd-stock-history-row p { color: #455b50; font-size: 10px; }
 .kd-stock-history-row small { color: #75877e; font-size: 9px; }
+.kd-stock-history-row .kd-stock-history-received { color: #355f4c; font-size: 10px; font-weight: 750; }
 .kd-receipt-dialog-layer {
   position: fixed;
   z-index: 150;
@@ -835,4 +836,62 @@
   .kd-receipt-dialog-layer { align-items: end; padding: 0; }
   .kd-receipt-dialog { width: 100%; padding: 18px 14px max(18px, env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
   .kd-receipt-dialog footer button { min-height: 50px; }
+}
+
+/* Compact operational feedback and grouped material actions */
+.kd-material-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--kd-line);
+  border-radius: 10px;
+  background: #f7faf8;
+}
+.kd-material-actions .kd-stock-requests-trigger,
+.kd-material-actions .kd-signout-btn { min-height: 38px; height: 38px; border-color: transparent; }
+.kd-material-actions .kd-signout-btn:hover { border-color: #a9cbbb; background: #fff; color: var(--kd-brand-deep); }
+.kd-toast-stack {
+  position: fixed;
+  z-index: 140;
+  right: 16px;
+  bottom: 16px;
+  width: min(360px, calc(100vw - 24px));
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+.kd-operation-toast {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px 9px 13px;
+  border: 1px solid #b9d4ef;
+  border-radius: 10px;
+  background: #f1f7fd;
+  color: #24557e;
+  box-shadow: 0 10px 28px rgba(16,38,29,.16);
+  font-size: 12px;
+  font-weight: 750;
+  pointer-events: auto;
+}
+.kd-operation-toast.success { border-color: #b9e4ce; background: #f0faf5; color: #17633e; }
+.kd-operation-toast button {
+  width: 30px; height: 30px; flex: 0 0 30px; border: 0; border-radius: 7px;
+  background: rgba(255,255,255,.72); color: inherit; font: inherit; font-size: 18px; cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .kd-header-datetime,
+  .kd-status-pill { display: none; }
+  .kd-header-search { min-width: 120px; }
+}
+
+@media (max-width: 620px) {
+  .kd-material-actions { gap: 2px; padding: 2px; }
+  .kd-material-actions .kd-signout-btn,
+  .kd-material-actions .kd-stock-requests-trigger { min-height: 42px; height: 42px; }
+  .kd-toast-stack { right: 8px; bottom: 8px; width: calc(100vw - 16px); }
 }
