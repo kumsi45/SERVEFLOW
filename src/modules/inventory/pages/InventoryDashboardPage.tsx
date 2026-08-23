@@ -83,6 +83,7 @@ import type {
   StockMovementDraft,
 } from "../types";
 import "../styles/inventoryDashboard.css";
+import "../styles/inventoryKitchenRequests.css";
 import "../styles/inventoryStockOperations.css";
 import "../styles/inventoryStockMovements.css";
 
@@ -939,22 +940,12 @@ export function InventoryDashboardPage({
       requests={kitchenRequests}
       requestsLoading={kitchenRequestsLoading}
       requestsError={kitchenRequestsError}
-      insightsError={insightsError}
       canProcessRequests={staffRole === "owner" || staffRole === "inventory_officer"}
-      outOfStockCount={dashboardKpis.outOfStockItems}
-      lowStockCount={dashboardKpis.lowStockItems}
-      pendingPurchaseCount={dashboardKpis.pendingPurchaseOrders}
-      totalActiveIngredients={data.items.filter((item) => item.status === "active").length}
-      inventoryValue={dashboardKpis.totalInventoryValue}
-      currentStock={currentStock}
       requestStorageLocations={Object.fromEntries(data.items.map((item) => [
         item.id,
         data.storageLocations.find((location) => location.id === item.storageLocationId)?.name ?? "Configured item storage",
       ]))}
-      recentLedger={recentLedger}
-      staffRoles={data.staffRoles}
       working={working}
-      onNavigate={navigate}
       onIssue={(request) => processKitchenRequest(
         () => issueInventoryKitchenRequest(restaurantId, request.id),
         `${request.itemName} issued to Kitchen. Stock was deducted once.`,

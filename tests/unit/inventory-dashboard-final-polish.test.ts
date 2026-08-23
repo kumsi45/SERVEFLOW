@@ -150,29 +150,25 @@ describe("Phase 8.5.6 inventory dashboard KPIs", () => {
 });
 
 describe("Inventory operational dashboard presentation", () => {
-  it("renders actionable KPIs and recent operational activity", () => {
-    for (const label of [
-      "Kitchen Requests", "Awaiting Kitchen Confirmation", "Out of Stock",
-      "Low Stock", "Pending Purchases", "Recent Activity",
-    ]) expect(operationalDashboard).toContain(label);
+  it("now renders the dedicated Kitchen request workflow without dashboard duplication", () => {
+    for (const label of ["Kitchen Requests", "Awaiting Inventory", "Awaiting Kitchen", "History"])
+      expect(operationalDashboard).toContain(label);
+    for (const removed of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"])
+      expect(operationalDashboard).not.toContain(removed);
   });
 
-  it("routes every quick action to the existing module", () => {
-    for (const action of [
-      "Receive Stock", "Stock Out / Issue Stock", "Adjustment", "Waste",
-      "Purchase Order", "Transfer",
-    ]) expect(operationalDashboard).toContain(action);
-    for (const route of [
-      'onNavigate("purchase-orders")', 'onNavigate("adjustments")',
-      'onNavigate("stock-in")', 'onNavigate("stock-out")', 'onNavigate("waste")',
-      'onNavigate("low-stock-assistant")', 'onNavigate("transfers")',
-    ]) expect(operationalDashboard).toContain(route);
+  it("keeps issuing and exception handling on the canonical request actions", () => {
+    expect(operationalDashboard).toContain("Confirm Issue");
+    expect(operationalDashboard).toContain("Confirm Cannot Fulfill");
+    expect(operationalDashboard).toContain("onIssue(action.request)");
+    expect(operationalDashboard).toContain("onUnable(action.request, unableExplanation)");
+    expect(operationalDashboard).not.toContain("onNavigate");
   });
 
   it("renders concise operational zero states", () => {
     for (const emptyState of [
-      "Everything is under control", "No approved Kitchen requests are waiting for Inventory.",
-      "No recent inventory activity.",
+      "No requests are awaiting Inventory.", "No requests are awaiting Kitchen.",
+      "No Kitchen request history yet.",
     ]) expect(operationalDashboard).toContain(emptyState);
   });
 
@@ -186,15 +182,12 @@ describe("Inventory operational dashboard presentation", () => {
     expect(presentation).not.toMatch(/supabase|insert\(|update\(|delete\(|rpc\(/i);
   });
 
-  it("supports desktop, tablet, mobile, large monitors, focus, and reduced motion", () => {
+  it("keeps prior dashboard styles for unaffected routes and exposes the request workflow semantics", () => {
     expect(styles).toContain(".ia-i1-quick-grid");
-    expect(styles).toContain("@media (max-width: 1024px)");
-    expect(styles).toContain("@media (max-width: 768px)");
-    expect(styles).toContain("@media (max-width: 430px)");
     expect(styles).toContain(":focus-visible");
     expect(styles).toContain("prefers-reduced-motion");
-    expect(operationalDashboard).toContain("aria-label=\"Kitchen request status\"");
-    expect(operationalDashboard).toContain("<time dateTime={entry.movementDate}");
+    expect(operationalDashboard).toContain("aria-label=\"Kitchen request workflow\"");
+    expect(operationalDashboard).toContain("<time dateTime={request.requestedAt}");
   });
 
   it("adds no database objects or Phase 8.5.6 migration", () => {

@@ -25,7 +25,7 @@ describe("Phase W.6 simplified V1 recipe and inventory workflow", () => {
 
   it("keeps inventory officers focused on operations", () => {
     expect(inventoryDashboard).not.toContain("Recipes");
-    for (const operation of ["Receive Stock", "Issue Stock", "Waste", "Transfer", "Adjustment"]) expect(inventoryDashboard).toContain(operation);
+    for (const operation of ["Receive Stock", "Issue Stock", "Waste", "Transfers", "Adjustments"]) expect(inventory).toContain(operation);
     expect(inventory).toContain("InventoryOperationalDashboard");
   });
 

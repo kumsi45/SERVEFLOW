@@ -7,33 +7,29 @@ const page = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
 const dashboard = read("src/modules/inventory/components/InventoryOperationalDashboard.tsx");
 const styles = read("src/modules/inventory/styles/inventoryDashboard.css");
 
-describe("Inventory Phase I1 operational dashboard supersession", () => {
-  it("renders the five operational sections in priority order", () => {
-    const titles = ["Needs Attention", "Kitchen Requests", "Quick Operations", "Stock Snapshot", "Recent Activity"];
+describe("Inventory Kitchen Requests supersedes the Phase I1 dashboard shell", () => {
+  it("renders the request workflow sections", () => {
+    const titles = ["Kitchen Requests", "Awaiting Inventory", "Awaiting Kitchen", "History"];
     const positions = titles.map((title) => dashboard.indexOf(title));
     expect(positions.every((position) => position >= 0)).toBe(true);
-    expect(positions).toEqual([...positions].sort((left, right) => left - right));
   });
 
-  it("shows only real actionable attention sources and a calm zero state", () => {
-    for (const label of ["Kitchen Requests", "Awaiting Kitchen Confirmation", "Out of Stock", "Low Stock", "Pending Purchases"]) expect(dashboard).toContain(label);
-    expect(dashboard).not.toContain("Expiring Soon");
-    expect(dashboard).not.toContain("Pending Transfers");
-    expect(dashboard).toContain("Everything is under control");
+  it("shows canonical request availability and calm queue zero states", () => {
+    for (const label of ["Requested quantity", "Available in", "OUT OF STOCK", "Insufficient stock"]) expect(dashboard).toContain(label);
+    expect(dashboard).toContain("No requests are awaiting Inventory.");
+    for (const removed of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"]) expect(dashboard).not.toContain(removed);
   });
 
-  it("keeps quick operations to established shift workflows", () => {
-    for (const label of ["Receive Stock", "Stock Out / Issue Stock", "Adjustment", "Transfer", "Waste", "Purchase Order"]) expect(dashboard).toContain(label);
-    expect(dashboard).not.toContain("Create Ingredient");
-    expect(dashboard).not.toContain("Report Shortcuts");
+  it("keeps only established request actions", () => {
+    for (const label of ["Issue", "Cannot Fulfill", "Confirm Issue", "Confirm Cannot Fulfill"]) expect(dashboard).toContain(label);
+    expect(dashboard).not.toContain("onNavigate");
   });
 
-  it("keeps stock and activity compact and canonical", () => {
-    expect(dashboard).toContain("Current Inventory Value");
-    expect(dashboard).toContain("Active Ingredients");
-    expect(dashboard).toContain("recentLedger.slice(0, 10)");
-    expect(dashboard).toContain("entry.staffName");
-    expect(dashboard).toContain("staffRoles[entry.createdByStaffId]");
+  it("keeps request stock and history compact and canonical", () => {
+    expect(dashboard).toContain("request.currentQuantity");
+    expect(dashboard).toContain("requestStorageLocations");
+    expect(dashboard).toContain("sortInventoryRequestHistory");
+    expect(dashboard).toContain("HISTORY_PAGE_SIZE");
     expect(page).toContain("calculateInventoryDashboardKpis");
   });
 

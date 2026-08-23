@@ -1,71 +1,56 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-const styles = readFileSync(resolve(process.cwd(), "src/modules/inventory/styles/inventoryDashboard.css"), "utf8");
-const requestCard = (index: number, state = "normal") => `<article class="ia-i1-request-card ${state}"><header><div class="ia-i1-request-primary"><strong>${index === 1 ? "Extra Fine Imported Brown Sugar With A Long Ingredient Name" : `Ingredient ${index}`}</strong><b>${index + 1} kg</b></div></header><strong class="ia-i1-station">Cold Drinks and Beverage Preparation</strong><div class="ia-i1-request-meta"><span>Requested by Chef With A Long Name</span><time>Aug 23, 2:40 PM</time></div><div class="ia-i1-request-meta"><span>Approved by Manager Sada</span><time>Aug 23, 2:43 PM</time></div><div class="ia-i1-availability available"><span>Available</span><strong>70 kg</strong></div><footer><button>Issue</button><button class="secondary">Cannot Fulfill</button></footer></article>`;
-const markup = `<main class="ia-i1-dashboard">
-  <section class="ia-i1-section"><div class="ia-i1-title"><div><span>OPERATIONS</span><h2>Needs Attention</h2></div></div><div class="ia-i1-attention-grid"><button><strong>4</strong><span>Kitchen Requests</span><small>Awaiting action</small></button><button class="critical"><strong>1</strong><span>Out of Stock</span><small>Review items</small></button><button><strong>7</strong><span>Pending Purchases</span><small>Open purchases</small></button></div></section>
-  <section class="ia-i1-section ia-i1-requests"><div class="ia-i1-title"><div><span>KITCHEN HANDOFF</span><h2>Kitchen Requests</h2></div></div><div class="ia-i1-tabs"><button aria-selected="true">Awaiting Inventory <span>4</span></button><button>Awaiting Kitchen <span>1</span></button><button>History</button></div><div class="ia-i1-request-list">${[1, 2, 3, 4].map((index) => requestCard(index, index === 4 ? "insufficient" : "normal")).join("")}</div></section>
-  <section class="ia-i1-section"><div class="ia-i1-title"><div><span>SHIFT WORK</span><h2>Quick Operations</h2></div></div><div class="ia-i1-quick-grid"><button><span>+</span><strong>Receive Stock</strong></button><button><span>−</span><strong>Stock Out / Issue Stock</strong></button><button><span>±</span><strong>Adjustment</strong></button><button><span>⇄</span><strong>Transfer</strong></button><button><span>!</span><strong>Waste</strong></button></div></section>
-  <section class="ia-i1-section"><div class="ia-i1-title"><div><span>STOCK POSITION</span><h2>Stock Snapshot</h2></div><button>View Current Stock</button></div></section>
-  <section class="ia-i1-section"><div class="ia-i1-title"><div><span>LEDGER</span><h2>Recent Activity</h2></div></div></section>
-</main>`;
+const styles = readFileSync(resolve(process.cwd(), "src/modules/inventory/styles/inventoryKitchenRequests.css"), "utf8");
+const card = (state: "available" | "insufficient" | "out", index: number) => `<article class="ia-kr-card ${state}"><header><div><strong>${index === 1 ? "Extra Fine Imported Brown Sugar With A Very Long Material Name" : `Material ${index}`}</strong><span>Cold Drinks and Beverage Preparation Station</span></div></header><div class="ia-kr-requested"><span>Requested quantity</span><strong>${index + 1}.25 kg</strong></div><div class="ia-kr-availability ${state}"><div><span>Available in Main Beverage and Dry Goods Storage</span><strong>${state === "out" ? "0" : state === "insufficient" ? "2" : "70"} kg</strong></div>${state === "out" ? "<b>OUT OF STOCK</b>" : state === "insufficient" ? "<b>Insufficient stock · short by 3.25 kg</b>" : ""}</div><div class="ia-kr-meta"><span>Requested by Chef With A Long Name</span><time>Aug 23, 12:21 PM</time></div><footer>${state === "available" ? "<button>Issue</button>" : ""}<button class="secondary">Cannot Fulfill</button></footer></article>`;
+const markup = `<main class="ia-kr-page"><header class="ia-kr-heading"><div><h2>Kitchen Requests</h2><p>Review and issue materials requested by kitchen.</p></div><strong>3 awaiting inventory</strong></header><div class="ia-kr-tabs" role="tablist"><button aria-selected="true">Awaiting Inventory<span>3</span></button><button>Awaiting Kitchen<span>1</span></button><button>History</button></div><div class="ia-kr-list">${card("available", 1)}${card("insufficient", 2)}${card("out", 3)}</div></main>`;
 
-for (const viewport of [
-  { name: "desktop", width: 1440, height: 900, columns: 3 },
-  { name: "laptop", width: 1024, height: 768, columns: 2 },
-  { name: "tablet", width: 768, height: 1024, columns: 2 },
-  { name: "mobile", width: 375, height: 812, columns: 1 },
-]) {
-  test(`Inventory I1.1 dashboard fits ${viewport.name}`, async ({ page }) => {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>*{box-sizing:border-box}html,body{margin:0;max-width:100%;overflow-x:hidden;background:#f6f8fb}.ia-i1-dashboard{padding:12px}${styles}</style>${markup}`);
-    const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
-    expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
-    const cards = page.locator(".ia-i1-request-card");
-    await expect(cards).toHaveCount(4);
-    const topPositions = await cards.evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().top)));
-    expect(topPositions.filter((top) => top === topPositions[0])).toHaveLength(viewport.columns);
-    const borderColors = await cards.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).borderLeftColor));
-    expect(borderColors[0]).not.toBe("rgb(220, 38, 38)");
-    expect(borderColors[3]).toBe("rgb(220, 38, 38)");
-    await expect(page.getByRole("button", { name: /Awaiting Inventory/ })).toHaveCount(1);
-    await expect(page.locator(".ia-i1-status.accepted")).toHaveCount(0);
-    for (const action of ["Issue", "Cannot Fulfill"]) {
-      const button = cards.first().getByRole("button", { name: action, exact: true });
-      await expect(button).toBeVisible();
+async function load(page: Page, width: number, height: number, body = markup) {
+  await page.setViewportSize({ width, height });
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>*{box-sizing:border-box}html,body{margin:0;max-width:100%;background:#f6f8fb}body{padding:10px}${styles}</style>${body}`);
+}
+
+const viewports = [[360, 800], [375, 812], [390, 844], [412, 915], [430, 932], [768, 1024], [820, 1180], [1024, 768], [1366, 768], [1440, 900], [1920, 1080]];
+for (const [width, height] of viewports) {
+  test(`Inventory Kitchen Requests fits ${width}x${height}`, async ({ page }) => {
+    await load(page, width, height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect(page.getByRole("heading", { name: "Kitchen Requests" })).toBeVisible();
+    const tabs = page.locator(".ia-kr-tabs");
+    expect((await tabs.evaluate((node) => node.scrollWidth)) >= (await tabs.evaluate((node) => node.clientWidth))).toBe(true);
+    const cards = page.locator(".ia-kr-card");
+    await expect(cards).toHaveCount(3);
+    const tops = await cards.evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().top)));
+    expect(tops.filter((top) => top === tops[0])).toHaveLength(width < 700 ? 1 : 2);
+    await expect(cards.nth(0).getByRole("button", { name: "Issue" })).toBeVisible();
+    await expect(cards.nth(1).getByRole("button", { name: "Issue" })).toHaveCount(0);
+    await expect(cards.nth(2).getByRole("button", { name: "Issue" })).toHaveCount(0);
+    await expect(page.getByText("OUT OF STOCK")).toBeVisible();
+    await expect(page.getByText(/Insufficient stock/)).toBeVisible();
+    for (const button of await page.locator(".ia-kr-card footer button").all()) {
       const box = await button.boundingBox();
-      expect(box?.x).toBeGreaterThanOrEqual(0);
-      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
     }
-    if (viewport.width >= 1440) {
-      const requestsBox = await page.locator(".ia-i1-requests").boundingBox();
-      expect(requestsBox?.y).toBeLessThan(180);
-      expect(topPositions[0]).toBeLessThan(270);
-      expect((await page.locator(".ia-i1-attention-grid button").first().boundingBox())?.height).toBeLessThan(80);
-      expect((await cards.first().boundingBox())?.height).toBeLessThan(240);
-    }
+    for (const forbidden of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity", "Ingredient / Food Material"]) await expect(page.getByText(forbidden, { exact: true })).toHaveCount(0);
   });
 }
 
-test("Inventory I1.1 supports four request columns on a wide workspace", async ({ page }) => {
-  await page.setViewportSize({ width: 1600, height: 900 });
-  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>*{box-sizing:border-box}html,body{margin:0}${styles}</style>${markup}`);
-  const tops = await page.locator(".ia-i1-request-card").evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().top)));
-  expect(new Set(tops).size).toBe(1);
+test("Kitchen Request issue confirmation is compact and full-quantity only", async ({ page }) => {
+  const dialog = `<div class="ia-kr-backdrop"><section class="ia-kr-dialog" role="dialog" aria-label="Issue Coffee"><header><div><span>KITCHEN REQUEST</span><h2>Issue Coffee</h2><p>Main Kitchen</p></div><button aria-label="Close">×</button></header><dl><div><dt>Requested</dt><dd>12 kg</dd></div><div><dt>From</dt><dd>Main Store</dd></div><div><dt>Available</dt><dd>60 kg</dd></div><div><dt>After issue</dt><dd>48 kg</dd></div></dl><label>Quantity to issue<div class="ia-kr-quantity-input"><input type="number" readonly value="12"><span>kg</span></div></label><p class="ia-kr-integrity-note">This issues the full approved quantity and records one stock movement.</p><footer><button class="secondary">Cancel</button><button>Confirm Issue</button></footer></section></div>`;
+  await load(page, 360, 800, dialog);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(page.getByRole("dialog", { name: "Issue Coffee" })).toBeVisible();
+  await expect(page.locator("input[readonly]")).toHaveValue("12");
+  await expect(page.getByRole("button", { name: "Confirm Issue" })).toBeVisible();
 });
 
-test("Inventory I1.1 mobile issue confirmation is compact and business-friendly", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>*{box-sizing:border-box}html,body{margin:0}${styles}</style><div class="ia-i1-dialog-backdrop"><section class="ia-i1-dialog" role="dialog" aria-label="Issue Stock"><header><div><span>KITCHEN REQUEST</span><h2>Issue Stock</h2><p>Sugar → Beverages</p></div><button aria-label="Close">×</button></header><dl class="ia-i1-dialog-summary"><div><dt>Requested</dt><dd>2 kg</dd></div><div><dt>Available</dt><dd>48 kg</dd></div><div><dt>Storage</dt><dd>Main Store</dd></div><div><dt>After issue</dt><dd>46 kg</dd></div></dl><p class="ia-i1-deduction-warning">You are issuing 2 kg of Sugar to Beverages. Stock will decrease from 48 kg to 46 kg.</p><footer><button class="secondary">Cancel</button><button>Issue 2 kg</button></footer></section></div>`);
-  const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
-  expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
-  const dialog = page.getByRole("dialog", { name: "Issue Stock" });
-  const box = await dialog.boundingBox();
-  expect(box?.x).toBe(0);
-  expect(box?.width).toBe(375);
-  expect(box?.height).toBeLessThan(600);
-  await expect(page.getByText("Stock will decrease from 48 kg to 46 kg.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Issue 2 kg" })).toBeVisible();
+test("Kitchen Request Cannot Fulfill confirmation is compact", async ({ page }) => {
+  const dialog = `<div class="ia-kr-backdrop"><section class="ia-kr-dialog" role="dialog" aria-label="Cannot Fulfill"><header><div><span>KITCHEN REQUEST</span><h2>Cannot Fulfill</h2><p>Main Kitchen</p></div><button aria-label="Close">×</button></header><div class="ia-kr-unable-form"><label>Reason<select><option>Insufficient stock</option><option>Out of stock</option><option>Material unavailable</option><option>Other</option></select></label><label>Additional explanation (optional)<textarea rows="2"></textarea></label></div><footer><button class="secondary">Cancel</button><button>Confirm Cannot Fulfill</button></footer></section></div>`;
+  await load(page, 360, 800, dialog);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(page.getByRole("button", { name: "Confirm Cannot Fulfill" })).toBeVisible();
+  const box = await page.locator(".ia-kr-dialog").boundingBox();
+  expect(box?.height).toBeLessThanOrEqual(800);
 });

@@ -22,17 +22,19 @@ describe("KMR3 end-to-end closeout contracts",()=>{
     for(const label of ["Ingredient / Food Material","Kitchen Supply","Tool / Equipment","Cleaning / Consumable","Other"]){
       expect(kitchenService+kitchenPage).toContain(label);
     }
-    for(const consumer of [managerKitchen,managerOperations,managerInventory,inventoryDashboard]){
+    for(const consumer of [managerKitchen,managerOperations,managerInventory]){
       expect(consumer).toContain("materialRequestTypeLabel");
       expect(consumer).not.toContain("{request.requestType}");
       expect(consumer).not.toContain("{selectedRequest.requestType}");
     }
+    expect(inventoryDashboard).not.toContain("materialRequestTypeLabel");
+    expect(inventoryDashboard).not.toContain("Ingredient / Food Material");
   });
 
   it("keeps non-stock materials visible but impossible to issue as stock",()=>{
     expect(inventoryService).toContain("row.current_quantity == null ? null");
-    expect(inventoryDashboard).toContain("!request.inventoryItemId || available === null");
-    expect(inventoryDashboard).toContain("Boolean(request.inventoryItemId)");
+    expect(inventoryDashboard).toContain("!request.inventoryItemId || request.currentQuantity === null");
+    expect(inventoryDashboard).toContain('availability === "available" && <button');
     expect(inventoryDashboard).toContain("Cannot Fulfill");
     expect(inventoryDashboard).toContain("Confirm Cannot Fulfill");
   });
