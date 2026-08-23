@@ -22,10 +22,11 @@ export const INVENTORY_REALTIME_TABLES = [
   "inventory_suppliers",
   "inventory_storage_locations",
   "inventory_units",
+  "kitchen_inventory_requests",
 ] as const;
 
 export type InventoryRealtimeTable = (typeof INVENTORY_REALTIME_TABLES)[number];
-export type InventoryRealtimeAdminTable = Exclude<InventoryRealtimeTable, "inventory_movements">;
+export type InventoryRealtimeAdminTable = Exclude<InventoryRealtimeTable, "inventory_movements" | "kitchen_inventory_requests">;
 export type InventoryRealtimeChange = {
   operation: "INSERT" | "UPDATE" | "DELETE";
   record: Record<string, unknown>;

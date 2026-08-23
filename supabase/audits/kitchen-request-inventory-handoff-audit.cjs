@@ -9,7 +9,11 @@ const env = Object.fromEntries(fs.readFileSync(path.join(root, "supabase", "conn
     const index = line.indexOf("=");
     return [line.slice(0, index).trim(), line.slice(index + 1).trim().replace(/^["']|["']$/g, "")];
   }));
-const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "242_kitchen_request_inventory_handoff.sql"), "utf8");
+const migration = [
+  "242_kitchen_request_inventory_handoff.sql",
+  "247_kitchen_stock_receipt_confirmation.sql",
+  "248_kitchen_stock_receipt_history_quantity.sql",
+].map((name) => fs.readFileSync(path.join(root, "supabase", "migrations", name), "utf8")).join("\n");
 const id = () => crypto.randomUUID();
 const results = [];
 const check = (label, ok, detail = "") => {
@@ -41,21 +45,34 @@ async function main() {
       check(label, pattern.test(error.message), error.message);
     }
   };
+  const expectAnonReject = async (label, sql, params, pattern) => {
+    await db.query("savepoint expected_anon_rejection");
+    try {
+      await db.query("set local role anon");
+      await db.query(sql, params);
+      await db.query("rollback to savepoint expected_anon_rejection");
+      check(label, false, "unexpected success");
+    } catch (error) {
+      await db.query("rollback to savepoint expected_anon_rejection");
+      await db.query("reset role");
+      check(label, pattern.test(error.message), error.message);
+    }
+  };
 
   try {
     await db.query("begin");
-    await db.query(migration);
+    if (process.env.AUDIT_APPLY_MIGRATION !== "false") await db.query(migration);
 
     const identities = (await db.query("select distinct user_id from public.restaurant_staff where user_id is not null limit 7")).rows.map((row) => row.user_id);
     if (identities.length < 7) throw new Error("Hosted audit requires seven existing authenticated identities.");
 
     const restaurantA = id(), restaurantB = id();
-    const stationA = id(), stationB = id();
+    const stationA = id(), stationAOther = id(), stationB = id();
     const categoryA = id(), categoryB = id(), unitA = id(), unitB = id(), storageA = id(), storageB = id();
     const itemA = id(), itemB = id();
     const staff = {
       managerA: { id: id(), user: identities[0] }, inventoryA: { id: id(), user: identities[1] }, chefA: { id: id(), user: identities[2] }, waiterA: { id: id(), user: identities[3] },
-      managerB: { id: id(), user: identities[4] }, inventoryB: { id: id(), user: identities[5] }, chefB: { id: id(), user: identities[6] },
+      otherChefA: { id: id(), user: identities[4] }, managerB: { id: id(), user: identities[4] }, inventoryB: { id: id(), user: identities[5] }, chefB: { id: id(), user: identities[6] },
     };
     const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -64,14 +81,19 @@ async function main() {
     await db.query(`insert into public.restaurant_staff(id,restaurant_id,user_id,role,display_name,active) values
       ($1,$2,$3,'manager','Audit Manager A',true),($4,$2,$5,'inventory_officer','Audit Inventory A',true),
       ($6,$2,$7,'kitchen','Audit Chef A',true),($8,$2,$9,'waiter','Audit Waiter A',true),
-      ($10,$11,$12,'manager','Audit Manager B',true),($13,$11,$14,'inventory_officer','Audit Inventory B',true),
-      ($15,$11,$16,'kitchen','Audit Chef B',true)`, [
+      ($10,$2,$11,'kitchen','Audit Other Station Chef A',true),
+      ($12,$13,$14,'manager','Audit Manager B',true),($15,$13,$16,'inventory_officer','Audit Inventory B',true),
+      ($17,$13,$18,'kitchen','Audit Chef B',true)`, [
       staff.managerA.id, restaurantA, staff.managerA.user, staff.inventoryA.id, staff.inventoryA.user,
       staff.chefA.id, staff.chefA.user, staff.waiterA.id, staff.waiterA.user,
+      staff.otherChefA.id, staff.otherChefA.user,
       staff.managerB.id, restaurantB, staff.managerB.user, staff.inventoryB.id, staff.inventoryB.user,
       staff.chefB.id, staff.chefB.user,
     ]);
-    await db.query("insert into public.kitchen_stations(id,restaurant_id,name) values($1,$2,'Audit Kitchen A'),($3,$4,'Audit Kitchen B')", [stationA, restaurantA, stationB, restaurantB]);
+    await db.query("insert into public.kitchen_stations(id,restaurant_id,name) values($1,$2,'Audit Kitchen A'),($3,$2,'Audit Other Kitchen A'),($4,$5,'Audit Kitchen B')", [stationA, restaurantA, stationAOther, stationB, restaurantB]);
+    await db.query(`update public.restaurant_staff set assigned_kitchen_station_id=case id
+      when $1 then $2::uuid when $3 then $4::uuid when $5 then $6::uuid end
+      where id in ($1,$3,$5)`, [staff.chefA.id, stationA, staff.otherChefA.id, stationAOther, staff.chefB.id, stationB]);
     await db.query("insert into public.inventory_categories(id,restaurant_id,name,status,created_by_staff_id,updated_by_staff_id) values($1,$2,'Audit Category A','active',$3,$3),($4,$5,'Audit Category B','active',$6,$6)", [categoryA, restaurantA, staff.inventoryA.id, categoryB, restaurantB, staff.inventoryB.id]);
     await db.query("insert into public.inventory_units(id,restaurant_id,name,status,created_by_staff_id,updated_by_staff_id) values($1,$2,'kg','active',$3,$3),($4,$5,'kg','active',$6,$6)", [unitA, restaurantA, staff.inventoryA.id, unitB, restaurantB, staff.inventoryB.id]);
     await db.query("insert into public.inventory_storage_locations(id,restaurant_id,name,status,created_by_staff_id,updated_by_staff_id) values($1,$2,'Audit Store A','active',$3,$3),($4,$5,'Audit Store B','active',$6,$6)", [storageA, restaurantA, staff.inventoryA.id, storageB, restaurantB, staff.inventoryB.id]);
@@ -114,7 +136,18 @@ async function main() {
     await expectReject("Repeated issue is rejected", staff.inventoryA.user, "select public.issue_kitchen_inventory_request($1,$2)", [restaurantA, requestId], /already issued|not awaiting/i);
     check("Issued request leaves the actionable Inventory queue", (await asUser(staff.inventoryA.user, "select * from public.get_inventory_kitchen_request_queue($1)", [restaurantA])).rowCount === 0);
 
+    const kitchenReceiptsA = (await asUser(staff.chefA.user, "select * from public.get_kitchen_stock_receipts($1,$2)", [restaurantA, 20])).rows;
+    check("Chef A sees only its station issued receipt", kitchenReceiptsA.length === 1 && kitchenReceiptsA[0].request_id === requestId && kitchenReceiptsA[0].storage_location_name === "Audit Store A");
+    const otherStationReceipts = (await asUser(staff.otherChefA.user, "select * from public.get_kitchen_stock_receipts($1,$2)", [restaurantA, 20])).rows;
+    check("Same-tenant Chef at another station cannot read the receipt queue row", otherStationReceipts.length === 0);
+    await expectReject("Chef B cannot open Tenant A receipt queue", staff.chefB.user, "select * from public.get_kitchen_stock_receipts($1,$2)", [restaurantA, 20], /access denied/i);
+    await expectReject("Waiter cannot open Kitchen receipt queue", staff.waiterA.user, "select * from public.get_kitchen_stock_receipts($1,$2)", [restaurantA, 20], /access denied/i);
+    await expectAnonReject("Anonymous cannot open Kitchen receipt queue", "select * from public.get_kitchen_stock_receipts($1,$2)", [restaurantA, 20], /permission denied/i);
+
     await expectReject("Chef B cannot confirm Tenant A receipt", staff.chefB.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, requestId], /access denied/i);
+    await expectReject("Same-tenant Chef at another station cannot confirm receipt", staff.otherChefA.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, requestId], /access denied.*station/i);
+    await expectReject("Chef cannot confirm an invalid request", staff.chefA.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, id()], /not found/i);
+    await expectAnonReject("Anonymous cannot confirm receipt", "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, requestId], /permission denied/i);
     const movementCountBeforeConfirmation = Number((await db.query("select count(*) count from public.inventory_movements where restaurant_id=$1 and inventory_item_id=$2", [restaurantA, itemA])).rows[0].count);
     await asUser(staff.chefA.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, requestId]);
     const confirmed = (await db.query("select * from public.kitchen_inventory_requests where id=$1", [requestId])).rows[0];
@@ -122,6 +155,12 @@ async function main() {
     check("Chef A confirmation finalizes Fulfilled with attribution", confirmed.status === "delivered" && confirmed.confirmed_by_staff_id === staff.chefA.id && confirmed.confirmed_at && confirmed.delivered_at);
     check("Kitchen confirmation does not deduct stock again", balanceAfterConfirmation === 7 && movementCountBeforeConfirmation === Number((await db.query("select count(*) count from public.inventory_movements where restaurant_id=$1 and inventory_item_id=$2", [restaurantA, itemA])).rows[0].count));
     await expectReject("Repeated confirmation is rejected", staff.chefA.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, requestId], /already confirmed|not awaiting/i);
+
+    const rejectedRequest = (await asUser(staff.chefA.user, "select public.create_kitchen_inventory_request($1,'ignored',1,'ignored','normal',$2,null,$3) id", [restaurantA, stationA, itemA])).rows[0].id;
+    await asUser(staff.managerA.user, "select public.process_kitchen_inventory_request($1,$2,'reject','Not required')", [restaurantA, rejectedRequest]);
+    await expectReject("Rejected request cannot be confirmed", staff.chefA.user, "select public.confirm_kitchen_inventory_request_receipt($1,$2)", [restaurantA, rejectedRequest], /not awaiting/i);
+    const rejectedHistory = (await asUser(staff.chefA.user, "select * from public.get_kitchen_stock_receipts($1,$2) where request_id=$3", [restaurantA, 20, rejectedRequest])).rows[0];
+    check("Rejected history keeps the authoritative requested quantity", Number(rejectedHistory.issued_quantity) === 1);
 
     const unableRequest = (await asUser(staff.chefA.user, "select public.create_kitchen_inventory_request($1,'ignored',2,'ignored','normal',$2,null,$3) id", [restaurantA, stationA, itemA])).rows[0].id;
     await asUser(staff.managerA.user, "select public.process_kitchen_inventory_request($1,$2,'accept',null)", [restaurantA, unableRequest]);

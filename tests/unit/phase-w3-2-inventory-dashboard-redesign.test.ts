@@ -1,57 +1,49 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const page = readFileSync("src/modules/inventory/pages/InventoryDashboardPage.tsx", "utf8");
-const styles = readFileSync("src/modules/inventory/styles/inventoryDashboard.css", "utf8");
-const finalDashboard = page.slice(page.indexOf("const dashboard = ("), page.indexOf("const stockRows ="));
+const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
+const page = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
+const dashboard = read("src/modules/inventory/components/InventoryOperationalDashboard.tsx");
+const styles = read("src/modules/inventory/styles/inventoryDashboard.css");
 
-describe("Phase W.3.2 inventory dashboard redesign", () => {
-  it("renders the five required sections in operational order", () => {
-    const titles = ["Today's Operations", "Quick Actions", "Inventory Overview", "Recent Activity", "Report Shortcuts"];
-    const positions = titles.map((title) => finalDashboard.indexOf(title));
-
+describe("Inventory Phase I1 operational dashboard supersession", () => {
+  it("renders the five operational sections in priority order", () => {
+    const titles = ["Needs Attention", "Kitchen Requests", "Quick Operations", "Stock Snapshot", "Recent Activity"];
+    const positions = titles.map((title) => dashboard.indexOf(title));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((left, right) => left - right));
   });
 
-  it("shows the six required attention cards without adding calculations", () => {
-    for (const label of ["Out of Stock", "Low Stock", "Expiring Soon", "Pending Purchases", "Waste Recorded", "Pending Transfers"]) {
-      expect(finalDashboard).toContain(label);
-    }
-    expect(finalDashboard).toContain("<strong>—</strong>");
-    expect(finalDashboard).toContain("data unavailable");
+  it("shows only real actionable attention sources and a calm zero state", () => {
+    for (const label of ["Kitchen Requests", "Awaiting Kitchen Confirmation", "Out of Stock", "Low Stock", "Pending Purchases"]) expect(dashboard).toContain(label);
+    expect(dashboard).not.toContain("Expiring Soon");
+    expect(dashboard).not.toContain("Pending Transfers");
+    expect(dashboard).toContain("Everything is under control");
   });
 
-  it("limits quick actions to the six daily inventory workflows", () => {
-    const actions = finalDashboard.slice(finalDashboard.indexOf("ia-final-action-grid"), finalDashboard.indexOf("inventory-overview-title"));
-    for (const label of ["Receive Stock", "Stock Adjustment", "Create Ingredient", "Purchase Order", "Transfer Stock", "Waste Entry"]) {
-      expect(actions).toContain(label);
-    }
-    expect((actions.match(/<button/g) ?? [])).toHaveLength(6);
-    expect(actions).not.toContain("Issue Stock");
+  it("keeps quick operations to established shift workflows", () => {
+    for (const label of ["Receive Stock", "Stock Out / Issue Stock", "Adjustment", "Transfer", "Waste", "Purchase Order"]) expect(dashboard).toContain(label);
+    expect(dashboard).not.toContain("Create Ingredient");
+    expect(dashboard).not.toContain("Report Shortcuts");
   });
 
-  it("keeps inventory value below operations and quick actions", () => {
-    expect(finalDashboard.indexOf("Current Inventory Value")).toBeGreaterThan(finalDashboard.indexOf("Quick Actions"));
-    expect(finalDashboard).toContain("Total Ingredients");
-    expect(finalDashboard).toContain("Storage Locations");
-    expect(finalDashboard).toContain("Active Categories");
+  it("keeps stock and activity compact and canonical", () => {
+    expect(dashboard).toContain("Current Inventory Value");
+    expect(dashboard).toContain("Active Ingredients");
+    expect(dashboard).toContain("recentLedger.slice(0, 10)");
+    expect(dashboard).toContain("entry.staffName");
+    expect(dashboard).toContain("staffRoles[entry.createdByStaffId]");
+    expect(page).toContain("calculateInventoryDashboardKpis");
   });
 
-  it("renders at most ten compact activity records with staff attribution", () => {
-    expect(page).toContain("ledger.slice(0, 10)");
-    expect(finalDashboard).toContain("entry.staffName");
-    expect(finalDashboard).toContain("data.staffRoles[entry.createdByStaffId]");
-    expect(finalDashboard).toContain("<time dateTime={entry.movementDate}");
-  });
-
-  it("provides mobile grids, large targets, focus states, and reduced motion", () => {
-    expect(styles).toContain(".ia-final-operation-grid { grid-template-columns: repeat(6");
-    expect(styles).toContain("min-height: 44px");
+  it("provides responsive wrapping, mobile sheets, focus states, and reduced motion", () => {
+    expect(styles).toContain(".ia-i1-attention-grid");
     expect(styles).toContain("@media (max-width: 1024px)");
     expect(styles).toContain("@media (max-width: 768px)");
-    expect(styles).toContain("@media (max-width: 360px)");
-    expect(styles).toContain(".ia-dashboard-final button:focus-visible");
+    expect(styles).toContain("@media (max-width: 430px)");
+    expect(styles).toContain("max-height: 100dvh");
+    expect(styles).toContain(".ia-i1-dashboard button:focus-visible");
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });

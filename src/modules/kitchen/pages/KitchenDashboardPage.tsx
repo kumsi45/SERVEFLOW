@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRestaurantEventStream } from "../../../core/realtime/restaurantEventService";
 import { formatCurrency } from "../../../core/format/currency";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
@@ -15,10 +15,15 @@ import {
   startOrderPreparation,
 } from "../services/kitchenOrderService";
 import {
+  confirmKitchenStockReceipt,
   createInventoryRequest,
+  kitchenReceiptErrorMessage,
   loadInventoryItems,
+  loadKitchenStockReceipts,
   type InventoryItem,
+  type KitchenStockReceipt,
 } from "../services/inventoryRequestService";
+import { KitchenStockRequestsPanel } from "../components/KitchenStockRequestsPanel";
 import {
   filterKitchenWorkspaceOrders,
   getKitchenOrderStationNames,
@@ -516,6 +521,11 @@ export function KitchenDashboardPage({
   });
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [requestNotice, setRequestNotice] = useState<string | null>(null);
+  const [stockRequestsOpen, setStockRequestsOpen] = useState(false);
+  const [stockReceipts, setStockReceipts] = useState<KitchenStockReceipt[]>([]);
+  const [stockReceiptsLoading, setStockReceiptsLoading] = useState(true);
+  const [stockReceiptsError, setStockReceiptsError] = useState<string | null>(null);
+  const [confirmingReceiptId, setConfirmingReceiptId] = useState<string | null>(null);
   useEffect(() => {
     void loadInventoryItems(restaurantId)
       .then(setInventoryItems)
@@ -552,9 +562,26 @@ export function KitchenDashboardPage({
   const kitchenRealtimeReadyRef = useRef(false);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const actionLocksRef = useRef<Set<string>>(new Set());
+  const receiptActionLocksRef = useRef<Set<string>>(new Set());
   const sortControlRef = useRef<HTMLDivElement | null>(null);
   const sortTriggerRef = useRef<HTMLButtonElement | null>(null);
   const sortOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const refreshStockReceipts = useCallback(async (showLoading = false) => {
+    try {
+      if (showLoading) setStockReceiptsLoading(true);
+      setStockReceiptsError(null);
+      setStockReceipts(await loadKitchenStockReceipts(restaurantId));
+    } catch {
+      setStockReceiptsError("Unable to load stock requests. Try again.");
+    } finally {
+      setStockReceiptsLoading(false);
+    }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    void refreshStockReceipts(true);
+  }, [refreshStockReceipts]);
 
   useEffect(() => {
     if (!sortMenuOpen) return;
@@ -729,6 +756,11 @@ export function KitchenDashboardPage({
     };
     const unsubscribe = getRestaurantEventStream(restaurantId).subscribe((event) => {
       const paymentEvent = event.type.startsWith("PAYMENT_");
+      if (event.table === "kitchen_inventory_requests") {
+        setRealtimeNotice("Stock requests updated.");
+        void refreshStockReceipts(false);
+        return;
+      }
       if (!kitchenQueueRealtimeTables.has(event.table) && !paymentEvent) return;
       if (event.table === "order_items" || paymentEvent)
         setRealtimeNotice("Kitchen queue updated.");
@@ -743,7 +775,7 @@ export function KitchenDashboardPage({
       realtimeRefreshTimerRef.current = null;
       unsubscribe();
     };
-  }, [dashboardContext, restaurantId, selectedStationId]);
+  }, [dashboardContext, refreshStockReceipts, restaurantId, selectedStationId]);
 
   // ── actions ────────────────────────────────────────────────────────────────
   function resolveActionStationId(order: KitchenOrder): string | null {
@@ -876,6 +908,32 @@ export function KitchenDashboardPage({
     }
   }
 
+  async function handleConfirmStockReceipt(receipt: KitchenStockReceipt) {
+    if (receiptActionLocksRef.current.has(receipt.id)) return false;
+    receiptActionLocksRef.current.add(receipt.id);
+    setConfirmingReceiptId(receipt.id);
+    setStockReceiptsError(null);
+    try {
+      await confirmKitchenStockReceipt(restaurantId, receipt.id);
+      setRequestNotice(`${receipt.itemName} marked as received.`);
+      await refreshStockReceipts(false);
+      return true;
+    } catch (cause) {
+      const message = kitchenReceiptErrorMessage(cause);
+      setStockReceiptsError(message);
+      await refreshStockReceipts(false);
+      if (message === "This request was already confirmed.") {
+        setStockReceiptsError(message);
+        return true;
+      }
+      setStockReceiptsError(message);
+      return false;
+    } finally {
+      receiptActionLocksRef.current.delete(receipt.id);
+      setConfirmingReceiptId(null);
+    }
+  }
+
   // ── derived ────────────────────────────────────────────────────────────────
   const filteredByContext = useMemo(
     () =>
@@ -969,6 +1027,31 @@ export function KitchenDashboardPage({
           <span /> {totalActive} Active
         </div>
         <div className="kd-header-actions">
+          <div className="kd-stock-requests-control">
+            <button
+              type="button"
+              className="kd-stock-requests-trigger"
+              aria-label={`${stockReceipts.filter((receipt) => receipt.status === "issued").length} stock requests waiting for confirmation`}
+              aria-expanded={stockRequestsOpen}
+              aria-controls="kitchen-stock-requests-panel"
+              onClick={() => setStockRequestsOpen((open) => !open)}
+            >
+              Requests
+              {stockReceipts.some((receipt) => receipt.status === "issued") ? (
+                <span>{stockReceipts.filter((receipt) => receipt.status === "issued").length}</span>
+              ) : null}
+              <i aria-hidden="true">⌄</i>
+            </button>
+            <KitchenStockRequestsPanel
+              open={stockRequestsOpen}
+              receipts={stockReceipts}
+              loading={stockReceiptsLoading}
+              error={stockReceiptsError}
+              confirmingId={confirmingReceiptId}
+              onClose={() => setStockRequestsOpen(false)}
+              onConfirm={handleConfirmStockReceipt}
+            />
+          </div>
           <button
             className="kd-signout-btn"
             onClick={() => setRequestOpen(true)}

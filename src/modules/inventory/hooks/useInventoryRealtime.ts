@@ -19,6 +19,7 @@ type Options = {
   staffRole: InventoryAccessRole;
   onBatch: (batch: InventoryRealtimeBatch) => void | Promise<void>;
   onReconcile: () => void | Promise<void>;
+  onKitchenRequestsChanged?: () => void | Promise<void>;
   onError?: (error: unknown) => void;
   debounceMs?: number;
 };
@@ -32,11 +33,12 @@ export function useInventoryRealtime({
   staffRole,
   onBatch,
   onReconcile,
+  onKitchenRequestsChanged,
   onError,
   debounceMs = 100,
 }: Options): RealtimeConnectionState {
-  const handlers = useRef({ onBatch, onReconcile, onError });
-  handlers.current = { onBatch, onReconcile, onError };
+  const handlers = useRef({ onBatch, onReconcile, onKitchenRequestsChanged, onError });
+  handlers.current = { onBatch, onReconcile, onKitchenRequestsChanged, onError };
   const movementItems = useRef(new Set<string>());
   const adminChanges = useRef(new Map<InventoryRealtimeAdminTable, Map<string, InventoryRealtimeChange>>());
   const flushTimer = useRef<number | undefined>(undefined);
@@ -66,6 +68,11 @@ export function useInventoryRealtime({
     if (!isInventoryTable(event.table)) return;
     const record = event.operation === "DELETE" ? event.previous : event.record;
     const id = typeof record.id === "string" ? record.id : "";
+    if (event.table === "kitchen_inventory_requests") {
+      void Promise.resolve(handlers.current.onKitchenRequestsChanged?.())
+        .catch((error) => handlers.current.onError?.(error));
+      return;
+    }
     if (event.table === "inventory_movements") {
       if (event.operation !== "INSERT") return;
       const inventoryItemId = typeof record.inventory_item_id === "string" ? record.inventory_item_id : "";

@@ -12,6 +12,84 @@ const one=<T,>(value:T|T[]|null|undefined)=>Array.isArray(value)?value[0]??null:
 export async function loadInventoryRequests(restaurantId:string){const {data,error}=await supabase.from("kitchen_inventory_requests").select("id,restaurant_id,inventory_item_id,station_id,item_name,quantity,unit,urgency,comment,status,rejection_reason,requested_at,reviewed_at,accepted_at,rejected_at,issued_at,issued_quantity,delivered_at,confirmed_at,unable_to_fulfill_at,unable_to_fulfill_reason,station:kitchen_stations!kitchen_requests_station_restaurant_fk(name),requester:restaurant_staff!kitchen_requests_requester_restaurant_fk(display_name),reviewer:restaurant_staff!kitchen_requests_reviewer_restaurant_fk(display_name),fulfiller:restaurant_staff!kitchen_requests_fulfiller_restaurant_fk(display_name),issuer:restaurant_staff!kitchen_requests_issuer_restaurant_fk(display_name),confirmer:restaurant_staff!kitchen_requests_confirmer_restaurant_fk(display_name),unable_actor:restaurant_staff!kitchen_requests_unable_actor_restaurant_fk(display_name)").eq("restaurant_id",restaurantId).order("requested_at",{ascending:false}).limit(200);if(error)throw new Error(error.message);return ((data??[]) as RequestRow[]).map(row=>({id:row.id,restaurantId:row.restaurant_id,inventoryItemId:row.inventory_item_id,stationId:row.station_id,itemName:row.item_name,quantity:Number(row.quantity),unit:row.unit,urgency:row.urgency,comment:row.comment,status:row.status,rejectionReason:row.rejection_reason,requestedAt:row.requested_at,reviewedAt:row.reviewed_at,acceptedAt:row.accepted_at,rejectedAt:row.rejected_at,issuedAt:row.issued_at,issuedQuantity:row.issued_quantity==null?null:Number(row.issued_quantity),deliveredAt:row.delivered_at,confirmedAt:row.confirmed_at,unableToFulfillAt:row.unable_to_fulfill_at,unableToFulfillReason:row.unable_to_fulfill_reason,stationName:one(row.station)?.name??null,requesterName:one(row.requester)?.display_name??null,reviewerName:one(row.reviewer)?.display_name??null,fulfillerName:one(row.fulfiller)?.display_name??null,issuerName:one(row.issuer)?.display_name??null,confirmerName:one(row.confirmer)?.display_name??null,unableToFulfillByName:one(row.unable_actor)?.display_name??null}));}
 export async function loadInventoryItems(restaurantId:string){const {data,error}=await supabase.from("inventory_items").select("id,name,unit,current_quantity,reorder_level,active").eq("restaurant_id",restaurantId).eq("active",true).order("name");if(error)throw new Error(error.message);return (data??[]).map(row=>({id:row.id,name:row.name,unit:row.unit,currentQuantity:Number(row.current_quantity),reorderLevel:Number(row.reorder_level),active:row.active})) as InventoryItem[];}
 export async function createInventoryRequest(restaurantId:string,input:{itemName:string;quantity:number;unit:string;urgency:InventoryUrgency;stationId?:string|null;comment?:string;inventoryItemId?:string|null}){const {error}=await supabase.rpc("create_kitchen_inventory_request",{target_restaurant_id:restaurantId,target_item_name:input.itemName,target_quantity:input.quantity,target_unit:input.unit,target_urgency:input.urgency,target_station_id:input.stationId??null,target_comment:input.comment??null,target_inventory_item_id:input.inventoryItemId??null});if(error)throw new Error(error.message);}
+
+export type KitchenStockReceipt = {
+  id: string;
+  itemName: string;
+  issuedQuantity: number;
+  unit: string;
+  stationId: string | null;
+  stationName: string | null;
+  storageLocationName: string | null;
+  requestedAt: string;
+  issuedAt: string | null;
+  issuedByName: string | null;
+  confirmedAt: string | null;
+  confirmedByName: string | null;
+  status: "issued" | "delivered" | "rejected" | "unable_to_fulfill";
+};
+
+type KitchenStockReceiptRow = {
+  request_id: string;
+  item_name: string;
+  issued_quantity: number | string | null;
+  unit: string;
+  station_id: string | null;
+  station_name: string | null;
+  storage_location_name: string | null;
+  requested_at: string;
+  issued_at: string | null;
+  issued_by_name: string | null;
+  confirmed_at: string | null;
+  confirmed_by_name: string | null;
+  request_status: KitchenStockReceipt["status"];
+};
+
+export function partitionKitchenStockReceipts(receipts: KitchenStockReceipt[]) {
+  return {
+    pending: receipts.filter((receipt) => receipt.status === "issued"),
+    history: receipts.filter((receipt) => receipt.status !== "issued"),
+  };
+}
+
+export async function loadKitchenStockReceipts(restaurantId: string) {
+  const { data, error } = await supabase.rpc("get_kitchen_stock_receipts", {
+    target_restaurant_id: restaurantId,
+    target_history_limit: 40,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as KitchenStockReceiptRow[]).map((row) => ({
+    id: row.request_id,
+    itemName: row.item_name,
+    issuedQuantity: Number(row.issued_quantity),
+    unit: row.unit,
+    stationId: row.station_id,
+    stationName: row.station_name,
+    storageLocationName: row.storage_location_name,
+    requestedAt: row.requested_at,
+    issuedAt: row.issued_at,
+    issuedByName: row.issued_by_name,
+    confirmedAt: row.confirmed_at,
+    confirmedByName: row.confirmed_by_name,
+    status: row.request_status,
+  })) as KitchenStockReceipt[];
+}
+
+export function kitchenReceiptErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (/already confirmed|not awaiting/i.test(message)) return "This request was already confirmed.";
+  if (/access denied|permission|not authorized/i.test(message)) return "You do not have access to this request.";
+  if (/not found|no longer/i.test(message)) return "This request is no longer available.";
+  return "Unable to confirm receipt. Try again.";
+}
+
+export async function confirmKitchenStockReceipt(restaurantId: string, requestId: string) {
+  const { error } = await supabase.rpc("confirm_kitchen_inventory_request_receipt", {
+    target_restaurant_id: restaurantId,
+    target_request_id: requestId,
+  });
+  if (error) throw new Error(error.message);
+}
 export async function processInventoryRequest(restaurantId:string,requestId:string,action:"accept"|"reject",reason?:string){const {error}=await supabase.rpc("process_kitchen_inventory_request",{target_restaurant_id:restaurantId,target_request_id:requestId,target_action:action,target_rejection_reason:reason??null});if(error)throw new Error(error.message);}
 
 export function inventoryRequestStatusLabel(status:InventoryRequestStatus){if(status==="pending")return "Pending Review";if(status==="accepted")return "Awaiting Inventory";if(status==="issued")return "Issued · Awaiting Kitchen Confirmation";if(status==="delivered")return "Fulfilled";if(status==="rejected")return "Rejected";return "Unable to Fulfill";}

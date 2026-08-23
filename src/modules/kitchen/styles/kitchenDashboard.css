@@ -661,3 +661,178 @@
   .kd-order-grid { grid-template-columns: 1fr; }
   .kd-order-card { min-height: 0; }
 }
+
+/* Kitchen stock receipt confirmation */
+.kd-stock-requests-control { position: relative; }
+.kd-stock-requests-trigger {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid #a9cbbb;
+  border-radius: 8px;
+  background: #f4faf7;
+  color: var(--kd-brand-deep);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.kd-stock-requests-trigger > span {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #b54708;
+  color: #fff;
+  font-size: 10px;
+}
+.kd-stock-requests-trigger > i { font-style: normal; font-size: 13px; }
+.kd-stock-requests-trigger:focus-visible,
+.kd-stock-panel button:focus-visible,
+.kd-receipt-dialog button:focus-visible { outline: 3px solid rgba(23,107,71,.24); outline-offset: 2px; }
+.kd-stock-panel-backdrop { display: none; }
+.kd-stock-panel {
+  position: absolute;
+  z-index: 105;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(390px, calc(100vw - 24px));
+  max-height: min(650px, calc(100vh - 78px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--kd-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(16,38,29,.22);
+  color: var(--kd-ink);
+}
+.kd-stock-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px 12px;
+  border-bottom: 1px solid var(--kd-line);
+}
+.kd-stock-panel-header h2 { font-size: 17px; }
+.kd-stock-panel-header p { margin-top: 3px; color: var(--kd-ink-soft); font-size: 11px; }
+.kd-stock-panel-header > button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0f4f2;
+  color: #455b50;
+  font-size: 22px;
+  cursor: pointer;
+}
+.kd-stock-panel-scroll { min-height: 0; overflow-y: auto; padding: 8px 10px; overscroll-behavior: contain; }
+.kd-stock-card {
+  display: grid;
+  gap: 5px;
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--kd-line);
+}
+.kd-stock-card:last-child { border-bottom: 0; }
+.kd-stock-card-primary { display: flex; justify-content: space-between; gap: 12px; }
+.kd-stock-card-primary strong { font-size: 14px; }
+.kd-stock-card-primary b { color: var(--kd-brand-deep); font-size: 13px; white-space: nowrap; }
+.kd-stock-card p { color: #455b50; font-size: 11px; }
+.kd-stock-card time { color: #75877e; font-size: 10px; }
+.kd-stock-card > button {
+  min-height: 44px;
+  margin-top: 5px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--kd-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.kd-stock-card > button:disabled { opacity: .58; cursor: wait; }
+.kd-stock-state { padding: 24px 12px; color: var(--kd-ink-soft); font-size: 12px; text-align: center; }
+.kd-stock-state.error { color: #b42318; }
+.kd-stock-empty { display: grid; gap: 5px; padding: 24px 12px; text-align: center; }
+.kd-stock-empty strong { font-size: 13px; }
+.kd-stock-empty span { color: var(--kd-ink-soft); font-size: 11px; }
+.kd-stock-panel-footer { padding: 9px 12px 12px; border-top: 1px solid var(--kd-line); }
+.kd-stock-panel-footer button {
+  width: 100%; min-height: 42px; border: 1px solid var(--kd-line); border-radius: 8px;
+  background: #fff; color: var(--kd-brand-deep); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.kd-stock-history { display: grid; }
+.kd-stock-history-row { display: grid; gap: 4px; padding: 10px; border-bottom: 1px solid var(--kd-line); }
+.kd-stock-history-row > div { display: flex; justify-content: space-between; gap: 10px; }
+.kd-stock-history-row strong,.kd-stock-history-row b { font-size: 12px; }
+.kd-stock-history-row p { color: #455b50; font-size: 10px; }
+.kd-stock-history-row small { color: #75877e; font-size: 9px; }
+.kd-receipt-dialog-layer {
+  position: fixed;
+  z-index: 150;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15,23,42,.48);
+}
+.kd-receipt-dialog {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15,23,42,.28);
+}
+.kd-receipt-dialog h2 { color: var(--kd-ink); font-size: 18px; }
+.kd-receipt-dialog header strong { display: block; margin-top: 5px; color: var(--kd-brand-deep); font-size: 13px; }
+.kd-receipt-dialog > p { color: #455b50; font-size: 13px; line-height: 1.5; }
+.kd-receipt-dialog footer { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; }
+.kd-receipt-dialog footer button { min-height: 46px; border: 1px solid var(--kd-line); border-radius: 9px; background: #fff; color: #455b50; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
+.kd-receipt-dialog footer button:last-child { border-color: var(--kd-brand); background: var(--kd-brand); color: #fff; }
+.kd-receipt-dialog footer button:disabled { opacity: .58; cursor: wait; }
+
+@media (min-width: 700px) and (max-width: 1280px) {
+  .kd-stock-panel { width: min(440px, calc(100vw - 28px)); max-height: min(720px, calc(100vh - 76px)); }
+  .kd-stock-panel-header { padding: 16px; }
+  .kd-stock-panel-scroll { padding: 10px 12px; }
+  .kd-stock-card { padding: 13px 11px; }
+  .kd-stock-card > button { min-height: 48px; font-size: 13px; }
+}
+
+@media (max-width: 620px) {
+  .kd-header { padding-inline: 8px; }
+  .kd-header-search { display: none; }
+  .kd-header-logo-area .sf-brand-name { display: none; }
+  .kd-header-actions { display: flex; gap: 6px; }
+  .kd-header-actions .kd-icon-btn,
+  .kd-header-actions > .kd-signout-btn:last-child { display: none; }
+  .kd-header-actions > .kd-signout-btn { min-height: 42px; height: 42px; padding-inline: 9px; }
+  .kd-stock-requests-trigger { min-height: 42px; padding-inline: 9px; }
+  .kd-stock-panel-backdrop {
+    position: fixed; z-index: 103; inset: 0; display: block; border: 0; background: rgba(15,23,42,.42);
+  }
+  .kd-stock-panel {
+    position: fixed;
+    z-index: 104;
+    inset: auto 0 0;
+    width: 100%;
+    max-height: min(82vh, 690px);
+    border-radius: 18px 18px 0 0;
+  }
+  .kd-stock-panel-header { padding: 15px 14px 12px; }
+  .kd-stock-panel-scroll { padding: 7px 10px; }
+  .kd-stock-card { padding: 12px 9px; }
+  .kd-stock-card > button { min-height: 48px; font-size: 13px; }
+  .kd-receipt-dialog-layer { align-items: end; padding: 0; }
+  .kd-receipt-dialog { width: 100%; padding: 18px 14px max(18px, env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
+  .kd-receipt-dialog footer button { min-height: 50px; }
+}

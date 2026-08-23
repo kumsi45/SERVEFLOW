@@ -8,6 +8,7 @@ import { loadPurchaseHistory } from "../../purchasing/services/purchaseHistorySe
 import type { PurchaseHistoryRecord } from "../../purchasing/purchaseHistoryTypes";
 import { fetchRecipes } from "../../recipes/services/recipeService";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
+import { InventoryOperationalDashboard } from "../components/InventoryOperationalDashboard";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
 import {
   calculateInventoryDashboardKpis,
@@ -34,6 +35,12 @@ import {
 } from "../services/inventoryAdminService";
 import { loadLedger } from "../services/ledgerService";
 import { loadInventoryMovementHistory } from "../services/movementHistoryService";
+import {
+  issueInventoryKitchenRequest,
+  loadInventoryKitchenRequests,
+  markInventoryKitchenRequestUnable,
+  type InventoryKitchenQueueRequest,
+} from "../services/inventoryKitchenRequestService";
 import {
   applyInventoryAdminRealtimeChanges,
   loadRealtimeCurrentStock,
@@ -426,6 +433,9 @@ export function InventoryDashboardPage({
   const [ingredientMenuUsage, setIngredientMenuUsage] = useState<Record<string, IngredientMenuUsage>>({});
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [kitchenRequests, setKitchenRequests] = useState<InventoryKitchenQueueRequest[]>([]);
+  const [kitchenRequestsLoading, setKitchenRequestsLoading] = useState(true);
+  const [kitchenRequestsError, setKitchenRequestsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -493,6 +503,18 @@ export function InventoryDashboardPage({
     setInsightsLoading(false);
   }, [restaurantId]);
 
+  const loadKitchenRequests = useCallback(async () => {
+    setKitchenRequestsLoading(true);
+    try {
+      setKitchenRequests(await loadInventoryKitchenRequests(restaurantId, staffRole));
+      setKitchenRequestsError(null);
+    } catch (cause) {
+      setKitchenRequestsError(cause instanceof Error ? cause.message : "Kitchen requests are unavailable.");
+    } finally {
+      setKitchenRequestsLoading(false);
+    }
+  }, [restaurantId, staffRole]);
+
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -500,6 +522,10 @@ export function InventoryDashboardPage({
   useEffect(() => {
     void loadDashboardInsights();
   }, [loadDashboardInsights]);
+
+  useEffect(() => {
+    void loadKitchenRequests();
+  }, [loadKitchenRequests]);
 
   useEffect(() => {
     let active = true;
@@ -549,7 +575,8 @@ export function InventoryDashboardPage({
     setLedger(nextLedger);
     setMovementHistory(nextMovementHistory);
     setError(null);
-  }, [restaurantId]);
+    await loadKitchenRequests();
+  }, [loadKitchenRequests, restaurantId]);
 
   const synchronizeRealtimeBatch = useCallback(async (batch: InventoryRealtimeBatch) => {
     const snapshot = dataRef.current;
@@ -592,6 +619,7 @@ export function InventoryDashboardPage({
     staffRole,
     onBatch: synchronizeRealtimeBatch,
     onReconcile: reconcileRealtime,
+    onKitchenRequestsChanged: loadKitchenRequests,
     onError: (realtimeError) => setError(realtimeError instanceof Error
       ? realtimeError.message
       : "Inventory realtime synchronization failed."),
@@ -788,6 +816,26 @@ export function InventoryDashboardPage({
     }
   }
 
+  async function processKitchenRequest(
+    action: () => Promise<unknown>,
+    success: string,
+  ) {
+    try {
+      setWorking(true);
+      setMessage(null);
+      setError(null);
+      await action();
+      await Promise.all([reload(), loadKitchenRequests()]);
+      setMessage(success);
+      return true;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Kitchen request action failed.");
+      return false;
+    } finally {
+      setWorking(false);
+    }
+  }
+
   function navigate(next: InventorySection) {
     setSection(next);
     setUtilityView(null);
@@ -846,158 +894,36 @@ export function InventoryDashboardPage({
     );
   }
 
-  const legacyDashboard = false && (
-    <div className="ia-stack ia-dashboard-polish">
-      <section className="ia-dashboard-hero ia-phase-w-hidden" aria-hidden="true">
-        <div><span>Inventory Operations</span><h2>Stock health at a glance</h2><p>Live balances, purchasing work, and recent operational activity for {restaurantName}.</p></div>
-        <button type="button" onClick={() => void loadDashboardInsights()} disabled={insightsLoading} aria-label="Refresh inventory dashboard insights">{insightsLoading ? "Refreshing…" : "Refresh dashboard"}</button>
-      </section>
-
-      {insightsError && <div className="ia-dashboard-notice" role="status">{insightsError}</div>}
-
-      {dashboardKpis.totalInventoryItems === 0 && (
-        <DashboardEmptyState icon="IN" title="No Ingredients" message="Create the first ingredient to start tracking stock and purchasing." actionLabel="Create Ingredient" onAction={() => { navigate("items"); setItemForm(itemDraft()); }} />
-      )}
-
-      <section className="ia-dashboard-metrics" aria-label="Inventory dashboard KPIs">
-        <button className="items" type="button" onClick={() => navigate("items")}><span>Total Ingredients</span><strong>{dashboardKpis.totalInventoryItems}</strong></button>
-        <button className="value" type="button" onClick={() => navigate("current-stock")}><span>Inventory Value</span><strong>{moneyLabel(dashboardKpis.totalInventoryValue)}</strong></button>
-        <button className="low" type="button" data-stock-lines={lowStockRows.length} onClick={() => navigate("low-stock-assistant")}><span>Low Stock</span><strong>{dashboardKpis.lowStockItems}</strong></button>
-        <button className="out" type="button" onClick={() => navigate("low-stock-assistant")}><span>Out of Stock</span><strong>{dashboardKpis.outOfStockItems}</strong></button>
-        <button className="purchases" type="button" onClick={() => navigate("purchase-orders")}><span>Pending Purchase Orders</span><strong>{dashboardKpis.pendingPurchaseOrders}</strong></button>
-      </section>
-
-      <section className="ia-dashboard-section ia-today-operations"><h2>Today's Operations</h2><div>
-        <button type="button" onClick={() => navigate("purchase-orders")}><strong>{dashboardKpis.pendingPurchaseOrders}</strong>Pending Purchase Orders</button><button type="button" onClick={() => navigate("low-stock-assistant")}><strong>{dashboardKpis.lowStockItems}</strong>Low Stock</button><button type="button" onClick={() => navigate("waste")}><strong>{todayOperations.waste}</strong>Today's Waste</button><button type="button" onClick={() => navigate("adjustments")}><strong>{todayOperations.adjustments}</strong>Today's Adjustments</button><button type="button" onClick={() => navigate("transfers")}><strong>{todayOperations.transfers}</strong>Today's Transfers</button>
-      </div></section>
-
-      <section className="ia-dashboard-section ia-dashboard-primary-actions" aria-labelledby="inventory-quick-actions-title">
-        <div className="ia-dashboard-section-title"><h2 id="inventory-quick-actions-title">Quick Actions</h2></div>
-        <div className="ia-dashboard-actions">
-          <button type="button" onClick={() => navigate("stock-in")}><strong>Receive Stock</strong></button>
-          <button type="button" onClick={() => navigate("stock-out")}><strong>Issue Stock</strong></button>
-          <button type="button" onClick={() => navigate("adjustments")}><strong>Adjustment</strong></button>
-          <button type="button" onClick={() => navigate("waste")}><strong>Waste</strong></button>
-          <button type="button" onClick={() => navigate("purchase-orders")}><strong>Purchase Order</strong></button>
-          <button type="button" onClick={() => navigate("items")}><strong>Search Ingredient</strong></button>
-          <button type="button" onClick={() => navigate("movement-history")}><span aria-hidden="true">MV</span><strong>Movement History</strong><small>Audit consumption movements</small></button>
-          <button type="button" onClick={() => navigate("purchase-history")}><span aria-hidden="true">PH</span><strong>Purchase History</strong><small>Review purchasing activity</small></button>
-          <button type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">LS</span><strong>Low Stock Assistant</strong><small>See suggested quantities</small></button>
-          {staffRole !== "inventory_officer" && <button type="button" onClick={openRecipes}><span aria-hidden="true">RE</span><strong>Recipes</strong><small>Open recipe management</small></button>}
-          <button type="button" onClick={() => navigate("suppliers")}><span aria-hidden="true">SU</span><strong>Suppliers</strong><small>Manage supplier records</small></button>
-        </div>
-      </section>
-
-      <section className="ia-dashboard-section ia-needs-attention"><h2>Needs Attention</h2><div>
-        <article><strong>{dashboardKpis.lowStockItems}</strong><span>Low Stock</span><button type="button" onClick={() => navigate("low-stock-assistant")}>Review</button></article>
-        <article><strong>{dashboardKpis.outOfStockItems}</strong><span>Out of Stock</span><button type="button" onClick={() => navigate("low-stock-assistant")}>Review</button></article>
-        <article><strong>—</strong><span>Expiring Soon</span><button type="button" onClick={() => navigate("current-stock")}>Review</button></article>
-        <article><strong>{dashboardKpis.pendingPurchaseOrders}</strong><span>Pending Receipts</span><button type="button" onClick={() => navigate("purchase-orders")}>Open</button></article>
-      </div></section>
-
-      {(activeSuppliers.length === 0 || (staffRole !== "inventory_officer" && !insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0)) && (
-        <section className="ia-setup-grid" aria-label="Inventory setup guidance">
-          {activeSuppliers.length === 0 && <DashboardEmptyState icon="SU" title="No Suppliers" message="Add an active supplier before preparing purchase orders." actionLabel="Add Supplier" onAction={() => { navigate("suppliers"); setSupplierForm(supplierDraft()); }} />}
-          {staffRole !== "inventory_officer" && !insightsLoading && !insightsError?.includes("recipes") && recipeCount === 0 && <DashboardEmptyState icon="RE" title="No Recipes" message="Owners create recipes for recipe-tracked menu items." actionLabel="Open Recipes" onAction={openRecipes} />}
-        </section>
-      )}
-
-      <section className="ia-dashboard-section ia-stock-attention" aria-labelledby="stock-attention-title">
-        <div className="ia-dashboard-section-title"><h2 id="stock-attention-title">Low Stock</h2></div>
-        {attentionRows.length ? <div className="ia-attention-list">{attentionRows.slice(0, 6).map((row) => (
-          <button type="button" key={row.inventoryItemId} onClick={() => navigate("low-stock-assistant")} aria-label={`Review ${row.itemName} in low stock assistant`}>
-            <span><strong>{row.itemName}</strong><small>{row.categoryName} · {row.supplierName ?? "No preferred supplier"}</small></span>
-            <span><small>Current</small><strong>{quantityLabel(row.currentQuantity, row.unitName)}</strong></span>
-            <span><small>Suggested Purchase</small><strong>{row.maximumStock === null ? "Set maximum" : quantityLabel(row.suggestedPurchase, row.unitName)}</strong></span>
-            {statusBadge(row.classification)}
-          </button>
-        ))}</div> : <DashboardEmptyState icon="OK" title="No Low Stock" message="Every active item is currently above its minimum stock level." actionLabel="Review Current Stock" onAction={() => navigate("current-stock")} />}
-      </section>
-
-      <section className="ia-dashboard-section" aria-labelledby="recent-operational-activity-title">
-        <div className="ia-dashboard-section-title"><h2 id="recent-operational-activity-title">Recent Activities</h2></div>
-        <div className="ia-w2-timeline">{ledger.slice(0, 10).map((entry) => <button type="button" key={entry.id} onClick={() => navigate("ledger")}><time dateTime={entry.movementDate}>{new Date(entry.movementDate).toDateString() === new Date().toDateString() ? "Today" : dateLabel(entry.movementDate)}</time><strong>{entry.itemName}</strong><span>{movementLabel(entry.movementType)}</span></button>)}{!ledger.length && <p>No recent activity.</p>}</div>
-        <div className="ia-activity-grid">
-          <DashboardActivityPanel title="Recent Purchases" subtitle="Latest purchase orders" items={recentPurchases} empty={{ icon: "PO", title: "No Purchases", message: "No purchase orders have been created yet.", actionLabel: "Create Purchase Order" }} onOpen={() => navigate("purchase-orders")} />
-          <DashboardActivityPanel title="Recent Receipts" subtitle="Latest received deliveries" items={recentReceipts} empty={{ icon: "RC", title: "No Receipts", message: "Received deliveries will appear here.", actionLabel: "Receive Purchase" }} onOpen={() => navigate("purchase-orders")} />
-          <DashboardActivityPanel title="Recent Inventory Adjustments" subtitle="Confirmed manual changes" items={recentAdjustments} empty={{ icon: "AD", title: "No Adjustments", message: "Confirmed adjustments will appear here.", actionLabel: "Inventory Adjustment" }} onOpen={() => navigate("adjustments")} />
-          <DashboardActivityPanel title="Recent Consumption" subtitle="Order-linked consumption" items={recentConsumption} empty={{ icon: "CO", title: "No Consumption", message: "Order consumption movements will appear here.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
-          <DashboardActivityPanel title="Recent Waste" subtitle="Waste and spoilage" items={recentWaste} empty={{ icon: "WA", title: "No Waste", message: "Waste and spoilage adjustments will appear here.", actionLabel: "View Adjustments" }} onOpen={() => navigate("adjustments")} />
-          <DashboardActivityPanel title="Recent Movements" subtitle="Latest stock ledger entries" items={recentMovements} empty={{ icon: "MV", title: "No Movements", message: "Inventory movements will appear after the first stock operation.", actionLabel: "Movement History" }} onOpen={() => navigate("movement-history")} />
-        </div>
-      </section>
-    </div>
-  );
-
-  void legacyDashboard;
-
   const dashboard = (
-    <div className="ia-stack ia-dashboard-final">
-      {insightsError && <div className="ia-dashboard-notice" role="status">{insightsError}</div>}
-
-      <section className="ia-final-section ia-final-operations" aria-labelledby="today-operations-title">
-        <div className="ia-final-section-title"><h2 id="today-operations-title">Today's Operations</h2></div>
-        <div className="ia-final-operation-grid">
-          <button className="urgent" type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">!</span><small>Out of Stock</small><strong>{dashboardKpis.outOfStockItems}</strong><em>Tap to view</em></button>
-          <button className="attention" type="button" onClick={() => navigate("low-stock-assistant")}><span aria-hidden="true">!</span><small>Low Stock</small><strong>{dashboardKpis.lowStockItems}</strong><em>Tap to view</em></button>
-          <button className="warning" type="button" onClick={() => navigate("current-stock")} aria-label="Expiring Soon, data unavailable, tap to view current stock"><span aria-hidden="true">!</span><small>Expiring Soon</small><strong>—</strong><em>Tap to view</em></button>
-          <button className="info" type="button" onClick={() => navigate("purchase-orders")}><span aria-hidden="true">PO</span><small>Pending Purchases</small><strong>{dashboardKpis.pendingPurchaseOrders}</strong><em>Tap to view</em></button>
-          <button className="attention" type="button" onClick={() => navigate("waste")}><span aria-hidden="true">!</span><small>Waste Recorded</small><strong>{todayOperations.waste}</strong><em>Tap to view</em></button>
-          <button className="info" type="button" onClick={() => navigate("transfers")} aria-label="Pending Transfers, data unavailable, tap to view transfers"><span aria-hidden="true">TR</span><small>Pending Transfers</small><strong>—</strong><em>Tap to view</em></button>
-        </div>
-      </section>
-
-      <section className="ia-final-section" aria-labelledby="inventory-quick-actions-title-v2">
-        <div className="ia-final-section-title"><h2 id="inventory-quick-actions-title-v2">Quick Actions</h2></div>
-        <div className="ia-final-action-grid">
-          <button type="button" onClick={() => navigate("stock-in")}><span aria-hidden="true">+</span><strong>Receive Stock</strong></button>
-          <button type="button" onClick={() => navigate("adjustments")}><span aria-hidden="true">±</span><strong>Stock Adjustment</strong></button>
-          <button type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }}><span aria-hidden="true">+</span><strong>Create Ingredient</strong></button>
-          <button type="button" onClick={() => navigate("purchase-orders")}><span aria-hidden="true">PO</span><strong>Purchase Order</strong></button>
-          <button type="button" onClick={() => navigate("transfers")}><span aria-hidden="true">TR</span><strong>Transfer Stock</strong></button>
-          <button type="button" onClick={() => navigate("waste")}><span aria-hidden="true">−</span><strong>Waste Entry</strong></button>
-        </div>
-      </section>
-
-      <section className="ia-final-section" aria-labelledby="inventory-overview-title">
-        <div className="ia-final-section-title"><h2 id="inventory-overview-title">Inventory Overview</h2></div>
-        <div className="ia-final-overview-grid" aria-label="Inventory dashboard KPIs">
-          <button type="button" onClick={() => navigate("inventory-value")}><small>Current Inventory Value</small><strong>{moneyLabel(dashboardKpis.totalInventoryValue)}</strong></button>
-          <button type="button" onClick={() => navigate("items")}><small>Total Ingredients</small><strong>{dashboardKpis.totalInventoryItems}</strong></button>
-          <button type="button" onClick={() => navigate("suppliers")}><small>Suppliers</small><strong>{dashboardKpis.activeSuppliers}</strong></button>
-          <button type="button" onClick={() => navigate("storage-locations")}><small>Storage Locations</small><strong>{activeLocations.length}</strong></button>
-          <button type="button" onClick={() => navigate("categories")}><small>Active Categories</small><strong>{activeCategories.length}</strong></button>
-        </div>
-        {dashboardKpis.totalInventoryItems === 0 && <button className="ia-final-empty-action" type="button" onClick={() => { navigate("items"); setItemForm(itemDraft()); }}>Create your first Ingredient</button>}
-      </section>
-
-      <section className="ia-final-section" aria-labelledby="recent-activity-title">
-        <div className="ia-final-section-title"><h2 id="recent-activity-title">Recent Activity</h2><span>Latest 10</span></div>
-        <div className="ia-final-activity-list">
-          {recentLedger.map((entry) => (
-            <button type="button" key={entry.id} onClick={() => navigate("ledger")} aria-label={`Open ${movementLabel(entry.movementType)} for ${entry.itemName}`}>
-              <span className={entry.quantityEffect === "in" ? "in" : "out"} aria-hidden="true">{entry.quantityEffect === "in" ? "+" : "−"}</span>
-              <span className="ingredient"><strong>{entry.itemName}</strong><small>{movementLabel(entry.movementType)}</small></span>
-              <strong className="quantity">{entry.quantityEffect === "in" ? "+" : "−"}{quantityLabel(entry.quantity, entry.unitName)}</strong>
-              <time dateTime={entry.movementDate}>{new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(entry.movementDate))}</time>
-              <span className="staff"><strong>{entry.staffName ?? "System"}</strong><small>{entry.createdByStaffId ? (data.staffRoles[entry.createdByStaffId] ?? "Staff").replace(/_/g, " ") : "System"}</small></span>
-            </button>
-          ))}
-          {recentLedger.length === 0 && <p className="ia-final-empty">No recent inventory activity.</p>}
-        </div>
-      </section>
-
-      <section className="ia-final-section" aria-labelledby="report-shortcuts-title">
-        <div className="ia-final-section-title"><h2 id="report-shortcuts-title">Report Shortcuts</h2></div>
-        <div className="ia-final-report-grid">
-          <button type="button" onClick={() => navigate("inventory-value")}>Inventory Value</button>
-          <button type="button" onClick={() => navigate("consumption")}>Consumption</button>
-          <button type="button" onClick={() => navigate("waste-report")}>Waste</button>
-          <button type="button" onClick={() => navigate("purchase-history")}>Purchases</button>
-          <button type="button" onClick={() => navigate("movement-history")}>Movement History</button>
-        </div>
-      </section>
-    </div>
+    <InventoryOperationalDashboard
+      requests={kitchenRequests}
+      requestsLoading={kitchenRequestsLoading}
+      requestsError={kitchenRequestsError}
+      insightsError={insightsError}
+      canProcessRequests={staffRole === "owner" || staffRole === "inventory_officer"}
+      outOfStockCount={dashboardKpis.outOfStockItems}
+      lowStockCount={dashboardKpis.lowStockItems}
+      pendingPurchaseCount={dashboardKpis.pendingPurchaseOrders}
+      totalActiveIngredients={data.items.filter((item) => item.status === "active").length}
+      inventoryValue={dashboardKpis.totalInventoryValue}
+      currentStock={currentStock}
+      requestStorageLocations={Object.fromEntries(data.items.map((item) => [
+        item.id,
+        data.storageLocations.find((location) => location.id === item.storageLocationId)?.name ?? "Configured item storage",
+      ]))}
+      recentLedger={recentLedger}
+      staffRoles={data.staffRoles}
+      working={working}
+      onNavigate={navigate}
+      onIssue={(request) => processKitchenRequest(
+        () => issueInventoryKitchenRequest(restaurantId, request.id),
+        `${request.itemName} issued to Kitchen. Stock was deducted once.`,
+      )}
+      onUnable={(request, reason) => processKitchenRequest(
+        () => markInventoryKitchenRequestUnable(restaurantId, request.id, reason),
+        `${request.itemName} marked unable to fulfill. No stock was deducted.`,
+      )}
+    />
   );
 
   const stockRows = currentStock.filter((row) => {
@@ -1477,7 +1403,7 @@ export function InventoryDashboardPage({
       <header className="ia-mobile-header">
         <div className="ia-mobile-header-title">
           <strong>Inventory</strong>
-          <span>{restaurantName}</span>
+          <span>{restaurantName} · Today&apos;s stock operations</span>
         </div>
         <div className="ia-mobile-header-actions">
           <button className="ia-theme-placeholder" type="button" aria-label="Theme switcher placeholder" title="Theme options coming later" disabled>
@@ -1611,7 +1537,7 @@ export function InventoryDashboardPage({
       </aside>
 
       <section className="ia-workspace">
-        <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName}</span></div></header>
+        <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>
         {(message || error) && <div className={`ia-alert ${error ? "error" : ""}`}>{error ?? message}</div>}
         {loading ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>

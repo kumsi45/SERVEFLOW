@@ -2225,3 +2225,151 @@
 @media (prefers-reduced-motion: reduce) {
   .ia-dashboard-final button { scroll-behavior: auto; transition: none; }
 }
+
+/* Phase I1: operational home and Kitchen handoff */
+.ia-workspace:has(.ia-i1-dashboard) { padding-top: 12px; }
+.ia-workspace:has(.ia-i1-dashboard) .ia-header { min-height: 38px; margin-bottom: 7px; }
+.ia-workspace:has(.ia-i1-dashboard) .ia-header h1 { font-size: 21px; }
+.ia-workspace:has(.ia-i1-dashboard) .ia-header span { display: block; margin-top: 1px; }
+.ia-i1-dashboard { max-width: 1480px; margin-inline: auto; gap: 10px; }
+.ia-i1-section { min-width: 0; padding: 12px; border: 1px solid #e2e8f0; border-radius: 13px; background: #fff; }
+.ia-i1-title { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.ia-i1-title > div { display: grid; gap: 2px; }
+.ia-i1-title span { color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .09em; }
+.ia-i1-title h2 { margin: 0; color: #0f172a; font-size: 16px; line-height: 1.2; }
+.ia-i1-title > button { min-height: 40px; padding: 7px 11px; border: 1px solid #dbe3ee; border-radius: 9px; background: #fff; color: #1d4ed8; font-weight: 800; cursor: pointer; }
+.ia-i1-zero { display: grid; gap: 4px; padding: 18px; border: 1px solid #bbf7d0; border-radius: 12px; background: #f0fdf4; color: #166534; }
+.ia-i1-zero span { font-size: 13px; }
+.ia-i1-partial { display: grid; gap: 4px; padding: 14px; border: 1px solid #fde68a; border-radius: 12px; background: #fffbeb; color: #92400e; }
+.ia-i1-partial span { font-size: 13px; }
+.ia-i1-attention-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 220px)); justify-content: start; gap: 8px; }
+.ia-i1-attention-grid button { display: grid; min-height: 68px; grid-template-columns: auto 1fr; align-content: center; gap: 0 8px; padding: 9px 10px; border: 1px solid #dbe3ee; border-left: 3px solid #2563eb; border-radius: 10px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-i1-attention-grid button.critical { border-left-color: #dc2626; }
+.ia-i1-attention-grid button.warning { border-left-color: #d97706; }
+.ia-i1-attention-grid button > strong { grid-row: 1 / 3; align-self: center; color: #1d4ed8; font-size: 22px; }
+.ia-i1-attention-grid button.critical > strong { color: #b91c1c; }
+.ia-i1-attention-grid button.warning > strong { color: #b45309; }
+.ia-i1-attention-grid button > span { align-self: end; font-size: 12px; font-weight: 900; }
+.ia-i1-attention-grid button > small { color: #64748b; font-size: 10px; }
+.ia-i1-tabs { display: inline-flex; max-width: 100%; gap: 3px; margin-bottom: 8px; padding: 3px; border-radius: 10px; background: #f1f5f9; }
+.ia-i1-tabs button { min-height: 36px; padding: 6px 10px; border: 0; border-radius: 7px; background: transparent; color: #475569; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.ia-i1-tabs button[aria-selected="true"] { background: #fff; color: #1d4ed8; box-shadow: 0 1px 4px #0f172a1a; }
+.ia-i1-tabs button span { display: inline-grid; min-width: 20px; height: 20px; margin-left: 4px; place-items: center; border-radius: 999px; background: #dbeafe; font-size: 10px; }
+.ia-i1-request-error { display: grid; gap: 3px; padding: 13px; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; }
+.ia-i1-request-error span { font-size: 12px; }
+.ia-i1-request-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ia-i1-request-card { display: flex; min-width: 0; flex-direction: column; padding: 10px; border: 1px solid #dbe3ee; border-left: 3px solid #60a5fa; border-radius: 10px; background: #fff; }
+.ia-i1-request-card.priority { border-left-color: #d97706; }
+.ia-i1-request-card.insufficient { border-left-color: #dc2626; background: #fffafa; }
+.ia-i1-request-card.unavailable { border-left-color: #d97706; background: #fffdf7; }
+.ia-i1-request-card > header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ia-i1-request-primary { display: grid; min-width: 0; gap: 1px; }
+.ia-i1-request-primary > strong { overflow: hidden; color: #0f172a; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.ia-i1-request-primary > b { color: #334155; font-size: 13px; }
+.ia-i1-priority { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 9px; font-weight: 900; }
+.ia-i1-station { overflow: hidden; margin-top: 7px; color: #1d4ed8; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.ia-i1-request-meta { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; color: #64748b; font-size: 10px; }
+.ia-i1-request-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-i1-request-meta time { flex: 0 0 auto; }
+.ia-i1-status { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 900; }
+.ia-i1-status.issued { background: #fff7ed; color: #9a3412; }
+.ia-i1-status.delivered { background: #ecfdf5; color: #047857; }
+.ia-i1-status.unable_to_fulfill,
+.ia-i1-status.rejected { background: #fef2f2; color: #b91c1c; }
+.ia-i1-availability { display: flex; align-items: center; gap: 5px; margin-top: 7px; padding: 6px 7px; border-radius: 7px; background: #f8fafc; font-size: 11px; }
+.ia-i1-availability > span { color: #64748b; }
+.ia-i1-availability > strong { color: #0f172a; }
+.ia-i1-availability > small { margin-left: auto; color: #b91c1c; font-weight: 800; }
+.ia-i1-availability.insufficient { background: #fef2f2; }
+.ia-i1-availability.unavailable { background: #fff7ed; }
+.ia-i1-card-details { margin-top: 6px; color: #475569; font-size: 10px; }
+.ia-i1-card-details summary { color: #1d4ed8; cursor: pointer; font-weight: 800; }
+.ia-i1-card-details p { margin: 5px 0 0; overflow-wrap: anywhere; }
+.ia-i1-request-card > p { margin: 7px 0 0; color: #475569; font-size: 10px; }
+.ia-i1-request-card .ia-i1-waiting { padding: 6px 7px; border-radius: 7px; background: #fff7ed; color: #9a3412; }
+.ia-i1-request-card footer { display: grid; grid-template-columns: minmax(72px, .8fr) minmax(110px, 1.2fr); gap: 6px; margin-top: auto; padding-top: 8px; }
+.ia-i1-request-card footer button,
+.ia-i1-dialog footer button { min-height: 38px; padding: 6px 10px; border: 1px solid #1d4ed8; border-radius: 8px; background: #1d4ed8; color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; }
+.ia-i1-request-card footer button:disabled { border-color: #cbd5e1; background: #e2e8f0; color: #64748b; cursor: not-allowed; }
+.ia-i1-request-card footer button.secondary,
+.ia-i1-dialog footer button.secondary { border-color: #cbd5e1; background: #fff; color: #334155; }
+.ia-i1-empty { margin: 0; padding: 20px 8px; color: #64748b; text-align: center; }
+.ia-i1-quick-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; }
+.ia-i1-quick-grid button { display: flex; min-height: 58px; align-items: center; gap: 8px; padding: 10px; border: 1px solid #dbe3ee; border-radius: 11px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-i1-quick-grid button span { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 8px; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 900; }
+.ia-i1-quick-grid button strong { font-size: 12px; }
+.ia-i1-snapshot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.ia-i1-snapshot-grid button { display: grid; min-height: 76px; align-content: center; gap: 5px; padding: 12px; border: 1px solid #dbe3ee; border-radius: 11px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-i1-snapshot-grid small { color: #64748b; font-weight: 800; }
+.ia-i1-snapshot-grid strong { font-size: 21px; }
+.ia-i1-activity-list > button { display: grid; width: 100%; min-height: 54px; grid-template-columns: 30px minmax(130px, 1.5fr) minmax(90px, .8fr) minmax(110px, .8fr) minmax(110px, 1fr); align-items: center; gap: 10px; padding: 8px 6px; border: 0; border-bottom: 1px solid #edf2f7; background: transparent; color: #0f172a; text-align: left; cursor: pointer; }
+.ia-i1-activity-list > button > span:first-child { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 999px; font-weight: 900; }
+.ia-i1-activity-list .in { background: #ecfdf3; color: #047857; }
+.ia-i1-activity-list .out { background: #fef2f2; color: #b91c1c; }
+.ia-i1-activity-list > button > span:not(:first-child) { display: grid; min-width: 0; gap: 2px; }
+.ia-i1-activity-list strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.ia-i1-activity-list small,
+.ia-i1-activity-list time { color: #64748b; font-size: 11px; text-transform: capitalize; }
+.ia-i1-dialog-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 18px; background: #0f172a8a; }
+.ia-i1-dialog { width: min(470px, 100%); max-height: calc(100dvh - 36px); overflow-y: auto; padding: 15px; border-radius: 14px; background: #fff; box-shadow: 0 24px 70px #0f172a40; }
+.ia-i1-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ia-i1-dialog > header > div { display: grid; gap: 2px; }
+.ia-i1-dialog > header span { color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .09em; }
+.ia-i1-dialog h2 { margin: 0; color: #0f172a; font-size: 20px; }
+.ia-i1-dialog > header p { margin: 3px 0 0; color: #475569; font-size: 12px; font-weight: 700; }
+.ia-i1-dialog > header > button { width: 40px; height: 40px; border: 1px solid #dbe3ee; border-radius: 9px; background: #fff; font-size: 22px; cursor: pointer; }
+.ia-i1-dialog dl { display: grid; gap: 0; margin: 14px 0; }
+.ia-i1-dialog dl div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 2px; border-bottom: 1px solid #edf2f7; }
+.ia-i1-dialog dt { color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.ia-i1-dialog dd { margin: 0; color: #0f172a; font-size: 13px; font-weight: 800; }
+.ia-i1-deduction-warning { padding: 12px; border: 1px solid #fed7aa; border-radius: 9px; background: #fff7ed; color: #9a3412; font-size: 13px; font-weight: 700; }
+.ia-i1-dialog > label { display: grid; gap: 7px; color: #334155; font-size: 13px; font-weight: 800; }
+.ia-i1-dialog > label span { color: #dc2626; }
+.ia-i1-dialog textarea { min-height: 110px; resize: vertical; padding: 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; }
+.ia-i1-dialog footer { display: flex; justify-content: flex-end; gap: 7px; margin-top: 14px; }
+.ia-i1-dashboard button:hover { border-color: #94a3b8; background-color: #f8fafc; }
+.ia-i1-dashboard button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+@media (max-width: 1499px) {
+  .ia-i1-request-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1199px) {
+  .ia-i1-request-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .ia-i1-quick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .ia-i1-dashboard { gap: 10px; }
+  .ia-i1-section { padding: 10px; border-radius: 12px; }
+  .ia-i1-attention-grid,
+  .ia-i1-quick-grid,
+  .ia-i1-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-i1-tabs { display: flex; overflow-x: auto; }
+  .ia-i1-activity-list > button { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; }
+  .ia-i1-activity-list > button > strong { grid-column: 3; grid-row: 1; }
+  .ia-i1-activity-list time { grid-column: 2; grid-row: 2; }
+  .ia-i1-activity-list > button > span:last-child { grid-column: 3; grid-row: 2; text-align: right; }
+}
+
+@media (max-width: 430px) {
+  .ia-workspace:has(.ia-i1-dashboard) { padding-top: 6px; }
+  .ia-i1-title { align-items: flex-start; }
+  .ia-i1-title > button { min-height: 44px; }
+  .ia-i1-attention-grid,
+  .ia-i1-request-list,
+  .ia-i1-snapshot-grid { grid-template-columns: 1fr; }
+  .ia-i1-attention-grid button { min-height: 62px; }
+  .ia-i1-request-card footer button { min-height: 44px; }
+  .ia-i1-dialog-backdrop { align-items: end; padding: 0; }
+  .ia-i1-dialog { width: 100%; max-height: 100dvh; border-radius: 16px 16px 0 0; }
+  .ia-i1-dialog footer button { min-height: 46px; }
+  .ia-i1-activity-list > button > span:last-child { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-i1-dashboard *, .ia-i1-dialog { scroll-behavior: auto; transition: none; }
+}

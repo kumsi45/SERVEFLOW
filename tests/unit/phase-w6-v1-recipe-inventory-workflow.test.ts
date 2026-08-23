@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const recipes = read("src/modules/recipes/pages/RecipeManagementPage.tsx");
 const inventory = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
+const inventoryDashboard = read("src/modules/inventory/components/InventoryOperationalDashboard.tsx");
 const owner = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
 
 describe("Phase W.6 simplified V1 recipe and inventory workflow", () => {
@@ -23,8 +24,9 @@ describe("Phase W.6 simplified V1 recipe and inventory workflow", () => {
   });
 
   it("keeps inventory officers focused on operations", () => {
-    expect(inventory).toContain('staffRole !== "inventory_officer" && <button type="button" onClick={openRecipes}');
-    for (const operation of ["Receive Stock", "Issue Stock", "Record Waste", "Transfer", "Adjust"]) expect(inventory).toContain(operation);
+    expect(inventoryDashboard).not.toContain("Recipes");
+    for (const operation of ["Receive Stock", "Issue Stock", "Waste", "Transfer", "Adjustment"]) expect(inventoryDashboard).toContain(operation);
+    expect(inventory).toContain("InventoryOperationalDashboard");
   });
 
   it("uses stock tracking language and keeps recipe items contextual", () => {

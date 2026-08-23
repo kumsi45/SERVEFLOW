@@ -67,12 +67,13 @@ describe("Phase 8.1 inventory administration contracts", () => {
     expect(sql).toContain("Inventory unit is already in use.");
   });
 
-  it("keeps the inventory admin UI isolated from kitchen, realtime, and request workflows", () => {
+  it("keeps request handoff isolated behind canonical services and centralized realtime", () => {
     const page = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
     expect(page).not.toContain("useTenantRealtime");
     expect(page).not.toContain("useRestaurantEvents");
-    expect(page).not.toContain("inventoryRequestService");
-    expect(page).not.toContain("../../kitchen");
+    expect(page).toContain("inventoryKitchenRequestService");
+    expect(page).toContain("useInventoryRealtime");
+    expect(page).not.toMatch(/from\("kitchen_inventory_requests"\)/);
 
     const route = read("src/modules/staff-auth/pages/ProtectedInventoryRoute.tsx");
     expect(route).toContain('.in("role", ["owner", "manager", "inventory_officer"])');

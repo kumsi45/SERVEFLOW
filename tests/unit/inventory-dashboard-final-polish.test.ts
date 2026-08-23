@@ -12,6 +12,7 @@ import type { PurchaseHistoryRecord, PurchaseHistoryStatus } from "../../src/mod
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const dashboard = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
+const operationalDashboard = read("src/modules/inventory/components/InventoryOperationalDashboard.tsx");
 const presentation = read("src/modules/inventory/inventoryDashboardPresentation.ts");
 const styles = read("src/modules/inventory/styles/inventoryDashboard.css");
 
@@ -148,32 +149,31 @@ describe("Phase 8.5.6 inventory dashboard KPIs", () => {
   });
 });
 
-describe("Phase 8.5.6 dashboard presentation", () => {
-  it("renders all KPI cards and recent operational activity groups", () => {
+describe("Inventory operational dashboard presentation", () => {
+  it("renders actionable KPIs and recent operational activity", () => {
     for (const label of [
-      "Pending Purchase Orders", "Low Stock", "Today's Operations",
-      "Today's Waste", "Today's Adjustments", "Today's Transfers", "Recent Activities",
-    ]) expect(dashboard).toContain(label);
+      "Kitchen Requests", "Awaiting Kitchen Confirmation", "Out of Stock",
+      "Low Stock", "Pending Purchases", "Recent Activity",
+    ]) expect(operationalDashboard).toContain(label);
   });
 
   it("routes every quick action to the existing module", () => {
     for (const action of [
-      "Receive Stock", "Issue Stock", "Adjustment", "Waste",
-      "Purchase Order", "Search Ingredient", "Transfer",
-    ]) expect(dashboard).toContain(action);
+      "Receive Stock", "Stock Out / Issue Stock", "Adjustment", "Waste",
+      "Purchase Order", "Transfer",
+    ]) expect(operationalDashboard).toContain(action);
     for (const route of [
-      'navigate("items")', 'navigate("purchase-orders")', 'navigate("adjustments")',
-      'navigate("stock-in")', 'navigate("stock-out")', 'navigate("waste")',
-      'navigate("low-stock-assistant")', 'navigate("transfers")',
-    ]) expect(dashboard).toContain(route);
+      'onNavigate("purchase-orders")', 'onNavigate("adjustments")',
+      'onNavigate("stock-in")', 'onNavigate("stock-out")', 'onNavigate("waste")',
+      'onNavigate("low-stock-assistant")', 'onNavigate("transfers")',
+    ]) expect(operationalDashboard).toContain(route);
   });
 
-  it("renders every requested empty state with a call to action", () => {
+  it("renders concise operational zero states", () => {
     for (const emptyState of [
-      "No Ingredients", "No Purchases", "No Suppliers", "No Recipes", "No Movements", "No Low Stock",
-    ]) expect(dashboard).toContain(emptyState);
-    expect(dashboard).toContain("DashboardEmptyState");
-    expect(dashboard).toContain("actionLabel");
+      "Everything is under control", "No approved Kitchen requests are waiting for Inventory.",
+      "No recent inventory activity.",
+    ]) expect(operationalDashboard).toContain(emptyState);
   });
 
   it("uses memoized calculations and independent read-only insight loading", () => {
@@ -187,15 +187,14 @@ describe("Phase 8.5.6 dashboard presentation", () => {
   });
 
   it("supports desktop, tablet, mobile, large monitors, focus, and reduced motion", () => {
-    expect(styles).toContain("grid-template-columns: repeat(6");
-    expect(styles).toContain("@media (min-width: 1181px) and (max-width: 1500px)");
-    expect(styles).toContain("@media (min-width: 701px) and (max-width: 1180px)");
-    expect(styles).toContain("@media (max-width: 700px)");
+    expect(styles).toContain(".ia-i1-quick-grid");
+    expect(styles).toContain("@media (max-width: 1024px)");
+    expect(styles).toContain("@media (max-width: 768px)");
     expect(styles).toContain("@media (max-width: 430px)");
     expect(styles).toContain(":focus-visible");
     expect(styles).toContain("prefers-reduced-motion");
-    expect(dashboard).toContain("aria-label=\"Inventory dashboard KPIs\"");
-    expect(dashboard).toContain("<time dateTime={item.date}>");
+    expect(operationalDashboard).toContain("aria-label=\"Kitchen request status\"");
+    expect(operationalDashboard).toContain("<time dateTime={entry.movementDate}");
   });
 
   it("adds no database objects or Phase 8.5.6 migration", () => {
