@@ -964,64 +964,17 @@ Deno.serve(async (request) => {
     }
 
     if (action === "assign-waiter-tables") {
-      if (targetStaff.role !== "waiter") {
+      if (targetStaff.role !== "waiter" || targetStaff.active !== true) {
         return jsonResponse(400, { error: "Only waiters can be assigned tables." });
       }
       const tableIds = Array.isArray(payload.tableIds) ? payload.tableIds.map((id) => requireUuid(id, "Table ID")) : [];
-      const { data: previousAssignments, error: previousAssignmentsError } = await serviceClient
-        .from("restaurant_table_waiter_assignments")
-        .select("table_id")
-        .eq("restaurant_id", restaurantId)
-        .eq("waiter_staff_id", staffId)
-        .eq("active", true);
-      if (previousAssignmentsError) throw new Error(previousAssignmentsError.message);
-      const previousTableIds = (previousAssignments ?? []).map((assignment) => assignment.table_id);
-      const { data: tables, error: tableError } = await serviceClient
-        .from("restaurant_tables")
-        .select("id, label, table_number")
-        .eq("restaurant_id", restaurantId)
-        .eq("active", true)
-        .in("id", tableIds.length > 0 ? tableIds : ["00000000-0000-0000-0000-000000000000"]);
-      if (tableError) throw new Error(tableError.message);
-      if ((tables ?? []).length !== tableIds.length) {
-        return jsonResponse(400, { error: "All selected tables must be active restaurant tables." });
-      }
-      const { error: deactivateError } = await serviceClient
-        .from("restaurant_table_waiter_assignments")
-        .update({ active: false })
-        .eq("restaurant_id", restaurantId)
-        .eq("waiter_staff_id", staffId)
-        .eq("active", true);
-      if (deactivateError) throw new Error(deactivateError.message);
-      if (tableIds.length > 0) {
-        const { error: releaseError } = await serviceClient
-          .from("restaurant_table_waiter_assignments")
-          .update({ active: false })
-          .eq("restaurant_id", restaurantId)
-          .in("table_id", tableIds)
-          .neq("waiter_staff_id", staffId)
-          .eq("active", true);
-        if (releaseError) throw new Error(releaseError.message);
-
-        const { error: assignError } = await serviceClient
-          .from("restaurant_table_waiter_assignments")
-          .upsert(tableIds.map((tableId) => ({
-            restaurant_id: restaurantId,
-            table_id: tableId,
-            waiter_staff_id: staffId,
-            assigned_by_staff_id: actingStaff.id,
-            active: true,
-          })), { onConflict: "restaurant_id,table_id,waiter_staff_id" });
-        if (assignError) throw new Error(assignError.message);
-      }
-      await audit("waiter_tables_assigned", staffId, targetStaff.email, {
-        target_staff_name: targetStaff.display_name,
-        table_ids: tableIds,
-        table_count: tableIds.length,
-        previous_values: { table_ids: previousTableIds },
-        new_values: { table_ids: tableIds },
+      const { data: assignments, error: assignmentError } = await userClient.rpc("assign_waiter_tables", {
+        target_restaurant_id: restaurantId,
+        target_waiter_staff_id: staffId,
+        target_table_ids: tableIds,
       });
-      return jsonResponse(200, { ok: true });
+      if (assignmentError) throw new Error(assignmentError.message);
+      return jsonResponse(200, { ok: true, assignments: assignments ?? [] });
     }
 
     if (action === "send-password-reset") {

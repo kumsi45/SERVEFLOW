@@ -27,7 +27,8 @@ describe("Manager Live Operations redesign", () => {
   it("uses an overlay inspector and preserves authorized handlers", () => {
     expect(page).toContain('role="dialog"');
     expect(styles).toContain("position:fixed");
-    expect(page).toContain("assignWaiterTables");
+    expect(page).toContain("assignManagerWaiterTables");
+    expect(page).toContain("ManagerWaiterTableAssignments");
     expect(page).toContain("releaseManagerDiningSession");
     expect(page).toContain("Emergency release reason (required)");
   });
