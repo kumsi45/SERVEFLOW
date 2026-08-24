@@ -113,7 +113,7 @@ describe("Phase 8.5.2 receiving validation and UI", () => {
   });
 
   it("exposes partial and full receiving without unrelated purchasing features", () => {
-    for (const marker of ["Receive", "Receive Now", "Receive Remaining", "Confirm Receipt", "Partially Received", "Completed"]) {
+    for (const marker of ["Receive Delivery", "Receiving now", "Receive Remaining", "Confirm Receipt", "Partially Received", "Completed"]) {
       expect(page).toContain(marker);
     }
     expect(page).not.toMatch(/supplier payment|accounting|purchase return/i);

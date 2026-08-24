@@ -18,7 +18,7 @@ describe("optional purchase order supplier", () => {
   });
 
   it("marks the field optional and sends null when omitted", () => {
-    expect(page).toContain("Supplier <span>(Optional)</span>");
+    expect(page).toContain("Supplier <span>(optional)</span>");
     expect(page).toContain('<option value="">No supplier</option>');
     expect(service).toContain("supplier_id: form.supplierId || null");
   });

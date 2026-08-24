@@ -126,19 +126,20 @@ describe("Phase 8.5.1 purchase order draft UI", () => {
     expect(dashboard).toContain('{ key: "purchase-orders", label: "Purchase Orders" }');
   });
 
-  it("supports create, edit, delete, search, supplier and status filters", () => {
+  it("supports clear creation, editing, search, supplier filters, and status tabs", () => {
     for (const text of [
-      "Create Draft", "Edit Draft", "Delete Draft", "Search", "Supplier", "Status",
-      "Expected Delivery Date", "Purchase Unit", "Unit Price", "Notes", "Add Ingredient",
+      "Create Purchase Order", "Edit Purchase Order", "Search", "Supplier", "Open",
+      "Expected delivery", "Unit price", "Materials", "Add Material",
     ]) expect(page).toContain(text);
     expect(page).toContain("setSearch");
     expect(page).toContain("setSupplierFilter");
-    expect(page).toContain("setStatusFilter");
+    expect(page).toContain("setTab");
+    expect(page).not.toContain("Delete Draft");
   });
 
   it("has explicit tablet and mobile responsive layouts", () => {
-    expect(styles).toContain("@media (max-width: 980px)");
-    expect(styles).toContain("@media (max-width: 680px)");
-    expect(styles).toContain("grid-template-columns: 1fr");
+    expect(styles).toContain("@media (min-width: 700px)");
+    expect(styles).toContain("@media (min-width: 1200px)");
+    expect(styles).toContain("@media (max-width: 430px)");
   });
 });

@@ -12,6 +12,7 @@ import { CurrentStockWorkspace } from "../components/CurrentStockWorkspace";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { InventoryOverviewDashboard } from "../components/InventoryOverviewDashboard";
 import { InventoryOperationalDashboard } from "../components/InventoryOperationalDashboard";
+import { InventorySuppliersWorkspace } from "../components/InventorySuppliersWorkspace";
 import { StockMovementWorkspace, TransferWorkspace } from "../components/StockOperationWorkspaces";
 import { StockMovementsWorkspace } from "../components/StockMovementsWorkspace";
 import { useInventoryRealtime, type InventoryRealtimeBatch } from "../hooks/useInventoryRealtime";
@@ -83,6 +84,7 @@ import type {
   StockMovementDraft,
 } from "../types";
 import "../styles/inventoryDashboard.css";
+import "../styles/inventorySuppliers.css";
 import "../styles/inventoryKitchenRequests.css";
 import "../styles/inventoryStockOperations.css";
 import "../styles/inventoryStockMovements.css";
@@ -696,7 +698,6 @@ export function InventoryDashboardPage({
   const categoryItemCounts = useMemo(() => countItemsBy("categoryId"), [countItemsBy]);
   const unitItemCounts = useMemo(() => countItemsBy("unitId"), [countItemsBy]);
   const storageItemCounts = useMemo(() => countItemsBy("storageLocationId"), [countItemsBy]);
-  const supplierItemCounts = useMemo(() => countItemsBy("preferredSupplierId"), [countItemsBy]);
   const stockByItemId = useMemo(() => {
     const totals = new Map<string, { quantity: number; unitName: string }>();
     for (const row of currentStock) {
@@ -1239,7 +1240,7 @@ export function InventoryDashboardPage({
     : section === "transfers" ? transfers
     : section === "ledger" ? ledgerView
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />
-    : section === "purchase-orders" ? <PurchaseOrderDraftsPage restaurantId={restaurantId} suppliers={data.suppliers} items={data.items} units={data.units} />
+    : section === "purchase-orders" ? <PurchaseOrderDraftsPage restaurantId={restaurantId} suppliers={data.suppliers} items={data.items} units={data.units} storageLocations={data.storageLocations} />
     : section === "purchase-history" ? <PurchaseHistoryPage restaurantId={restaurantId} />
     : section === "inventory-reports" ? (
       <section className="ia-navigation-placeholder" aria-labelledby="inventory-reports-page-title">
@@ -1264,40 +1265,7 @@ export function InventoryDashboardPage({
       "inventory_categories",
       (row) => ({ label: "Ingredients", value: countLabel(categoryItemCounts.get(row.id) ?? 0, "ingredient") }),
     )
-    : section === "suppliers" ? (
-      <div className="ia-stack">
-        <section className="ia-toolbar">
-          <div className="ia-section-title"><h2>Suppliers</h2><span>{data.suppliers.filter((row) => row.status !== "deleted").length} records</span></div>
-          <label className="ia-search compact"><span>Search</span><input value={filters.search} onChange={(event) => setFilter("search", event.target.value)} placeholder="Supplier name, phone, contact" /></label>
-          <div className="ia-actions"><button type="button" onClick={() => setSupplierForm(supplierDraft())}>Create</button></div>
-        </section>
-        <section className="ia-record-grid">
-          {data.suppliers
-            .filter((row) => row.status !== "deleted")
-            .filter((row) => !filters.search.trim() || [row.name, row.phone, row.contactPerson, row.address].some((value) => (value ?? "").toLowerCase().includes(filters.search.trim().toLowerCase())))
-            .map((supplier) => (
-            <article className="ia-record" key={supplier.id}>
-              <header><div><strong>{supplier.name}</strong><span>{supplier.contactPerson || "No contact person"}</span></div>{statusBadge(supplier.status)}</header>
-              <dl>
-                <div><dt>Supplied Ingredients</dt><dd>{countLabel(supplierItemCounts.get(supplier.id) ?? 0, "ingredient")}</dd></div>
-                <div><dt>Phone</dt><dd>{supplier.phone || "Not set"}</dd></div>
-                <div><dt>Address</dt><dd>{supplier.address || "Not set"}</dd></div>
-                <div><dt>Notes</dt><dd>{supplier.notes || "None"}</dd></div>
-              </dl>
-              <footer>
-                {(supplier.status === "active" || canManageMasterLifecycle) && <button type="button" onClick={() => setSupplierForm(supplierDraft(supplier))}>Edit</button>}
-                {canManageMasterLifecycle && (supplier.status === "archived" ? (
-                  <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier restored.")}>Restore</button>
-                ) : (
-                  <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier archived.")}>Archive</button>
-                ))}
-                {canManageMasterLifecycle && <button type="button" onClick={() => void run(() => softDeleteRecord(restaurantId, "inventory_suppliers", supplier.id), "Supplier soft deleted.")}>Soft Delete</button>}
-              </footer>
-            </article>
-          ))}
-        </section>
-      </div>
-    )
+    : section === "suppliers" ? <InventorySuppliersWorkspace suppliers={data.suppliers} items={data.items} onCreate={() => setSupplierForm(supplierDraft())} onEdit={(supplier) => setSupplierForm(supplierDraft(supplier))} />
     : section === "storage-locations" ? masterList(
       "Storage Locations",
       data.storageLocations,
@@ -1595,13 +1563,12 @@ function CategoryForm({ draft, setDraft, metadata, working, onSave }: { draft: I
 
 function SupplierForm({ draft, setDraft, metadata, working, onSave }: { draft: InventorySupplierDraft; setDraft: (draft: InventorySupplierDraft | null) => void; metadata: { createdAt: string; updatedAt: string } | null; working: boolean; onSave: () => void }) {
   return (
-    <FormShell title={draft.id ? "Edit Supplier" : "Create Supplier"} onClose={() => setDraft(null)}>
-      <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-        <label>Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
-        <label>Phone<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label>
-        <label>Contact Person<input value={draft.contactPerson} onChange={(event) => setDraft({ ...draft, contactPerson: event.target.value })} /></label>
-        <label className="wide">Address<textarea value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label>
-        <label className="wide">Notes<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
+    <FormShell title={draft.id ? "Edit Supplier" : "Add Supplier"} onClose={() => setDraft(null)}>
+      <form className="ia-form ia-supplier-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
+        <label>Supplier name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+        <label>Phone<input inputMode="tel" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label>
+        <label>Contact person <span>(optional)</span><input value={draft.contactPerson} onChange={(event) => setDraft({ ...draft, contactPerson: event.target.value })} /></label>
+        <label>Address <span>(optional)</span><input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label>
         {metadata && <AdvancedInfo rows={[{ label: "Created", value: dateLabel(metadata.createdAt) }, { label: "Updated", value: dateLabel(metadata.updatedAt) }]} />}
         <footer><button disabled={working} type="submit">{working ? "Saving..." : "Save Supplier"}</button></footer>
       </form>

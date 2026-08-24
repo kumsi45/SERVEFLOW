@@ -54,7 +54,10 @@ export type PurchaseOrderReceiptFormLine = {
   purchaseOrderItemId: string;
   inventoryItemName: string;
   purchaseUnitName: string;
+  orderedQuantity: number;
+  alreadyReceivedQuantity: number;
   remainingQuantity: number;
+  storageLocationName: string;
   receivedQuantity: string;
 };
 

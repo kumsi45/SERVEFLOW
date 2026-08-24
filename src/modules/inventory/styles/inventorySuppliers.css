@@ -1,0 +1,26 @@
+.ia-suppliers-page { display: grid; width: 100%; max-width: 1120px; min-width: 0; gap: 12px; margin-inline: auto; }
+.ia-suppliers-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ia-suppliers-heading h2, .ia-suppliers-heading p { margin: 0; }
+.ia-suppliers-heading h2 { color: #0f172a; font-size: 22px; }
+.ia-suppliers-heading p { margin-top: 3px; color: #64748b; font-size: 12px; }
+.ia-suppliers-heading button, .ia-supplier-card footer button, .ia-suppliers-empty button { min-height: 44px; padding: 8px 13px; border: 1px solid #176b47; border-radius: 9px; background: #176b47; color: #fff; font-weight: 850; cursor: pointer; }
+.ia-suppliers-search { display: grid; max-width: 480px; gap: 5px; color: #475569; font-size: 11px; font-weight: 800; }
+.ia-suppliers-search input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #d7e0dc; border-radius: 10px; background: #fff; color: #0f172a; font: inherit; }
+.ia-suppliers-grid { display: grid; min-width: 0; gap: 9px; }
+.ia-supplier-card { display: grid; min-width: 0; gap: 10px; padding: 13px; border: 1px solid #dce5e0; border-radius: 12px; background: #fff; }
+.ia-supplier-card header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 9px; }
+.ia-supplier-card header strong { min-width: 0; overflow-wrap: anywhere; color: #0f172a; font-size: 16px; }
+.ia-supplier-status { flex: 0 0 auto; padding: 4px 7px; border-radius: 999px; background: #ecfdf3; color: #047857; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.ia-supplier-status.archived { background: #f1f5f9; color: #64748b; }
+.ia-supplier-contact { display: grid; gap: 4px; color: #475569; font-size: 11px; }
+.ia-supplier-contact span, .ia-supplier-contact a { overflow-wrap: anywhere; }
+.ia-supplier-contact a { color: #1457d9; font-weight: 800; text-decoration: none; }
+.ia-supplier-card footer { display: flex; justify-content: flex-end; }
+.ia-supplier-card footer button { min-width: 88px; border-color: #cbd5e1; background: #fff; color: #176b47; }
+.ia-suppliers-empty { display: grid; justify-items: center; gap: 12px; padding: 32px 14px; border: 1px solid #dce5e0; border-radius: 12px; background: #fff; color: #64748b; text-align: center; }
+.ia-form.ia-supplier-form { grid-template-columns: 1fr; }
+.ia-form.ia-supplier-form textarea { min-height: 64px; }
+@media (min-width: 700px) { .ia-suppliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ia-form.ia-supplier-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .ia-suppliers-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 430px) { .ia-suppliers-heading { align-items: stretch; flex-direction: column; } .ia-suppliers-heading button { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .ia-suppliers-page * { scroll-behavior: auto; transition: none; } }
