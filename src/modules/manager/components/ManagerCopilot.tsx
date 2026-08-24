@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { ArrowRight, Bot, RotateCw, Send, Sparkles, X } from "lucide-react";
+import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import type { CurrencyConfig } from "../../../core/format/currency";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../services/managerCopilotService";
 import "../styles/managerCopilot.css";
 import { managerFacingMessage } from "../managerPresentation";
+import type { OpenManagerCopilotDetail } from "../managerLiveUpdates";
 
 type Props = {
   restaurantId: string;
@@ -113,8 +115,15 @@ export function ManagerCopilot({
   section,
   currency,
 }: Props) {
-  const context = (section === "ai" ? "dashboard" : section) as CopilotContext;
+  const context = (
+    section === "ai" ? "dashboard" : section === "cashier" ? "tables" : section
+  ) as CopilotContext;
   const [open, setOpen] = useState(section === "ai");
+  const [activeContext, setActiveContext] = useState(context);
+  const [queuedQuestion, setQueuedQuestion] = useState<{
+    text: string;
+    context: CopilotContext;
+  } | null>(null);
   const [snapshot, setSnapshot] = useState<ManagerCopilotSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +132,15 @@ export function ManagerCopilot({
     restoreMessages(restaurantId),
   );
   const conversationRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+
+  const closeCopilot = useCallback(() => {
+    setOpen(false);
+    window.requestAnimationFrame(() => launcherRef.current?.focus());
+  }, []);
+  useModalFocus(open, closeCopilot, panelRef, composerRef);
 
   const refresh = useCallback(async () => {
     if (!open) return;
@@ -152,13 +170,22 @@ export function ManagerCopilot({
     refreshOnConnect: false,
   });
   useEffect(() => {
-    const show = () => setOpen(true);
+    const show = (event: Event) => {
+      const detail = (event as CustomEvent<OpenManagerCopilotDetail>).detail;
+      const nextContext = detail?.context ?? context;
+      setActiveContext(nextContext);
+      if (detail?.prompt) {
+        setQueuedQuestion({ text: detail.prompt, context: nextContext });
+      }
+      setOpen(true);
+    };
     window.addEventListener("serveflow:open-copilot", show);
     return () => window.removeEventListener("serveflow:open-copilot", show);
-  }, []);
+  }, [context]);
   useEffect(() => {
     if (section === "ai") setOpen(true);
-  }, [section]);
+    if (!open) setActiveContext(context);
+  }, [context, open, section]);
   useEffect(() => {
     if (!open) return;
     let timer: number | undefined;
@@ -192,18 +219,34 @@ export function ManagerCopilot({
   }, [messages, loading]);
   useEffect(() => {
     if (!open) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+    document.documentElement.classList.add("manager-copilot-open");
+    const viewport = window.visualViewport;
+    const syncViewport = () =>
+      document.documentElement.style.setProperty(
+        "--mcp-viewport-height",
+        `${viewport?.height ?? window.innerHeight}px`,
+      );
+    syncViewport();
+    viewport?.addEventListener("resize", syncViewport);
+    return () => {
+      document.documentElement.classList.remove("manager-copilot-open");
+      document.documentElement.style.removeProperty("--mcp-viewport-height");
+      viewport?.removeEventListener("resize", syncViewport);
     };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !snapshot || loading || !queuedQuestion) return;
+    const question = queuedQuestion;
+    setQueuedQuestion(null);
+    ask(question.text, question.context);
+  }, [loading, open, queuedQuestion, snapshot]);
+
   const prompts = useMemo(
-    () => suggestions[context] ?? suggestions.dashboard,
-    [context],
+    () => suggestions[activeContext] ?? suggestions.dashboard,
+    [activeContext],
   );
-  function ask(value = draft) {
+  function ask(value = draft, questionContext = activeContext) {
     const question = value.trim();
     if (!question || loading) return;
     const managerMessage: Message = {
@@ -223,7 +266,7 @@ export function ManagerCopilot({
             question,
             nextSnapshot,
             currency,
-            context,
+            questionContext,
           );
           setMessages((current) => [
             ...current,
@@ -244,7 +287,7 @@ export function ManagerCopilot({
       question,
       snapshot,
       currency,
-      context,
+      questionContext,
     );
     setMessages((current) => [
       ...current,
@@ -267,8 +310,13 @@ export function ManagerCopilot({
     <>
       <button
         className="mcp-launcher"
+        ref={launcherRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setActiveContext(context);
+          setQueuedQuestion(null);
+          setOpen(true);
+        }}
         aria-label="Open ServeFlow Copilot"
         aria-expanded={open}
       >
@@ -280,14 +328,16 @@ export function ManagerCopilot({
           className="mcp-layer"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setOpen(false);
+            if (event.currentTarget === event.target) closeCopilot();
           }}
         >
           <aside
             className="mcp-panel"
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label="ServeFlow Copilot"
+            tabIndex={-1}
           >
             <header className="mcp-header">
               <div className="mcp-title">
@@ -296,46 +346,54 @@ export function ManagerCopilot({
                 </span>
                 <div>
                   <strong>ServeFlow Copilot</strong>
-                  <small><i /> Live operations</small>
+                  <small>
+                    <i /> Live operations
+                    <b>{contextLabels[activeContext] ?? "Manager Workspace"}</b>
+                  </small>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closeCopilot}
                 aria-label="Close Copilot"
               >
                 <X />
               </button>
             </header>
-            <div className="mcp-context">
-              <span>
-                Viewing: {contextLabels[context] ?? "Manager Workspace"}
-              </span>
-              {snapshot?.unavailable.length ? (
-                <small>
-                  Some evidence unavailable: {snapshot.unavailable.join(", ")}
-                </small>
-              ) : (
-                <small>Business data up to date</small>
-              )}
-            </div>
+            {snapshot?.unavailable.length ? (
+              <div className="mcp-evidence-note" role="status">
+                Some evidence unavailable: {snapshot.unavailable.join(", ")}
+              </div>
+            ) : null}
             <div
-              className="mcp-conversation"
+              className={`mcp-conversation ${messages.length ? "" : "is-empty"}`}
               ref={conversationRef}
               aria-live="polite"
             >
               {!messages.length && (
-                <div className="mcp-empty">
-                  <span>
-                    <Sparkles />
-                  </span>
-                  <h2>
-                    {greeting()}, {firstName(managerName)}.
-                  </h2>
-                  <p>
-                    What would you like to know about today&apos;s operation?
-                  </p>
-                </div>
+                <>
+                  <div className="mcp-empty">
+                    <h2>
+                      {greeting()}, {firstName(managerName)}.
+                    </h2>
+                    <p>How can I help?</p>
+                  </div>
+                  <div
+                    className="mcp-prompts"
+                    aria-label={`${contextLabels[activeContext]} suggested questions`}
+                  >
+                    {prompts.map((prompt) => (
+                      <button
+                        type="button"
+                        key={prompt}
+                        disabled={loading}
+                        onClick={() => ask(prompt)}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
               {messages.map((message) =>
                 message.role === "manager" ? (
@@ -370,25 +428,11 @@ export function ManagerCopilot({
                 </div>
               )}
             </div>
-            <div
-              className="mcp-prompts"
-              aria-label={`${contextLabels[context]} suggested questions`}
-            >
-              {prompts.map((prompt) => (
-                <button
-                  type="button"
-                  key={prompt}
-                  disabled={loading}
-                  onClick={() => ask(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
             <form className="mcp-composer" onSubmit={submit}>
               <label>
                 <span className="sr-only">Ask ServeFlow Copilot</span>
                 <textarea
+                  ref={composerRef}
                   rows={1}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}

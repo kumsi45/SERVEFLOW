@@ -1,5 +1,12 @@
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Bell, ChevronRight, X } from "lucide-react";
 import { useRestaurantEvents } from "../../../core/realtime/useRestaurantEvents";
+import type { RestaurantEvent } from "../../../core/realtime/restaurantEventService";
+import {
+  openManagerCopilot,
+  presentManagerLiveUpdate,
+  type ManagerLiveUpdate,
+} from "../managerLiveUpdates";
 import "../styles/managerWorkspaceChrome.css";
 
 type Props = {
@@ -17,13 +24,21 @@ export function ManagerWorkspaceChrome({
   const [realtimeState, setRealtimeState] = useState<
     "connecting" | "connected" | "reconnecting"
   >("connecting");
-  const [criticalCount, setCriticalCount] = useState(0);
+  const [pendingUpdates, setPendingUpdates] = useState<ManagerLiveUpdate[]>([]);
+  const [banner, setBanner] = useState<ManagerLiveUpdate | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     () =>
       typeof Notification !== "undefined" &&
       Notification.permission === "granted",
   );
   const [connectionOpen, setConnectionOpen] = useState(false);
+  const seenEventIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    seenEventIds.current.clear();
+    setPendingUpdates([]);
+    setBanner(null);
+  }, [restaurantId]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -37,35 +52,63 @@ export function ManagerWorkspaceChrome({
   }, []);
 
   const onRestaurantEvent = useCallback(
-    (event: { table: string }) => {
+    (event: RestaurantEvent) => {
+      if (seenEventIds.current.has(event.id)) return;
+      seenEventIds.current.add(event.id);
+      if (seenEventIds.current.size > 200) {
+        const oldest = seenEventIds.current.values().next().value;
+        if (oldest) seenEventIds.current.delete(oldest);
+      }
       window.dispatchEvent(
         new CustomEvent("serveflow:manager-data-changed", {
           detail: { table: event.table },
         }),
       );
+      const update = presentManagerLiveUpdate(event);
+      if (!update) return;
+      setBanner(update);
+      if (update.kind === "actionable") {
+        setPendingUpdates((current) =>
+          current.some((item) => item.id === update.id)
+            ? current
+            : [...current.slice(-19), update],
+        );
+      }
       if (
-        ![
-          "orders",
-          "order_items",
-          "manager_customer_complaints",
-          "restaurant_staff",
-        ].includes(event.table)
-      )
-        return;
-      setCriticalCount((count) => Math.min(99, count + 1));
-      if (
+        update.kind === "actionable" &&
         notificationsEnabled &&
         typeof Notification !== "undefined" &&
         document.hidden
       ) {
         new Notification("ServeFlow Manager Alert", {
-          body: "Restaurant operations changed. Review live alerts.",
+          body: update.title,
           tag: `serveflow-manager-${restaurantId}`,
         });
       }
     },
     [notificationsEnabled, restaurantId],
   );
+
+  useEffect(() => {
+    if (!banner) return;
+    const timer = window.setTimeout(
+      () => setBanner((current) => (current?.id === banner.id ? null : current)),
+      banner.kind === "informational" ? 4000 : 7000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [banner]);
+
+  function reviewUpdate(update: ManagerLiveUpdate) {
+    setPendingUpdates((current) =>
+      current.filter((item) => item.id !== update.id),
+    );
+    setBanner((current) => (current?.id === update.id ? null : current));
+    openManagerCopilot({
+      context: update.context,
+      prompt: update.copilotPrompt,
+      updateId: update.id,
+    });
+  }
   const centralRealtimeState = useRestaurantEvents({
     restaurantId,
     onEvent: onRestaurantEvent,
@@ -107,17 +150,36 @@ export function ManagerWorkspaceChrome({
           )}
         </div>
       )}
-      {criticalCount > 0 && (
-        <button
-          className="mwc-critical"
-          type="button"
-          onClick={() => {
-            setCriticalCount(0);
-            window.dispatchEvent(new CustomEvent("serveflow:open-copilot"));
-          }}
+      {banner && (
+        <div
+          className={`mwc-live-banner ${banner.kind}`}
+          role={banner.kind === "actionable" ? "alert" : "status"}
+          aria-live={banner.kind === "actionable" ? "assertive" : "polite"}
         >
-          {criticalCount} live update{criticalCount === 1 ? "" : "s"} need
-          review
+          <button type="button" onClick={() => reviewUpdate(banner)}>
+            <Bell aria-hidden="true" />
+            <span>{banner.title}</span>
+            <ChevronRight aria-hidden="true" />
+          </button>
+          <button
+            className="mwc-banner-dismiss"
+            type="button"
+            aria-label="Dismiss live update banner"
+            onClick={() => setBanner(null)}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {!banner && pendingUpdates.length > 0 && (
+        <button
+          className="mwc-review-badge"
+          type="button"
+          aria-label={`${pendingUpdates.length} live update${pendingUpdates.length === 1 ? "" : "s"} need review`}
+          onClick={() => reviewUpdate(pendingUpdates[pendingUpdates.length - 1])}
+        >
+          <Bell aria-hidden="true" />
+          <span>{Math.min(99, pendingUpdates.length)}</span>
         </button>
       )}
       {children}

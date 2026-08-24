@@ -27,7 +27,7 @@
   inset: 0;
   display: flex;
   height: 100vh;
-  height: 100dvh;
+  height: var(--mcp-viewport-height, 100dvh);
   overflow: hidden;
   justify-content: flex-end;
   background: rgba(16, 24, 40, 0.32);
@@ -35,7 +35,7 @@
 .mcp-panel {
   display: flex;
   width: min(460px, 100%);
-  height: 100dvh;
+  height: var(--mcp-viewport-height, 100dvh);
   max-height: 100%;
   min-width: 0;
   flex-direction: column;
@@ -96,6 +96,20 @@
   border-radius: 50%;
   background: #12b76a;
 }
+.mcp-title small b {
+  display: inline-block;
+  max-width: 150px;
+  margin-left: 7px;
+  padding: 2px 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  color: #344054;
+  background: #eef2f6;
+  font-size: 9px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
 .mcp-header > button {
   display: grid;
   flex: 0 0 44px;
@@ -110,25 +124,12 @@
 .mcp-header > button svg {
   width: 20px;
 }
-.mcp-context {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+.mcp-evidence-note {
   padding: 7px 15px;
   border-bottom: 1px solid #eef1f5;
-  color: #475467;
-  background: #fafbfc;
+  color: #854d0e;
+  background: #fffbeb;
   font-size: 10px;
-}
-.mcp-context span {
-  font-weight: 800;
-}
-.mcp-context small {
-  overflow: hidden;
-  color: #667085;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .mcp-conversation {
   display: flex;
@@ -141,25 +142,17 @@
   padding: 15px;
   background: #f7f8fa;
 }
-.mcp-empty {
-  margin: auto;
-  padding: 24px 12px;
-  text-align: center;
+.mcp-conversation.is-empty {
+  justify-content: flex-end;
 }
-.mcp-empty > span {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  margin: 0 auto 12px;
-  place-items: center;
-  border: 1px solid #dce5f8;
-  border-radius: 14px;
-  color: #155eef;
-  background: #f2f6ff;
+.mcp-empty {
+  margin: 0;
+  padding: 5px 2px 2px;
+  text-align: left;
 }
 .mcp-empty h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
 }
 .mcp-empty p {
   margin: 6px 0 0;
@@ -237,7 +230,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 38px;
+  min-height: 44px;
   margin-top: 11px;
   padding: 0 11px;
   border: 1px solid #c8d7f6;
@@ -289,7 +282,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 34px;
+  min-height: 44px;
   margin-top: 7px;
   border: 0;
   color: #b42318;
@@ -309,10 +302,18 @@
   border-top: 1px solid #e6eaf0;
   background: #fff;
   scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+.mcp-conversation .mcp-prompts {
+  flex: 0 0 auto;
+  margin: 0 -2px -2px;
+  padding: 7px 0 0;
+  border: 0;
+  background: transparent;
 }
 .mcp-prompts button {
   flex: 0 0 auto;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid #d8dee8;
   border-radius: 999px;
@@ -373,6 +374,11 @@
   font-size: 8px;
   text-align: center;
 }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .mcp-panel {
+    width: min(620px, 92vw);
+  }
+}
 @media (max-width: 767px) {
   .mcp-launcher {
     right: 12px;
@@ -388,30 +394,28 @@
   }
   .mcp-panel {
     width: 100%;
-    height: 100dvh;
+    height: var(--mcp-viewport-height, 100dvh);
     box-shadow: none;
   }
   .mcp-header {
     padding: 9px 11px;
   }
-  .mcp-context {
-    padding-right: 11px;
-    padding-left: 11px;
-  }
-  .mcp-context small {
-    display: none;
+  .mcp-title small b {
+    max-width: 118px;
   }
   .mcp-conversation {
-    padding: 12px;
+    padding: 10px 12px;
   }
   .mcp-message {
     max-width: 96%;
   }
   .mcp-prompts {
-    padding: 8px;
+    padding: 7px 8px;
+    scroll-padding-inline: 8px;
   }
   .mcp-prompts button {
     min-height: 44px;
+    white-space: nowrap;
   }
   .mcp-composer {
     padding-right: 8px;
@@ -421,15 +425,17 @@
     font-size: 16px;
   }
   .mcp-disclaimer {
-    padding-bottom: max(7px, env(safe-area-inset-bottom));
+    display: none;
+  }
+  .manager-copilot-open .ml-bottom-nav,
+  .manager-copilot-open .mwc-live-banner,
+  .manager-copilot-open .mwc-review-badge {
+    display: none;
   }
 }
 @media (max-width: 359px) {
   .mcp-message {
     max-width: 100%;
-  }
-  .mcp-context {
-    font-size: 9px;
   }
   .mcp-title strong {
     font-size: 13px;
