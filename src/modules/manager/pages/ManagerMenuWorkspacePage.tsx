@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { CurrencyConfig } from "../../../core/format/currency";
 import { formatCurrency } from "../../../core/format/currency";
@@ -24,7 +25,6 @@ function recipeLabel(item: ManagerMenuItem) {
   if (item.directInventoryItemId) return "Ready-to-serve item";
   return "Recipe missing";
 }
-
 export function ManagerMenuWorkspacePage({ restaurantId, currency }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerMenuSnapshot | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -113,7 +113,7 @@ export function ManagerMenuWorkspacePage({ restaurantId, currency }: Props) {
     {tab === "preview" && <section className="mmw-panel mmw-preview"><header><div><h2>Currently orderable items</h2></div>{snapshot?.restaurantSlug && <a href={`/r/${encodeURIComponent(snapshot.restaurantSlug)}`} target="_blank" rel="noreferrer">Open live menu</a>}</header><p className="mmw-preview-note">Only currently available items appear.</p>{snapshot?.categories.map((entry) => { const items = snapshot.items.filter((item) => item.categoryId === entry.id && item.available); if (!items.length) return null; return <div className="mmw-preview-category" key={entry.id}><h3>{entry.name}</h3><div>{items.map((item) => <article key={item.id}>{item.imageUrl && <img src={item.imageUrl} alt=""/>}<span><strong>{item.name}</strong><small>{item.description || ""}</small></span><b>{formatCurrency(item.price, currency)}</b></article>)}</div></div>; })}{!counts.available && <div className="mmw-empty">No items are currently available on the customer menu.</div>}</section>}
 
     {selected && <ItemEditor item={selected} snapshot={snapshot!} currency={currency} onClose={() => setSelected(null)} onSaved={async () => { setSelected(null); setNotice("Menu item updated."); await refresh(); }} onError={setError} restaurantId={restaurantId}/>} 
-    {appearanceOpen && <div className="mmw-appearance-layer"><div className="mmw-appearance"><header><div><span>Secondary menu settings</span><h2>Customer menu appearance</h2></div><button type="button" onClick={() => setAppearanceOpen(false)} aria-label="Close appearance">×</button></header><div><Suspense fallback={<div className="mmw-empty">Loading appearance settings...</div>}><ThemeCustomizationStudio restaurantId={restaurantId} role="manager" /></Suspense></div></div></div>}
+    {appearanceOpen && <div className="mmw-appearance-layer"><div className="mmw-appearance"><header><h2>Appearance</h2><button type="button" onClick={() => setAppearanceOpen(false)} aria-label="Close appearance">×</button></header><div><Suspense fallback={<div className="mmw-empty">Loading appearance settings...</div>}><ThemeCustomizationStudio restaurantId={restaurantId} role="manager" /></Suspense></div></div></div>}
   </main>;
 }
 

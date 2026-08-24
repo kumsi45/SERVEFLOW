@@ -41,6 +41,7 @@ const livePreview = read("src/modules/menu/theme-engine/customization/ThemeLiveP
 const customizationCss = read("src/modules/menu/theme-engine/customization/themeCustomization.css");
 const studioCss = read("src/modules/menu/theme-engine/customization/themeCustomizationStudio.css");
 const managerRoute = read("src/modules/staff-auth/pages/ProtectedManagerRoute.tsx");
+const managerMenu = read("src/modules/manager/pages/ManagerMenuWorkspacePage.tsx");
 
 const restaurant = {
   id: "restaurant-1",
@@ -428,17 +429,8 @@ describe("Phase 9.6 restaurant theme customization studio", () => {
     });
   });
 
-  it("provides all controls, live preview actions, and owner/manager access", () => {
-    for (const label of [
-      "Branding",
-      "Typography",
-      "Hero Layout",
-      "Food Cards",
-      "Buttons",
-      "Spacing",
-      "Animations",
-      "Dark / Light",
-    ]) {
+  it("provides focused controls, preview actions, and owner/manager access", () => {
+    for (const label of ["Brand", "Text & Layout", "Menu Cards", "Effects"]) {
       expect(customizationPanel).toContain(label);
     }
     for (const action of [
@@ -465,8 +457,20 @@ describe("Phase 9.6 restaurant theme customization studio", () => {
     expect(livePreview).toContain("useQRMenu(restaurantSlug");
     expect(livePreview).toContain("<ThemeRenderer");
     expect(ownerPage).not.toContain('<ThemeCustomizationStudio');
-    expect(managerRoute).toContain('role="manager"');
+    expect(managerMenu).toContain('role="manager"');
     expect(managerRoute).toContain('section === "menu"');
+    expect(customizationPanel).toContain('useState("brand")');
+    expect(customizationPanel).toContain("Advanced image URLs");
+    expect(customizationStudio).toContain('" mobile-open"');
+    expect(customizationStudio.match(/<ThemeLivePreview/g)).toHaveLength(1);
+    expect(customizationStudio).toContain('{role === "owner" &&');
+    expect(customizationStudio).not.toContain(
+      'disabled={working || !dirty || role !== "owner"}',
+    );
+    expect(customizationStudio).not.toContain("Theme Customization Studio");
+    expect(customizationStudio).not.toContain("Updates instantly");
+    expect(managerMenu).not.toContain("Secondary menu settings");
+    expect(managerMenu).not.toContain("Customer menu appearance");
   });
 
   it("keeps the customization layer accessible, responsive, and presentation-only", () => {

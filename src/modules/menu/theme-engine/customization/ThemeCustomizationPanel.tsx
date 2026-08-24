@@ -1,4 +1,5 @@
-import { memo, type ReactNode } from "react";
+import { memo, useState, type ComponentType, type ReactNode } from "react";
+import { ChevronDown, Image, LayoutGrid, Sparkles, Type } from "lucide-react";
 import {
   FONT_PRESETS,
   normalizeThemeCustomization,
@@ -29,27 +30,41 @@ type Choice<T extends string> = {
 };
 
 function ControlSection({
+  id,
+  icon: Icon,
   title,
-  description,
   children,
-  open = false,
+  open,
+  onToggle,
 }: {
+  id: string;
+  icon: ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
   title: string;
-  description: string;
   children: ReactNode;
-  open?: boolean;
+  open: boolean;
+  onToggle: (id: string) => void;
 }) {
   return (
-    <details className="tcs-control-section" open={open}>
-      <summary>
+    <section className={`tcs-control-section${open ? " open" : ""}`}>
+      <button
+        className="tcs-control-toggle"
+        type="button"
+        aria-expanded={open}
+        aria-controls={`tcs-controls-${id}`}
+        onClick={() => onToggle(id)}
+      >
         <span>
+          <Icon size={18} aria-hidden />
           <strong>{title}</strong>
-          <small>{description}</small>
         </span>
-        <span aria-hidden="true">+</span>
-      </summary>
-      <div className="tcs-control-body">{children}</div>
-    </details>
+        <ChevronDown className="tcs-control-chevron" size={18} aria-hidden />
+      </button>
+      {open && (
+        <div className="tcs-control-body" id={`tcs-controls-${id}`}>
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -183,58 +198,91 @@ const MODE_CHOICES: readonly Choice<ThemeColorMode>[] = [
   { value: "light", label: "Light" },
 ];
 
-export const ThemeCustomizationPanel = memo(
-  function ThemeCustomizationPanel({
-    theme,
-    customization,
-    disabled = false,
-    onChange,
-  }: ThemeCustomizationPanelProps) {
-    const effective = resolveThemeCustomization(theme, customization);
+export const ThemeCustomizationPanel = memo(function ThemeCustomizationPanel({
+  theme,
+  customization,
+  disabled = false,
+  onChange,
+}: ThemeCustomizationPanelProps) {
+  const [openSection, setOpenSection] = useState("brand");
+  const effective = resolveThemeCustomization(theme, customization);
 
-    function updateSection(
-      section:
-        | "branding"
-        | "typography"
-        | "card"
-        | "buttons"
-        | "spacing",
-      patch: Record<string, unknown>,
-    ) {
-      onChange(
-        normalizeThemeCustomization({
-          ...customization,
-          [section]: {
-            ...(customization[section] ?? {}),
-            ...patch,
-          },
-        }),
-      );
-    }
+  function updateSection(
+    section: "branding" | "typography" | "card" | "buttons" | "spacing",
+    patch: Record<string, unknown>,
+  ) {
+    onChange(
+      normalizeThemeCustomization({
+        ...customization,
+        [section]: {
+          ...(customization[section] ?? {}),
+          ...patch,
+        },
+      }),
+    );
+  }
 
-    function updateRoot(
-      key: "heroLayout" | "animation" | "colorMode",
-      value: string,
-    ) {
-      onChange(
-        normalizeThemeCustomization({ ...customization, [key]: value }),
-      );
-    }
+  function updateRoot(
+    key: "heroLayout" | "animation" | "colorMode",
+    value: string,
+  ) {
+    onChange(normalizeThemeCustomization({ ...customization, [key]: value }));
+  }
 
-    return (
-      <aside className="tcs-customization-panel" aria-label="Theme controls">
-        <ControlSection
-          title="Branding"
-          description="Images and restaurant colors"
-          open
+  return (
+    <aside className="tcs-customization-panel" aria-label="Theme controls">
+      <ControlSection
+        id="brand"
+        icon={Image}
+        title="Brand"
+        open={openSection === "brand"}
+        onToggle={setOpenSection}
+      >
+        <div className="tcs-field-grid tcs-color-grid">
+          <label>
+            <span>Accent Color</span>
+            <input
+              type="color"
+              value={effective.branding.accentColor}
+              disabled={disabled}
+              onChange={(event) =>
+                updateSection("branding", {
+                  accentColor: event.target.value,
+                })
+              }
+            />
+          </label>
+          <label>
+            <span>Secondary Color</span>
+            <input
+              type="color"
+              value={effective.branding.secondaryColor}
+              disabled={disabled}
+              onChange={(event) =>
+                updateSection("branding", {
+                  secondaryColor: event.target.value,
+                })
+              }
+            />
+          </label>
+        </div>
+        <div
+          className="tcs-brand-color-preview"
+          aria-label="Brand color preview"
         >
+          <span style={{ background: effective.branding.accentColor }} />
+          <span style={{ background: effective.branding.secondaryColor }} />
+          <strong>Brand Color Preview</strong>
+        </div>
+        <details className="tcs-advanced-fields">
+          <summary>Advanced image URLs</summary>
           <div className="tcs-field-grid">
             <label className="wide">
-              <span>Restaurant Logo URL</span>
+              <span>Logo URL</span>
               <input
                 type="url"
                 value={customization.branding?.logoUrl ?? ""}
-                placeholder="Use the restaurant logo"
+                placeholder="Use the business logo"
                 disabled={disabled}
                 onChange={(event) =>
                   updateSection("branding", { logoUrl: event.target.value })
@@ -242,11 +290,11 @@ export const ThemeCustomizationPanel = memo(
               />
             </label>
             <label className="wide">
-              <span>Cover Image URL</span>
+              <span>Cover image URL</span>
               <input
                 type="url"
                 value={customization.branding?.coverUrl ?? ""}
-                placeholder="Use the restaurant cover"
+                placeholder="Use the business cover"
                 disabled={disabled}
                 onChange={(event) =>
                   updateSection("branding", { coverUrl: event.target.value })
@@ -254,7 +302,7 @@ export const ThemeCustomizationPanel = memo(
               />
             </label>
             <label className="wide">
-              <span>Background Image URL</span>
+              <span>Background image URL</span>
               <input
                 type="url"
                 value={customization.branding?.backgroundImageUrl ?? ""}
@@ -267,314 +315,263 @@ export const ThemeCustomizationPanel = memo(
                 }
               />
             </label>
-            <label>
-              <span>Accent Color</span>
-              <input
-                type="color"
-                value={effective.branding.accentColor}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("branding", {
-                    accentColor: event.target.value,
-                  })
-                }
-              />
-            </label>
-            <label>
-              <span>Secondary Color</span>
-              <input
-                type="color"
-                value={effective.branding.secondaryColor}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("branding", {
-                    secondaryColor: event.target.value,
-                  })
-                }
-              />
-            </label>
           </div>
-          <div
-            className="tcs-brand-color-preview"
-            aria-label="Brand color preview"
-          >
-            <span style={{ background: effective.branding.accentColor }} />
-            <span style={{ background: effective.branding.secondaryColor }} />
-            <strong>Brand Color Preview</strong>
-          </div>
-        </ControlSection>
+        </details>
+      </ControlSection>
 
-        <ControlSection
-          title="Typography"
-          description="Fonts, size, spacing, and weight"
-        >
-          <div className="tcs-field-grid">
-            <label>
-              <span>Heading Font</span>
-              <select
-                value={effective.typography.headingFont}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("typography", {
-                    headingFont: event.target.value,
-                  })
-                }
-              >
-                {FONT_PRESETS.map((preset) => (
-                  <option value={preset.id} key={preset.id}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Body Font</span>
-              <select
-                value={effective.typography.bodyFont}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("typography", {
-                    bodyFont: event.target.value,
-                  })
-                }
-              >
-                {FONT_PRESETS.map((preset) => (
-                  <option value={preset.id} key={preset.id}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <RangeControl
-            label="Font Size"
-            value={effective.typography.fontSize}
-            minimum={13}
-            maximum={20}
-            disabled={disabled}
-            onChange={(value) =>
-              updateSection("typography", { fontSize: value })
-            }
-          />
-          <RangeControl
-            label="Letter Spacing"
-            value={effective.typography.letterSpacing}
-            minimum={-1}
-            maximum={3}
-            step={0.1}
-            disabled={disabled}
-            onChange={(value) =>
-              updateSection("typography", { letterSpacing: value })
-            }
-          />
-          <div className="tcs-field-grid">
-            <label>
-              <span>Heading Weight</span>
-              <select
-                value={effective.typography.headingWeight}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("typography", {
-                    headingWeight: Number(event.target.value),
-                  })
-                }
-              >
-                {[400, 500, 600, 700, 800, 900].map((weight) => (
-                  <option value={weight} key={weight}>
-                    {weight}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Body Weight</span>
-              <select
-                value={effective.typography.bodyWeight}
-                disabled={disabled}
-                onChange={(event) =>
-                  updateSection("typography", {
-                    bodyWeight: Number(event.target.value),
-                  })
-                }
-              >
-                {[400, 500, 600, 700, 800, 900].map((weight) => (
-                  <option value={weight} key={weight}>
-                    {weight}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </ControlSection>
-
-        <ControlSection
-          title="Hero Layout"
-          description="Choose the menu header size"
-        >
-          <ChoiceGroup
-            label="Hero size"
-            value={effective.heroLayout}
-            choices={HERO_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateRoot("heroLayout", value)}
-          />
-        </ControlSection>
-
-        <ControlSection
-          title="Food Cards"
-          description="Shape, depth, image, and border"
-        >
-          <ChoiceGroup
-            label="Corner style"
-            value={effective.card.radius}
-            choices={RADIUS_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("card", { radius: value })}
-          />
-          <ChoiceGroup
-            label="Shadow"
-            value={effective.card.shadow}
-            choices={SHADOW_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("card", { shadow: value })}
-          />
-          <ChoiceGroup
-            label="Image size"
-            value={effective.card.imageSize}
-            choices={IMAGE_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("card", { imageSize: value })}
-          />
-          <ChoiceGroup
-            label="Card border"
-            value={effective.card.border}
-            choices={BORDER_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("card", { border: value })}
-          />
-        </ControlSection>
-
-        <ControlSection
-          title="Buttons"
-          description="Fill, shape, color, and hover preview"
-        >
-          <ChoiceGroup
-            label="Button style"
-            value={effective.buttons.style}
-            choices={BUTTON_STYLE_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("buttons", { style: value })}
-          />
-          <ChoiceGroup
-            label="Button shape"
-            value={effective.buttons.shape}
-            choices={BUTTON_SHAPE_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateSection("buttons", { shape: value })}
-          />
-          <label className="tcs-color-control">
-            <span>Button Accent Color</span>
-            <input
-              type="color"
-              value={effective.buttons.accentColor}
+      <ControlSection
+        id="text-layout"
+        icon={Type}
+        title="Text & Layout"
+        open={openSection === "text-layout"}
+        onToggle={setOpenSection}
+      >
+        <div className="tcs-field-grid">
+          <label>
+            <span>Heading Font</span>
+            <select
+              value={effective.typography.headingFont}
               disabled={disabled}
               onChange={(event) =>
-                updateSection("buttons", {
-                  accentColor: event.target.value,
+                updateSection("typography", {
+                  headingFont: event.target.value,
                 })
               }
-            />
+            >
+              {FONT_PRESETS.map((preset) => (
+                <option value={preset.id} key={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           </label>
-          <button
-            className="tcs-hover-preview"
-            type="button"
-            disabled={disabled}
-            style={{
-              background:
-                effective.buttons.style === "filled"
-                  ? effective.buttons.accentColor
-                  : "transparent",
-              borderColor: effective.buttons.accentColor,
-              color:
-                effective.buttons.style === "filled"
-                  ? "#ffffff"
-                  : effective.buttons.accentColor,
-              borderRadius:
-                effective.buttons.shape === "pill"
-                  ? "999px"
-                  : effective.buttons.shape === "square"
-                    ? "0"
-                    : "13px",
-            }}
-          >
-            Hover Preview
-          </button>
-        </ControlSection>
+          <label>
+            <span>Body Font</span>
+            <select
+              value={effective.typography.bodyFont}
+              disabled={disabled}
+              onChange={(event) =>
+                updateSection("typography", {
+                  bodyFont: event.target.value,
+                })
+              }
+            >
+              {FONT_PRESETS.map((preset) => (
+                <option value={preset.id} key={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <RangeControl
+          label="Font Size"
+          value={effective.typography.fontSize}
+          minimum={13}
+          maximum={20}
+          disabled={disabled}
+          onChange={(value) => updateSection("typography", { fontSize: value })}
+        />
+        <RangeControl
+          label="Letter Spacing"
+          value={effective.typography.letterSpacing}
+          minimum={-1}
+          maximum={3}
+          step={0.1}
+          disabled={disabled}
+          onChange={(value) =>
+            updateSection("typography", { letterSpacing: value })
+          }
+        />
+        <div className="tcs-field-grid">
+          <label>
+            <span>Heading Weight</span>
+            <select
+              value={effective.typography.headingWeight}
+              disabled={disabled}
+              onChange={(event) =>
+                updateSection("typography", {
+                  headingWeight: Number(event.target.value),
+                })
+              }
+            >
+              {[400, 500, 600, 700, 800, 900].map((weight) => (
+                <option value={weight} key={weight}>
+                  {weight}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Body Weight</span>
+            <select
+              value={effective.typography.bodyWeight}
+              disabled={disabled}
+              onChange={(event) =>
+                updateSection("typography", {
+                  bodyWeight: Number(event.target.value),
+                })
+              }
+            >
+              {[400, 500, 600, 700, 800, 900].map((weight) => (
+                <option value={weight} key={weight}>
+                  {weight}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <ChoiceGroup
+          label="Hero size"
+          value={effective.heroLayout}
+          choices={HERO_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateRoot("heroLayout", value)}
+        />
+        <RangeControl
+          label="Card Spacing"
+          value={effective.spacing.card}
+          minimum={6}
+          maximum={40}
+          disabled={disabled}
+          onChange={(value) => updateSection("spacing", { card: value })}
+        />
+        <RangeControl
+          label="Section Spacing"
+          value={effective.spacing.section}
+          minimum={12}
+          maximum={72}
+          disabled={disabled}
+          onChange={(value) => updateSection("spacing", { section: value })}
+        />
+        <RangeControl
+          label="Header Spacing"
+          value={effective.spacing.header}
+          minimum={8}
+          maximum={56}
+          disabled={disabled}
+          onChange={(value) => updateSection("spacing", { header: value })}
+        />
+        <RangeControl
+          label="Image Spacing"
+          value={effective.spacing.image}
+          minimum={0}
+          maximum={32}
+          disabled={disabled}
+          onChange={(value) => updateSection("spacing", { image: value })}
+        />
+      </ControlSection>
 
-        <ControlSection
-          title="Spacing"
-          description="Tune whitespace throughout the menu"
+      <ControlSection
+        id="menu-cards"
+        icon={LayoutGrid}
+        title="Menu Cards"
+        open={openSection === "menu-cards"}
+        onToggle={setOpenSection}
+      >
+        <ChoiceGroup
+          label="Corner style"
+          value={effective.card.radius}
+          choices={RADIUS_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("card", { radius: value })}
+        />
+        <ChoiceGroup
+          label="Shadow"
+          value={effective.card.shadow}
+          choices={SHADOW_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("card", { shadow: value })}
+        />
+        <ChoiceGroup
+          label="Image size"
+          value={effective.card.imageSize}
+          choices={IMAGE_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("card", { imageSize: value })}
+        />
+        <ChoiceGroup
+          label="Card border"
+          value={effective.card.border}
+          choices={BORDER_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("card", { border: value })}
+        />
+        <ChoiceGroup
+          label="Button style"
+          value={effective.buttons.style}
+          choices={BUTTON_STYLE_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("buttons", { style: value })}
+        />
+        <ChoiceGroup
+          label="Button shape"
+          value={effective.buttons.shape}
+          choices={BUTTON_SHAPE_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateSection("buttons", { shape: value })}
+        />
+        <label className="tcs-color-control">
+          <span>Button Accent Color</span>
+          <input
+            type="color"
+            value={effective.buttons.accentColor}
+            disabled={disabled}
+            onChange={(event) =>
+              updateSection("buttons", {
+                accentColor: event.target.value,
+              })
+            }
+          />
+        </label>
+        <button
+          className="tcs-hover-preview"
+          type="button"
+          disabled={disabled}
+          style={{
+            background:
+              effective.buttons.style === "filled"
+                ? effective.buttons.accentColor
+                : "transparent",
+            borderColor: effective.buttons.accentColor,
+            color:
+              effective.buttons.style === "filled"
+                ? "#ffffff"
+                : effective.buttons.accentColor,
+            borderRadius:
+              effective.buttons.shape === "pill"
+                ? "999px"
+                : effective.buttons.shape === "square"
+                  ? "0"
+                  : "13px",
+          }}
         >
-          <RangeControl
-            label="Card Spacing"
-            value={effective.spacing.card}
-            minimum={6}
-            maximum={40}
-            disabled={disabled}
-            onChange={(value) => updateSection("spacing", { card: value })}
-          />
-          <RangeControl
-            label="Section Spacing"
-            value={effective.spacing.section}
-            minimum={12}
-            maximum={72}
-            disabled={disabled}
-            onChange={(value) => updateSection("spacing", { section: value })}
-          />
-          <RangeControl
-            label="Header Spacing"
-            value={effective.spacing.header}
-            minimum={8}
-            maximum={56}
-            disabled={disabled}
-            onChange={(value) => updateSection("spacing", { header: value })}
-          />
-          <RangeControl
-            label="Image Spacing"
-            value={effective.spacing.image}
-            minimum={0}
-            maximum={32}
-            disabled={disabled}
-            onChange={(value) => updateSection("spacing", { image: value })}
-          />
-        </ControlSection>
+          Hover Preview
+        </button>
+      </ControlSection>
 
-        <ControlSection
-          title="Animations"
-          description="Motion intensity with reduced-motion support"
-        >
-          <ChoiceGroup
-            label="Animation level"
-            value={effective.animation}
-            choices={ANIMATION_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateRoot("animation", value)}
-          />
-        </ControlSection>
-
-        <ControlSection
-          title="Dark / Light"
-          description="Choose how supported themes render"
-        >
-          <ChoiceGroup
-            label="Color mode"
-            value={effective.colorMode}
-            choices={MODE_CHOICES}
-            disabled={disabled}
-            onChange={(value) => updateRoot("colorMode", value)}
-          />
-        </ControlSection>
-      </aside>
-    );
-  },
-);
+      <ControlSection
+        id="effects"
+        icon={Sparkles}
+        title="Effects"
+        open={openSection === "effects"}
+        onToggle={setOpenSection}
+      >
+        <ChoiceGroup
+          label="Animation level"
+          value={effective.animation}
+          choices={ANIMATION_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateRoot("animation", value)}
+        />
+        <ChoiceGroup
+          label="Color mode"
+          value={effective.colorMode}
+          choices={MODE_CHOICES}
+          disabled={disabled}
+          onChange={(value) => updateRoot("colorMode", value)}
+        />
+      </ControlSection>
+    </aside>
+  );
+});
