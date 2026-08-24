@@ -68,6 +68,7 @@ import { buildLowStockAssistantRows } from "../services/lowStockAssistantService
 import { recordStockMovement } from "../services/stockMovementService";
 import { transferInventoryStock } from "../services/transferService";
 import { InventoryAdjustmentsPage } from "./InventoryAdjustmentsPage";
+import { InventoryWastePage } from "./InventoryWastePage";
 import { LowStockAssistantPage } from "./LowStockAssistantPage";
 import { MovementHistoryPage } from "./MovementHistoryPage";
 import type {
@@ -1015,6 +1016,19 @@ export function InventoryDashboardPage({
       staffRole={staffRole}
       items={data.items}
       currentStock={currentStock}
+      storageLocations={data.storageLocations}
+      onChanged={reload}
+    />
+  );
+
+  const waste = (
+    <InventoryWastePage
+      restaurantId={restaurantId}
+      staffRole={staffRole}
+      items={data.items}
+      currentStock={currentStock}
+      ledger={ledger}
+      context={stockContext}
       onChanged={reload}
     />
   );
@@ -1093,7 +1107,8 @@ export function InventoryDashboardPage({
     : section === "movements" ? movements
     : section === "stock-in" ? stockMovement
     : section === "stock-out" ? stockMovement
-    : section === "adjustments" || section === "waste" ? adjustments
+    : section === "adjustments" ? adjustments
+    : section === "waste" ? waste
     : section === "transfers" ? transfers
     : section === "ledger" ? ledgerView
     : section === "movement-history" ? <MovementHistoryPage movements={movementHistory} onRefresh={() => void reload()} />

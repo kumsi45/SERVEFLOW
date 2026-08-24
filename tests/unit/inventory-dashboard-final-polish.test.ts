@@ -151,7 +151,7 @@ describe("Phase 8.5.6 inventory dashboard KPIs", () => {
 
 describe("Inventory operational dashboard presentation", () => {
   it("now renders the dedicated Kitchen request workflow without dashboard duplication", () => {
-    for (const label of ["Kitchen Requests", "Awaiting Inventory", "Awaiting Kitchen", "History"])
+    for (const label of ["Kitchen request workflow", "Awaiting Inventory", "Awaiting Kitchen", "History"])
       expect(operationalDashboard).toContain(label);
     for (const removed of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"])
       expect(operationalDashboard).not.toContain(removed);

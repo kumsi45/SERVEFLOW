@@ -301,6 +301,13 @@ export type InventoryOpeningBalanceDraft = {
 
 export type InventoryAdjustmentDirection = "increase" | "decrease";
 
+export type InventoryCorrectionReason =
+  | "opening_stock"
+  | "manual_correction"
+  | "stock_count_difference"
+  | "data_entry_correction"
+  | "other_correction";
+
 export type InventoryAdjustmentType =
   | "opening_stock"
   | "manual_correction"
@@ -324,6 +331,8 @@ export type InventoryAdjustmentHistoryItem = {
   id: string;
   inventoryItemId: string;
   inventoryItemName: string;
+  storageLocationId: string | null;
+  storageLocationName: string | null;
   unitId: string;
   unitName: string;
   quantity: number;
@@ -354,12 +363,13 @@ export type InventoryAdjustment = {
 
 export type InventoryAdjustmentFormLine = {
   inventoryItemId: string;
+  storageLocationId: string;
   quantity: string;
 };
 
 export type InventoryAdjustmentForm = {
   direction: InventoryAdjustmentDirection;
-  adjustmentType: InventoryAdjustmentType | "";
+  correctionReason: InventoryCorrectionReason | "";
   notes: string;
   lines: InventoryAdjustmentFormLine[];
 };

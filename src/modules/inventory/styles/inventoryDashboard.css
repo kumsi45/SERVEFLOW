@@ -112,7 +112,7 @@
 
 .ia-sidebar-chevron {
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 300;
   line-height: 1;
   transform: rotate(0deg);
   transition: transform 150ms ease;
@@ -1837,7 +1837,7 @@
 @media (min-width: 601px) and (max-width: 900px) {
   .ia-shell {
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-columns: 232px minmax(0, 1fr);
     padding-bottom: 0;
   }
 
@@ -2060,9 +2060,10 @@
   flex: 0 0 auto;
   display: inline-grid;
   place-items: center;
-  min-width: 24px;
-  height: 24px;
-  padding-inline: 7px;
+  box-sizing: border-box;
+  min-width: 28px;
+  height: 28px;
+  padding-inline: 6px;
   border-radius: 999px;
   color: #174ea6;
   background: #dbeafe;
@@ -2190,24 +2191,26 @@
 
 @media (min-width: 901px) {
   .ia-shell {
-    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-columns: 264px minmax(0, 1fr);
   }
 
   .ia-sidebar {
     gap: 14px;
-    padding: 16px;
+    padding: 14px;
   }
 
   .ia-sidebar-nav > button,
   .ia-sidebar-nav .ia-sidebar-group-toggle,
   .ia-sidebar-nav .ia-kitchen-request-link {
     min-height: 42px;
+    padding-inline: 8px;
+    font-size: 14px;
   }
 }
 
 @media (min-width: 901px) and (max-width: 1180px) {
   .ia-shell {
-    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-columns: 252px minmax(0, 1fr);
   }
 
   .ia-sidebar {
@@ -2233,6 +2236,15 @@
   grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
+}
+
+.ia-sidebar-nav > button {
+  gap: 8px;
+}
+
+.ia-sidebar-nav .ia-nav-label {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .ia-nav-icon {

@@ -106,6 +106,13 @@ for (const viewport of tabletViewports) {
       for (const destination of ["Overview", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchase Orders", "Suppliers", "Materials", "Storage"]) await expect(drawer.getByRole("button", { name: new RegExp(`^${destination}`) })).toBeVisible();
       await expect(drawer.locator(".ia-nav-icon")).toHaveCount(8);
       for (const icon of await drawer.locator(".ia-nav-icon").all()) expect((await icon.boundingBox())?.width).toBe(20);
+    } else {
+      for (const label of ["Stock Movements", "Kitchen Requests"]) {
+        const element = page.locator(".ia-sidebar-nav .ia-nav-label", { hasText: label });
+        const fit = await element.evaluate((node) => ({ client: node.clientWidth, scroll: node.scrollWidth, overflow: getComputedStyle(node).textOverflow }));
+        expect(fit.scroll).toBeLessThanOrEqual(fit.client);
+        expect(fit.overflow).not.toBe("ellipsis");
+      }
     }
   });
 }
@@ -119,7 +126,13 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 1366, height: 768
     await expect(page.locator(".ia-sidebar-nav .ia-nav-icon")).toHaveCount(8);
     for (const icon of await page.locator(".ia-sidebar-nav .ia-nav-icon").all()) expect((await icon.boundingBox())?.width).toBe(20);
     const sidebar = await page.locator(".ia-sidebar").boundingBox();
-    expect(sidebar?.width).toBeLessThanOrEqual(232);
+    expect(sidebar?.width).toBeLessThanOrEqual(264);
+    for (const label of ["Stock Movements", "Kitchen Requests"]) {
+      const element = page.locator(".ia-sidebar-nav .ia-nav-label", { hasText: label });
+      const fit = await element.evaluate((node) => ({ client: node.clientWidth, scroll: node.scrollWidth, overflow: getComputedStyle(node).textOverflow }));
+      expect(fit.scroll).toBeLessThanOrEqual(fit.client);
+      expect(fit.overflow).not.toBe("ellipsis");
+    }
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
   });

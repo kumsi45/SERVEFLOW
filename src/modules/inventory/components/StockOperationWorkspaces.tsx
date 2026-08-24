@@ -4,6 +4,11 @@ import {
   validateTransferDraft,
   type StockValidationContext,
 } from "../services/stockOperationValidation";
+import {
+  activeTenantStorageChoices,
+  inferMaterialStorageChoices,
+  resolveInferredStorage,
+} from "../services/inventoryStorageInference";
 import type { InventoryItem, InventoryMovementType, InventoryTransferDraft, StockMovementDraft } from "../types";
 
 type Location = { id: string; name: string };
@@ -54,6 +59,10 @@ export function StockMovementWorkspace({
   const [reviewing, setReviewing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const incoming = draft.movementType === "stock_in";
+  const relationshipChoices = useMemo(() => inferMaterialStorageChoices(context, restaurantId, draft.inventoryItemId, incoming ? "relationship" : "positive-source"), [context, draft.inventoryItemId, incoming, restaurantId]);
+  const storageChoices = useMemo(() => incoming && relationshipChoices.length === 0
+    ? activeTenantStorageChoices(context, restaurantId)
+    : relationshipChoices, [context, incoming, relationshipChoices, restaurantId]);
   const item = items.find((candidate) => candidate.id === draft.inventoryItemId);
   const location = locations.find((candidate) => candidate.id === draft.storageLocationId);
   const current = balanceFor(context, draft.inventoryItemId, draft.storageLocationId);
@@ -65,6 +74,11 @@ export function StockMovementWorkspace({
     setDraft(next);
     setReviewing(false);
     setValidationError(null);
+  }
+
+  function selectMaterial(inventoryItemId: string) {
+    const existing = inferMaterialStorageChoices(context, restaurantId, inventoryItemId, incoming ? "relationship" : "positive-source");
+    update({ ...draft, inventoryItemId, storageLocationId: existing.length === 1 ? existing[0].id : "", quantity: "" });
   }
 
   function review() {
@@ -92,8 +106,11 @@ export function StockMovementWorkspace({
     {validationError && <div className="ia-so-error" id="ia-so-validation" role="alert">{validationError}</div>}
     <form className="ia-so-form" onSubmit={(event) => { event.preventDefault(); review(); }}>
       <div className="ia-so-primary-fields">
-        <label>Material<select required value={draft.inventoryItemId} onChange={(event) => update({ ...draft, inventoryItemId: event.target.value })}><option value="">Select material</option>{items.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
-        <label>Storage<select required value={draft.storageLocationId} onChange={(event) => update({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+        <label>Material<select required value={draft.inventoryItemId} onChange={(event) => selectMaterial(event.target.value)}><option value="">Select material</option>{items.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+        {draft.inventoryItemId && relationshipChoices.length === 1 ? <div className="ia-so-auto-storage"><span>Storage</span><strong>{storageChoices[0].name}</strong>{!incoming && <small>{quantityLabel(storageChoices[0].quantity, storageChoices[0].unitName)} available</small>}</div>
+          : draft.inventoryItemId && storageChoices.length > 0 ? <label>Storage<select required value={draft.storageLocationId} onChange={(event) => update({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{storageChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.name}{!incoming ? ` — ${quantityLabel(choice.quantity, choice.unitName)}` : ""}</option>)}</select></label>
+            : draft.inventoryItemId && !incoming ? <div className="ia-so-error ia-so-inline-state">No available stock exists for this material.</div>
+              : null}
         <label>Quantity<input required inputMode="decimal" min="0.001" step="0.001" type="number" value={draft.quantity} aria-describedby={validationError ? "ia-so-validation" : undefined} onChange={(event) => update({ ...draft, quantity: event.target.value })} /></label>
       </div>
       {item && location && <div className={`ia-so-stock-context ${!incoming && after < 0 ? "warning" : ""}`}><span>{incoming ? "Current stock" : "Available"}</span><strong>{quantityLabel(current, unit)}</strong>{!incoming && movementQuantity > 0 && <small>Remaining after issue: {quantityLabel(after, unit)}</small>}</div>}
@@ -129,6 +146,7 @@ export function TransferWorkspace({
   const [reviewing, setReviewing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const item = items.find((candidate) => candidate.id === draft.inventoryItemId);
+  const sourceChoices = useMemo(() => inferMaterialStorageChoices(context, restaurantId, draft.inventoryItemId, "positive-source"), [context, draft.inventoryItemId, restaurantId]);
   const source = locations.find((candidate) => candidate.id === draft.fromStorageLocationId);
   const destination = locations.find((candidate) => candidate.id === draft.toStorageLocationId);
   const available = balanceFor(context, draft.inventoryItemId, draft.fromStorageLocationId);
@@ -141,6 +159,12 @@ export function TransferWorkspace({
     setDraft(next);
     setReviewing(false);
     setValidationError(null);
+  }
+
+  function selectMaterial(inventoryItemId: string) {
+    const choices = inferMaterialStorageChoices(context, restaurantId, inventoryItemId, "positive-source");
+    const fromStorageLocationId = resolveInferredStorage("", choices);
+    update({ ...draft, inventoryItemId, fromStorageLocationId, toStorageLocationId: "", quantity: "" });
   }
 
   function review() {
@@ -168,8 +192,10 @@ export function TransferWorkspace({
     {validationError && <div className="ia-so-error" id="ia-transfer-validation" role="alert">{validationError}</div>}
     <form className="ia-so-form" onSubmit={(event) => { event.preventDefault(); review(); }}>
       <div className="ia-so-primary-fields">
-        <label>Material<select required value={draft.inventoryItemId} onChange={(event) => update({ ...draft, inventoryItemId: event.target.value })}><option value="">Select material</option>{items.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
-        <label>From storage<select required value={draft.fromStorageLocationId} onChange={(event) => update({ ...draft, fromStorageLocationId: event.target.value, toStorageLocationId: event.target.value === draft.toStorageLocationId ? "" : draft.toStorageLocationId })}><option value="">Select source</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
+        <label>Material<select required value={draft.inventoryItemId} onChange={(event) => selectMaterial(event.target.value)}><option value="">Select material</option>{items.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+        {draft.inventoryItemId && sourceChoices.length === 1 ? <div className="ia-so-auto-storage"><span>From</span><strong>{sourceChoices[0].name}</strong><small>{quantityLabel(sourceChoices[0].quantity, sourceChoices[0].unitName)} available</small></div>
+          : draft.inventoryItemId && sourceChoices.length > 0 ? <label>From storage<select required value={draft.fromStorageLocationId} onChange={(event) => update({ ...draft, fromStorageLocationId: event.target.value, toStorageLocationId: event.target.value === draft.toStorageLocationId ? "" : draft.toStorageLocationId })}><option value="">Select source</option>{sourceChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.name} — {quantityLabel(choice.quantity, choice.unitName)}</option>)}</select></label>
+            : draft.inventoryItemId ? <div className="ia-so-error ia-so-inline-state">No available source stock exists for this material.</div> : null}
         <label>To storage<select required value={draft.toStorageLocationId} onChange={(event) => update({ ...draft, toStorageLocationId: event.target.value })}><option value="">Select destination</option>{destinationLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
         <label>Quantity<input required inputMode="decimal" min="0.001" step="0.001" type="number" value={draft.quantity} aria-describedby={validationError ? "ia-transfer-validation" : undefined} onChange={(event) => update({ ...draft, quantity: event.target.value })} /></label>
       </div>

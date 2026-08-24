@@ -3,11 +3,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ADJUSTMENT_TYPE_LABELS,
+  CORRECTION_REASON_LABELS,
+  correctionHistoryPresentation,
   mapInventoryAdjustmentRow,
-  validAdjustmentTypes,
+  validCorrectionReasons,
   validateInventoryAdjustment,
 } from "../../src/modules/inventory/services/inventoryAdjustmentService";
-import type { InventoryCurrentStockRow, InventoryItem } from "../../src/modules/inventory/types";
+import type { InventoryCurrentStockRow, InventoryItem, InventoryStorageLocation } from "../../src/modules/inventory/types";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const sql = read("supabase/migrations/183_phase8_5_3_inventory_adjustments.sql");
@@ -15,6 +17,8 @@ const executableSql = sql.replace(/--.*$/gm, "").replace(/comment on[\s\S]*?;/gi
 const page = read("src/modules/inventory/pages/InventoryAdjustmentsPage.tsx");
 const service = read("src/modules/inventory/services/inventoryAdjustmentService.ts");
 const dashboard = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
+const wastePage = read("src/modules/inventory/pages/InventoryWastePage.tsx");
+const wasteService = read("src/modules/inventory/services/wasteService.ts");
 
 const item: InventoryItem = {
   id: "item-1", restaurantId: "restaurant-1", name: "Flour", categoryId: "category-1",
@@ -30,6 +34,10 @@ const stock: InventoryCurrentStockRow = {
   storageLocationName: "Main Store", unitId: item.unitId, unitName: "kg",
   minimumStock: 0, maximumStock: null, currentQuantity: 10,
   stockStatus: "in_stock", lastMovementAt: null,
+};
+const storageLocation: InventoryStorageLocation = {
+  id: item.storageLocationId, restaurantId: item.restaurantId, name: "Main Store",
+  description: null, status: "active", createdAt: "", updatedAt: "",
 };
 
 describe("Phase 8.5.3 inventory adjustment database", () => {
@@ -102,27 +110,35 @@ describe("Phase 8.5.3 inventory adjustment database", () => {
   });
 });
 
-describe("Phase 8.5.3 adjustment validation and UI", () => {
-  it("accepts valid increases, waste, spoilage, and supplier returns", () => {
-    expect(validAdjustmentTypes("increase")).toContain("opening_stock");
-    expect(validAdjustmentTypes("decrease")).toEqual(expect.arrayContaining(["waste", "spoilage", "returned_to_supplier"]));
-    for (const adjustmentType of ["waste", "spoilage", "returned_to_supplier"] as const) {
-      expect(validateInventoryAdjustment({
-        direction: "decrease", adjustmentType, notes: "Reviewed",
-        lines: [{ inventoryItemId: item.id, quantity: "2" }],
-      }, [item], [stock])).toEqual([]);
+describe("Inventory correction and waste workflow separation", () => {
+  it("offers correction-only reasons for increases and decreases", () => {
+    expect(validCorrectionReasons("increase")).toEqual([
+      "opening_stock", "manual_correction", "stock_count_difference", "data_entry_correction", "other_correction",
+    ]);
+    expect(validCorrectionReasons("decrease")).toEqual([
+      "manual_correction", "stock_count_difference", "data_entry_correction", "other_correction",
+    ]);
+    for (const reasons of [validCorrectionReasons("increase"), validCorrectionReasons("decrease")]) {
+      expect(reasons).not.toEqual(expect.arrayContaining(["waste", "spoilage", "expired", "donation_received"]));
     }
+    for (const correctionReason of validCorrectionReasons("decrease")) {
+      expect(validateInventoryAdjustment({
+        direction: "decrease", correctionReason, notes: "Reviewed",
+        lines: [{ inventoryItemId: item.id, storageLocationId: storageLocation.id, quantity: "2" }],
+      }, [item], [stock], [storageLocation])).toEqual([]);
+    }
+    expect(CORRECTION_REASON_LABELS.stock_count_difference).toBe("Stock Count Difference");
   });
 
   it("rejects zero, negative, excessive, duplicate, inactive, and invalid-direction lines", () => {
     const errors = validateInventoryAdjustment({
-      direction: "decrease", adjustmentType: "donation_received", notes: "",
+      direction: "decrease", correctionReason: "opening_stock", notes: "",
       lines: [
-        { inventoryItemId: item.id, quantity: "0" },
-        { inventoryItemId: item.id, quantity: "11" },
-        { inventoryItemId: "deleted", quantity: "-1" },
+        { inventoryItemId: item.id, storageLocationId: storageLocation.id, quantity: "0" },
+        { inventoryItemId: item.id, storageLocationId: storageLocation.id, quantity: "11" },
+        { inventoryItemId: "deleted", storageLocationId: "cross-tenant", quantity: "-1" },
       ],
-    }, [item], [stock]).join(" ");
+    }, [item], [stock], [storageLocation]).join(" ");
     expect(errors).toMatch(/valid reason|greater than zero|duplicated|exceeds current stock|active inventory item/i);
   });
 
@@ -143,15 +159,37 @@ describe("Phase 8.5.3 adjustment validation and UI", () => {
     expect(ADJUSTMENT_TYPE_LABELS.returned_to_supplier).toBe("Returned to Supplier");
   });
 
-  it("implements create, review, confirm, history, search, and all requested filters", () => {
+  it("preserves a specific correction reason in immutable audit notes", () => {
+    const mapped = mapInventoryAdjustmentRow({
+      adjustment_type: "manual_correction", reason: "Manual Correction",
+      notes: "Correction reason: Data Entry Correction\nCount sheet typo", items: [],
+    });
+    expect(correctionHistoryPresentation(mapped)).toEqual({ reason: "Data Entry Correction", note: "Count sheet typo" });
+  });
+
+  it("implements a compact single-material adjustment review without operational-loss language", () => {
     for (const marker of [
-      "Create Adjustment", "Increase", "Decrease", "Reason", "Notes",
+      "Create Adjustment", "Increase", "Decrease", "Reason", "Note",
       "Review Adjustment", "Confirm Adjustment", "Adjustment history",
-      "Search", "Date From", "Date To", "Status", "Ingredient", "Adjustment Type",
+      "Search", "Date From", "Date To", "Status", "Material", "Current → After",
     ]) expect(page).toContain(marker);
+    for (const excluded of ["Operational Stock Control", "Add Ingredient", "Donation Received", "Supplier Replacement", "Preparation Waste", "Spillage"]) expect(page).not.toContain(excluded);
     expect(page).toContain("canCreate");
     expect(page).toContain('staffRole');
     expect(dashboard).toContain("<InventoryAdjustmentsPage");
-    expect(dashboard).toContain('section === "adjustments" || section === "waste"');
+    expect(dashboard).toContain('section === "adjustments" ? adjustments');
+  });
+
+  it("routes Waste to its dedicated one-decrease workflow", () => {
+    expect(dashboard).toContain("<InventoryWastePage");
+    expect(dashboard).toContain('section === "waste" ? waste');
+    for (const field of ["Material *", "Storage *", "Quantity *", "Reason *", "Note", "Available → After waste", "Record Waste"]) expect(wastePage).toContain(field);
+    for (const reason of ["Spoilage", "Expired", "Damaged", "Preparation Waste", "Spillage", "Contamination", "Other Waste"]) expect(wastePage).toContain(reason);
+    expect(wastePage).not.toContain("Adjustment direction");
+    expect(wastePage).not.toContain(">Increase<");
+    expect(wastePage).not.toContain(">Decrease<");
+    expect(wastePage).toContain("submissionInFlight.current");
+    expect(wasteService.match(/recordInventoryWaste\(/g)).toHaveLength(1);
+    expect(wastePage).toContain('entry.movementType === "waste" || entry.movementType === "spoilage"');
   });
 });

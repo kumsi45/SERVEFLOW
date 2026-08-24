@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
 import {
-  ADJUSTMENT_TYPE_LABELS,
+  CORRECTION_REASON_LABELS,
   confirmInventoryAdjustment,
+  correctionHistoryPresentation,
   loadInventoryAdjustments,
-  validAdjustmentTypes,
+  validCorrectionReasons,
   validateInventoryAdjustment,
 } from "../services/inventoryAdjustmentService";
+import {
+  activeTenantStorageChoices,
+  inferMaterialStorageChoices,
+} from "../services/inventoryStorageInference";
 import type {
   InventoryAdjustment,
   InventoryAdjustmentDirection,
   InventoryAdjustmentForm,
   InventoryAdjustmentFormLine,
-  InventoryAdjustmentType,
+  InventoryCorrectionReason,
   InventoryCurrentStockRow,
   InventoryItem,
+  InventoryStorageLocation,
 } from "../types";
 import "../styles/inventoryAdjustments.css";
 
@@ -23,13 +29,14 @@ type Props = {
   staffRole: string;
   items: InventoryItem[];
   currentStock: InventoryCurrentStockRow[];
+  storageLocations: InventoryStorageLocation[];
   onChanged: () => void | Promise<void>;
 };
 
-const emptyLine = (): InventoryAdjustmentFormLine => ({ inventoryItemId: "", quantity: "" });
+const emptyLine = (): InventoryAdjustmentFormLine => ({ inventoryItemId: "", storageLocationId: "", quantity: "" });
 const emptyForm = (): InventoryAdjustmentForm => ({
   direction: "increase",
-  adjustmentType: "",
+  correctionReason: "",
   notes: "",
   lines: [emptyLine()],
 });
@@ -44,7 +51,7 @@ function quantityLabel(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value);
 }
 
-export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, currentStock, onChanged }: Props) {
+export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, currentStock, storageLocations, onChanged }: Props) {
   const [history, setHistory] = useState<InventoryAdjustment[]>([]);
   const [form, setForm] = useState<InventoryAdjustmentForm | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -53,7 +60,6 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "confirmed">("all");
   const [itemFilter, setItemFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | InventoryAdjustmentType>("all");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,17 +82,18 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
 
   useEffect(() => { void load(); }, [load]);
 
-  const stockByItem = useMemo(() => {
+  const stockByItemStorage = useMemo(() => {
     const result = new Map<string, number>();
     for (const stock of currentStock) {
-      result.set(stock.inventoryItemId, (result.get(stock.inventoryItemId) ?? 0) + stock.currentQuantity);
+      const key = `${stock.inventoryItemId}:${stock.storageLocationId}`;
+      result.set(key, (result.get(key) ?? 0) + stock.currentQuantity);
     }
     return result;
   }, [currentStock]);
 
   const filtered = useMemo(() => history.filter((adjustment) => {
+    if (adjustment.adjustmentType !== "opening_stock" && adjustment.adjustmentType !== "manual_correction") return false;
     if (statusFilter !== "all" && adjustment.status !== statusFilter) return false;
-    if (typeFilter !== "all" && adjustment.adjustmentType !== typeFilter) return false;
     if (itemFilter && !adjustment.items.some((item) => item.inventoryItemId === itemFilter)) return false;
     const created = new Date(adjustment.createdAt);
     if (dateFrom && created < new Date(`${dateFrom}T00:00:00`)) return false;
@@ -101,7 +108,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
       adjustment.approvedByName,
       ...adjustment.items.flatMap((item) => [item.inventoryItemName, item.movementAuditType]),
     ].some((value) => (value ?? "").toLowerCase().includes(query));
-  }), [dateFrom, dateTo, history, itemFilter, search, statusFilter, typeFilter]);
+  }), [dateFrom, dateTo, history, itemFilter, search, statusFilter]);
 
   function updateLine(index: number, patch: Partial<InventoryAdjustmentFormLine>) {
     setForm((current) => current ? {
@@ -110,14 +117,42 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
     } : current);
   }
 
+  function storageResolutionFor(inventoryItemId: string, direction: InventoryAdjustmentDirection) {
+    const existing = inferMaterialStorageChoices(
+      { currentStock, storageLocations }, restaurantId, inventoryItemId,
+      direction === "increase" ? "relationship" : "positive-source",
+    );
+    const unitName = currentStock.find((row) => row.inventoryItemId === inventoryItemId)?.unitName ?? "units";
+    return {
+      choices: direction === "increase" && existing.length === 0
+        ? activeTenantStorageChoices({ currentStock, storageLocations }, restaurantId, unitName)
+        : existing,
+      autoStorageId: existing.length === 1 ? existing[0].id : "",
+    };
+  }
+
+  function selectMaterial(index: number, inventoryItemId: string) {
+    if (!form) return;
+    const resolution = storageResolutionFor(inventoryItemId, form.direction);
+    updateLine(index, { inventoryItemId, storageLocationId: resolution.autoStorageId, quantity: "" });
+  }
+
   function changeDirection(direction: InventoryAdjustmentDirection) {
     setReviewing(false);
-    setForm((current) => current ? { ...current, direction, adjustmentType: "" } : current);
+    setForm((current) => current ? {
+      ...current,
+      direction,
+      correctionReason: "",
+      lines: current.lines.map((line) => ({
+        ...line,
+        storageLocationId: storageResolutionFor(line.inventoryItemId, direction).autoStorageId,
+      })),
+    } : current);
   }
 
   function review() {
     if (!form) return;
-    const errors = validateInventoryAdjustment(form, activeItems, currentStock);
+    const errors = validateInventoryAdjustment(form, activeItems, currentStock, storageLocations);
     if (errors.length) {
       setError(errors.join(" "));
       return;
@@ -132,7 +167,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
     try {
       setWorking(true);
       setError(null);
-      const result = await confirmInventoryAdjustment(restaurantId, form, activeItems, currentStock);
+      const result = await confirmInventoryAdjustment(restaurantId, form, activeItems, currentStock, storageLocations);
       await Promise.all([load(), Promise.resolve(onChanged())]);
       setForm(null);
       setReviewing(false);
@@ -149,7 +184,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
   return (
     <div className="iad-page">
       <header className="iad-heading">
-        <div><span>Operational Stock Control</span><h2>Inventory Adjustments</h2><p>Review and confirm manual increases, decreases, waste, spoilage, and supplier returns.</p></div>
+        <div><h2>Inventory Adjustments</h2></div>
         {canCreate && <button type="button" onClick={() => { setForm(emptyForm()); setReviewing(false); setError(null); setMessage(null); }}>Create Adjustment</button>}
       </header>
 
@@ -165,22 +200,26 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
             <button className={form.direction === "decrease" ? "active decrease" : ""} type="button" onClick={() => changeDirection("decrease")}>Decrease</button>
           </div>
           <div className="iad-header-fields">
-            <label>Reason<select required value={form.adjustmentType} onChange={(event) => setForm({ ...form, adjustmentType: event.target.value as InventoryAdjustmentType })}><option value="">Select reason</option>{validAdjustmentTypes(form.direction).map((type) => <option key={type} value={type}>{ADJUSTMENT_TYPE_LABELS[type]}</option>)}</select></label>
-            <label className="wide">Notes<textarea maxLength={1000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional operational details" /></label>
+            <label>Reason<select required value={form.correctionReason} onChange={(event) => setForm({ ...form, correctionReason: event.target.value as InventoryCorrectionReason })}><option value="">Select reason</option>{validCorrectionReasons(form.direction).map((reason) => <option key={reason} value={reason}>{CORRECTION_REASON_LABELS[reason]}</option>)}</select></label>
+            <label className="wide">Note <span>(optional)</span><input maxLength={900} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Short correction note" /></label>
           </div>
-          <div className="iad-lines-heading"><h3>Ingredients</h3><button type="button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })}>Add Ingredient</button></div>
           <div className="iad-lines">
             {form.lines.map((line, index) => {
               const item = activeItems.find((candidate) => candidate.id === line.inventoryItemId);
-              const current = stockByItem.get(line.inventoryItemId) ?? 0;
+              const storageResolution = storageResolutionFor(line.inventoryItemId, form.direction);
+              const storageChoices = storageResolution.choices;
+              const selectedStorage = storageChoices.find((choice) => choice.id === line.storageLocationId);
+              const current = stockByItemStorage.get(`${line.inventoryItemId}:${line.storageLocationId}`) ?? 0;
               const quantity = Number(line.quantity) || 0;
               const after = form.direction === "increase" ? current + quantity : current - quantity;
               return (
                 <div className="iad-line" key={`${index}:${line.inventoryItemId}`}>
-                  <label>Ingredient<select required value={line.inventoryItemId} onChange={(event) => updateLine(index, { inventoryItemId: event.target.value })}><option value="">Select ingredient</option>{activeItems.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+                  <label>Material<select required value={line.inventoryItemId} onChange={(event) => selectMaterial(index, event.target.value)}><option value="">Select material</option>{activeItems.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></label>
+                  {line.inventoryItemId && storageResolution.autoStorageId ? <div className="ia-so-auto-storage"><span>Storage</span><strong>{storageChoices[0].name}</strong><small>Current {quantityLabel(storageChoices[0].quantity)} {storageChoices[0].unitName}</small></div>
+                    : line.inventoryItemId && storageChoices.length > 0 ? <label>Storage<select required value={line.storageLocationId} onChange={(event) => updateLine(index, { storageLocationId: event.target.value, quantity: "" })}><option value="">Select storage</option>{storageChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.name} — {quantityLabel(choice.quantity)} {choice.unitName}</option>)}</select></label>
+                      : line.inventoryItemId ? <div className="ia-so-error ia-so-inline-state">No available source stock exists for this material.</div> : null}
                   <label>Quantity<input required min="0.001" step="0.001" type="number" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></label>
-                  <div className="iad-stock-preview"><span>Current → After</span><strong>{quantityLabel(current)} → {quantityLabel(after)}</strong>{item && <small>{currentStock.find((stock) => stock.inventoryItemId === item.id)?.unitName ?? "units"}</small>}</div>
-                  <button className="danger" disabled={form.lines.length === 1} type="button" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })}>Remove</button>
+                  <div className="iad-stock-preview"><span>Current → After</span><strong>{quantityLabel(current)} → {quantityLabel(after)}</strong>{item && <small>{selectedStorage?.unitName ?? currentStock.find((stock) => stock.inventoryItemId === item.id)?.unitName ?? "units"}</small>}</div>
                 </div>
               );
             })}
@@ -192,13 +231,16 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
       {form && reviewing && (
         <section className="iad-editor iad-review" aria-label="Review inventory adjustment">
           <div className="iad-editor-heading"><h3>Review Adjustment</h3><span>Step 2 of 2</span></div>
-          <dl><div><dt>Direction</dt><dd>{form.direction === "increase" ? "Increase" : "Decrease"}</dd></div><div><dt>Reason</dt><dd>{ADJUSTMENT_TYPE_LABELS[form.adjustmentType as InventoryAdjustmentType]}</dd></div><div><dt>Status</dt><dd>Ready to confirm</dd></div></dl>
+          <dl><div><dt>Direction</dt><dd>{form.direction === "increase" ? "Increase" : "Decrease"}</dd></div><div><dt>Reason</dt><dd>{CORRECTION_REASON_LABELS[form.correctionReason as InventoryCorrectionReason]}</dd></div><div><dt>Status</dt><dd>Ready to confirm</dd></div></dl>
           <div className="iad-review-lines">{form.lines.map((line) => {
             const item = activeItems.find((candidate) => candidate.id === line.inventoryItemId);
-            const before = stockByItem.get(line.inventoryItemId) ?? 0;
+            const before = stockByItemStorage.get(`${line.inventoryItemId}:${line.storageLocationId}`) ?? 0;
             const quantity = Number(line.quantity);
             const after = form.direction === "increase" ? before + quantity : before - quantity;
-            return <div key={line.inventoryItemId}><strong>{item?.name}</strong><span>{form.direction === "increase" ? "+" : "−"}{quantityLabel(quantity)}</span><span>{quantityLabel(before)} → {quantityLabel(after)}</span></div>;
+            const stock = currentStock.find((candidate) => candidate.inventoryItemId === line.inventoryItemId && candidate.storageLocationId === line.storageLocationId);
+            const storage = storageLocations.find((candidate) => candidate.id === line.storageLocationId);
+            const unit = stock?.unitName ?? "units";
+            return <div key={line.inventoryItemId}><strong>{item?.name}<small>{storage?.name}</small></strong><span>{form.direction === "increase" ? "+" : "−"}{quantityLabel(quantity)} {unit}</span><span>{quantityLabel(before)} → {quantityLabel(after)} {unit}</span></div>;
           })}</div>
           {form.notes.trim() && <p>{form.notes}</p>}
           <div className="iad-warning">Confirmation immediately updates inventory and creates immutable movement records. This action cannot be edited or deleted.</div>
@@ -211,21 +253,22 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
         <label>Date From<input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label>
         <label>Date To<input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "confirmed")}><option value="all">All statuses</option><option value="confirmed">Confirmed</option></select></label>
-        <label>Ingredient<select value={itemFilter} onChange={(event) => setItemFilter(event.target.value)}><option value="">All ingredients</option>{items.filter((item) => item.status !== "deleted").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>Adjustment Type<select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | InventoryAdjustmentType)}><option value="all">All types</option>{Object.entries(ADJUSTMENT_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Material<select value={itemFilter} onChange={(event) => setItemFilter(event.target.value)}><option value="">All materials</option>{items.filter((item) => item.status !== "deleted").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       </section></details>
 
       {loading ? <div className="ia-empty">Loading adjustment history...</div> : (
         <section className="iad-history" aria-label="Adjustment history">
-          {filtered.map((adjustment) => (
+          {filtered.map((adjustment) => {
+            const presentation = correctionHistoryPresentation(adjustment);
+            return (
             <article className="iad-card" key={adjustment.id}>
-              <header><div><span>ADJ {adjustment.id.slice(0, 8).toUpperCase()}</span><h3>{adjustment.reason}</h3></div><span className={`iad-status ${adjustment.status}`}>{statusLabel(adjustment.status)}</span></header>
+              <header><div><span>ADJ {adjustment.id.slice(0, 8).toUpperCase()}</span><h3>{presentation.reason}</h3></div><span className={`iad-status ${adjustment.status}`}>{statusLabel(adjustment.status)}</span></header>
               <dl><div><dt>Direction</dt><dd className={adjustment.direction}>{adjustment.direction === "increase" ? "Increase" : "Decrease"}</dd></div><div><dt>Date</dt><dd>{dateTimeLabel(adjustment.createdAt)}</dd></div><div><dt>Created By</dt><dd>{adjustment.createdByName}</dd></div><div><dt>Approved By</dt><dd>{adjustment.approvedByName ?? "Not approved"}</dd></div></dl>
-              <div className="iad-history-lines">{adjustment.items.map((item) => <div key={item.id}><strong>{item.inventoryItemName}</strong><span>{item.movementAuditType.replace(/_/g, " ")}</span><span>{quantityLabel(item.quantityBefore)} → {quantityLabel(item.quantityAfter)} {item.unitName}</span></div>)}</div>
-              {adjustment.notes && <p>{adjustment.notes}</p>}
+              <div className="iad-history-lines">{adjustment.items.map((item) => <div key={item.id}><strong>{item.inventoryItemName}{item.storageLocationName && <small>{item.storageLocationName}</small>}</strong><span>{item.movementAuditType.replace(/_/g, " ")}</span><span>{quantityLabel(item.quantityBefore)} → {quantityLabel(item.quantityAfter)} {item.unitName}</span></div>)}</div>
+              {presentation.note && <p>{presentation.note}</p>}
               <footer><span>{adjustment.itemCount} item{adjustment.itemCount === 1 ? "" : "s"}</span><strong>Total quantity: {quantityLabel(adjustment.totalQuantity)}</strong></footer>
             </article>
-          ))}
+          );})}
           {!filtered.length && <div className="ia-empty">No inventory adjustments match the current filters.</div>}
         </section>
       )}

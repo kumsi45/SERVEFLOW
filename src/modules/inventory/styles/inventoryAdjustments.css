@@ -3,7 +3,7 @@
 .iad-heading h2, .iad-heading p, .iad-editor h3, .iad-card h3 { margin: 0; }
 .iad-heading p { margin-top: 4px; color: #667085; }
 .iad-heading > div > span, .iad-editor-heading > span, .iad-card header span { color: #667085; font-size: 12px; font-weight: 800; text-transform: uppercase; }
-.iad-heading button, .iad-lines-heading button, .iad-editor footer button, .iad-line > button { min-height: 40px; padding: 0 13px; border: 1px solid #1457d9; border-radius: 8px; color: #fff; background: #1457d9; font-weight: 800; cursor: pointer; }
+.iad-heading button, .iad-lines-heading button, .iad-editor footer button, .iad-line > button { min-height: 44px; padding: 0 13px; border: 1px solid #1457d9; border-radius: 8px; color: #fff; background: #1457d9; font-weight: 800; cursor: pointer; }
 .iad-editor, .iad-card { display: grid; gap: 16px; padding: 16px; border: 1px solid #dfe4ec; border-radius: 14px; background: #fff; }
 .iad-direction { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .iad-direction button { min-height: 44px; border: 1px solid #cfd6e2; border-radius: 9px; color: #344054; background: #fff; font-weight: 800; cursor: pointer; }
@@ -12,10 +12,10 @@
 .iad-header-fields { display: grid; grid-template-columns: minmax(200px, .45fr) minmax(260px, 1fr); gap: 12px; }
 .iad-header-fields .wide { grid-column: auto; }
 .iad-header-fields label, .iad-line label, .iad-filters label { display: grid; gap: 5px; color: #344054; font-size: 12px; font-weight: 800; }
-.iad-header-fields select, .iad-header-fields textarea, .iad-line select, .iad-line input, .iad-filters input, .iad-filters select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #cfd6e2; border-radius: 8px; color: #17202f; background: #fff; font: inherit; }
+.iad-header-fields select, .iad-header-fields input, .iad-header-fields textarea, .iad-line select, .iad-line input, .iad-filters input, .iad-filters select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #cfd6e2; border-radius: 8px; color: #17202f; background: #fff; font: inherit; }
 .iad-header-fields textarea { min-height: 74px; resize: vertical; }
 .iad-lines, .iad-history, .iad-review-lines { display: grid; gap: 10px; }
-.iad-line { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(120px, .4fr) minmax(180px, .65fr) auto; align-items: end; gap: 10px; padding: 12px; border: 1px solid #e4e7ec; border-radius: 10px; background: #f9fafb; }
+.iad-line { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .8fr) minmax(110px, .45fr) minmax(170px, .65fr); align-items: end; gap: 10px; padding: 12px; border: 1px solid #e4e7ec; border-radius: 10px; background: #f9fafb; }
 .iad-line > button.danger { border-color: #fda29b; color: #b42318; background: #fff; }
 .iad-line button:disabled, .iad-editor button:disabled { cursor: not-allowed; opacity: .55; }
 .iad-stock-preview { display: grid; gap: 3px; min-height: 42px; align-content: center; }
@@ -28,6 +28,8 @@
 .iad-review dd, .iad-card dd { margin: 0; font-weight: 700; }
 .iad-review-lines, .iad-history-lines { border: 1px solid #e4e7ec; border-radius: 9px; overflow: hidden; }
 .iad-review-lines > div, .iad-history-lines > div { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(170px, .8fr) minmax(160px, auto); gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e4e7ec; }
+.iad-review-lines strong, .iad-history-lines strong { display: grid; gap: 2px; }
+.iad-review-lines strong small, .iad-history-lines strong small { color: #667085; font-size: 10px; font-weight: 600; }
 .iad-review-lines > div:last-child, .iad-history-lines > div:last-child { border-bottom: 0; }
 .iad-warning { padding: 12px; border: 1px solid #fec84b; border-radius: 9px; color: #854d0e; background: #fffaeb; }
 .iad-filters { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(5, minmax(125px, .45fr)); gap: 10px; padding: 12px; border: 1px solid #dfe4ec; border-radius: 10px; background: #fff; }
@@ -36,6 +38,13 @@
 .iad-card dd.decrease { color: #b42318; }
 .iad-card > p, .iad-review > p { margin: 0; padding: 10px; border-radius: 8px; color: #475467; background: #f9fafb; white-space: pre-wrap; }
 .iad-card > footer { color: #475467; }
+.iaw-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.iaw-form > label { display: grid; gap: 5px; color: #344054; font-size: 12px; font-weight: 800; }
+.iaw-form > label.wide, .iaw-form > footer, .iaw-stock-preview { grid-column: 1 / -1; }
+.iaw-form select, .iaw-form input { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #cfd6e2; border-radius: 8px; color: #17202f; background: #fff; font: inherit; }
+.iaw-stock-preview { padding: 12px; border: 1px solid #d7e3f4; border-radius: 10px; background: #f7faff; }
+.iaw-stock-preview.invalid { border-color: #fda29b; color: #b42318; background: #fef3f2; }
+.iaw-form > footer button { width: min(100%, 260px); }
 
 @media (max-width: 1100px) {
   .iad-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -47,4 +56,6 @@
   .iad-heading button, .iad-editor > footer button { width: 100%; }
   .iad-header-fields, .iad-line, .iad-filters, .iad-review dl, .iad-card dl { grid-template-columns: 1fr; }
   .iad-review-lines > div, .iad-history-lines > div { grid-template-columns: 1fr; }
+  .iaw-form { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
+  .iaw-form > footer button { width: 100%; min-height: 48px; }
 }
