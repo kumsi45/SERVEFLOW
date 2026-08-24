@@ -58,6 +58,12 @@ function requestStatusTone(status: InventoryRequest["status"]) {
   return "green";
 }
 
+function requestQueueStatus(request: InventoryRequest) {
+  if (request.urgency === "critical") return "Critical \u00b7 Pending";
+  if (request.urgency === "high") return "High \u00b7 Pending";
+  return inventoryRequestStatusLabel(request.status);
+}
+
 function quantity(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value);
 }
@@ -402,13 +408,14 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
     {operationsView === "cashier" ? <CashierOperationsView snapshot={cashierOps} currency={currency} onRefresh={refresh} onError={(message) => { setError(message); setNotice(null); }} onNotice={(message) => { setNotice(message); setError(null); }} /> : <>
 
     <section className="moc-panel moc-actions" aria-labelledby="manager-actions-title">
-      <div className="moc-section-head"><div><h2 id="manager-actions-title">Manager Actions <b>{managerActions.length}</b></h2></div><div className="moc-filter-row" aria-label="Filter manager actions">{(["all", "urgent", "approvals", "service"] as const).map((filter) => <button key={filter} type="button" className={actionFilter === filter ? "is-active" : ""} onClick={() => setActionFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)} <span>{actionCounts[filter]}</span></button>)}</div></div>
+      <div className="moc-section-head"><div><h2 id="manager-actions-title">Manager Actions <b>{managerActions.length}</b></h2></div><div className="moc-filter-row" aria-label="Filter manager actions">{(["all", "urgent", "approvals", "service"] as const).map((filter) => <button key={filter} type="button" className={actionFilter === filter ? "is-active" : ""} aria-pressed={actionFilter === filter} onClick={() => setActionFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)} <span className={actionCounts[filter] === 0 ? "is-zero" : ""}>{actionCounts[filter]}</span></button>)}</div></div>
       <div className="moc-action-list">
         {requestsLoading && inventoryRequests.length === 0 && <div className="moc-empty" role="status"><strong>Loading requests...</strong></div>}
         {visibleActions.map((action) => { const request=action.requestId ? inventoryRequests.find((item)=>item.id===action.requestId) : null; return request ? <article className={`moc-request-action ${action.priority}`} key={action.id}>
-          <header><div><span>{materialRequestTypeLabel(request.requestType)}</span><h3>{request.itemName}</h3></div><span className={`moc-status ${request.urgency === "critical" ? "red" : request.urgency === "high" ? "amber" : ""}`}>{inventoryRequestStatusLabel(request.status)}</span></header>
-          <dl><div><dt>Quantity</dt><dd>{quantity(request.quantity)} {request.unit}</dd></div><div><dt>Station</dt><dd>{request.stationName || "Station not recorded"}</dd></div><div><dt>Requested by</dt><dd>{request.requesterName || "Requester not recorded"}</dd></div><div className="is-wide"><dt>Reason</dt><dd>{request.comment || "Reason not recorded"}</dd></div><div><dt>Requested</dt><dd>{requestedLabel(request.requestedAt)}</dd></div><div><dt>Waiting</dt><dd>{action.age || "Just now"}</dd></div></dl>
-          <footer><button type="button" onClick={() => reviewAction(action)}>Review Request</button><button type="button" className="secondary" onClick={checkInventory}>Check Inventory</button></footer>
+          <header><div><span>{materialRequestTypeLabel(request.requestType)}</span><h3>{request.itemName}</h3></div><span className={`moc-status ${request.urgency === "critical" ? "red" : request.urgency === "high" ? "amber" : ""}`}>{requestQueueStatus(request)}</span></header>
+          <div className="moc-request-mobile-summary"><p><strong>{quantity(request.quantity)} {request.unit}</strong>{request.stationName && <><i aria-hidden="true">&middot;</i><span>{request.stationName}</span></>}</p><p>{request.requesterName && <><span>{request.requesterName}</span><i aria-hidden="true">&middot;</i></>}<strong className="moc-request-wait">Waiting {action.age || "less than a minute"}</strong></p></div>
+          <dl><div><dt>Quantity</dt><dd>{quantity(request.quantity)} {request.unit}</dd></div>{request.stationName && <div><dt>Station</dt><dd>{request.stationName}</dd></div>}{request.requesterName && <div><dt>Requested by</dt><dd>{request.requesterName}</dd></div>}{request.comment && <div className="is-wide"><dt>Reason</dt><dd>{request.comment}</dd></div>}<div><dt>Requested</dt><dd>{requestedLabel(request.requestedAt)}</dd></div><div><dt>Waiting</dt><dd>{action.age || "Just now"}</dd></div></dl>
+          <footer><button type="button" onClick={() => reviewAction(action)}>Review</button><button type="button" className="secondary" onClick={checkInventory}>Inventory <span aria-hidden="true">&#8599;</span></button></footer>
         </article> : <article className={`moc-action-row ${action.priority}`} key={action.id}><span className="moc-priority-dot" aria-label={`${action.priority} priority`} /><div><strong>{action.title}</strong><span>{action.detail}</span></div>{action.age && <time>{action.age}</time>}<button type="button" onClick={() => reviewAction(action)}>Review</button></article>; })}
         {!requestsLoading && !requestsUnavailable && visibleActions.length === 0 && <div className="moc-empty"><strong>{actionFilter === "approvals" ? "No kitchen requests require attention." : "No manager actions require attention."}</strong><span>Current service is operating normally.</span></div>}
       </div>

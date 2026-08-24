@@ -79,4 +79,18 @@ describe("Live Operations kitchen material request workflow",()=>{
     expect(css).toContain("@media(max-width:430px)");
     expect(css).toContain("min-height:46px");
   });
+
+  it("keeps the mobile queue compact while retaining full Review details",()=>{
+    expect(page).toContain("moc-request-mobile-summary");
+    expect(page).toContain('className="moc-request-wait"');
+    expect(page).toContain('return "Critical \\u00b7 Pending"');
+    expect(page).toContain('aria-pressed={actionFilter === filter}');
+    expect(css).toContain(".moc-request-action>dl{display:none}");
+    expect(css).toContain(".moc-request-mobile-summary{display:grid");
+    expect(css).toContain("button span.is-zero{display:none}");
+    expect(css).toContain("footer button{width:auto;min-height:44px");
+    expect(page).toContain("<section><h3>Reason</h3>");
+    expect(page).toContain("requestedLabel(selectedRequest.requestedAt)");
+    expect(page).toContain("selectedRequestStockQuantity");
+  });
 });
