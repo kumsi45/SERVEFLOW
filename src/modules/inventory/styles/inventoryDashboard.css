@@ -2765,13 +2765,14 @@
 .ia-i2-section-errors span { padding: 6px 8px; border-radius: 7px; background: #fff7ed; color: #9a3412; font-size: 11px; font-weight: 750; }
 .ia-i2-error { display: grid; gap: 3px; padding: 12px; border: 1px solid #fed7aa; border-radius: 9px; background: #fff7ed; color: #9a3412; }
 .ia-i2-error span { font-size: 12px; }
-.ia-i2-attention-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.ia-i2-attention-grid { display: grid; width: 100%; max-width: 440px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .ia-i2-attention-grid button { display: grid; min-width: 0; min-height: 72px; grid-template-columns: auto minmax(0, 1fr); align-content: center; gap: 1px 7px; padding: 9px; border: 1px solid #dbe3ee; border-left: 3px solid #2563eb; border-radius: 10px; background: #fff; color: #0f172a; text-align: left; cursor: pointer; }
 .ia-i2-attention-grid button.critical { border-left-color: #dc2626; }
 .ia-i2-attention-grid button.warning { border-left-color: #d97706; }
 .ia-i2-attention-grid button > strong { grid-row: 1 / 3; align-self: center; color: #1d4ed8; font-size: 21px; }
 .ia-i2-attention-grid button.critical > strong { color: #b91c1c; }
 .ia-i2-attention-grid button.warning > strong { color: #b45309; }
+.ia-i2-attention-grid button.is-unavailable > strong { color: #94a3b8; }
 .ia-i2-attention-grid button > span { overflow-wrap: anywhere; align-self: end; font-size: 11px; font-weight: 900; }
 .ia-i2-attention-grid button > small { color: #64748b; font-size: 9px; line-height: 1.25; }
 .ia-i2-quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -2803,7 +2804,7 @@
 
 @media (min-width: 600px) {
   .ia-i2-section { padding: 12px; }
-  .ia-i2-attention-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ia-i2-attention-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ia-i2-quick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ia-i2-activity-list > button { grid-template-columns: 30px minmax(0, 1fr) minmax(90px, auto) minmax(155px, auto); }
   .ia-i2-activity-meta { display: grid; grid-column: 4; justify-items: end; }

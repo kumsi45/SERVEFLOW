@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { inventoryMovementBusinessLabel } from "../../src/modules/inventory/components/InventoryOverviewDashboard";
+import { inventoryAttentionValue, inventoryMovementBusinessLabel } from "../../src/modules/inventory/components/InventoryOverviewDashboard";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const overview = read("src/modules/inventory/components/InventoryOverviewDashboard.tsx");
@@ -24,28 +24,39 @@ describe("Inventory V1 Phase 2 dashboard", () => {
   });
 
   it("keeps a truthful Kitchen Request summary linked to the dedicated workflow", () => {
-    expect(overview).toContain('request.status === "accepted"');
+    expect(overview).toContain("partitionInventoryKitchenRequests(requests).awaitingInventory.length");
+    expect(requestService).toContain('request.status === "accepted"');
     expect(overview).toContain("Kitchen Requests");
     expect(overview).not.toContain("Awaiting Inventory</small>");
     expect(overview).toContain("onClick={onOpenRequests}");
     expect(page).toContain('window.history.pushState({}, "", "/inventory/dashboard#kitchen-requests")');
   });
 
-  it("uses canonical stock and purchase counts without frontend placeholders", () => {
+  it("keeps operational attention separate from canonical stock and purchase counts", () => {
     expect(page).toContain("outOfStockCount={dashboardKpis.outOfStockItems}");
     expect(page).toContain("lowStockCount={dashboardKpis.lowStockItems}");
     expect(page).toContain("pendingPurchaseCount={dashboardKpis.pendingPurchaseOrders}");
     expect(overview).toContain('onNavigate("current-stock")');
     expect(overview).toContain('onNavigate("purchase-orders")');
+    const attention = overview.slice(overview.indexOf('id="i2-attention-title"'), overview.indexOf('id="i2-actions-title"'));
+    expect(attention.match(/<button/g)).toHaveLength(2);
+    expect(attention).not.toContain("Out of Stock");
+    expect(attention).not.toContain("Low Stock");
   });
 
-  it("never presents loading or failed sections as confirmed zeros", () => {
-    expect(overview).toContain("Loading inventory overview...");
+  it("keeps both cards stable for zero, refresh, and unavailable states", () => {
+    expect(inventoryAttentionValue(0, false, true, null)).toBe(0);
+    expect(inventoryAttentionValue(1, false, true, null)).toBe(1);
+    expect(inventoryAttentionValue(12, false, true, null)).toBe(12);
+    expect(inventoryAttentionValue(5, true, true, null)).toBe(5);
+    expect(inventoryAttentionValue(0, true, false, null)).toBe("—");
+    expect(inventoryAttentionValue(7, false, true, "unavailable")).toBe("—");
+    expect(overview).toContain("requestsLoaded");
+    expect(overview).toContain("purchasesLoaded");
+    expect(overview).toContain('aria-live="polite"');
     expect(overview).toContain("Loading stock summary...");
-    expect(overview).toContain("Kitchen requests unavailable.");
-    expect(overview).toContain("Stock summary unavailable.");
-    expect(overview).toContain("Purchase summary unavailable.");
-    expect(overview).toContain("attentionConfirmed && knownActionCount === 0");
+    expect(overview).not.toContain("knownActionCount");
+    expect(overview).not.toContain("attentionConfirmed");
     expect(page).toContain('loading && section !== "dashboard"');
   });
 
@@ -96,12 +107,13 @@ describe("Inventory V1 Phase 2 dashboard", () => {
   });
 
   it("defines mobile-first grids before tablet and desktop enhancements", () => {
-    const base = styles.indexOf(".ia-i2-attention-grid { display: grid; grid-template-columns: repeat(2");
+    const base = styles.indexOf(".ia-i2-attention-grid { display: grid; width: 100%; max-width: 440px; grid-template-columns: repeat(2");
     const tablet = styles.indexOf("@media (min-width: 600px)");
     const desktop = styles.indexOf("@media (min-width: 1025px)");
     expect(base).toBeGreaterThanOrEqual(0);
     expect(base).toBeLessThan(tablet);
     expect(tablet).toBeLessThan(desktop);
+    expect(styles).toContain("max-width: 440px");
     expect(styles).toContain("min-height: 44px");
     expect(styles).toContain("overflow-wrap: anywhere");
   });

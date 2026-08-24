@@ -48,6 +48,39 @@ const text = (value: unknown) => typeof value === "string" ? value : "";
 const nullableText = (value: unknown) => typeof value === "string" && value.trim() ? value : null;
 const numberValue = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
+function backendErrorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) return text((error as { message?: unknown }).message);
+  return "";
+}
+
+export function inventoryAdjustmentErrorMessage(
+  error: unknown,
+  form?: InventoryAdjustmentForm,
+  storageLocations: InventoryStorageLocation[] = [],
+) {
+  const message = backendErrorText(error).toLowerCase();
+  const storageName = form?.lines.length === 1
+    ? storageLocations.find((storage) => storage.id === form.lines[0].storageLocationId)?.name
+    : undefined;
+  if (message.includes("negative storage stock") || message.includes("negative current stock")) {
+    return storageName ? `Not enough stock in ${storageName}.` : "Not enough stock in the selected storage.";
+  }
+  if (message.includes("storage location") || message.includes("cross-tenant item or storage")) {
+    return "Select a valid storage location.";
+  }
+  if (message.includes("quantity") || message.includes("quantities")) {
+    return "Enter a valid adjustment quantity.";
+  }
+  if (message.includes("access denied") || message.includes("actor is invalid")) {
+    return "You are not authorized to make inventory adjustments.";
+  }
+  if (message.includes("already") || message.includes("duplicate")) {
+    return "This adjustment was already submitted.";
+  }
+  return "Could not save this adjustment. Please try again.";
+}
+
 function mapItem(row: Row): InventoryAdjustmentHistoryItem {
   return {
     id: text(row.id),
@@ -90,7 +123,10 @@ export async function loadInventoryAdjustments(restaurantId: string) {
   const { data, error } = await supabase.rpc("get_inventory_adjustments", {
     target_restaurant_id: restaurantId,
   });
-  if (error) throw new Error(error.message || "Inventory adjustment history is unavailable.");
+  if (error) {
+    console.error("Inventory adjustment history load failed.", error);
+    throw new Error("Could not load adjustment history. Please try again.");
+  }
   return ((data ?? []) as Row[]).map(mapInventoryAdjustmentRow);
 }
 
@@ -207,7 +243,10 @@ export async function confirmInventoryAdjustment(
       quantity: Number(line.quantity),
     })),
   });
-  if (error) throw new Error(error.message || "Inventory adjustment could not be confirmed.");
+  if (error) {
+    console.error("Inventory adjustment confirmation failed.", error);
+    throw new Error(inventoryAdjustmentErrorMessage(error, form, storageLocations));
+  }
   window.sessionStorage.removeItem(idempotency.storageKey);
   return data as { adjustment_id: string; status: "confirmed"; already_processed: boolean };
 }

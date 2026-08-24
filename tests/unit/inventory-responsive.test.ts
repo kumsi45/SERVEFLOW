@@ -25,7 +25,7 @@ describe("Inventory I3 mobile-first navigation architecture", () => {
   });
 
   it("reuses canonical Kitchen request data for a nonzero actionable badge", () => {
-    expect(page).toContain('request.status === "accepted"');
+    expect(page).toContain("partitionInventoryKitchenRequests(kitchenRequests).awaitingInventory.length");
     expect(page).toContain("actionableKitchenRequestCount > 0");
     expect(page).toContain("${actionableKitchenRequestCount} kitchen requests awaiting inventory");
     expect(page).toContain('"/inventory/dashboard#kitchen-requests"');

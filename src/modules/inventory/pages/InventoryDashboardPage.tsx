@@ -52,6 +52,7 @@ import {
   issueInventoryKitchenRequest,
   loadInventoryKitchenRequests,
   markInventoryKitchenRequestUnable,
+  partitionInventoryKitchenRequests,
   type InventoryKitchenQueueRequest,
 } from "../services/inventoryKitchenRequestService";
 import {
@@ -425,7 +426,9 @@ export function InventoryDashboardPage({
   const [activityError, setActivityError] = useState<string | null>(null);
   const [kitchenRequests, setKitchenRequests] = useState<InventoryKitchenQueueRequest[]>([]);
   const [kitchenRequestsLoading, setKitchenRequestsLoading] = useState(true);
+  const [kitchenRequestsLoaded, setKitchenRequestsLoaded] = useState(false);
   const [kitchenRequestsError, setKitchenRequestsError] = useState<string | null>(null);
+  const [purchaseSummaryLoaded, setPurchaseSummaryLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [adminDataFailed, setAdminDataFailed] = useState(false);
   const [working, setWorking] = useState(false);
@@ -493,7 +496,10 @@ export function InventoryDashboardPage({
       }),
     ]);
     const [purchasesResult, adjustmentsResult, recipesResult] = results;
-    if (purchasesResult.status === "fulfilled") setPurchaseHistory(purchasesResult.value);
+    if (purchasesResult.status === "fulfilled") {
+      setPurchaseHistory(purchasesResult.value);
+      setPurchaseSummaryLoaded(true);
+    }
     if (adjustmentsResult.status === "fulfilled") setDashboardAdjustments(adjustmentsResult.value);
     if (recipesResult.status === "fulfilled") setRecipeCount(recipesResult.value.total);
     setInsightsError(purchasesResult.status === "rejected" ? "Unable to load purchase summary." : null);
@@ -504,9 +510,11 @@ export function InventoryDashboardPage({
     setKitchenRequestsLoading(true);
     try {
       setKitchenRequests(await loadInventoryKitchenRequests(restaurantId, staffRole));
+      setKitchenRequestsLoaded(true);
       setKitchenRequestsError(null);
     } catch (cause) {
-      setKitchenRequestsError(cause instanceof Error ? cause.message : "Kitchen requests are unavailable.");
+      console.error("Inventory Kitchen Request summary refresh failed.", cause);
+      setKitchenRequestsError("Kitchen requests are unavailable.");
     } finally {
       setKitchenRequestsLoading(false);
     }
@@ -915,12 +923,14 @@ export function InventoryDashboardPage({
     <InventoryOverviewDashboard
       requests={kitchenRequests}
       requestsLoading={kitchenRequestsLoading}
+      requestsLoaded={kitchenRequestsLoaded}
       requestsError={kitchenRequestsError}
       stockLoading={stockSummaryLoading}
       stockError={stockSummaryError}
       activityLoading={activityLoading}
       activityError={activityError}
       purchasesLoading={insightsLoading}
+      purchasesLoaded={purchaseSummaryLoaded}
       purchasesError={insightsError}
       outOfStockCount={dashboardKpis.outOfStockItems}
       lowStockCount={dashboardKpis.lowStockItems}
@@ -1150,9 +1160,9 @@ export function InventoryDashboardPage({
 
   const displayedContent = content;
   const compactSetupWorkspace = section === "items" || section === "storage-locations";
-  const actionableKitchenRequestCount = kitchenRequestsLoading || kitchenRequestsError
+  const actionableKitchenRequestCount = kitchenRequestsError || (kitchenRequestsLoading && !kitchenRequestsLoaded)
     ? 0
-    : kitchenRequests.filter((request) => request.status === "accepted").length;
+    : partitionInventoryKitchenRequests(kitchenRequests).awaitingInventory.length;
 
   const desktopNavigation = (
     <nav className="ia-sidebar-nav">

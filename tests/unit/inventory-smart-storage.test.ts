@@ -6,7 +6,8 @@ import {
   inferMaterialStorageChoices,
   resolveInferredStorage,
 } from "../../src/modules/inventory/services/inventoryStorageInference";
-import type { InventoryCurrentStockRow, InventoryStorageLocation } from "../../src/modules/inventory/types";
+import { inventoryAdjustmentErrorMessage } from "../../src/modules/inventory/services/inventoryAdjustmentService";
+import type { InventoryAdjustmentForm, InventoryCurrentStockRow, InventoryStorageLocation } from "../../src/modules/inventory/types";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const operations = read("src/modules/inventory/components/StockOperationWorkspaces.tsx");
@@ -76,5 +77,17 @@ describe("Inventory smart storage inference", () => {
     expect(adjustments).toContain("item.storageLocationName");
     expect(migration).toContain("grant execute on function public.confirm_inventory_storage_adjustment");
     expect(migration).toContain("revoke all on function public.confirm_inventory_storage_adjustment");
+  });
+
+  it("keeps backend and PostgREST details out of the operational error UI", () => {
+    const form: InventoryAdjustmentForm = { direction: "decrease", correctionReason: "manual_correction", notes: "", lines: [{ inventoryItemId: "coffee", storageLocationId: "main", quantity: "2" }] };
+    expect(inventoryAdjustmentErrorMessage({ message: "Inventory adjustment would create negative storage stock." }, form, [storage("main")])).toBe("Not enough stock in Main Store.");
+    expect(inventoryAdjustmentErrorMessage({ message: "Could not find public.confirm_inventory_storage_adjustment in the schema cache" }, form, [storage("main")])).toBe("Could not save this adjustment. Please try again.");
+    expect(inventoryAdjustmentErrorMessage({ message: "Inventory adjustment access denied." }, form, [storage("main")])).toBe("You are not authorized to make inventory adjustments.");
+    for (const forbidden of ["confirm_inventory_storage_adjustment", "schema cache", "RPC", "PostgREST", "target_restaurant_id"]) {
+      expect(inventoryAdjustmentErrorMessage({ message: forbidden }, form, [storage("main")])).not.toContain(forbidden);
+    }
+    expect(adjustments).toContain("This will update stock immediately.");
+    expect(adjustments).not.toContain("creates immutable movement records");
   });
 });

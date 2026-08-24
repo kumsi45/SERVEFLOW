@@ -173,7 +173,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
       setReviewing(false);
       setMessage(result.already_processed
         ? "This adjustment was already confirmed; inventory was not changed again."
-        : "Adjustment confirmed. Inventory and movement history were updated atomically.");
+        : "Adjustment confirmed. Stock was updated.");
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : "Inventory adjustment could not be confirmed.");
     } finally {
@@ -243,7 +243,7 @@ export function InventoryAdjustmentsPage({ restaurantId, staffRole, items, curre
             return <div key={line.inventoryItemId}><strong>{item?.name}<small>{storage?.name}</small></strong><span>{form.direction === "increase" ? "+" : "−"}{quantityLabel(quantity)} {unit}</span><span>{quantityLabel(before)} → {quantityLabel(after)} {unit}</span></div>;
           })}</div>
           {form.notes.trim() && <p>{form.notes}</p>}
-          <div className="iad-warning">Confirmation immediately updates inventory and creates immutable movement records. This action cannot be edited or deleted.</div>
+          <div className="iad-warning">This will update stock immediately.</div>
           <footer><button type="button" disabled={working} onClick={() => setReviewing(false)}>Back</button><button type="button" disabled={working} onClick={() => void confirm()}>{working ? "Confirming..." : "Confirm Adjustment"}</button></footer>
         </section>
       )}

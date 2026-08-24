@@ -1,15 +1,17 @@
 import type { InventoryLedgerEntry, InventorySection } from "../types";
-import type { InventoryKitchenQueueRequest } from "../services/inventoryKitchenRequestService";
+import { partitionInventoryKitchenRequests, type InventoryKitchenQueueRequest } from "../services/inventoryKitchenRequestService";
 
 type Props = {
   requests: InventoryKitchenQueueRequest[];
   requestsLoading: boolean;
+  requestsLoaded: boolean;
   requestsError: string | null;
   stockLoading: boolean;
   stockError: string | null;
   activityLoading: boolean;
   activityError: string | null;
   purchasesLoading: boolean;
+  purchasesLoaded: boolean;
   purchasesError: string | null;
   outOfStockCount: number;
   lowStockCount: number;
@@ -19,6 +21,10 @@ type Props = {
   onNavigate: (section: InventorySection) => void;
   onOpenRequests: () => void;
 };
+
+export function inventoryAttentionValue(count: number, loading: boolean, loaded: boolean, error: string | null) {
+  return error || (loading && !loaded) ? "—" : count;
+}
 
 const quantityLabel = (value: number, unit: string) => {
   const amount = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(value);
@@ -52,12 +58,14 @@ export function inventoryMovementBusinessLabel(value: InventoryLedgerEntry["move
 export function InventoryOverviewDashboard({
   requests,
   requestsLoading,
+  requestsLoaded,
   requestsError,
   stockLoading,
   stockError,
   activityLoading,
   activityError,
   purchasesLoading,
+  purchasesLoaded,
   purchasesError,
   outOfStockCount,
   lowStockCount,
@@ -67,43 +75,22 @@ export function InventoryOverviewDashboard({
   onNavigate,
   onOpenRequests,
 }: Props) {
-  const kitchenRequestCount = requests.filter((request) => request.status === "accepted").length;
-  const knownActionCount = (requestsLoading || requestsError ? 0 : kitchenRequestCount)
-    + (stockLoading || stockError ? 0 : outOfStockCount + lowStockCount)
-    + (purchasesLoading || purchasesError ? 0 : pendingPurchaseCount);
-  const attentionLoading = requestsLoading || stockLoading || purchasesLoading;
-  const attentionUnavailable = Boolean(requestsError || stockError || purchasesError);
-  const attentionConfirmed = !attentionLoading && !attentionUnavailable;
+  const kitchenRequestCount = partitionInventoryKitchenRequests(requests).awaitingInventory.length;
+  const kitchenRequestValue = inventoryAttentionValue(kitchenRequestCount, requestsLoading, requestsLoaded, requestsError);
+  const pendingPurchaseValue = inventoryAttentionValue(pendingPurchaseCount, purchasesLoading, purchasesLoaded, purchasesError);
 
   return (
     <div className="ia-stack ia-i2-dashboard">
       <section className="ia-i2-section" aria-labelledby="i2-attention-title">
         <div className="ia-i2-title"><div><h2 id="i2-attention-title">Needs Attention</h2></div></div>
-        {attentionLoading && knownActionCount === 0 && (
-          <div className="ia-i2-loading" role="status">Loading inventory overview...</div>
-        )}
-        {attentionConfirmed && knownActionCount === 0 && (
-          <div className="ia-i2-healthy"><strong>No inventory actions require attention.</strong></div>
-        )}
-        {knownActionCount > 0 && <div className="ia-i2-attention-grid">
-          {!requestsLoading && !requestsError && kitchenRequestCount > 0 && <button type="button" onClick={onOpenRequests}>
-            <strong>{kitchenRequestCount}</strong><span>Kitchen Requests</span>
-          </button>}
-          {!stockLoading && !stockError && outOfStockCount > 0 && <button className="critical" type="button" onClick={() => onNavigate("current-stock")}>
-            <strong>{outOfStockCount}</strong><span>Out of Stock</span>
-          </button>}
-          {!stockLoading && !stockError && lowStockCount > 0 && <button className="warning" type="button" onClick={() => onNavigate("current-stock")}>
-            <strong>{lowStockCount}</strong><span>Low Stock</span>
-          </button>}
-          {!purchasesLoading && !purchasesError && pendingPurchaseCount > 0 && <button type="button" onClick={() => onNavigate("purchase-orders")}>
-            <strong>{pendingPurchaseCount}</strong><span>Pending Purchases</span>
-          </button>}
-        </div>}
-        {attentionUnavailable && <div className="ia-i2-section-errors" role="status">
-          {requestsError && <span>Kitchen requests unavailable.</span>}
-          {stockError && <span>Stock summary unavailable.</span>}
-          {purchasesError && <span>Purchase summary unavailable.</span>}
-        </div>}
+        <div className="ia-i2-attention-grid">
+          <button className={kitchenRequestValue === "—" ? "is-unavailable" : ""} type="button" onClick={onOpenRequests}>
+            <strong aria-live="polite">{kitchenRequestValue}</strong><span>Kitchen Requests</span>
+          </button>
+          <button className={pendingPurchaseValue === "—" ? "is-unavailable" : ""} type="button" onClick={() => onNavigate("purchase-orders")}>
+            <strong aria-live="polite">{pendingPurchaseValue}</strong><span>Pending Purchases</span>
+          </button>
+        </div>
       </section>
 
       <section className="ia-i2-section" aria-labelledby="i2-actions-title">

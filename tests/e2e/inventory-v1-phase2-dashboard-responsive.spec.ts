@@ -12,7 +12,7 @@ const activity = (index: number) => `<button>
 </button>`;
 
 const markup = `<main class="ia-i2-dashboard">
-  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Needs Attention</h2></div></div><div class="ia-i2-attention-grid"><button><strong>3</strong><span>Kitchen Requests</span></button><button class="critical"><strong>1</strong><span>Out of Stock</span></button><button class="warning"><strong>4</strong><span>Low Stock</span></button><button><strong>6</strong><span>Pending Purchases</span></button></div></section>
+  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Needs Attention</h2></div></div><div class="ia-i2-attention-grid"><button><strong>0</strong><span>Kitchen Requests</span></button><button><strong>5</strong><span>Pending Purchases</span></button></div></section>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Quick Operations</h2></div></div><div class="ia-i2-quick-grid"><button><span>+</span><strong>Receive</strong></button><button><span>−</span><strong>Issue</strong></button><button><span>⇄</span><strong>Transfer</strong></button><button><span>±</span><strong>Adjust</strong></button><button><span>!</span><strong>Waste</strong></button><button><span>PO</span><strong>Purchase Order</strong></button></div></section>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Stock Snapshot</h2></div><button>Current Stock</button></div><div class="ia-i2-snapshot-grid"><button><small>Active Materials</small><strong>42</strong></button><button><small>Out of Stock</small><strong>1</strong></button><button><small>Low Stock</small><strong>4</strong></button></div></section>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Recent Activity</h2></div><button>View Movements</button></div><div class="ia-i2-activity-list">${[1, 2, 3, 4, 5, 6].map(activity).join("")}</div></section>
@@ -48,6 +48,12 @@ for (const viewport of viewports) {
     const sectionTops = await page.locator(".ia-i2-section").evaluateAll((sections) => sections.map((section) => Math.round(section.getBoundingClientRect().top)));
     expect(sectionTops).toEqual([...sectionTops].sort((left, right) => left - right));
     await expect(page.getByRole("heading", { name: "Needs Attention" })).toBeVisible();
+    const attentionCards = page.locator(".ia-i2-attention-grid > button");
+    await expect(attentionCards).toHaveCount(2);
+    await expect(attentionCards.nth(0)).toContainText("Kitchen Requests");
+    await expect(attentionCards.nth(1)).toContainText("Pending Purchases");
+    await expect(page.locator(".ia-i2-attention-grid").getByText("Out of Stock", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".ia-i2-attention-grid").getByText("Low Stock", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Quick Operations" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Stock Snapshot" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
@@ -70,8 +76,10 @@ for (const viewport of viewports) {
     }
 
     const activityTopBefore = sectionTops[3];
-    await page.locator(".ia-i2-attention-grid button strong").first().evaluate((node) => { node.textContent = "12"; });
-    const activityTopAfter = Math.round((await page.locator(".ia-i2-section").nth(3).boundingBox())?.y ?? 0);
-    expect(Math.abs(activityTopAfter - activityTopBefore)).toBeLessThanOrEqual(1);
+    for (const value of ["1", "12", "—", "0"]) {
+      await page.locator(".ia-i2-attention-grid button strong").first().evaluate((node, next) => { node.textContent = next; }, value);
+      const activityTopAfter = Math.round((await page.locator(".ia-i2-section").nth(3).boundingBox())?.y ?? 0);
+      expect(Math.abs(activityTopAfter - activityTopBefore)).toBeLessThanOrEqual(1);
+    }
   });
 }
