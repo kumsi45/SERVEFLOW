@@ -49,7 +49,34 @@ function stockStatus(value: unknown): InventoryStockStatus {
 }
 
 function errorMessage(error: { message?: string } | null | undefined) {
-  return error?.message ?? "Inventory stock request failed.";
+  const message = error?.message?.trim() ?? "";
+  const safeBusinessMessages = [
+    /access denied/i,
+    /negative stock/i,
+    /quantity must be greater than zero/i,
+    /storage location is invalid/i,
+    /inventory item is invalid/i,
+    /supplier is invalid/i,
+    /reason is required/i,
+    /locations must be different/i,
+    /idempotency key was already used/i,
+  ];
+  return safeBusinessMessages.some((pattern) => pattern.test(message))
+    ? message
+    : "Inventory operation could not be completed. Refresh stock and try again.";
+}
+
+function operationIdempotency(restaurantId: string, operation: string, payload: unknown) {
+  const storageKey = `serveflow:inventory-operation:${restaurantId}:${operation}:${JSON.stringify(payload)}`;
+  const stored = typeof window === "undefined" ? null : window.sessionStorage.getItem(storageKey);
+  const key = stored || globalThis.crypto.randomUUID();
+  if (!stored && typeof window !== "undefined") window.sessionStorage.setItem(storageKey, key);
+  return {
+    key,
+    complete: () => {
+      if (typeof window !== "undefined") window.sessionStorage.removeItem(storageKey);
+    },
+  };
 }
 
 export function mapCurrentStock(row: Row): InventoryCurrentStockRow {
@@ -131,8 +158,10 @@ export async function recordInventoryMovement(args: {
   notes?: string | null;
   movementDate?: string | null;
 }) {
-  const { error } = await supabase.rpc("record_inventory_movement", {
+  const idempotency = operationIdempotency(args.restaurantId, "movement", args);
+  const { error } = await supabase.rpc("record_inventory_movement_v2", {
     target_restaurant_id: args.restaurantId,
+    target_idempotency_key: idempotency.key,
     target_inventory_item_id: args.inventoryItemId,
     target_storage_location_id: args.storageLocationId,
     target_movement_type: args.movementType,
@@ -145,7 +174,11 @@ export async function recordInventoryMovement(args: {
     target_notes: args.notes ?? null,
     target_movement_date: args.movementDate || null,
   });
-  if (error) throw new Error(errorMessage(error));
+  if (error) {
+    console.error("Inventory movement RPC failed.", error);
+    throw new Error(errorMessage(error));
+  }
+  idempotency.complete();
 }
 
 export async function recordInventoryTransfer(args: {
@@ -159,8 +192,10 @@ export async function recordInventoryTransfer(args: {
   notes?: string | null;
   movementDate?: string | null;
 }) {
-  const { error } = await supabase.rpc("record_inventory_transfer", {
+  const idempotency = operationIdempotency(args.restaurantId, "transfer", args);
+  const { error } = await supabase.rpc("record_inventory_transfer_v2", {
     target_restaurant_id: args.restaurantId,
+    target_idempotency_key: idempotency.key,
     target_inventory_item_id: args.inventoryItemId,
     target_from_storage_location_id: args.fromStorageLocationId,
     target_to_storage_location_id: args.toStorageLocationId,
@@ -170,7 +205,11 @@ export async function recordInventoryTransfer(args: {
     target_notes: args.notes ?? null,
     target_movement_date: args.movementDate || null,
   });
-  if (error) throw new Error(errorMessage(error));
+  if (error) {
+    console.error("Inventory transfer RPC failed.", error);
+    throw new Error(errorMessage(error));
+  }
+  idempotency.complete();
 }
 
 export async function recordInventoryAdjustment(args: {
@@ -206,8 +245,10 @@ export async function recordInventoryWaste(args: {
   notes?: string | null;
   movementDate?: string | null;
 }) {
-  const { error } = await supabase.rpc("record_inventory_waste", {
+  const idempotency = operationIdempotency(args.restaurantId, "waste", args);
+  const { error } = await supabase.rpc("record_inventory_waste_v2", {
     target_restaurant_id: args.restaurantId,
+    target_idempotency_key: idempotency.key,
     target_inventory_item_id: args.inventoryItemId,
     target_storage_location_id: args.storageLocationId,
     target_quantity: args.quantity,
@@ -216,7 +257,11 @@ export async function recordInventoryWaste(args: {
     target_notes: args.notes ?? null,
     target_movement_date: args.movementDate || null,
   });
-  if (error) throw new Error(errorMessage(error));
+  if (error) {
+    console.error("Inventory waste RPC failed.", error);
+    throw new Error(errorMessage(error));
+  }
+  idempotency.complete();
 }
 
 export async function recordInventoryOpeningBalance(args: {

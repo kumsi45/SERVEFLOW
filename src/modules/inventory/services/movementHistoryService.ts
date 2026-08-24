@@ -56,6 +56,9 @@ export async function loadInventoryMovementHistory(
     target_inventory_item_id: filters.inventoryItemId || null,
     result_limit: filters.limit ?? 500,
   });
-  if (error) throw new Error(error.message || "Inventory movement history is unavailable.");
+  if (error) {
+    console.error("Inventory movement history RPC failed.", error);
+    throw new Error("Inventory movement history is unavailable.");
+  }
   return ((data ?? []) as Row[]).map(mapInventoryMovementHistoryRow);
 }

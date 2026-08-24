@@ -226,9 +226,9 @@ async function main() {
     check("Owner retains read-only integrity diagnostics", ownerIntegrity.rowCount > 0);
 
     await asUser(staff.inventoryA.user, "select public.record_inventory_opening_balance($1,$2,$3,10,'SECURITY-AUDIT-OPEN','Rollback audit')", [restaurantA, itemA, storageA]);
-    await asUser(staff.inventoryA.user, `select public.record_inventory_movement(
-      $1,$2,$3,'stock_out'::public.inventory_movement_type,3,'out',null,null,null,
-      'Security audit stock out','Rollback audit',now())`, [restaurantA, itemA, storageA]);
+    await asUser(staff.inventoryA.user, `select public.record_inventory_movement_v2(
+      $1,$2,$3,$4,'stock_out'::public.inventory_movement_type,3,'out',null,null,null,
+      'Security audit stock out','Rollback audit',now())`, [restaurantA, id(), itemA, storageA]);
     const balance = Number((await asUser(staff.inventoryA.user,
       "select public.get_inventory_storage_balance($1,$2,$3) balance", [restaurantA, itemA, storageA])).rows[0].balance);
     check("Inventory Officer stock-in and stock-out workflow remains operational", balance === 7);

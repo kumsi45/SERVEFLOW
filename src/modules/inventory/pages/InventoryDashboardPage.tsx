@@ -831,7 +831,8 @@ export function InventoryDashboardPage({
       setMessage(success);
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kitchen request action failed.");
+      console.error("Inventory Kitchen Request action failed.", cause);
+      setError(inventoryUserMessage(cause, "Kitchen request action could not be completed. Try again."));
       return false;
     } finally {
       setWorking(false);

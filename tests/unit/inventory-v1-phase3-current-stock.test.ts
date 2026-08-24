@@ -73,8 +73,9 @@ describe("Inventory V1 Phase 3 Current Stock and stock operations", () => {
   });
 
   it("reuses the canonical movement and balanced-transfer RPC paths", () => {
-    expect(service).toContain('supabase.rpc("record_inventory_movement"');
-    expect(service).toContain('supabase.rpc("record_inventory_transfer"');
+    expect(service).toContain('supabase.rpc("record_inventory_movement_v2"');
+    expect(service).toContain('supabase.rpc("record_inventory_transfer_v2"');
+    expect(service).toContain("target_idempotency_key: idempotency.key");
     expect(page).toContain("recordStockMovement(restaurantId, movementForm");
     expect(page).toContain("transferInventoryStock(restaurantId, transferForm");
   });

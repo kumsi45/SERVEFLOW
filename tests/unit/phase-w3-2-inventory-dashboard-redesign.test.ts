@@ -9,9 +9,10 @@ const styles = read("src/modules/inventory/styles/inventoryDashboard.css");
 
 describe("Inventory Kitchen Requests supersedes the Phase I1 dashboard shell", () => {
   it("renders the request workflow sections", () => {
-    const titles = ["Kitchen Requests", "Awaiting Inventory", "Awaiting Kitchen", "History"];
-    const positions = titles.map((title) => dashboard.indexOf(title));
+    const tabs = ["Awaiting Inventory", "Awaiting Kitchen", "History"];
+    const positions = tabs.map((title) => dashboard.indexOf(title));
     expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(page).toContain('desktopLabel: "Kitchen Requests"');
   });
 
   it("shows canonical request availability and calm queue zero states", () => {
