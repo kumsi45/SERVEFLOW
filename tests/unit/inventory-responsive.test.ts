@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 describe("Inventory I3 mobile-first navigation architecture", () => {
   const page = read("src/modules/inventory/pages/InventoryDashboardPage.tsx");
   const css = read("src/modules/inventory/styles/inventoryDashboard.css");
-  const primaryArchitecture = page.slice(page.indexOf("const STOCK_NAV"), page.indexOf("const DEFAULT_FILTERS"));
+  const primaryArchitecture = page.slice(page.indexOf("const STOCK_NAV"), page.indexOf("const STOCK_CONTEXT_SECTIONS"));
 
   it("uses the requested business-facing destination hierarchy", () => {
     for (const label of ["Current Stock", "Stock Movements", "Purchase Orders", "Suppliers", "Materials", "Storage"]) {

@@ -84,9 +84,9 @@ export function validateItemDraft(
   restaurantId: string,
 ): ValidationResult {
   const errors: string[] = [];
-  if (!trimmed(draft.name)) errors.push("Ingredient name is required.");
+  if (!trimmed(draft.name)) errors.push("Material name is required.");
   if (hasDuplicateName(data.items, restaurantId, draft.name, draft.id)) {
-    errors.push("Ingredient names must be unique inside the restaurant.");
+    errors.push("Material names must be unique inside the restaurant.");
   }
   if (!draft.categoryId) errors.push("Category is required.");
   if (!draft.unitId) errors.push("Unit is required.");

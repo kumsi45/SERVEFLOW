@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const migration = readFileSync("supabase/migrations/251_inventory_destructive_authority_hardening.sql", "utf8");
 const historicalRoleMigration = readFileSync("supabase/migrations/160_inventory_officer_role.sql", "utf8");
 const page = readFileSync("src/modules/inventory/pages/InventoryDashboardPage.tsx", "utf8");
+const setupWorkspaces = readFileSync("src/modules/inventory/components/InventorySetupWorkspaces.tsx", "utf8");
 
 describe("Inventory V1 Security Phase 1A", () => {
   it("preserves the existing operational helper for Inventory Officer workflows", () => {
@@ -41,8 +42,9 @@ describe("Inventory V1 Security Phase 1A", () => {
 
   it("hides lifecycle controls from Inventory Officers while retaining Owner and Manager controls", () => {
     expect(page).toContain('const canManageMasterLifecycle = staffRole === "owner" || staffRole === "manager"');
-    expect(page).toContain("{canManageMasterLifecycle && <>");
-    expect(page).toContain("{canManageMasterLifecycle && (item.status");
-    expect(page).toContain("{canManageMasterLifecycle && <button");
+    expect(page).toContain("canManageLifecycle={canManageMasterLifecycle}");
+    expect(setupWorkspaces).toContain("{canManageLifecycle && <details>");
+    expect(setupWorkspaces).toContain('(item.status === "active" || canManageLifecycle)');
+    expect(setupWorkspaces).toContain('(location.status === "active" || canManageLifecycle)');
   });
 });

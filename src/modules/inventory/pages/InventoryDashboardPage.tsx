@@ -12,6 +12,7 @@ import { CurrentStockWorkspace } from "../components/CurrentStockWorkspace";
 import { InventoryIntegrityCheckPanel } from "../components/InventoryIntegrityCheckPanel";
 import { InventoryOverviewDashboard } from "../components/InventoryOverviewDashboard";
 import { InventoryOperationalDashboard } from "../components/InventoryOperationalDashboard";
+import { InventoryMaterialsWorkspace, InventorySetupLoadError, InventoryStorageWorkspace } from "../components/InventorySetupWorkspaces";
 import { InventorySuppliersWorkspace } from "../components/InventorySuppliersWorkspace";
 import { StockMovementWorkspace, TransferWorkspace } from "../components/StockOperationWorkspaces";
 import { StockMovementsWorkspace } from "../components/StockMovementsWorkspace";
@@ -25,11 +26,6 @@ import { loadCurrentStock } from "../services/inventoryBalanceService";
 import { loadInventoryAdjustments } from "../services/inventoryAdjustmentService";
 import {
   archiveRecord,
-  bulkArchiveItems,
-  bulkRestoreItems,
-  bulkSoftDeleteItems,
-  duplicateItem,
-  getFilteredItems,
   loadInventoryAdminData,
   restoreRecord,
   saveCategory,
@@ -69,7 +65,6 @@ import type {
   InventoryCategory,
   InventoryCategoryDraft,
   InventoryCurrentStockRow,
-  InventoryFilters,
   InventoryFoodConsumptionMovement,
   InventoryItem,
   InventoryItemDraft,
@@ -84,6 +79,7 @@ import type {
   StockMovementDraft,
 } from "../types";
 import "../styles/inventoryDashboard.css";
+import "../styles/inventorySetup.css";
 import "../styles/inventorySuppliers.css";
 import "../styles/inventoryKitchenRequests.css";
 import "../styles/inventoryStockOperations.css";
@@ -169,19 +165,6 @@ const REPORT_CONTEXT_SECTIONS = new Set<InventorySection>([
   "inventory-reports", "inventory-value", "low-stock-assistant", "consumption", "waste-report", "movement-history", "export",
 ]);
 const SETTINGS_CONTEXT_SECTIONS = new Set<InventorySection>(["inventory-settings", "help"]);
-
-const DEFAULT_FILTERS: InventoryFilters = {
-  search: "",
-  categoryId: "",
-  supplierId: "",
-  storageLocationId: "",
-  status: "all",
-  archived: "active",
-  recentlyAdded: false,
-  sort: "newest",
-};
-
-const ITEM_PAGE_SIZE = 10;
 
 function isInventorySection(value: string | undefined): value is InventorySection {
   return INVENTORY_NAV.some((item) => item.key === value);
@@ -446,10 +429,8 @@ export function InventoryDashboardPage({
   const [kitchenRequests, setKitchenRequests] = useState<InventoryKitchenQueueRequest[]>([]);
   const [kitchenRequestsLoading, setKitchenRequestsLoading] = useState(true);
   const [kitchenRequestsError, setKitchenRequestsError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [adminDataFailed, setAdminDataFailed] = useState(false);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -478,6 +459,7 @@ export function InventoryDashboardPage({
         loadInventoryMovementHistory(restaurantId),
       ]);
       if (adminResult.status === "fulfilled") setData(adminResult.value);
+      setAdminDataFailed(adminResult.status === "rejected");
       if (stockResult.status === "fulfilled") setCurrentStock(stockResult.value);
       if (ledgerResult.status === "fulfilled") setLedger(ledgerResult.value);
       if (movementResult.status === "fulfilled") setMovementHistory(movementResult.value);
@@ -683,7 +665,6 @@ export function InventoryDashboardPage({
   const stockContext = useMemo(() => ({ ...data, currentStock }), [data, currentStock]);
 
   const supplierNames = useMemo(() => new Map(data.suppliers.map((row) => [row.id, row.name])), [data.suppliers]);
-  const categoryNames = useMemo(() => new Map(data.categories.map((row) => [row.id, row.name])), [data.categories]);
   const storageNames = useMemo(() => new Map(data.storageLocations.map((row) => [row.id, row.name])), [data.storageLocations]);
   const unitNames = useMemo(() => new Map(data.units.map((row) => [row.id, row.name])), [data.units]);
   const activeItemRows = useMemo(() => data.items.filter((item) => item.status !== "deleted"), [data.items]);
@@ -697,7 +678,6 @@ export function InventoryDashboardPage({
   }, [activeItemRows]);
   const categoryItemCounts = useMemo(() => countItemsBy("categoryId"), [countItemsBy]);
   const unitItemCounts = useMemo(() => countItemsBy("unitId"), [countItemsBy]);
-  const storageItemCounts = useMemo(() => countItemsBy("storageLocationId"), [countItemsBy]);
   const stockByItemId = useMemo(() => {
     const totals = new Map<string, { quantity: number; unitName: string }>();
     for (const row of currentStock) {
@@ -740,17 +720,6 @@ export function InventoryDashboardPage({
     };
   }, [ledger]);
 
-  const filteredItems = useMemo(() => {
-    const rows = getFilteredItems(data, filters);
-    if (filters.sort !== "stock_high" && filters.sort !== "stock_low") return rows;
-    return [...rows].sort((left, right) => {
-      const leftStock = stockByItemId.get(left.id)?.quantity ?? 0;
-      const rightStock = stockByItemId.get(right.id)?.quantity ?? 0;
-      return filters.sort === "stock_high" ? rightStock - leftStock : leftStock - rightStock;
-    });
-  }, [data, filters, stockByItemId]);
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEM_PAGE_SIZE));
-  const pagedItems = useMemo(() => filteredItems.slice((page - 1) * ITEM_PAGE_SIZE, page * ITEM_PAGE_SIZE), [filteredItems, page]);
   const archivedItems = useMemo(() => data.items.filter((item) => item.status === "archived"), [data.items]);
   const recentPurchases = useMemo<DashboardActivityItem[]>(() => [...purchaseHistory]
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
@@ -811,11 +780,6 @@ export function InventoryDashboardPage({
     date: entry.movementDate,
     status: entry.quantityEffect === "in" ? "healthy" : "completed",
   })), [ledger]);
-
-  useEffect(() => {
-    setPage(1);
-    setSelectedIds([]);
-  }, [filters, section]);
 
   useEffect(() => {
     if (section === "stock-in" && movementForm.movementType !== "stock_in") {
@@ -914,26 +878,9 @@ export function InventoryDashboardPage({
     return parentNavGroup(section) === group;
   }
 
-  function setFilter<Key extends keyof InventoryFilters>(key: Key, value: InventoryFilters[Key]) {
-    setFilters((current) => ({ ...current, [key]: value }));
-  }
-
   async function logout() {
     await signOutStaff();
     window.location.replace("/staff-login");
-  }
-
-  function toggleSelected(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
-    );
-  }
-
-  function selectPageItems(checked: boolean) {
-    const pageIds = pagedItems.map((item) => item.id);
-    setSelectedIds((current) =>
-      checked ? [...new Set([...current, ...pageIds])] : current.filter((id) => !pageIds.includes(id)),
-    );
   }
 
   const dashboard = kitchenRequestsActive ? (
@@ -1081,103 +1028,6 @@ export function InventoryDashboardPage({
       />
   );
 
-  const items = (
-    <div className="ia-stack">
-      <section className="ia-toolbar">
-        <label className="ia-search">
-          <span>Search</span>
-          <input
-            value={filters.search}
-            onChange={(event) => setFilter("search", event.target.value)}
-            placeholder="Search ingredients"
-          />
-        </label>
-        <div className="ia-actions">
-          <button type="button" onClick={() => setItemForm(itemDraft())}>Create Ingredient</button>
-          {canManageMasterLifecycle && <>
-            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkArchiveItems(restaurantId, selectedIds), "Selected ingredients archived.")}>Archive Selected</button>
-            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkRestoreItems(restaurantId, selectedIds), "Selected ingredients restored.")}>Restore Selected</button>
-            <button type="button" disabled={selectedIds.length === 0 || working} onClick={() => void run(() => bulkSoftDeleteItems(restaurantId, selectedIds), "Selected ingredients soft deleted.")}>Soft Delete</button>
-          </>}
-        </div>
-      </section>
-
-      <details className="ia-collapsible-filters"><summary>Filters <span aria-hidden="true">▼</span></summary><section className="ia-filters" aria-label="Ingredient filters">
-        <select value={filters.categoryId} onChange={(event) => setFilter("categoryId", event.target.value)}>
-          <option value="">All categories</option>
-          {activeCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select>
-        <select value={filters.storageLocationId} onChange={(event) => setFilter("storageLocationId", event.target.value)}>
-          <option value="">All storage</option>
-          {activeLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
-        </select>
-        <select value={filters.status} onChange={(event) => setFilter("status", event.target.value as InventoryFilters["status"])}>
-          <option value="all">Any status</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-          <option value="deleted">Soft deleted</option>
-        </select>
-        <select value={filters.sort} onChange={(event) => setFilter("sort", event.target.value as InventoryFilters["sort"])}>
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="alphabetical">A–Z</option>
-          <option value="stock_high">Stock High → Low</option>
-          <option value="stock_low">Stock Low → High</option>
-          <option value="updated">Recently Updated</option>
-        </select>
-      </section></details>
-
-      <section className="ia-table-wrap">
-        <table className="ia-table">
-          <thead>
-            <tr>
-              <th><input aria-label="Select page" type="checkbox" checked={pagedItems.length > 0 && pagedItems.every((item) => selectedIds.includes(item.id))} onChange={(event) => selectPageItems(event.target.checked)} /></th>
-              <th>Ingredient</th>
-              <th>Current Stock</th>
-              <th>Unit</th>
-              <th>Storage</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedItems.map((item) => (
-              <tr key={item.id}>
-                <td data-label="Select"><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelected(item.id)} /></td>
-                <td data-label="Ingredient"><strong>{item.name}</strong></td>
-                <td data-label="Current Stock">{stockByItemId.has(item.id) ? quantityLabel(stockByItemId.get(item.id)?.quantity ?? 0, stockByItemId.get(item.id)?.unitName ?? unitNames.get(item.unitId) ?? "unit") : "No stock"}</td>
-                <td data-label="Unit">{unitNames.get(item.unitId) ?? "—"}</td>
-                <td data-label="Storage">{storageNames.get(item.storageLocationId) ?? "Missing"}</td>
-                <td data-label="Status">{statusBadge(item.status)}</td>
-                <td data-label="Actions">
-                  <div className="ia-row-actions">
-                    <button type="button" onClick={() => setDetailIngredientId(item.id)}>Details</button>
-                    {(item.status === "active" || canManageMasterLifecycle) && <button type="button" onClick={() => setItemForm(itemDraft(item))}>Edit</button>}
-                    <button type="button" onClick={() => navigate("stock-in")}>Stock In</button>
-                    <button type="button" onClick={() => navigate("stock-out")}>Stock Out</button>
-                    <button type="button" onClick={() => void run(() => duplicateItem(restaurantId, item, data), "Ingredient duplicated.")}>Duplicate</button>
-                    {canManageMasterLifecycle && (item.status === "archived" ? (
-                      <button type="button" onClick={() => void run(() => restoreRecord(restaurantId, "inventory_items", item.id), "Ingredient restored.")}>Restore</button>
-                    ) : (
-                      <button type="button" onClick={() => void run(() => archiveRecord(restaurantId, "inventory_items", item.id), "Ingredient archived.")}>Archive</button>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {pagedItems.length === 0 && <div className="ia-empty ia-filter-empty"><p>No ingredients match your filters.</p><div><button type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>Clear Filters</button><button type="button" onClick={() => setItemForm(itemDraft())}>Create Ingredient</button></div></div>}
-      </section>
-      <div className="ia-pagination">
-        <span>{filteredItems.length} result{filteredItems.length === 1 ? "" : "s"}</span>
-        <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
-        <strong>Page {page} of {totalPages}</strong>
-        <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Next</button>
-      </div>
-    </div>
-  );
-
   function masterList(
     title: string,
     rows: Array<{ id: string; name: string; description?: string | null; status: string; createdAt: string; updatedAt: string }>,
@@ -1256,7 +1106,7 @@ export function InventoryDashboardPage({
     : section === "export" ? <section className="ia-navigation-placeholder"><span>Export</span><h2>Export Inventory Data</h2><p>Open the report you want to review and export.</p><button type="button" onClick={() => navigate("inventory-reports")}>Open Inventory Reports</button></section>
     : section === "help" ? <section className="ia-navigation-placeholder"><span>Help</span><h2>Inventory Help</h2><p>Choose an inventory workspace to continue.</p><div className="ia-actions"><button type="button" onClick={() => navigate("current-stock")}>Current Stock</button><button type="button" onClick={() => navigate("stock-in")}>Receive Stock</button><button type="button" onClick={() => navigate("items")}>Ingredients</button></div></section>
     : section === "low-stock-assistant" ? <LowStockAssistantPage restaurantId={restaurantId} staffRole={staffRole} currentStock={currentStock} items={data.items} categories={data.categories} suppliers={data.suppliers} storageLocations={data.storageLocations} units={data.units} onOpenPurchaseOrders={() => navigate("purchase-orders")} />
-    : section === "items" ? items
+    : section === "items" ? adminDataFailed ? <InventorySetupLoadError resource="materials" /> : <InventoryMaterialsWorkspace items={data.items} categories={data.categories} units={data.units} canManageLifecycle={canManageMasterLifecycle} onAdd={() => setItemForm(itemDraft())} onEdit={(item) => setItemForm(itemDraft(item))} onArchive={(id) => void run(() => archiveRecord(restaurantId, "inventory_items", id), "Material archived.")} onRestore={(id) => void run(() => restoreRecord(restaurantId, "inventory_items", id), "Material restored.")} />
     : section === "categories" ? masterList(
       "Categories",
       data.categories,
@@ -1266,14 +1116,7 @@ export function InventoryDashboardPage({
       (row) => ({ label: "Ingredients", value: countLabel(categoryItemCounts.get(row.id) ?? 0, "ingredient") }),
     )
     : section === "suppliers" ? <InventorySuppliersWorkspace suppliers={data.suppliers} items={data.items} onCreate={() => setSupplierForm(supplierDraft())} onEdit={(supplier) => setSupplierForm(supplierDraft(supplier))} />
-    : section === "storage-locations" ? masterList(
-      "Storage Locations",
-      data.storageLocations,
-      () => setStorageForm(simpleDraft()),
-      (id) => setStorageForm(simpleDraft(data.storageLocations.find((row) => row.id === id))),
-      "inventory_storage_locations",
-      (row) => ({ label: "Stored Ingredients", value: countLabel(storageItemCounts.get(row.id) ?? 0, "ingredient") }),
-    )
+    : section === "storage-locations" ? adminDataFailed ? <InventorySetupLoadError resource="storage locations" /> : <InventoryStorageWorkspace locations={data.storageLocations} items={data.items} canManageLifecycle={canManageMasterLifecycle} onAdd={() => setStorageForm(simpleDraft())} onEdit={(location) => setStorageForm(simpleDraft(location))} onArchive={(id) => void run(() => archiveRecord(restaurantId, "inventory_storage_locations", id), "Storage archived.")} onRestore={(id) => void run(() => restoreRecord(restaurantId, "inventory_storage_locations", id), "Storage restored.")} />
     : masterList(
       "Units",
       data.units,
@@ -1284,6 +1127,7 @@ export function InventoryDashboardPage({
     );
 
   const displayedContent = content;
+  const compactSetupWorkspace = section === "items" || section === "storage-locations";
   const actionableKitchenRequestCount = kitchenRequestsLoading || kitchenRequestsError
     ? 0
     : kitchenRequests.filter((request) => request.status === "accepted").length;
@@ -1316,7 +1160,7 @@ export function InventoryDashboardPage({
       <header className="ia-mobile-header">
         <div className="ia-mobile-header-title">
           <strong>Inventory</strong>
-          <span>{restaurantName} · Today&apos;s stock operations</span>
+          {!compactSetupWorkspace && <span>{restaurantName} · Today&apos;s stock operations</span>}
         </div>
         <div className="ia-mobile-header-actions">
           <button
@@ -1363,10 +1207,10 @@ export function InventoryDashboardPage({
       </aside>
 
       <section className="ia-workspace">
-        <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>
-        {error && section !== "dashboard" && section !== "current-stock" && section !== "ledger" && <div className="ia-alert error" role="alert">{error}</div>}
+        {!compactSetupWorkspace && <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>}
+        {error && !(compactSetupWorkspace && adminDataFailed) && section !== "dashboard" && section !== "current-stock" && section !== "ledger" && <div className="ia-alert error" role="alert">{error}</div>}
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
-        {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
+        {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? compactSetupWorkspace ? <div className="ia-setup-loading" role="status">Loading {section === "items" ? "materials" : "storage locations"}...</div> : <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
 
       {detailIngredientId && (() => {
@@ -1400,7 +1244,7 @@ export function InventoryDashboardPage({
           onCreateStorage={() => { setInlineMasterTarget("storage"); setStorageForm(simpleDraft()); }}
           onCreateSupplier={() => { setInlineMasterTarget("supplier"); setSupplierForm(supplierDraft()); }}
           working={working}
-          onSave={() => void run(() => saveItem(restaurantId, itemForm, data), itemForm.id ? "Ingredient updated." : "Ingredient created.").then((saved) => { if (saved) setItemForm(null); })}
+          onSave={() => void run(() => saveItem(restaurantId, itemForm, data), itemForm.id ? "Material updated." : "Material created.").then((saved) => { if (saved) setItemForm(null); })}
         />
       )}
       {categoryForm && (
@@ -1423,13 +1267,13 @@ export function InventoryDashboardPage({
       )}
       {storageForm && (
         <SimpleForm
-          title="Storage Location"
+          title="Storage"
           draft={storageForm}
           setDraft={setStorageForm}
           metadata={storageForm.id ? data.storageLocations.find((row) => row.id === storageForm.id) ?? null : null}
           working={working}
           examples="Main Store, Freezer, Cold Room, Bar Store, Bakery Store"
-          onSave={() => void run(() => saveStorageLocation(restaurantId, storageForm, data), storageForm.id ? "Storage location updated." : "Storage location created.").then(async (saved) => { if (saved) { if (inlineMasterTarget === "storage") { const next = await loadInventoryAdminData(restaurantId); setData(next); const created = next.storageLocations.find((row) => row.name.trim().toLowerCase() === storageForm.name.trim().toLowerCase()); if (created) setItemForm((current) => current ? { ...current, storageLocationId: created.id } : current); setInlineMasterTarget(null); } setStorageForm(null); } })}
+          onSave={() => void run(() => saveStorageLocation(restaurantId, storageForm, data), storageForm.id ? "Storage updated." : "Storage created.").then(async (saved) => { if (saved) { if (inlineMasterTarget === "storage") { const next = await loadInventoryAdminData(restaurantId); setData(next); const created = next.storageLocations.find((row) => row.name.trim().toLowerCase() === storageForm.name.trim().toLowerCase()); if (created) setItemForm((current) => current ? { ...current, storageLocationId: created.id } : current); setInlineMasterTarget(null); } setStorageForm(null); } })}
         />
       )}
       {unitForm && (
@@ -1520,28 +1364,30 @@ function InventoryItemForm({
   onCreateStorage: () => void;
   onCreateSupplier: () => void;
 }) {
-  const canCreate = data.categories.length > 0 && data.units.length > 0 && data.storageLocations.length > 0;
+  const canCreate = categories.length > 0 && units.length > 0 && locations.length > 0;
   return (
-    <FormShell title={draft.id ? "Edit Ingredient" : "Create Ingredient"} onClose={() => setDraft(null)}>
-      {!canCreate && <div className="ia-alert error">Create at least one category, unit, and storage location before saving ingredients.</div>}
-      <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-        <label>Ingredient Name *<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+    <FormShell title={draft.id ? "Edit Material" : "Add Material"} onClose={() => setDraft(null)}>
+      {!canCreate && <div className="ia-alert error">Create at least one category, unit, and storage location before saving materials.</div>}
+      <form className="ia-form ia-material-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
+        <label>Material name *<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
         <label>Category<div className="ia-inline-select"><select required value={draft.categoryId} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value })}><option value="">Select category</option>{categories.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateCategory}>+ Create Category</button></div></label>
         <label>Unit<div className="ia-inline-select"><select required value={draft.unitId} onChange={(event) => setDraft({ ...draft, unitId: event.target.value })}><option value="">Select unit</option>{units.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateUnit}>+ Create Unit</button></div></label>
-        <label>Storage<div className="ia-inline-select"><select required value={draft.storageLocationId} onChange={(event) => setDraft({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateStorage}>+ Create Storage</button></div></label>
-        <label>Minimum Stock<input min="0" step="0.001" type="number" value={draft.minimumStock} onChange={(event) => setDraft({ ...draft, minimumStock: event.target.value })} /></label>
-        <label>Maximum Stock<input min="0" step="0.001" type="number" value={draft.maximumStock} onChange={(event) => setDraft({ ...draft, maximumStock: event.target.value })} /></label>
-        <label>Purchase Price<input required min="0" step="0.000001" type="number" value={draft.purchasePrice} onChange={(event) => setDraft({ ...draft, purchasePrice: event.target.value })} /></label>
-        <label>Preferred Supplier<div className="ia-inline-select"><select value={draft.preferredSupplierId} onChange={(event) => setDraft({ ...draft, preferredSupplierId: event.target.value })}><option value="">None</option>{suppliers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateSupplier}>+ Create Supplier</button></div></label>
-        <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
-        <details className="ia-advanced-options wide"><summary>Advanced Options</summary><label>Barcode (optional)<input value={draft.barcode} onChange={(event) => setDraft({ ...draft, barcode: event.target.value })} /></label></details>
+        <label>Default storage<div className="ia-inline-select"><select required value={draft.storageLocationId} onChange={(event) => setDraft({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateStorage}>+ Create Storage</button></div><span className="ia-form-help">Used as this material's configured storage location.</span></label>
+        <label>Minimum stock<input min="0" step="0.001" type="number" value={draft.minimumStock} onChange={(event) => setDraft({ ...draft, minimumStock: event.target.value })} /><span className="ia-form-help">Low-stock alert threshold.</span></label>
+        <label>Maximum stock<input min="0" step="0.001" type="number" value={draft.maximumStock} onChange={(event) => setDraft({ ...draft, maximumStock: event.target.value })} /><span className="ia-form-help">Optional upper stock target.</span></label>
+        <details className="ia-advanced-options ia-material-additional wide"><summary>Additional configuration</summary><div className="ia-material-additional-grid">
+          <label>Purchase price<input required min="0" step="0.000001" type="number" value={draft.purchasePrice} onChange={(event) => setDraft({ ...draft, purchasePrice: event.target.value })} /></label>
+          <label>Preferred supplier<div className="ia-inline-select"><select value={draft.preferredSupplierId} onChange={(event) => setDraft({ ...draft, preferredSupplierId: event.target.value })}><option value="">None</option>{suppliers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateSupplier}>+ Create Supplier</button></div></label>
+          <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+          <label className="wide">Barcode (optional)<input value={draft.barcode} onChange={(event) => setDraft({ ...draft, barcode: event.target.value })} /></label>
+        </div></details>
         {metadata && (
           <AdvancedInfo rows={[
             { label: "Created by", value: <span><strong>{metadata.createdByStaffId ? data.staffNames[metadata.createdByStaffId] ?? "Staff member" : "System"}</strong><small>{metadata.createdByStaffId ? data.staffRoles[metadata.createdByStaffId] ?? "Staff" : "System"} · {dateLabel(metadata.createdAt)}</small></span> },
             { label: "Updated by", value: <span><strong>{metadata.updatedByStaffId ? data.staffNames[metadata.updatedByStaffId] ?? "Staff member" : "System"}</strong><small>{metadata.updatedByStaffId ? data.staffRoles[metadata.updatedByStaffId] ?? "Staff" : "System"} · {dateLabel(metadata.updatedAt)}</small></span> },
           ]} />
         )}
-        <footer><button disabled={working || !canCreate} type="submit">{working ? "Saving..." : "Save Ingredient"}</button></footer>
+        <footer><button disabled={working || !canCreate} type="submit">{working ? "Saving..." : "Save Material"}</button></footer>
       </form>
     </FormShell>
   );
@@ -1578,9 +1424,9 @@ function SupplierForm({ draft, setDraft, metadata, working, onSave }: { draft: I
 
 function SimpleForm({ title, draft, setDraft, metadata, working, examples, onSave }: { title: string; draft: InventorySimpleDraft; setDraft: (draft: InventorySimpleDraft | null) => void; metadata: { createdAt: string; updatedAt: string } | null; working: boolean; examples: string; onSave: () => void }) {
   return (
-    <FormShell title={draft.id ? `Edit ${title}` : `Create ${title}`} onClose={() => setDraft(null)}>
-      <form className="ia-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-        <label>Name<input required value={draft.name} placeholder={examples} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+    <FormShell title={draft.id ? `Edit ${title}` : `${title === "Storage" ? "Add" : "Create"} ${title}`} onClose={() => setDraft(null)}>
+      <form className={`ia-form ${title === "Storage" ? "ia-storage-form" : ""}`} onSubmit={(event) => { event.preventDefault(); onSave(); }}>
+        <label>{title === "Storage" ? "Storage name" : "Name"}<input required value={draft.name} placeholder={examples} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
         <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
         {metadata && <AdvancedInfo rows={[{ label: "Created", value: dateLabel(metadata.createdAt) }, { label: "Updated", value: dateLabel(metadata.updatedAt) }]} />}
         <footer><button disabled={working} type="submit">{working ? "Saving..." : `Save ${title}`}</button></footer>

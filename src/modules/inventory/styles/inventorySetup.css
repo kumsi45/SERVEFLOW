@@ -1,0 +1,62 @@
+.ia-setup-page { display: grid; width: 100%; max-width: 1120px; min-width: 0; gap: 11px; margin-inline: auto; }
+.ia-setup-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 11px; }
+.ia-setup-heading h2, .ia-setup-heading p { margin: 0; }
+.ia-setup-heading h2 { color: #0f172a; font-size: 22px; }
+.ia-setup-heading p { margin-top: 3px; color: #64748b; font-size: 11px; }
+.ia-setup-heading button, .ia-setup-empty button { min-height: 44px; padding: 8px 13px; border: 1px solid #176b47; border-radius: 9px; background: #176b47; color: #fff; font-weight: 850; cursor: pointer; }
+.ia-setup-tools { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 7px; }
+.ia-setup-tools > label, .ia-setup-tools details label { display: grid; min-width: 0; gap: 4px; color: #475569; font-size: 10px; font-weight: 800; }
+.ia-setup-tools > label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ia-setup-tools input, .ia-setup-tools select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #d7e0dc; border-radius: 9px; background: #fff; color: #0f172a; font: inherit; }
+.ia-setup-tools > details { position: relative; }
+.ia-setup-tools > details > summary { display: flex; min-height: 44px; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid #d7e0dc; border-radius: 9px; background: #fff; color: #334155; font-size: 10px; font-weight: 850; cursor: pointer; list-style: none; }
+.ia-setup-tools > details > summary::-webkit-details-marker { display: none; }
+.ia-setup-tools summary b { padding: 3px 5px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 8px; }
+.ia-setup-tools details > div { position: absolute; z-index: 5; top: calc(100% + 5px); right: 0; display: grid; width: min(290px, calc(100vw - 24px)); gap: 8px; padding: 10px; border: 1px solid #d7e0dc; border-radius: 10px; background: #fff; box-shadow: 0 14px 32px #0f172a1f; }
+.ia-material-list { display: grid; min-width: 0; gap: 6px; }
+.ia-material-row { display: grid; min-width: 0; grid-template-columns: minmax(0, 1.5fr) minmax(110px, .8fr) minmax(70px, .4fr) minmax(76px, .45fr) minmax(112px, auto); align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid #dce5e0; border-radius: 10px; background: #fff; }
+.ia-material-row.header { min-height: 34px; border: 0; background: transparent; color: #64748b; font-size: 9px; font-weight: 850; text-transform: uppercase; }
+.ia-material-row > div:first-child { display: grid; min-width: 0; gap: 2px; }
+.ia-material-row > div:first-child strong { overflow-wrap: anywhere; color: #0f172a; font-size: 13px; }
+.ia-material-row > div:first-child span { display: none; color: #64748b; font-size: 9px; }
+.ia-material-row > span { overflow-wrap: anywhere; color: #475569; font-size: 10px; }
+.ia-material-row.archived { border-color: #fecaca; background: #fffafa; }
+.ia-setup-status { width: fit-content; color: #64748b; font-size: 9px; font-weight: 800; }
+.ia-setup-status.archived { padding: 4px 6px; border-radius: 999px; background: #fef2f2; color: #b91c1c; text-transform: uppercase; }
+.ia-setup-actions { position: relative; display: flex; justify-content: flex-end; gap: 5px; }
+.ia-setup-actions > button, .ia-setup-actions summary, .ia-storage-card footer > button, .ia-storage-card footer summary { display: grid; min-height: 44px; min-width: 64px; place-items: center; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #176b47; font-size: 10px; font-weight: 850; cursor: pointer; list-style: none; }
+.ia-setup-actions summary::-webkit-details-marker, .ia-storage-card footer summary::-webkit-details-marker { display: none; }
+.ia-setup-actions details, .ia-storage-card footer details { position: relative; }
+.ia-setup-actions details > div, .ia-storage-card footer details > div { position: absolute; z-index: 4; top: calc(100% + 4px); right: 0; min-width: 110px; padding: 5px; border: 1px solid #d7e0dc; border-radius: 8px; background: #fff; box-shadow: 0 10px 24px #0f172a1f; }
+.ia-setup-actions details button, .ia-storage-card footer details button { width: 100%; min-height: 40px; border: 0; background: transparent; color: #b45309; font-weight: 800; cursor: pointer; }
+.ia-storage-grid { display: grid; min-width: 0; gap: 8px; }
+.ia-storage-card { display: grid; min-width: 0; min-height: 124px; gap: 7px; padding: 12px; border: 1px solid #dce5e0; border-radius: 11px; background: #fff; }
+.ia-storage-card.archived { border-color: #fecaca; background: #fffafa; }
+.ia-storage-card header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ia-storage-card header strong { overflow-wrap: anywhere; color: #0f172a; font-size: 15px; }
+.ia-storage-card > p { display: -webkit-box; margin: 0; overflow: hidden; color: #64748b; font-size: 10px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ia-storage-card > span { color: #475569; font-size: 10px; font-weight: 750; }
+.ia-storage-card footer { display: flex; align-items: flex-end; justify-content: flex-end; gap: 5px; margin-top: auto; }
+.ia-setup-empty, .ia-setup-load-error, .ia-setup-loading { display: grid; justify-items: center; gap: 10px; padding: 28px 12px; border: 1px solid #dce5e0; border-radius: 11px; background: #fff; color: #64748b; text-align: center; }
+.ia-setup-load-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.ia-form.ia-material-form .ia-form-help { margin: -2px 0 0; color: #64748b; font-size: 9px; font-weight: 500; }
+.ia-form.ia-material-form details { grid-column: 1 / -1; }
+.ia-form.ia-material-form details summary { min-height: 44px; padding: 11px 0; color: #176b47; font-size: 11px; font-weight: 850; cursor: pointer; }
+.ia-form.ia-material-form details > div { display: grid; gap: 10px; }
+.ia-form.ia-storage-form { grid-template-columns: 1fr; }
+.ia-form.ia-storage-form textarea { min-height: 64px; }
+.ia-setup-page button:focus-visible, .ia-setup-page input:focus-visible, .ia-setup-page select:focus-visible, .ia-setup-page summary:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+@media (min-width: 700px) { .ia-storage-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ia-form.ia-material-form details > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1180px) { .ia-storage-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 699px) {
+  .ia-material-row.header { display: none; }
+  .ia-material-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 9px; padding: 10px; }
+  .ia-material-row > div:first-child span { display: block; }
+  .ia-material-row > span.category { display: none; }
+  .ia-material-row > span.unit { grid-column: 1; grid-row: 2; }
+  .ia-material-row > .ia-setup-status { grid-column: 2; grid-row: 1; }
+  .ia-material-row > .ia-setup-actions { grid-column: 2; grid-row: 2 / span 2; }
+  .ia-material-row > .ia-setup-actions details > summary { min-width: 48px; }
+}
+@media (max-width: 430px) { .ia-setup-heading { align-items: stretch; flex-direction: column; } .ia-setup-heading button { width: 100%; } .ia-storage-card { min-height: 112px; } }
+@media (prefers-reduced-motion: reduce) { .ia-setup-page * { scroll-behavior: auto; transition: none; } }
