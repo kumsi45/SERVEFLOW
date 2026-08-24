@@ -9,12 +9,39 @@ describe("inventory hamburger routing", () => {
   it("uses one flat eight-destination list in the mobile drawer", () => {
     const destinations = page.slice(page.indexOf("const INVENTORY_DESTINATIONS"), page.indexOf("function isInventorySection"));
     for (const label of ["Overview", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchase Orders", "Suppliers", "Materials", "Storage"]) {
-      expect(destinations).toContain(`label: "${label}"`);
+      expect(destinations).toContain(`desktopLabel: "${label}"`);
     }
-    for (const folder of ["Stock", "Purchasing", "Setup"]) expect(destinations).not.toContain(`label: "${folder}"`);
-    expect(page).toContain("{navigationItems(true)}");
+    for (const folder of ["Stock", "Purchasing", "Setup"]) expect(destinations).not.toContain(`desktopLabel: "${folder}"`);
+    expect(page).toContain("{mobileDrawerNavigation}");
+    expect(page).toContain("{mobileBottomNavigation}");
     expect(page).toContain('aria-label="Close inventory navigation"');
     expect(page).toContain("setMobileMenuOpen(false)");
+  });
+
+  it("assigns one shared icon to every inventory destination", () => {
+    const destinations = page.slice(page.indexOf("const INVENTORY_DESTINATIONS"), page.indexOf("function isInventorySection"));
+    const expectedIcons = new Map([
+      ["Overview", "LayoutDashboard"], ["Current Stock", "Boxes"], ["Stock Movements", "ArrowLeftRight"],
+      ["Kitchen Requests", "ClipboardList"], ["Purchase Orders", "ShoppingCart"], ["Suppliers", "Truck"],
+      ["Materials", "Package"], ["Storage", "Warehouse"],
+    ]);
+    for (const [label, icon] of expectedIcons) {
+      expect(destinations).toMatch(new RegExp(`desktopLabel: "${label}"[^\\n]+icon: ${icon}`));
+    }
+    expect(page.match(/const Icon = item\.icon;/g)).toHaveLength(3);
+    expect(page).toContain('<Icon className="ia-nav-icon" aria-hidden="true" />');
+    expect(page).toContain('<Icon aria-hidden="true" />');
+  });
+
+  it("keeps phone bottom and hamburger destinations disjoint", () => {
+    const destinations = page.slice(page.indexOf("const INVENTORY_DESTINATIONS"), page.indexOf("function isInventorySection"));
+    const entries = [...destinations.matchAll(/key: "([^"]+)".*?mobilePlacement: "(primary|secondary)"/g)];
+    const primary = entries.filter((entry) => entry[2] === "primary").map((entry) => entry[1]);
+    const secondary = entries.filter((entry) => entry[2] === "secondary").map((entry) => entry[1]);
+    expect(primary).toEqual(["dashboard", "current-stock", "kitchen-requests", "purchase-orders"]);
+    expect(secondary).toEqual(["ledger", "suppliers", "items", "storage-locations"]);
+    expect(primary.filter((route) => secondary.includes(route))).toEqual([]);
+    expect(page).not.toMatch(/mobileLabel: "More"|>More</);
   });
 
   it("keeps secondary management utilities out of the primary drawer", () => {

@@ -18,7 +18,8 @@ describe("Inventory V1 global presentation cleanup", () => {
     expect(page).not.toContain("Today's stock operations");
     expect(page).not.toContain('<header className="ia-header"');
     expect(page).not.toContain("ia-mobile-header-title");
-    expect(page).toContain('<strong>Inventory</strong><span>{restaurantName}</span>');
+    expect(page).not.toContain("<span>{restaurantName}</span>");
+    expect(page).toContain('<div className="ia-mobile-brand"><ServeFlowBrand variant="compact" /></div>');
   });
 
   it("starts the overview with operational information instead of its route name", () => {

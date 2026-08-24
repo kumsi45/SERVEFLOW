@@ -11,9 +11,9 @@ describe("Inventory I3 mobile-first navigation architecture", () => {
 
   it("uses the requested business-facing destination hierarchy", () => {
     for (const label of ["Overview", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchase Orders", "Suppliers", "Materials", "Storage"]) {
-      expect(primaryArchitecture).toContain(`label: "${label}"`);
+      expect(primaryArchitecture).toContain(`desktopLabel: "${label}"`);
     }
-    for (const folder of ["Stock", "Purchasing", "Setup"]) expect(primaryArchitecture).not.toContain(`label: "${folder}"`);
+    for (const folder of ["Stock", "Purchasing", "Setup"]) expect(primaryArchitecture).not.toContain(`desktopLabel: "${folder}"`);
   });
 
   it("keeps legacy stock, purchasing, setup, and report routes URL-compatible", () => {
@@ -27,18 +27,32 @@ describe("Inventory I3 mobile-first navigation architecture", () => {
   it("reuses canonical Kitchen request data for a nonzero actionable badge", () => {
     expect(page).toContain('request.status === "accepted"');
     expect(page).toContain("actionableKitchenRequestCount > 0");
-    expect(page).toContain('aria-label={`${actionableKitchenRequestCount} actionable requests`}');
+    expect(page).toContain("${actionableKitchenRequestCount} kitchen requests awaiting inventory");
     expect(page).toContain('"/inventory/dashboard#kitchen-requests"');
     expect(page).toContain('getElementById("i1-requests-title")');
   });
 
-  it("uses one shared navigation renderer for persistent and drawer navigation", () => {
-    expect(page).toContain("const navigationItems = (mobile = false)");
-    expect(page).toContain("{navigationItems(true)}");
-    expect(page).toContain("{navigationItems()}");
+  it("keeps primary active state truthful for direct and child operation routes", () => {
+    for (const section of ["current-stock", "movements", "stock-in", "stock-out", "transfers", "adjustments", "waste"]) expect(page).toContain(`"${section}"`);
+    expect(page).toContain("STOCK_PRIMARY_SECTIONS.has(section)");
+    expect(page).toContain("PURCHASE_PRIMARY_SECTIONS.has(section)");
+    expect(page).toContain('if (item.key === "kitchen-requests") return kitchenRequestsActive');
+    expect(page).toContain("return section === item.key");
+  });
+
+  it("derives desktop, drawer, and bottom navigation from one destination definition", () => {
+    expect(page).toContain("const desktopNavigation");
+    expect(page).toContain("const mobileDrawerNavigation");
+    expect(page).toContain("const mobileBottomNavigation");
     expect(page).toContain("INVENTORY_DESTINATIONS.map");
+    expect(page).toContain('INVENTORY_DESTINATIONS.filter((item) => item.mobilePlacement === "primary")');
     expect(page).toContain('aria-label="Close inventory navigation"');
     expect(page).toContain('event.key === "Escape"');
+    expect(page).toContain("mobileMenuButtonRef.current?.focus()");
+    expect(page).toContain('icon: LucideIcon');
+    expect(page).not.toContain('icon?: LucideIcon');
+    expect(css).toContain(".ia-nav-icon");
+    expect(css).toContain("grid-template-columns: 20px minmax(0, 1fr) auto");
   });
 
   it("removes Reports and Settings from primary navigation without deleting their routes", () => {
@@ -60,7 +74,7 @@ describe("Inventory I3 mobile-first navigation architecture", () => {
 
   it("does not expose hidden action routes in the primary I3 arrays", () => {
     for (const label of ["Receive Stock", "Issue Stock", "Transfers", "Adjustments", "Waste", "Purchase History", "Ingredient Categories", "Units", "Ledger"]) {
-      expect(primaryArchitecture).not.toContain(`label: "${label}"`);
+      expect(primaryArchitecture).not.toContain(`desktopLabel: "${label}"`);
     }
   });
 });

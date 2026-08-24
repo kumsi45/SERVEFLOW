@@ -1,4 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  ArrowLeftRight,
+  Boxes,
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Truck,
+  Warehouse,
+  type LucideIcon,
+} from "lucide-react";
 import { supabase } from "../../../core/database";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { useOperationalNotice } from "../../../core/presentation/useOperationalNotice";
@@ -133,20 +144,30 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "units", label: "Units" },
 ];
 
-type InventoryDestination =
-  | { key: InventorySection; label: string }
-  | { key: "kitchen-requests"; label: string };
+type InventoryDestinationKey = InventorySection | "kitchen-requests";
+type InventoryDestination = {
+  key: InventoryDestinationKey;
+  desktopLabel: string;
+  mobileLabel?: string;
+  icon: LucideIcon;
+  mobilePlacement: "primary" | "secondary";
+};
 
 const INVENTORY_DESTINATIONS: InventoryDestination[] = [
-  { key: "dashboard", label: "Overview" },
-  { key: "current-stock", label: "Current Stock" },
-  { key: "ledger", label: "Stock Movements" },
-  { key: "kitchen-requests", label: "Kitchen Requests" },
-  { key: "purchase-orders", label: "Purchase Orders" },
-  { key: "suppliers", label: "Suppliers" },
-  { key: "items", label: "Materials" },
-  { key: "storage-locations", label: "Storage" },
+  { key: "dashboard", desktopLabel: "Overview", mobileLabel: "Overview", icon: LayoutDashboard, mobilePlacement: "primary" },
+  { key: "current-stock", desktopLabel: "Current Stock", mobileLabel: "Stock", icon: Boxes, mobilePlacement: "primary" },
+  { key: "ledger", desktopLabel: "Stock Movements", icon: ArrowLeftRight, mobilePlacement: "secondary" },
+  { key: "kitchen-requests", desktopLabel: "Kitchen Requests", mobileLabel: "Requests", icon: ClipboardList, mobilePlacement: "primary" },
+  { key: "purchase-orders", desktopLabel: "Purchase Orders", mobileLabel: "Purchase", icon: ShoppingCart, mobilePlacement: "primary" },
+  { key: "suppliers", desktopLabel: "Suppliers", icon: Truck, mobilePlacement: "secondary" },
+  { key: "items", desktopLabel: "Materials", icon: Package, mobilePlacement: "secondary" },
+  { key: "storage-locations", desktopLabel: "Storage", icon: Warehouse, mobilePlacement: "secondary" },
 ];
+
+const STOCK_PRIMARY_SECTIONS = new Set<InventorySection>([
+  "current-stock", "movements", "stock-in", "stock-out", "transfers", "adjustments", "waste",
+]);
+const PURCHASE_PRIMARY_SECTIONS = new Set<InventorySection>(["purchase-orders", "purchase-history"]);
 
 function isInventorySection(value: string | undefined): value is InventorySection {
   return INVENTORY_NAV.some((item) => item.key === value);
@@ -374,7 +395,6 @@ function AdvancedInfo({ rows }: { rows: Array<{ label: string; value: ReactNode 
 
 export function InventoryDashboardPage({
   restaurantId,
-  restaurantName,
   staffName,
   staffRole,
   initialSection,
@@ -383,6 +403,8 @@ export function InventoryDashboardPage({
     isInventorySection(initialSection) ? initialSection : "dashboard",
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuWasOpenRef = useRef(false);
   const [kitchenRequestsActive, setKitchenRequestsActive] = useState(() => window.location.hash === "#kitchen-requests");
   const [inlineMasterTarget, setInlineMasterTarget] = useState<"category" | "unit" | "storage" | "supplier" | null>(null);
   const [detailIngredientId, setDetailIngredientId] = useState<string | null>(null);
@@ -623,6 +645,13 @@ export function InventoryDashboardPage({
   }, [mobileMenuOpen]);
 
   useEffect(() => {
+    if (mobileMenuWasOpenRef.current && !mobileMenuOpen) {
+      window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus());
+    }
+    mobileMenuWasOpenRef.current = mobileMenuOpen;
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     const syncKitchenRequestContext = () => setKitchenRequestsActive(
       window.location.pathname === "/inventory/dashboard" && window.location.hash === "#kitchen-requests",
     );
@@ -834,6 +863,22 @@ export function InventoryDashboardPage({
     window.history.pushState({}, "", "/inventory/dashboard#kitchen-requests");
     window.dispatchEvent(new PopStateEvent("popstate"));
     window.requestAnimationFrame(() => document.getElementById("i1-requests-title")?.scrollIntoView({ block: "start" }));
+  }
+
+  function openDestination(key: InventoryDestinationKey) {
+    if (key === "kitchen-requests") {
+      openKitchenRequests();
+      return;
+    }
+    navigate(key);
+  }
+
+  function destinationActive(item: InventoryDestination, primaryChildState = false) {
+    if (item.key === "kitchen-requests") return kitchenRequestsActive;
+    if (kitchenRequestsActive) return false;
+    if (primaryChildState && item.key === "current-stock") return STOCK_PRIMARY_SECTIONS.has(section);
+    if (primaryChildState && item.key === "purchase-orders") return PURCHASE_PRIMARY_SECTIONS.has(section);
+    return section === item.key;
   }
 
   function openRecipes() {
@@ -1094,22 +1139,63 @@ export function InventoryDashboardPage({
     ? 0
     : kitchenRequests.filter((request) => request.status === "accepted").length;
 
-  const navigationItems = (mobile = false) => (
-    <nav className={mobile ? "ia-mobile-menu-nav" : "ia-sidebar-nav"} aria-label={mobile ? "Inventory destinations" : undefined}>
+  const desktopNavigation = (
+    <nav className="ia-sidebar-nav">
       {INVENTORY_DESTINATIONS.map((item) => {
-        const kitchenDestination = item.key === "kitchen-requests";
-        const active = kitchenDestination
-          ? kitchenRequestsActive
-          : !kitchenRequestsActive && section === item.key;
+        const active = destinationActive(item);
+        const Icon = item.icon;
         return <button
-          className={`${active ? "active " : ""}${kitchenDestination ? "ia-kitchen-request-link" : ""}`.trim()}
+          className={`${active ? "active " : ""}${item.key === "kitchen-requests" ? "ia-kitchen-request-link" : ""}`.trim()}
           type="button"
           key={item.key}
           aria-current={active ? "page" : undefined}
-          onClick={kitchenDestination ? openKitchenRequests : () => navigate(item.key)}
+          onClick={() => openDestination(item.key)}
         >
-          <span>{item.label}</span>
-          {kitchenDestination && actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} actionable requests`}>{actionableKitchenRequestCount}</strong>}
+          <Icon className="ia-nav-icon" aria-hidden="true" />
+          <span className="ia-nav-label">{item.desktopLabel}</span>
+          {item.key === "kitchen-requests" && actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} kitchen requests awaiting inventory`}>{actionableKitchenRequestCount}</strong>}
+        </button>;
+      })}
+    </nav>
+  );
+
+  const mobileDrawerNavigation = (
+    <nav className="ia-mobile-menu-nav" aria-label="Inventory menu navigation">
+      {INVENTORY_DESTINATIONS.map((item) => {
+        const active = destinationActive(item);
+        const Icon = item.icon;
+        return <button
+          className={`${active ? "active " : ""}ia-mobile-${item.mobilePlacement}-destination`.trim()}
+          type="button"
+          key={item.key}
+          aria-current={active ? "page" : undefined}
+          onClick={() => openDestination(item.key)}
+        >
+          <Icon className="ia-nav-icon" aria-hidden="true" />
+          <span className="ia-nav-label">{item.desktopLabel}</span>
+          {item.key === "kitchen-requests" && actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} kitchen requests awaiting inventory`}>{actionableKitchenRequestCount}</strong>}
+        </button>;
+      })}
+    </nav>
+  );
+
+  const mobileBottomNavigation = (
+    <nav className="ia-mobile-bottom-nav" aria-label="Inventory navigation">
+      {INVENTORY_DESTINATIONS.filter((item) => item.mobilePlacement === "primary").map((item) => {
+        const active = destinationActive(item, true);
+        const Icon = item.icon;
+        const requestBadge = item.key === "kitchen-requests" && actionableKitchenRequestCount > 0;
+        return <button
+          className={active ? "active" : ""}
+          type="button"
+          key={item.key}
+          aria-current={active ? "page" : undefined}
+          aria-label={requestBadge ? `${item.mobileLabel}, ${actionableKitchenRequestCount} kitchen requests awaiting inventory` : item.mobileLabel}
+          onClick={() => openDestination(item.key)}
+        >
+          <Icon aria-hidden="true" />
+          <strong>{item.mobileLabel}</strong>
+          {requestBadge && <span className="ia-mobile-nav-badge" aria-hidden="true">{actionableKitchenRequestCount}</span>}
         </button>;
       })}
     </nav>
@@ -1118,8 +1204,10 @@ export function InventoryDashboardPage({
   return (
     <main className="ia-shell">
       <header className="ia-mobile-header">
+        <div className="ia-mobile-brand"><ServeFlowBrand variant="compact" /></div>
         <div className="ia-mobile-header-actions">
           <button
+            ref={mobileMenuButtonRef}
             className="ia-menu-button"
             type="button"
             aria-label="Open inventory navigation"
@@ -1137,10 +1225,10 @@ export function InventoryDashboardPage({
           <button className="ia-mobile-menu-scrim" type="button" aria-label="Close inventory navigation" onClick={() => setMobileMenuOpen(false)} />
           <aside className="ia-mobile-menu" id="inventory-mobile-menu" aria-label="Inventory mobile navigation">
             <div className="ia-mobile-menu-heading">
-              <div><strong>Inventory</strong><span>{restaurantName}</span></div>
+              <ServeFlowBrand variant="compact" />
               <button type="button" aria-label="Close inventory navigation" onClick={() => setMobileMenuOpen(false)}>×</button>
             </div>
-            {navigationItems(true)}
+            {mobileDrawerNavigation}
             <div className="ia-mobile-menu-user">
               <strong>{staffName}</strong>
               <span>{staffRole === "owner" ? "Owner" : staffRole === "manager" ? "Manager" : "Inventory Officer"}</span>
@@ -1154,7 +1242,7 @@ export function InventoryDashboardPage({
         <div className="ia-brand">
           <ServeFlowBrand variant="compact" />
         </div>
-        {navigationItems()}
+        {desktopNavigation}
         <div className="ia-user">
           <strong>{staffName}</strong>
           <span>{staffRole === "owner" ? "Owner" : staffRole === "manager" ? "Manager" : "Inventory Officer"}</span>
@@ -1167,6 +1255,8 @@ export function InventoryDashboardPage({
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
         {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? compactSetupWorkspace ? <div className="ia-setup-loading" role="status">Loading {section === "items" ? "materials" : "storage locations"}...</div> : <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
       </section>
+
+      {mobileBottomNavigation}
 
       {detailIngredientId && (() => {
         const ingredient = data.items.find((row) => row.id === detailIngredientId);

@@ -70,7 +70,7 @@ describe("Inventory Setup Materials and Storage redesign", () => {
     expect(workspace).toContain("Try again.");
     expect(page).toContain("const compactSetupWorkspace");
     expect(page).not.toContain('<header className="ia-header"');
-    expect(page).toContain('{ key: "items", label: "Materials" }');
-    expect(page).toContain('{ key: "storage-locations", label: "Storage" }');
+    expect(page).toContain('{ key: "items", desktopLabel: "Materials", icon: Package, mobilePlacement: "secondary" }');
+    expect(page).toContain('{ key: "storage-locations", desktopLabel: "Storage", icon: Warehouse, mobilePlacement: "secondary" }');
   });
 });
