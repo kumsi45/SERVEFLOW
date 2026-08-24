@@ -126,8 +126,8 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "inventory-settings", label: "Inventory Settings" },
   { key: "export", label: "Export" },
   { key: "help", label: "Help" },
-  { key: "items", label: "Ingredients" },
-  { key: "categories", label: "Ingredient Categories" },
+  { key: "items", label: "Materials" },
+  { key: "categories", label: "Material Categories" },
   { key: "suppliers", label: "Suppliers" },
   { key: "storage-locations", label: "Storage Locations" },
   { key: "units", label: "Units" },
@@ -1051,7 +1051,7 @@ export function InventoryDashboardPage({
                   <header>
                     <div>
                       <strong>{row.name}</strong>
-                      <span>{row.description || "No description"}</span>
+                      {row.description && <span>{row.description}</span>}
                     </div>
                     {statusBadge(row.status)}
                   </header>
@@ -1077,9 +1077,9 @@ export function InventoryDashboardPage({
     );
   }
 
-  const reportView = (title: string, rows: InventoryLedgerEntry[]) => <section className="ia-report-view"><h2>{title}</h2><div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Ingredient</th><th>Movement</th><th>Quantity</th><th>Storage</th><th>Date</th></tr></thead><tbody>{rows.slice(0, 100).map((entry) => <tr key={entry.id}><td data-label="Ingredient">{entry.itemName}</td><td data-label="Movement">{movementLabel(entry.movementType)}</td><td data-label="Quantity">{quantityLabel(entry.quantity, entry.unitName)}</td><td data-label="Storage">{entry.storageLocationName}</td><td data-label="Date">{dateLabel(entry.movementDate)}</td></tr>)}</tbody></table>{!rows.length && <div className="ia-empty">No records available.</div>}</div></section>;
+  const reportView = (title: string, rows: InventoryLedgerEntry[]) => <section className="ia-report-view"><h2>{title}</h2><div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Material</th><th>Movement</th><th>Quantity</th><th>Storage</th><th>Date</th></tr></thead><tbody>{rows.slice(0, 100).map((entry) => <tr key={entry.id}><td data-label="Material">{entry.itemName}</td><td data-label="Movement">{movementLabel(entry.movementType)}</td><td data-label="Quantity">{quantityLabel(entry.quantity, entry.unitName)}</td><td data-label="Storage">{entry.storageLocationName}</td><td data-label="Date">{dateLabel(entry.movementDate)}</td></tr>)}</tbody></table>{!rows.length && <div className="ia-empty">No records available.</div>}</div></section>;
 
-  const inventoryValueView = <section className="ia-report-view"><h2>Inventory Value</h2><strong className="ia-report-total">{moneyLabel(dashboardKpis.totalInventoryValue)}</strong><div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Ingredient</th><th>Current</th><th>Purchase Price</th><th>Value</th></tr></thead><tbody>{currentStock.map((row) => { const ingredient = data.items.find((candidate) => candidate.id === row.inventoryItemId); return <tr key={`${row.inventoryItemId}:${row.storageLocationId}`}><td data-label="Ingredient">{row.itemName}</td><td data-label="Current">{quantityLabel(row.currentQuantity, row.unitName)}</td><td data-label="Purchase Price">{moneyLabel(ingredient?.purchasePrice ?? 0)}</td><td data-label="Value">{moneyLabel(row.currentQuantity * (ingredient?.purchasePrice ?? 0))}</td></tr>; })}</tbody></table></div></section>;
+  const inventoryValueView = <section className="ia-report-view"><h2>Inventory Value</h2><strong className="ia-report-total">{moneyLabel(dashboardKpis.totalInventoryValue)}</strong><div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Material</th><th>Current</th><th>Purchase Price</th><th>Value</th></tr></thead><tbody>{currentStock.map((row) => { const ingredient = data.items.find((candidate) => candidate.id === row.inventoryItemId); return <tr key={`${row.inventoryItemId}:${row.storageLocationId}`}><td data-label="Material">{row.itemName}</td><td data-label="Current">{quantityLabel(row.currentQuantity, row.unitName)}</td><td data-label="Purchase Price">{moneyLabel(ingredient?.purchasePrice ?? 0)}</td><td data-label="Value">{moneyLabel(row.currentQuantity * (ingredient?.purchasePrice ?? 0))}</td></tr>; })}</tbody></table></div></section>;
 
   const content = section === "dashboard" ? dashboard
     : section === "current-stock" ? currentStockView
@@ -1104,7 +1104,7 @@ export function InventoryDashboardPage({
     : section === "inventory-settings" && staffRole === "owner" ? <InventoryIntegrityCheckPanel restaurantId={restaurantId} />
     : section === "inventory-settings" ? <section className="ia-navigation-placeholder"><span>Settings</span><h2>Inventory Settings</h2><p>Inventory integrity tools are owner-only.</p><button type="button" onClick={() => navigate("items")}>Open Inventory Records</button></section>
     : section === "export" ? <section className="ia-navigation-placeholder"><span>Export</span><h2>Export Inventory Data</h2><p>Open the report you want to review and export.</p><button type="button" onClick={() => navigate("inventory-reports")}>Open Inventory Reports</button></section>
-    : section === "help" ? <section className="ia-navigation-placeholder"><span>Help</span><h2>Inventory Help</h2><p>Choose an inventory workspace to continue.</p><div className="ia-actions"><button type="button" onClick={() => navigate("current-stock")}>Current Stock</button><button type="button" onClick={() => navigate("stock-in")}>Receive Stock</button><button type="button" onClick={() => navigate("items")}>Ingredients</button></div></section>
+    : section === "help" ? <section className="ia-navigation-placeholder"><span>Help</span><h2>Inventory Help</h2><p>Choose an inventory workspace to continue.</p><div className="ia-actions"><button type="button" onClick={() => navigate("current-stock")}>Current Stock</button><button type="button" onClick={() => navigate("stock-in")}>Receive Stock</button><button type="button" onClick={() => navigate("items")}>Materials</button></div></section>
     : section === "low-stock-assistant" ? <LowStockAssistantPage restaurantId={restaurantId} staffRole={staffRole} currentStock={currentStock} items={data.items} categories={data.categories} suppliers={data.suppliers} storageLocations={data.storageLocations} units={data.units} onOpenPurchaseOrders={() => navigate("purchase-orders")} />
     : section === "items" ? adminDataFailed ? <InventorySetupLoadError resource="materials" /> : <InventoryMaterialsWorkspace items={data.items} categories={data.categories} units={data.units} canManageLifecycle={canManageMasterLifecycle} onAdd={() => setItemForm(itemDraft())} onEdit={(item) => setItemForm(itemDraft(item))} onArchive={(id) => void run(() => archiveRecord(restaurantId, "inventory_items", id), "Material archived.")} onRestore={(id) => void run(() => restoreRecord(restaurantId, "inventory_items", id), "Material restored.")} />
     : section === "categories" ? masterList(
@@ -1113,7 +1113,7 @@ export function InventoryDashboardPage({
       () => setCategoryForm(categoryDraft()),
       (id) => setCategoryForm(categoryDraft(data.categories.find((row) => row.id === id))),
       "inventory_categories",
-      (row) => ({ label: "Ingredients", value: countLabel(categoryItemCounts.get(row.id) ?? 0, "ingredient") }),
+      (row) => ({ label: "Materials", value: countLabel(categoryItemCounts.get(row.id) ?? 0, "material") }),
     )
     : section === "suppliers" ? <InventorySuppliersWorkspace suppliers={data.suppliers} items={data.items} onCreate={() => setSupplierForm(supplierDraft())} onEdit={(supplier) => setSupplierForm(supplierDraft(supplier))} />
     : section === "storage-locations" ? adminDataFailed ? <InventorySetupLoadError resource="storage locations" /> : <InventoryStorageWorkspace locations={data.storageLocations} items={data.items} canManageLifecycle={canManageMasterLifecycle} onAdd={() => setStorageForm(simpleDraft())} onEdit={(location) => setStorageForm(simpleDraft(location))} onArchive={(id) => void run(() => archiveRecord(restaurantId, "inventory_storage_locations", id), "Storage archived.")} onRestore={(id) => void run(() => restoreRecord(restaurantId, "inventory_storage_locations", id), "Storage restored.")} />
@@ -1123,7 +1123,7 @@ export function InventoryDashboardPage({
       () => setUnitForm(simpleDraft()),
       (id) => setUnitForm(simpleDraft(data.units.find((row) => row.id === id))),
       "inventory_units",
-      (row) => ({ label: "Ingredients", value: countLabel(unitItemCounts.get(row.id) ?? 0, "ingredient") }),
+      (row) => ({ label: "Materials", value: countLabel(unitItemCounts.get(row.id) ?? 0, "material") }),
     );
 
   const displayedContent = content;
@@ -1158,10 +1158,6 @@ export function InventoryDashboardPage({
   return (
     <main className="ia-shell">
       <header className="ia-mobile-header">
-        <div className="ia-mobile-header-title">
-          <strong>Inventory</strong>
-          {!compactSetupWorkspace && <span>{restaurantName} · Today&apos;s stock operations</span>}
-        </div>
         <div className="ia-mobile-header-actions">
           <button
             className="ia-menu-button"
@@ -1207,7 +1203,6 @@ export function InventoryDashboardPage({
       </aside>
 
       <section className="ia-workspace">
-        {!compactSetupWorkspace && <header className="ia-header"><div><h1>Inventory</h1><span>{restaurantName} · Today&apos;s stock operations</span></div></header>}
         {error && !(compactSetupWorkspace && adminDataFailed) && section !== "dashboard" && section !== "current-stock" && section !== "ledger" && <div className="ia-alert error" role="alert">{error}</div>}
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
         {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? compactSetupWorkspace ? <div className="ia-setup-loading" role="status">Loading {section === "items" ? "materials" : "storage locations"}...</div> : <div className="ia-empty">Loading inventory administration...</div> : displayedContent}
@@ -1308,7 +1303,7 @@ function OpeningBalanceForm({
 }) {
   return (
     <form className="ia-form operation" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
-      <label>Ingredient<select required value={draft.inventoryItemId} onChange={(event) => setDraft({ ...draft, inventoryItemId: event.target.value })}><option value="">Select ingredient</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label>Material<select required value={draft.inventoryItemId} onChange={(event) => setDraft({ ...draft, inventoryItemId: event.target.value })}><option value="">Select material</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>Storage<select required value={draft.storageLocationId} onChange={(event) => setDraft({ ...draft, storageLocationId: event.target.value })}><option value="">Select storage</option>{locations.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
       <label>Quantity<input required min="0.001" step="0.001" type="number" value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /></label>
       <label>Reference<input value={draft.referenceNumber} onChange={(event) => setDraft({ ...draft, referenceNumber: event.target.value })} /></label>
@@ -1377,7 +1372,7 @@ function InventoryItemForm({
         <label>Maximum stock<input min="0" step="0.001" type="number" value={draft.maximumStock} onChange={(event) => setDraft({ ...draft, maximumStock: event.target.value })} /><span className="ia-form-help">Optional upper stock target.</span></label>
         <details className="ia-advanced-options ia-material-additional wide"><summary>Additional configuration</summary><div className="ia-material-additional-grid">
           <label>Purchase price<input required min="0" step="0.000001" type="number" value={draft.purchasePrice} onChange={(event) => setDraft({ ...draft, purchasePrice: event.target.value })} /></label>
-          <label>Preferred supplier<div className="ia-inline-select"><select value={draft.preferredSupplierId} onChange={(event) => setDraft({ ...draft, preferredSupplierId: event.target.value })}><option value="">None</option>{suppliers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateSupplier}>+ Create Supplier</button></div></label>
+          <label>Preferred supplier<div className="ia-inline-select"><select value={draft.preferredSupplierId} onChange={(event) => setDraft({ ...draft, preferredSupplierId: event.target.value })}><option value="">Select supplier (optional)</option>{suppliers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><button type="button" onClick={onCreateSupplier}>+ Create Supplier</button></div></label>
           <label className="wide">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           <label className="wide">Barcode (optional)<input value={draft.barcode} onChange={(event) => setDraft({ ...draft, barcode: event.target.value })} /></label>
         </div></details>

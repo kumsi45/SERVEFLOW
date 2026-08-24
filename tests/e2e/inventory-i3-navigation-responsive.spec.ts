@@ -12,7 +12,7 @@ const navigation = (mobile: boolean) => `<nav class="${mobile ? "ia-mobile-menu-
 </nav>`;
 
 const fixture = `<main class="ia-shell">
-  <header class="ia-mobile-header"><div class="ia-mobile-header-title"><strong>Inventory</strong><span>Grand Royal · Today&apos;s stock operations</span></div><div class="ia-mobile-header-actions"><button class="ia-menu-button" aria-label="Open inventory navigation" aria-expanded="false">☰</button></div></header>
+  <header class="ia-mobile-header"><div class="ia-mobile-header-actions"><button class="ia-menu-button" aria-label="Open inventory navigation" aria-expanded="false">☰</button></div></header>
   <button class="ia-mobile-menu-scrim" aria-label="Close inventory navigation" hidden></button>
   <aside class="ia-mobile-menu" aria-label="Inventory mobile navigation" hidden><div class="ia-mobile-menu-heading"><div><strong>Inventory</strong><span>Grand Royal Restaurant With A Long Name</span></div><button aria-label="Close inventory navigation">×</button></div>${navigation(true)}<div class="ia-mobile-menu-user"><strong>Inventory Officer With A Long Name</strong><span>Inventory Officer</span><button>Logout</button></div></aside>
   <aside class="ia-sidebar" aria-label="Inventory navigation"><div class="ia-brand"><strong>ServeFlow</strong></div>${navigation(false)}<div class="ia-user"><strong>Inventory Officer</strong><span>Inventory Officer</span><button>Logout</button></div></aside>

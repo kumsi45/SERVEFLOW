@@ -24,7 +24,7 @@ describe("Inventory stock operation form cleanup", () => {
 
   it("shows Supplier only for Stock In and keeps it optional", () => {
     expect(operations).toContain("{incoming && <label>Supplier");
-    expect(operations).toContain('<option value="">No supplier selected</option>');
+    expect(operations).toContain('<option value="">Select supplier (optional)</option>');
     expect(operations).not.toContain("required value={draft.supplierId}");
   });
 

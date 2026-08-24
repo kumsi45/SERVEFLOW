@@ -77,26 +77,27 @@ export function InventoryOverviewDashboard({
 
   return (
     <div className="ia-stack ia-i2-dashboard">
+      <header className="ia-i2-page-title"><h1>Dashboard</h1></header>
       <section className="ia-i2-section" aria-labelledby="i2-attention-title">
-        <div className="ia-i2-title"><div><span>NOW</span><h2 id="i2-attention-title">Needs Attention</h2></div></div>
+        <div className="ia-i2-title"><div><h2 id="i2-attention-title">Needs Attention</h2></div></div>
         {attentionLoading && knownActionCount === 0 && (
           <div className="ia-i2-loading" role="status">Loading inventory overview...</div>
         )}
         {attentionConfirmed && knownActionCount === 0 && (
-          <div className="ia-i2-healthy"><strong>Everything is under control.</strong><span>No inventory actions currently require attention.</span></div>
+          <div className="ia-i2-healthy"><strong>No inventory actions require attention.</strong></div>
         )}
         {knownActionCount > 0 && <div className="ia-i2-attention-grid">
           {!requestsLoading && !requestsError && kitchenRequestCount > 0 && <button type="button" onClick={onOpenRequests}>
-            <strong>{kitchenRequestCount}</strong><span>Kitchen Requests</span><small>Awaiting Inventory</small>
+            <strong>{kitchenRequestCount}</strong><span>Kitchen Requests</span>
           </button>}
           {!stockLoading && !stockError && outOfStockCount > 0 && <button className="critical" type="button" onClick={() => onNavigate("current-stock")}>
-            <strong>{outOfStockCount}</strong><span>Out of Stock</span><small>Needs replenishment</small>
+            <strong>{outOfStockCount}</strong><span>Out of Stock</span>
           </button>}
           {!stockLoading && !stockError && lowStockCount > 0 && <button className="warning" type="button" onClick={() => onNavigate("current-stock")}>
-            <strong>{lowStockCount}</strong><span>Low Stock</span><small>Below minimum level</small>
+            <strong>{lowStockCount}</strong><span>Low Stock</span>
           </button>}
           {!purchasesLoading && !purchasesError && pendingPurchaseCount > 0 && <button type="button" onClick={() => onNavigate("purchase-orders")}>
-            <strong>{pendingPurchaseCount}</strong><span>Pending Purchases</span><small>Open orders</small>
+            <strong>{pendingPurchaseCount}</strong><span>Pending Purchases</span>
           </button>}
         </div>}
         {attentionUnavailable && <div className="ia-i2-section-errors" role="status">
@@ -107,19 +108,19 @@ export function InventoryOverviewDashboard({
       </section>
 
       <section className="ia-i2-section" aria-labelledby="i2-actions-title">
-        <div className="ia-i2-title"><div><span>DAILY WORK</span><h2 id="i2-actions-title">Quick Actions</h2></div></div>
+        <div className="ia-i2-title"><div><h2 id="i2-actions-title">Quick Operations</h2></div></div>
         <div className="ia-i2-quick-grid">
-          <button type="button" onClick={() => onNavigate("stock-in")}><span>+</span><strong>Receive Stock</strong></button>
-          <button type="button" onClick={() => onNavigate("stock-out")}><span>−</span><strong>Issue Stock</strong></button>
+          <button type="button" onClick={() => onNavigate("stock-in")}><span>+</span><strong>Receive</strong></button>
+          <button type="button" onClick={() => onNavigate("stock-out")}><span>−</span><strong>Issue</strong></button>
           <button type="button" onClick={() => onNavigate("transfers")}><span>⇄</span><strong>Transfer</strong></button>
-          <button type="button" onClick={() => onNavigate("adjustments")}><span>±</span><strong>Adjust Stock</strong></button>
-          <button type="button" onClick={() => onNavigate("waste")}><span>!</span><strong>Record Waste</strong></button>
+          <button type="button" onClick={() => onNavigate("adjustments")}><span>±</span><strong>Adjust</strong></button>
+          <button type="button" onClick={() => onNavigate("waste")}><span>!</span><strong>Waste</strong></button>
           <button type="button" onClick={() => onNavigate("purchase-orders")}><span>PO</span><strong>Purchase Order</strong></button>
         </div>
       </section>
 
       <section className="ia-i2-section" aria-labelledby="i2-stock-title">
-        <div className="ia-i2-title"><div><span>STOCK</span><h2 id="i2-stock-title">Stock Snapshot</h2></div><button type="button" onClick={() => onNavigate("current-stock")}>View Current Stock</button></div>
+        <div className="ia-i2-title"><div><h2 id="i2-stock-title">Stock Snapshot</h2></div><button type="button" onClick={() => onNavigate("current-stock")}>Current Stock</button></div>
         {stockLoading ? <div className="ia-i2-loading" role="status">Loading stock summary...</div>
           : stockError ? <div className="ia-i2-error" role="alert"><strong>Unable to load stock summary.</strong><span>Try again.</span></div>
             : <div className="ia-i2-snapshot-grid">
@@ -130,7 +131,7 @@ export function InventoryOverviewDashboard({
       </section>
 
       <section className="ia-i2-section" aria-labelledby="i2-activity-title">
-        <div className="ia-i2-title"><div><span>LATEST CHANGES</span><h2 id="i2-activity-title">Recent Activity</h2></div><button type="button" onClick={() => onNavigate("ledger")}>View Stock Movements</button></div>
+        <div className="ia-i2-title"><div><h2 id="i2-activity-title">Recent Activity</h2></div><button type="button" onClick={() => onNavigate("ledger")}>View Movements</button></div>
         {activityLoading ? <div className="ia-i2-loading" role="status">Loading recent activity...</div>
           : activityError ? <div className="ia-i2-error" role="alert"><strong>Unable to load recent activity.</strong><span>Try again.</span></div>
             : recentLedger.length === 0 ? <p className="ia-i2-empty">No recent stock activity.</p>

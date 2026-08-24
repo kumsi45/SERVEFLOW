@@ -24,13 +24,13 @@ export function InventorySuppliersWorkspace({ suppliers, items, onCreate, onEdit
   }, {}), [items]);
 
   return <div className="ia-suppliers-page">
-    <header className="ia-suppliers-heading"><div><h2>Suppliers</h2><p>Manage the businesses you buy materials from.</p></div><button type="button" onClick={onCreate}>Add Supplier</button></header>
+    <header className="ia-suppliers-heading"><div><h2>Suppliers</h2></div><button type="button" onClick={onCreate}>Add Supplier</button></header>
     <label className="ia-suppliers-search"><span>Search suppliers</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, phone, or contact" /></label>
     {visible.length > 0 ? <section className="ia-suppliers-grid" aria-label="Suppliers">
       {visible.map((supplier) => {
         const materialCount = suppliedMaterialCounts[supplier.id] ?? 0;
         return <article className="ia-supplier-card" key={supplier.id}>
-          <header><strong>{supplier.name}</strong><span className={`ia-supplier-status ${supplier.status}`}>{supplier.status === "active" ? "Active" : "Archived"}</span></header>
+          <header><strong>{supplier.name}</strong>{supplier.status !== "active" && <span className={`ia-supplier-status ${supplier.status}`}>Archived</span>}</header>
           <div className="ia-supplier-contact">
             {supplier.contactPerson && <span>Contact: {supplier.contactPerson}</span>}
             {supplier.phone && <a href={`tel:${supplier.phone}`}>{supplier.phone}</a>}

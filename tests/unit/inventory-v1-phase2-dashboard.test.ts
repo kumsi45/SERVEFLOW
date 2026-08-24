@@ -26,7 +26,7 @@ describe("Inventory V1 Phase 2 dashboard", () => {
   it("keeps a truthful Kitchen Request summary linked to the dedicated workflow", () => {
     expect(overview).toContain('request.status === "accepted"');
     expect(overview).toContain("Kitchen Requests");
-    expect(overview).toContain("Awaiting Inventory");
+    expect(overview).not.toContain("Awaiting Inventory</small>");
     expect(overview).toContain("onClick={onOpenRequests}");
     expect(page).toContain('window.history.pushState({}, "", "/inventory/dashboard#kitchen-requests")');
   });
@@ -51,8 +51,8 @@ describe("Inventory V1 Phase 2 dashboard", () => {
 
   it("routes six compact daily actions and excludes material creation", () => {
     for (const [label, route] of [
-      ["Receive Stock", "stock-in"], ["Issue Stock", "stock-out"], ["Transfer", "transfers"],
-      ["Adjust Stock", "adjustments"], ["Record Waste", "waste"], ["Purchase Order", "purchase-orders"],
+      ["Receive", "stock-in"], ["Issue", "stock-out"], ["Transfer", "transfers"],
+      ["Adjust", "adjustments"], ["Waste", "waste"], ["Purchase Order", "purchase-orders"],
     ]) {
       expect(overview).toContain(label);
       expect(overview).toContain(`onNavigate("${route}")`);
@@ -82,7 +82,7 @@ describe("Inventory V1 Phase 2 dashboard", () => {
   });
 
   it("links activity to the dedicated stock movement workspace", () => {
-    expect(overview).toContain("View Stock Movements");
+    expect(overview).toContain("View Movements");
     expect(overview).toContain('onNavigate("ledger")');
   });
 

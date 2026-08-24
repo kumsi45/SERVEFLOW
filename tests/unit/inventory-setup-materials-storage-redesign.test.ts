@@ -69,7 +69,7 @@ describe("Inventory Setup Materials and Storage redesign", () => {
     expect(workspace).toContain("Unable to load {resource}.");
     expect(workspace).toContain("Try again.");
     expect(page).toContain("const compactSetupWorkspace");
-    expect(page).toContain("!compactSetupWorkspace && <header className=\"ia-header\"");
+    expect(page).not.toContain('<header className="ia-header"');
     expect(page).toContain('{ key: "items", label: "Materials" }');
     expect(page).toContain('{ key: "storage-locations", label: "Storage" }');
   });

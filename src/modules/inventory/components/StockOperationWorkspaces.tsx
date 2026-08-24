@@ -82,13 +82,13 @@ export function StockMovementWorkspace({
   }
 
   if (reviewing) return <section className="ia-so-page ia-so-review" aria-labelledby="ia-so-review-title">
-    <header><div><span>REVIEW</span><h2 id="ia-so-review-title">{incoming ? "Stock In" : "Stock Out"}</h2><p>Confirm this stock change before saving.</p></div></header>
+    <header><div><h2 id="ia-so-review-title">{incoming ? "Stock In" : "Stock Out"}</h2></div></header>
     <div className="ia-so-review-card"><strong>{item?.name}</strong><span>{location?.name}</span><dl><div><dt>Current stock</dt><dd>{quantityLabel(current, unit)}</dd></div><div><dt>{incoming ? "Receiving" : "Issuing"}</dt><dd>{quantityLabel(movementQuantity, unit)}</dd></div><div><dt>{incoming ? "New stock" : "Remaining"}</dt><dd>{quantityLabel(after, unit)}</dd></div></dl>{draft.reason.trim() && <p><strong>Reason:</strong> {draft.reason}</p>}</div>
     <footer className="ia-so-review-actions"><button type="button" disabled={working} onClick={() => setReviewing(false)}>Back</button><button type="button" disabled={working} onClick={() => void confirm()}>{working ? "Saving..." : incoming ? "Confirm Stock In" : "Confirm Stock Out"}</button></footer>
   </section>;
 
   return <section className="ia-so-page" aria-labelledby="ia-so-title">
-    <header><div><span>STOCK OPERATION</span><h2 id="ia-so-title">{incoming ? "Stock In" : "Stock Out"}</h2><p>{incoming ? "Receive material into a storage location." : "Issue material from available stock."}</p></div></header>
+    <header><div><h2 id="ia-so-title">{incoming ? "Stock In" : "Stock Out"}</h2></div></header>
     {validationError && <div className="ia-so-error" id="ia-so-validation" role="alert">{validationError}</div>}
     <form className="ia-so-form" onSubmit={(event) => { event.preventDefault(); review(); }}>
       <div className="ia-so-primary-fields">
@@ -98,7 +98,7 @@ export function StockMovementWorkspace({
       </div>
       {item && location && <div className={`ia-so-stock-context ${!incoming && after < 0 ? "warning" : ""}`}><span>{incoming ? "Current stock" : "Available"}</span><strong>{quantityLabel(current, unit)}</strong>{!incoming && movementQuantity > 0 && <small>Remaining after issue: {quantityLabel(after, unit)}</small>}</div>}
       <details className="ia-so-details"><summary>Additional details</summary><div>
-        {incoming && <label>Supplier<select value={draft.supplierId} onChange={(event) => update({ ...draft, supplierId: event.target.value })}><option value="">No supplier selected</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>}
+        {incoming && <label>Supplier<select value={draft.supplierId} onChange={(event) => update({ ...draft, supplierId: event.target.value })}><option value="">Select supplier (optional)</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>}
         <label>Reason<textarea className="ia-so-reason" rows={2} maxLength={500} placeholder="Why is this stock being changed? (optional)" value={draft.reason} onChange={(event) => update({ ...draft, reason: event.target.value })} /></label>
         <label>Movement time<input type="datetime-local" value={draft.movementDate} onChange={(event) => update({ ...draft, movementDate: event.target.value })} /></label>
       </div></details>
@@ -158,13 +158,13 @@ export function TransferWorkspace({
   }
 
   if (reviewing) return <section className="ia-so-page ia-so-review" aria-labelledby="ia-transfer-review-title">
-    <header><div><span>REVIEW</span><h2 id="ia-transfer-review-title">Transfer Stock</h2><p>Confirm both storage locations before saving.</p></div></header>
+    <header><div><h2 id="ia-transfer-review-title">Transfer Stock</h2></div></header>
     <div className="ia-so-review-card"><strong>{item?.name}</strong><b>{quantityLabel(quantity, unit)}</b><div className="ia-so-transfer-route"><span>{source?.name}</span><i aria-hidden="true">↓</i><span>{destination?.name}</span></div><dl><div><dt>Available at source</dt><dd>{quantityLabel(available, unit)}</dd></div><div><dt>Remaining at source</dt><dd>{quantityLabel(remaining, unit)}</dd></div></dl></div>
     <footer className="ia-so-review-actions"><button type="button" disabled={working} onClick={() => setReviewing(false)}>Back</button><button type="button" disabled={working} onClick={() => void confirm()}>{working ? "Saving..." : "Confirm Transfer"}</button></footer>
   </section>;
 
   return <section className="ia-so-page" aria-labelledby="ia-transfer-title">
-    <header><div><span>STOCK OPERATION</span><h2 id="ia-transfer-title">Transfer</h2><p>Move material between storage locations.</p></div></header>
+    <header><div><h2 id="ia-transfer-title">Transfer</h2></div></header>
     {validationError && <div className="ia-so-error" id="ia-transfer-validation" role="alert">{validationError}</div>}
     <form className="ia-so-form" onSubmit={(event) => { event.preventDefault(); review(); }}>
       <div className="ia-so-primary-fields">

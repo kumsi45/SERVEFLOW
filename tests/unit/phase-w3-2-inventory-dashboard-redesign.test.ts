@@ -15,7 +15,8 @@ describe("Inventory Kitchen Requests supersedes the Phase I1 dashboard shell", (
   });
 
   it("shows canonical request availability and calm queue zero states", () => {
-    for (const label of ["Requested quantity", "Available in", "OUT OF STOCK", "Insufficient stock"]) expect(dashboard).toContain(label);
+    for (const label of ["Available in", "OUT OF STOCK", "Insufficient stock"]) expect(dashboard).toContain(label);
+    expect(dashboard).toContain('<span className="sr-only">Requested</span>');
     expect(dashboard).toContain("No requests are awaiting Inventory.");
     for (const removed of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"]) expect(dashboard).not.toContain(removed);
   });

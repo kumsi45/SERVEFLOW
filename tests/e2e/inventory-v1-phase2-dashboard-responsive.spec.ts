@@ -12,10 +12,11 @@ const activity = (index: number) => `<button>
 </button>`;
 
 const markup = `<main class="ia-i2-dashboard">
-  <section class="ia-i2-section"><div class="ia-i2-title"><div><span>NOW</span><h2>Needs Attention</h2></div></div><div class="ia-i2-attention-grid"><button><strong>3</strong><span>Kitchen Requests</span><small>Awaiting Inventory</small></button><button class="critical"><strong>1</strong><span>Out of Stock</span><small>Needs replenishment</small></button><button class="warning"><strong>4</strong><span>Low Stock</span><small>Below minimum level</small></button><button><strong>6</strong><span>Pending Purchases</span><small>Open orders</small></button></div></section>
-  <section class="ia-i2-section"><div class="ia-i2-title"><div><span>DAILY WORK</span><h2>Quick Actions</h2></div></div><div class="ia-i2-quick-grid"><button><span>+</span><strong>Receive Stock</strong></button><button><span>−</span><strong>Issue Stock</strong></button><button><span>⇄</span><strong>Transfer</strong></button><button><span>±</span><strong>Adjust Stock</strong></button><button><span>!</span><strong>Record Waste</strong></button><button><span>PO</span><strong>Purchase Order</strong></button></div></section>
-  <section class="ia-i2-section"><div class="ia-i2-title"><div><span>STOCK</span><h2>Stock Snapshot</h2></div><button>View Current Stock</button></div><div class="ia-i2-snapshot-grid"><button><small>Active Materials</small><strong>42</strong></button><button><small>Out of Stock</small><strong>1</strong></button><button><small>Low Stock</small><strong>4</strong></button></div></section>
-  <section class="ia-i2-section"><div class="ia-i2-title"><div><span>LATEST CHANGES</span><h2>Recent Activity</h2></div><button>View Stock Movements</button></div><div class="ia-i2-activity-list">${[1, 2, 3, 4, 5, 6].map(activity).join("")}</div></section>
+  <header class="ia-i2-page-title"><h1>Dashboard</h1></header>
+  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Needs Attention</h2></div></div><div class="ia-i2-attention-grid"><button><strong>3</strong><span>Kitchen Requests</span></button><button class="critical"><strong>1</strong><span>Out of Stock</span></button><button class="warning"><strong>4</strong><span>Low Stock</span></button><button><strong>6</strong><span>Pending Purchases</span></button></div></section>
+  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Quick Operations</h2></div></div><div class="ia-i2-quick-grid"><button><span>+</span><strong>Receive</strong></button><button><span>−</span><strong>Issue</strong></button><button><span>⇄</span><strong>Transfer</strong></button><button><span>±</span><strong>Adjust</strong></button><button><span>!</span><strong>Waste</strong></button><button><span>PO</span><strong>Purchase Order</strong></button></div></section>
+  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Stock Snapshot</h2></div><button>Current Stock</button></div><div class="ia-i2-snapshot-grid"><button><small>Active Materials</small><strong>42</strong></button><button><small>Out of Stock</small><strong>1</strong></button><button><small>Low Stock</small><strong>4</strong></button></div></section>
+  <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Recent Activity</h2></div><button>View Movements</button></div><div class="ia-i2-activity-list">${[1, 2, 3, 4, 5, 6].map(activity).join("")}</div></section>
 </main>`;
 
 async function loadDashboard(page: Page, width: number, height: number) {
@@ -48,7 +49,7 @@ for (const viewport of viewports) {
     const sectionTops = await page.locator(".ia-i2-section").evaluateAll((sections) => sections.map((section) => Math.round(section.getBoundingClientRect().top)));
     expect(sectionTops).toEqual([...sectionTops].sort((left, right) => left - right));
     await expect(page.getByRole("heading", { name: "Needs Attention" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Quick Actions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Quick Operations" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Stock Snapshot" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
     await expect(page.locator(".ia-i1-tabs")).toHaveCount(0);

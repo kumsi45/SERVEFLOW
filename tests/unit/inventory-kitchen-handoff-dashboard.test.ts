@@ -67,7 +67,8 @@ describe("Inventory Kitchen Requests operational queue", () => {
 
   it("removes dashboard duplication and technical labels", () => {
     for (const forbidden of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity", "Current Inventory Value", "Ingredient / Food Material"]) expect(workspace).not.toContain(forbidden);
-    expect(workspace).toContain("Review and issue materials requested by kitchen.");
+    expect(workspace).toContain("<h2>Kitchen Requests</h2>");
+    expect(workspace).not.toContain("Review and issue materials requested by kitchen.");
     expect(workspace).not.toContain("materialRequestTypeLabel");
   });
 

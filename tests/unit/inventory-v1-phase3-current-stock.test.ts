@@ -36,7 +36,7 @@ describe("Inventory V1 Phase 3 Current Stock and stock operations", () => {
   });
 
   it("keeps ordinary row actions to the three canonical operations and details", () => {
-    for (const label of ["Stock In", "Stock Out", "Transfer", "View details"]) expect(currentStock).toContain(label);
+    for (const label of ["Receive", "Issue", "Transfer", "Details"]) expect(currentStock).toContain(label);
     for (const forbidden of ["Adjustment", "Adjust Stock", "Archive", "Delete"]) expect(currentStock).not.toContain(forbidden);
   });
 

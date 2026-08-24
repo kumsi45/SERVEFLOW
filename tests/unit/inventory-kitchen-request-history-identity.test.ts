@@ -28,7 +28,8 @@ describe("Inventory Kitchen request History identity",()=>{
 
   it("shows honest labels instead of generic Kitchen and Chef fallbacks",()=>{
     expect(dashboard).toContain('request.stationName ?? "Kitchen / station not recorded"');
-    expect(dashboard).toContain('request.requesterName ?? "Name not recorded"');
+    expect(dashboard).toContain("request.requesterName && <span>Requested by {request.requesterName}</span>");
+    expect(dashboard).not.toContain("Name not recorded");
     expect(dashboard).not.toContain('request.stationName ?? "Kitchen"');
     expect(dashboard).not.toContain('request.requesterName ?? "Chef"');
   });

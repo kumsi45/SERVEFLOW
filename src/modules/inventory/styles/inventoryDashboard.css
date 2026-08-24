@@ -1439,10 +1439,10 @@
     z-index: 15;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
-    min-height: 64px;
-    padding: 8px 12px;
+    min-height: 54px;
+    padding: 4px 8px;
     border-bottom: 1px solid #d9dee8;
     background: rgba(255, 255, 255, 0.98);
     box-shadow: 0 2px 12px rgba(16, 24, 40, 0.06);
@@ -2604,6 +2604,7 @@
 .ia-workspace:has(.ia-i2-dashboard) .ia-header h1 { font-size: 20px; }
 .ia-workspace:has(.ia-i2-dashboard) .ia-header span { display: block; margin-top: 1px; }
 .ia-i2-dashboard { width: 100%; max-width: 1480px; margin-inline: auto; gap: 9px; }
+.ia-i2-page-title h1 { margin: 0; color: #0f172a; font-size: 22px; line-height: 1.15; }
 .ia-i2-section { min-width: 0; padding: 10px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
 .ia-i2-title { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .ia-i2-title > div { display: grid; min-width: 0; gap: 2px; }

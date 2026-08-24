@@ -79,7 +79,7 @@ export function CurrentStockWorkspace({ rows, loading, error, onReload, onStartA
   return (
     <div className="ia-cs-page">
       <header className="ia-cs-heading">
-        <div><span>LIVE STOCK</span><h2>Current Stock</h2><p>Live stock across your storage locations</p></div>
+        <div><h2>Current Stock</h2></div>
         <button type="button" onClick={() => openActions(null)}>+ Stock Action</button>
       </header>
 
@@ -108,7 +108,7 @@ export function CurrentStockWorkspace({ rows, loading, error, onReload, onStartA
                     <td><strong>{row.itemName}</strong><small>{row.categoryName ?? "Uncategorized"}</small></td>
                     <td><strong>{quantityLabel(row.currentQuantity, row.unitName)}</strong></td>
                     <td>{quantityLabel(row.minimumStock, row.unitName)}</td>
-                    <td>{row.maximumStock == null ? "Not set" : quantityLabel(row.maximumStock, row.unitName)}</td>
+                    <td aria-label={row.maximumStock == null ? "No maximum configured" : undefined}>{row.maximumStock == null ? "" : quantityLabel(row.maximumStock, row.unitName)}</td>
                     <td>{row.storageLocationName}</td>
                     <td><span className={`ia-cs-status ${row.stockStatus}`}>{currentStockStatusLabel(row.stockStatus)}</span></td>
                     <td><button type="button" onClick={() => openActions(row)} aria-label={`Open stock actions for ${row.itemName}`}>Actions</button></td>
@@ -127,7 +127,7 @@ export function CurrentStockWorkspace({ rows, loading, error, onReload, onStartA
 
       {actionsOpen && <div className="ia-cs-sheet-backdrop" role="presentation" onClick={() => setActionsOpen(false)}><section className="ia-cs-sheet ia-cs-action-sheet" role="dialog" aria-modal="true" aria-labelledby="ia-cs-action-title" onClick={(event) => event.stopPropagation()}>
         <header><div><h3 id="ia-cs-action-title">{actionRow ? actionRow.itemName : "Update Stock"}</h3>{actionRow && <span>{quantityLabel(actionRow.currentQuantity, actionRow.unitName)} · {actionRow.storageLocationName}</span>}</div><button type="button" aria-label="Close stock actions" onClick={() => setActionsOpen(false)}>×</button></header>
-        <div className="ia-cs-action-list"><button type="button" onClick={() => startAction("stock_in")}><strong>Stock In</strong><span>Receive stock into storage</span></button><button type="button" onClick={() => startAction("stock_out")}><strong>Stock Out</strong><span>Issue stock from storage</span></button><button type="button" onClick={() => startAction("transfer")}><strong>Transfer</strong><span>Move stock between locations</span></button>{actionRow && <button type="button" onClick={() => { onViewDetails(actionRow.inventoryItemId); setActionsOpen(false); }}><strong>View details</strong><span>Thresholds and recent movements</span></button>}</div>
+        <div className="ia-cs-action-list"><button type="button" onClick={() => startAction("stock_in")}><strong>Receive</strong></button><button type="button" onClick={() => startAction("stock_out")}><strong>Issue</strong></button><button type="button" onClick={() => startAction("transfer")}><strong>Transfer</strong></button>{actionRow && <button type="button" onClick={() => { onViewDetails(actionRow.inventoryItemId); setActionsOpen(false); }}><strong>Details</strong></button>}</div>
       </section></div>}
     </div>
   );
