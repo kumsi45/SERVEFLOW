@@ -5,26 +5,12 @@
   color: #172033;
   background: #f6f7f9;
 }
-.miw-header > button{margin-left:auto}
-.miw-header {
+.miw-actions {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 14px;
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
-.miw-header h1 {
-  margin: 0;
-  font-size: 28px;
-  line-height: 1.15;
-}
-.miw-header p {
-  max-width: 680px;
-  margin: 5px 0 0;
-  color: #667085;
-  font-size: 14px;
-}
-.miw-header button {
+.miw-actions button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -104,6 +90,8 @@
   margin: 3px 0 0;
   font-size: 18px;
 }
+.miw-panel > header.miw-compact-heading { min-height: 52px; }
+.miw-compact-heading h2 { margin-top: 0; }
 .miw-panel > header > b {
   display: grid;
   min-width: 30px;
@@ -473,15 +461,8 @@
   .miw-page {
     padding: 12px;
   }
-  .miw-header {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 11px;
-  }
-  .miw-header h1 {
-    font-size: 24px;
-  }
-  .miw-header button {
+  .miw-actions button {
+    width: 100%;
     justify-content: center;
     min-height: 44px;
   }

@@ -11,15 +11,16 @@
 .mso-page button, .mso-page input, .mso-page select, .mso-page textarea { font: inherit; }
 .mso-page button { cursor: pointer; }
 
-.mso-page-header {
+.mso-workspace-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
   margin-bottom: 18px;
 }
+.mso-workspace-bar .mso-tabs { min-width: 0; margin-bottom: 0; }
 
-.mso-page-header p, .mso-section-heading p, .mso-inspector header p {
+.mso-section-heading p, .mso-inspector header p {
   margin: 0 0 3px;
   color: #667085;
   font-size: 11px;
@@ -28,11 +29,9 @@
   text-transform: uppercase;
 }
 
-.mso-page-header h1 { margin: 0; font-size: clamp(25px, 2.3vw, 34px); line-height: 1.08; letter-spacing: -.035em; }
-.mso-page-header > div > span { display: block; margin-top: 5px; color: #667085; font-size: 14px; }
-
 .mso-primary-action {
-  margin-left: auto;
+  flex: 0 0 auto;
+  margin-left: 0;
   min-height: 44px;
   border: 1px solid #174ea6;
   border-radius: 10px;
@@ -91,6 +90,7 @@
 
 .mso-panel { overflow: hidden; }
 .mso-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 70px; padding: 14px 18px; border-bottom: 1px solid #e8ecf2; }
+.mso-section-heading.is-compact { min-height: 54px; padding-top: 10px; padding-bottom: 10px; }
 .mso-section-heading h2 { margin: 0; font-size: 18px; letter-spacing: -.015em; }
 .mso-section-heading > span { color: #667085; font-size: 12px; }
 
@@ -242,12 +242,9 @@
 
 @media (max-width: 640px) {
   .mso-page { padding: 14px 12px 34px; }
-  .mso-page-header { align-items: center; margin-bottom: 14px; }
-  .mso-page-header p { display: none; }
-  .mso-page-header h1 { font-size: 25px; }
-  .mso-page-header > div > span { font-size: 12px; }
-  .mso-page-header .mso-primary-action { min-height: 44px; padding: 0 12px; }
-  .mso-tabs { width: 100%; margin-bottom: 14px; }
+  .mso-workspace-bar { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 14px; }
+  .mso-workspace-bar .mso-primary-action { width: 100%; min-height: 44px; padding: 0 12px; }
+  .mso-tabs { width: 100%; }
   .mso-tabs button { min-height: 44px; padding: 0 13px; }
   .mso-metrics { grid-template-columns: repeat(2, 1fr); }
   .mso-metrics > div { padding: 12px 13px; border-right: 1px solid #edf0f4; border-bottom: 1px solid #edf0f4; }
@@ -290,6 +287,6 @@
 @media (max-width: 355px) {
   .mso-live-list, .mso-shift-list { grid-template-columns: 1fr; }
   .mso-staff-row, .mso-live-list .mso-staff-row, .mso-shift-list .mso-staff-row { min-height: 144px; }
-  .mso-page-header { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .mso-page-header .mso-primary-action { width: 100%; }
+  .mso-workspace-bar { grid-template-columns: 1fr; }
+  .mso-workspace-bar .mso-primary-action { width: 100%; }
 }

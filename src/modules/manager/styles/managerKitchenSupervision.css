@@ -4,6 +4,7 @@
   min-width: 0;
   color: #172033;
 }
+.mks-panel > header div > h2:first-child { margin-top: 0; }
 
 .mks-command-header,
 .mks-panel,

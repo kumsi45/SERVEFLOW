@@ -335,7 +335,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       </section>
 
       <section className="mks-panel mks-attention" aria-labelledby="mks-attention-title">
-        <header><div><span>Intervention queue</span><h2 id="mks-attention-title">Needs Attention <b>{attentionCount}</b></h2></div></header>
+        <header><div><h2 id="mks-attention-title">Needs Attention <b>{attentionCount}</b></h2></div></header>
         <div className="mks-attention-list">
           {attentionStations.map((alert) => {
             const station = stations.find((candidate) => candidate.id === alert.stationId);
@@ -348,7 +348,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       </section>
 
       <section className="mks-panel" aria-labelledby="mks-stations-title">
-        <header><div><span>Current workload</span><h2 id="mks-stations-title">Stations</h2></div></header>
+        <header><div><h2 id="mks-stations-title">Stations</h2></div></header>
         <div className="mks-station-list">
           {stations.map((station) => <button key={station.id} type="button" className={`mks-station-row ${stationTone(station)}`} onClick={() => openStation(station.id)}>
             <span className="mks-station-name"><strong>{station.name}</strong>{stationTone(station) !== "idle" && <em>{stationStatus(station)}</em>}</span>
@@ -366,13 +366,13 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
       </section>}
 
       <section className="mks-panel" aria-labelledby="mks-current-orders-title">
-        <header><div><span>Active production context</span><h2 id="mks-current-orders-title">Current Orders</h2></div>{allBatches.length > 5 && <button type="button" onClick={() => setActiveView("orders")}>View all →</button>}</header>
+        <header><div><h2 id="mks-current-orders-title">Current Orders</h2></div>{allBatches.length > 5 && <button type="button" onClick={() => setActiveView("orders")}>View all →</button>}</header>
         <div className="mks-order-list">{sortedBatches.slice(0, 5).map((batch) => renderOrderRow(batch, true))}{sortedBatches.length === 0 && <p className="mks-empty">✓ No active tickets</p>}</div>
       </section>
     </>}
 
     {activeView === "orders" && <section className="mks-panel mks-orders-view" aria-labelledby="mks-orders-title">
-      <header><div><span>Supervision queue</span><h2 id="mks-orders-title">Current Orders <b>{visibleOrders.length}</b></h2></div></header>
+      <header><div><h2 id="mks-orders-title">Current Orders <b>{visibleOrders.length}</b></h2></div></header>
       <div className="mks-order-filters" aria-label="Filter kitchen orders">{(["all", "waiting", "preparing", "ready", "delayed"] as const).map((filter) => <button key={filter} type="button" className={orderFilter === filter ? "active" : ""} onClick={() => setOrderFilter(filter)}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</button>)}</div>
       <div className="mks-order-list">{visibleOrders.map((batch) => renderOrderRow(batch))}{visibleOrders.length === 0 && <p className="mks-empty">✓ No active tickets in this filter</p>}</div>
     </section>}
@@ -385,7 +385,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
         <article><span>Rush</span><strong>{snapshot?.performance.rushIndicator ? "Yes" : "No"}</strong></article>
         <article><span>Bottleneck</span><strong>{snapshot?.performance.bottleneckIndicator ? "Yes" : "No"}</strong></article>
       </section>
-      <section className="mks-panel" aria-labelledby="mks-station-performance-title"><header><div><span>Current station comparison</span><h2 id="mks-station-performance-title">Station Performance</h2></div></header><div className="mks-performance-list">{stations.map((station) => <button type="button" key={station.id} onClick={() => openStation(station.id)}><span><strong>{station.name}</strong><small>{stationStatus(station)}</small></span><span><small>Active load</small><strong>{station.queueLength}</strong></span><span><small>Avg prep</small><strong>{fmtMinutes(station.averagePreparationMinutes)}</strong></span><span><small>Delayed</small><strong>{station.delayed}</strong></span><b>›</b></button>)}</div></section>
+      <section className="mks-panel" aria-labelledby="mks-station-performance-title"><header><div><h2 id="mks-station-performance-title">Station Performance</h2></div></header><div className="mks-performance-list">{stations.map((station) => <button type="button" key={station.id} onClick={() => openStation(station.id)}><span><strong>{station.name}</strong><small>{stationStatus(station)}</small></span><span><small>Active load</small><strong>{station.queueLength}</strong></span><span><small>Avg prep</small><strong>{fmtMinutes(station.averagePreparationMinutes)}</strong></span><span><small>Delayed</small><strong>{station.delayed}</strong></span><b>›</b></button>)}</div></section>
     </>}
 
     {selectedRequest && <div className="mks-inspector-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequestId(null); }}><aside className="mks-inspector mks-request-inspector" role="dialog" aria-modal="true" aria-labelledby="mks-request-title">

@@ -17,7 +17,10 @@ describe("Manager Recipes operational workspace", () => {
     expect(roleRoute).toContain('section === "recipes" && state.role === "manager"');
     expect(page).not.toContain(">Dashboard<");
     expect(page).not.toContain("Manage recipe standards, ingredient usage, preparation details, and inventory connections.");
-    expect(page).toContain('<h1 className="sr-only">Recipes</h1>');
+    expect(page).not.toMatch(/<h1[^>]*>Recipes<\/h1>/);
+    expect(page).not.toContain('className="mrw-header"');
+    expect(page).toContain('className="mrw-summary-row"');
+    expect(page).toContain('className="mrw-setup-action"');
   });
 
   it("uses the four focused summaries and an exception-first attention section", () => {

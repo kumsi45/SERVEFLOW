@@ -323,7 +323,6 @@ export function ManagerDashboardPage({
       <section className="md-pulse" aria-labelledby="shift-pulse-title">
         <div className="md-block-heading">
           <div>
-            <span>Live operations</span>
             <h2 id="shift-pulse-title">Shift Pulse</h2>
           </div>
           <small aria-live="polite">
@@ -348,7 +347,6 @@ export function ManagerDashboardPage({
       >
         <div className="md-block-heading">
           <div>
-            <span>Prioritized queue</span>
             <h2 id="attention-title">Needs Attention</h2>
           </div>
           <small>{attentionItems.length} active</small>
@@ -584,7 +582,6 @@ export function ManagerDashboardPage({
       <section className="md-recent" aria-labelledby="recent-activity-title">
         <div className="md-block-heading">
           <div>
-            <span>Live floor signals</span>
             <h2 id="recent-activity-title">Recent Activity</h2>
           </div>
         </div>

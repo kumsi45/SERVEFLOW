@@ -13,4 +13,6 @@
 /* The desktop drawer owns vertical scrolling. Its grid rows must retain their
    content height instead of absorbing flex shrink and collapsing Ingredients. */
 @media(min-width:768px){.mrw-editor{flex:1 1 0;min-height:0;grid-auto-rows:max-content;align-content:start}.mrw-ingredients{min-height:min-content}}
-.mrw-header{justify-content:flex-end}
+.mrw-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;margin-bottom:12px}.mrw-summary-row .mrw-summary{margin-bottom:0}.mrw-setup-action{min-height:42px;padding:0 14px;border:1px solid #174c3e;border-radius:9px;color:#fff;background:#174c3e;font-weight:800;white-space:nowrap}
+@media(max-width:767px){.mrw-summary-row{grid-template-columns:1fr}.mrw-setup-action{width:100%;min-height:46px}}
+.mrw-compact-heading{min-height:52px}.mrw-compact-heading h2{margin-top:0}

@@ -90,7 +90,6 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
 
   return (
     <main className="mri-page" aria-busy={loading}>
-      <h1 className="sr-only">Business Intelligence</h1>
       <section className="mri-toolbar" aria-label="Business Intelligence controls">
         <div className="mri-toolbar-controls">
           <div className="mri-horizons" aria-label="Intelligence time horizon">

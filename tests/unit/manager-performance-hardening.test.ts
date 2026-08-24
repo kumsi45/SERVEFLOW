@@ -109,7 +109,7 @@ describe("Manager performance hardening", () => {
     expect(guard).toContain("key={restaurantId}");
   });
 
-  it("keeps accessible page names without rendering redundant visible headers", () => {
+  it("does not reintroduce title nodes into performance-hardened Manager pages", () => {
     for (const [path, title] of [
       ["ManagerStaffOperationsPage.tsx", "Staff"],
       ["ManagerRecipeWorkspacePage.tsx", "Recipes"],
@@ -117,8 +117,8 @@ describe("Manager performance hardening", () => {
       ["ManagerInventoryWorkspacePage.tsx", "Inventory"],
     ]) {
       const page = read(`src/modules/manager/pages/${path}`);
-      expect(page).toContain(`<h1 className="sr-only">${title}</h1>`);
-      expect(page).not.toContain(`<h1>${title}</h1>`);
+      expect(page).not.toContain(`<h1 className="sr-only">${title}</h1>`);
+      expect(page).not.toMatch(new RegExp(`<h1[^>]*>${title}</h1>`));
     }
   });
 });

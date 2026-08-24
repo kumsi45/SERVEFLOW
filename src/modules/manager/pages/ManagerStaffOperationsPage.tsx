@@ -206,14 +206,12 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
 
   return (
     <main className="mso-page">
-      <header className="mso-page-header">
-        <h1 className="sr-only">Staff</h1>
+      <div className="mso-workspace-bar">
+        <nav className="mso-tabs" aria-label="Staff workspace">
+          {STAFF_TABS.map(([key, label]) => <button key={key} type="button" className={activeTab === key ? "active" : ""} aria-current={activeTab === key ? "page" : undefined} onClick={() => setActiveTab(key)}>{label}</button>)}
+        </nav>
         <button type="button" className="mso-primary-action" onClick={() => setActiveTab("create")}>+ Add Staff</button>
-      </header>
-
-      <nav className="mso-tabs" aria-label="Staff workspace">
-        {STAFF_TABS.map(([key, label]) => <button key={key} type="button" className={activeTab === key ? "active" : ""} aria-current={activeTab === key ? "page" : undefined} onClick={() => setActiveTab(key)}>{label}</button>)}
-      </nav>
+      </div>
 
       {notice && <div className="mso-notice success" role="status">{notice}<button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button></div>}
       {error && <div className="mso-notice error" role="alert">{managerFacingMessage(error, "Unable to complete the staff action. Try again.")}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>×</button></div>}
@@ -232,7 +230,7 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
 
           {activeTab === "overview" && (
             <section className="mso-panel">
-              <div className="mso-section-heading"><div><p>Current workforce</p><h2>Live Staff</h2></div><span>{staff.length} staff</span></div>
+              <div className="mso-section-heading is-compact"><div><h2>Live Staff</h2></div><span>{staff.length} staff</span></div>
               <div className="mso-data-list mso-live-list">
                 <div className="mso-list-header" aria-hidden="true"><span>Staff</span><span>Role</span><span>Shift</span><span>Status</span><span>Current Work</span><span /></div>
                 {liveStaff.length ? liveStaff.map((member) => (
@@ -246,7 +244,7 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
 
           {activeTab === "directory" && (
             <section className="mso-panel">
-              <div className="mso-section-heading"><div><p>People and access</p><h2>Directory</h2></div><span>{filteredStaff.length} results</span></div>
+              <div className="mso-section-heading is-compact"><div><h2>Directory</h2></div><span>{filteredStaff.length} results</span></div>
               <div className="mso-directory-toolbar">
                 <label className="mso-search"><span aria-hidden="true">⌕</span><input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search staff…" aria-label="Search staff" /></label>
                 <select aria-label="Filter by role" value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="all">All roles</option><option value="waiter">Waiter</option><option value="cashier">Cashier</option><option value="kitchen">Chef</option><option value="inventory_officer">Inventory Officer</option><option value="inventory">Inventory Staff</option></select>
@@ -266,7 +264,7 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
 
           {activeTab === "shift" && (
             <section className="mso-panel">
-              <div className="mso-section-heading"><div><p>Current status</p><h2>Shift Status</h2></div></div>
+              <div className="mso-section-heading is-compact"><div><h2>Shift Status</h2></div></div>
               <div className="mso-capability-note"><strong>Shift check-in is not recorded.</strong><span>Online status reflects an operational account session, not employee attendance or arrival time.</span></div>
               <div className="mso-data-list mso-shift-list">
                 <div className="mso-list-header" aria-hidden="true"><span>Name</span><span>Role</span><span>Shift Start</span><span>Status</span><span>Current Work</span><span /></div>

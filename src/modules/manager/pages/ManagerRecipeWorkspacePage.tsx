@@ -91,18 +91,20 @@ export function ManagerRecipeWorkspacePage({ restaurantId }: Props) {
   }
 
   return <main className="mrw-page">
-    <header className="mrw-header"><h1 className="sr-only">Recipes</h1><button type="button" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button></header>
     {error && <div className="mrw-message error" role="alert">{managerFacingMessage(error, "Unable to load recipes. Try again.")}</div>}{notice && <div className="mrw-message">{notice}</div>}
 
-    <section className="mrw-summary" aria-label="Recipe summary">
-      <button type="button" onClick={() => setFilter("active")}><span>Active Recipes</span><strong>{counts.active}</strong></button>
-      <button type="button" onClick={() => setFilter("missing")}><span>Missing Recipes</span><strong>{counts.missing}</strong></button>
-      <button type="button" onClick={() => setFilter("incomplete")}><span>Incomplete Recipes</span><strong>{counts.incomplete}</strong></button>
-      <button type="button" onClick={() => setFilter("issues")}><span>Inventory Link Issues</span><strong>{counts.issues}</strong></button>
-    </section>
+    <div className="mrw-summary-row">
+      <section className="mrw-summary" aria-label="Recipe summary">
+        <button type="button" onClick={() => setFilter("active")}><span>Active Recipes</span><strong>{counts.active}</strong></button>
+        <button type="button" onClick={() => setFilter("missing")}><span>Missing Recipes</span><strong>{counts.missing}</strong></button>
+        <button type="button" onClick={() => setFilter("incomplete")}><span>Incomplete Recipes</span><strong>{counts.incomplete}</strong></button>
+        <button type="button" onClick={() => setFilter("issues")}><span>Inventory Link Issues</span><strong>{counts.issues}</strong></button>
+      </section>
+      <button type="button" className="mrw-setup-action" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button>
+    </div>
 
     <section className="mrw-attention">
-      <header><div><span>Exceptions</span><h2>Attention required</h2></div></header>
+      <header className="mrw-compact-heading"><div><h2>Attention required</h2></div></header>
       {counts.missing + counts.incomplete + counts.issues === 0 ? <div className="mrw-healthy"><i>✓</i><span><strong>Recipe setup is healthy</strong><small>No recipe intervention is currently required.</small></span></div> : <div className="mrw-attention-list">
         {counts.missing > 0 && <button type="button" onClick={() => setFilter("missing")}><i className="critical"/><span><strong>{counts.missing} sellable item{counts.missing === 1 ? " has" : "s have"} no recipe or direct-stock connection</strong><small>Review the intended inventory-consumption method.</small></span><b>Review →</b></button>}
         {rows.filter((row) => row.recipe && row.ingredientCount === 0).length > 0 && <button type="button" onClick={() => setFilter("issues")}><i/><span><strong>{rows.filter((row) => row.recipe && row.ingredientCount === 0).length} recipe{rows.filter((row) => row.recipe && row.ingredientCount === 0).length === 1 ? " has" : "s have"} no inventory-linked ingredients</strong><small>Add ingredients from the existing Inventory catalog.</small></span><b>Review →</b></button>}
@@ -111,7 +113,7 @@ export function ManagerRecipeWorkspacePage({ restaurantId }: Props) {
     </section>
 
     <section className="mrw-workspace">
-      <header className="mrw-toolbar"><div><span>Recipe source of truth</span><h2>{visibleRows.length} sellable items</h2></div><input aria-label="Search recipes and menu items" placeholder="Search recipes or menu items..." value={query} onChange={(event) => setQuery(event.target.value)}/></header>
+      <header className="mrw-toolbar mrw-compact-heading"><div><h2>{visibleRows.length} sellable items</h2></div><input aria-label="Search recipes and menu items" placeholder="Search recipes or menu items..." value={query} onChange={(event) => setQuery(event.target.value)}/></header>
       <nav className="mrw-filters" aria-label="Recipe filters">{FILTERS.map((entry) => <button type="button" key={entry.id} className={filter === entry.id ? "active" : ""} onClick={() => setFilter(entry.id)}>{entry.label}</button>)}</nav>
       {loading ? <div className="mrw-empty">Loading recipes...</div> : <div className="mrw-list">
         <div className="mrw-row mrw-row-head"><span>Item</span><span>Category</span><span>Type</span><span>Recipe Status</span><span>Ingredients</span><span>Inventory Link</span><span>Prep Time</span><span>Actions</span></div>

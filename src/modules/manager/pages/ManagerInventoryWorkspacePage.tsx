@@ -163,12 +163,11 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
 
   return (
     <main className="miw-page">
-      <header className="miw-header">
-        <h1 className="sr-only">Inventory</h1>
+      <div className="miw-actions">
         <button type="button" onClick={openFullInventory}>
           Open Full Inventory <ExternalLink size={16} />
         </button>
-      </header>
+      </div>
       {error && (
         <div className="miw-message error" role="alert">
           {managerFacingMessage(error, "Unable to load Inventory. Try again.")}
@@ -199,9 +198,8 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       </section>
 
       <section className="miw-panel miw-attention">
-        <header>
+        <header className="miw-compact-heading">
           <div>
-            <span>Exceptions</span>
             <h2>Needs Attention</h2>
           </div>
           <b>{attention.length}</b>
@@ -228,9 +226,8 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       </section>
 
       <section className="miw-panel">
-        <header>
+        <header className="miw-compact-heading">
           <div>
-            <span>Operational requests</span>
             <h2>Request Center</h2>
           </div>
         </header>
@@ -323,9 +320,8 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       </section>
 
       <section className="miw-panel">
-        <header className="miw-toolbar">
+        <header className="miw-toolbar miw-compact-heading">
           <div>
-            <span>Current stock levels</span>
             <h2>Stock Health</h2>
           </div>
           <div>
