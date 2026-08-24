@@ -21,17 +21,19 @@ describe("Inventory V1 global presentation cleanup", () => {
     expect(page).toContain('<strong>Inventory</strong><span>{restaurantName}</span>');
   });
 
-  it("keeps one clear title and removes redundant dashboard copy", () => {
-    for (const title of ["Dashboard", "Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"]) expect(overview).toContain(title);
+  it("starts the overview with operational information instead of its route name", () => {
+    expect(overview).not.toContain('<h1>Dashboard</h1>');
+    for (const title of ["Needs Attention", "Quick Operations", "Stock Snapshot", "Recent Activity"]) expect(overview).toContain(title);
     for (const removed of ["NOW", "DAILY WORK", "LATEST CHANGES", "Awaiting Inventory</small>", "Needs replenishment", "Below minimum level", "Open orders"]) expect(overview).not.toContain(removed);
     for (const action of [">Receive<", ">Issue<", ">Transfer<", ">Adjust<", ">Waste<", ">Purchase Order<"]) expect(overview).toContain(action);
   });
 
   it("removes Stock workspace subtitles without removing decisions", () => {
     for (const removed of ["LIVE STOCK", "Live stock across your storage locations"]) expect(currentStock).not.toContain(removed);
-    for (const required of ["Current Stock", "Material", "Storage", "Status", "Filters", "Receive", "Issue", "Transfer"]) expect(currentStock).toContain(required);
+    expect(currentStock).not.toContain("<h2>Current Stock</h2>");
+    for (const required of ["Material", "Storage", "Status", "Filters", "Receive", "Issue", "Transfer"]) expect(currentStock).toContain(required);
     for (const removed of ["OPERATIONAL HISTORY", "What changed in stock, where, and when"]) expect(movements).not.toContain(removed);
-    expect(movements).toContain("Stock Movements");
+    expect(movements).not.toContain("<h2>Stock Movements</h2>");
   });
 
   it("keeps stock operation labels and review safety without introductory prose", () => {
@@ -42,16 +44,21 @@ describe("Inventory V1 global presentation cleanup", () => {
   it("removes redundant Kitchen and Purchasing introductions", () => {
     expect(kitchen).not.toContain("Review and issue materials requested by kitchen.");
     expect(kitchen).not.toContain("KITCHEN REQUEST");
-    for (const required of ["Kitchen Requests", "Awaiting Inventory", "Awaiting Kitchen", "History", "Available in", "Cannot Fulfill"]) expect(kitchen).toContain(required);
+    expect(kitchen).not.toContain("<h2>Kitchen Requests</h2>");
+    for (const required of ["Awaiting Inventory", "Awaiting Kitchen", "History", "Available in", "Cannot Fulfill"]) expect(kitchen).toContain(required);
     expect(purchasing).not.toContain("Track orders and receive deliveries.");
     expect(purchasing).not.toContain("<span>PURCHASE ORDER</span>");
-    for (const required of ["Purchase Orders", "Create Purchase Order", "Supplier", "Expected delivery", "Receive Delivery"]) expect(purchasing).toContain(required);
+    expect(purchasing).not.toContain("<h2>Purchase Orders</h2>");
+    for (const required of ["Create Purchase Order", "Supplier", "Expected delivery", "Receive Delivery"]) expect(purchasing).toContain(required);
   });
 
   it("omits optional Setup card noise and preserves concise actions", () => {
     expect(suppliers).not.toContain("Manage the businesses you buy materials from.");
+    expect(suppliers).not.toContain("<h2>Suppliers</h2>");
     expect(suppliers).toContain('supplier.status !== "active"');
     for (const removed of ["Materials tracked by this business.", "Places where inventory materials are kept.", "No description", "0 ingredients", "Stored Ingredients"]) expect(setup).not.toContain(removed);
+    expect(setup).not.toContain("<h2>Materials</h2>");
+    expect(setup).not.toContain("<h2>Storage</h2>");
     for (const required of ["Add Supplier", "Add Material", "Add Storage", "Search materials", "Edit"]) expect(`${suppliers}${setup}`).toContain(required);
   });
 

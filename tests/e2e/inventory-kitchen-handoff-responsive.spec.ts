@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const styles = readFileSync(resolve(process.cwd(), "src/modules/inventory/styles/inventoryKitchenRequests.css"), "utf8");
 const card = (state: "available" | "insufficient" | "out", index: number) => `<article class="ia-kr-card ${state}"><header><div><strong>${index === 1 ? "Extra Fine Imported Brown Sugar With A Very Long Material Name" : `Material ${index}`}</strong><span>Cold Drinks and Beverage Preparation Station</span></div></header><div class="ia-kr-requested"><span>Requested quantity</span><strong>${index + 1}.25 kg</strong></div><div class="ia-kr-availability ${state}"><div><span>Available in Main Beverage and Dry Goods Storage</span><strong>${state === "out" ? "0" : state === "insufficient" ? "2" : "70"} kg</strong></div>${state === "out" ? "<b>OUT OF STOCK</b>" : state === "insufficient" ? "<b>Insufficient stock · short by 3.25 kg</b>" : ""}</div><div class="ia-kr-meta"><span>Requested by Chef With A Long Name</span><time>Aug 23, 12:21 PM</time></div><footer>${state === "available" ? "<button>Issue</button>" : ""}<button class="secondary">Cannot Fulfill</button></footer></article>`;
-const markup = `<main class="ia-kr-page"><header class="ia-kr-heading"><div><h2>Kitchen Requests</h2></div></header><div class="ia-kr-tabs" role="tablist"><button aria-selected="true">Awaiting Inventory<span>3</span></button><button>Awaiting Kitchen<span>1</span></button><button>History</button></div><div class="ia-kr-list">${card("available", 1)}${card("insufficient", 2)}${card("out", 3)}</div></main>`;
+const markup = `<main class="ia-kr-page"><div class="ia-kr-tabs" role="tablist"><button aria-selected="true">Awaiting Inventory<span>3</span></button><button>Awaiting Kitchen<span>1</span></button><button>History</button></div><div class="ia-kr-list">${card("available", 1)}${card("insufficient", 2)}${card("out", 3)}</div></main>`;
 
 async function load(page: Page, width: number, height: number, body = markup) {
   await page.setViewportSize({ width, height });
@@ -16,7 +16,7 @@ for (const [width, height] of viewports) {
   test(`Inventory Kitchen Requests fits ${width}x${height}`, async ({ page }) => {
     await load(page, width, height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await expect(page.getByRole("heading", { name: "Kitchen Requests" })).toBeVisible();
+    await expect(page.getByRole("tablist")).toBeVisible();
     const tabs = page.locator(".ia-kr-tabs");
     expect((await tabs.evaluate((node) => node.scrollWidth)) >= (await tabs.evaluate((node) => node.clientWidth))).toBe(true);
     const cards = page.locator(".ia-kr-card");

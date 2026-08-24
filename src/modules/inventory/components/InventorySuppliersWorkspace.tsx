@@ -24,8 +24,7 @@ export function InventorySuppliersWorkspace({ suppliers, items, onCreate, onEdit
   }, {}), [items]);
 
   return <div className="ia-suppliers-page">
-    <header className="ia-suppliers-heading"><div><h2>Suppliers</h2></div><button type="button" onClick={onCreate}>Add Supplier</button></header>
-    <label className="ia-suppliers-search"><span>Search suppliers</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, phone, or contact" /></label>
+    <div className="ia-suppliers-tools"><label className="ia-suppliers-search"><span>Search suppliers</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, phone, or contact" /></label><button type="button" onClick={onCreate}>Add Supplier</button></div>
     {visible.length > 0 ? <section className="ia-suppliers-grid" aria-label="Suppliers">
       {visible.map((supplier) => {
         const materialCount = suppliedMaterialCounts[supplier.id] ?? 0;

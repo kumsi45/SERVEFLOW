@@ -12,7 +12,6 @@ const activity = (index: number) => `<button>
 </button>`;
 
 const markup = `<main class="ia-i2-dashboard">
-  <header class="ia-i2-page-title"><h1>Dashboard</h1></header>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Needs Attention</h2></div></div><div class="ia-i2-attention-grid"><button><strong>3</strong><span>Kitchen Requests</span></button><button class="critical"><strong>1</strong><span>Out of Stock</span></button><button class="warning"><strong>4</strong><span>Low Stock</span></button><button><strong>6</strong><span>Pending Purchases</span></button></div></section>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Quick Operations</h2></div></div><div class="ia-i2-quick-grid"><button><span>+</span><strong>Receive</strong></button><button><span>−</span><strong>Issue</strong></button><button><span>⇄</span><strong>Transfer</strong></button><button><span>±</span><strong>Adjust</strong></button><button><span>!</span><strong>Waste</strong></button><button><span>PO</span><strong>Purchase Order</strong></button></div></section>
   <section class="ia-i2-section"><div class="ia-i2-title"><div><h2>Stock Snapshot</h2></div><button>Current Stock</button></div><div class="ia-i2-snapshot-grid"><button><small>Active Materials</small><strong>42</strong></button><button><small>Out of Stock</small><strong>1</strong></button><button><small>Low Stock</small><strong>4</strong></button></div></section>

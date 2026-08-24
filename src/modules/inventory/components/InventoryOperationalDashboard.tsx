@@ -71,7 +71,6 @@ export function InventoryOperationalDashboard({ requests, requestsLoading, reque
   }
 
   return <div className="ia-kr-page">
-    <header className="ia-kr-heading"><div><h2>Kitchen Requests</h2></div></header>
     <div className="ia-kr-tabs" role="tablist" aria-label="Kitchen request workflow">
       <button type="button" role="tab" aria-selected={tab === "accepted"} onClick={() => selectTab("accepted")}>Awaiting Inventory{accepted.length > 0 && <span>{accepted.length}</span>}</button>
       <button type="button" role="tab" aria-selected={tab === "issued"} onClick={() => selectTab("issued")}>Awaiting Kitchen{issued.length > 0 && <span>{issued.length}</span>}</button>

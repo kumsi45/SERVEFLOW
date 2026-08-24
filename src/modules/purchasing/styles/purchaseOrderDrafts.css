@@ -1,5 +1,6 @@
 .po-page { display: grid; width: 100%; max-width: 1160px; min-width: 0; gap: 11px; margin-inline: auto; }
 .po-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.po-heading-action { justify-content: flex-end; }
 .po-heading h2, .po-heading p { margin: 0; }
 .po-heading h2 { color: #0f172a; font-size: 22px; }
 .po-heading p { margin-top: 3px; color: #64748b; font-size: 12px; }

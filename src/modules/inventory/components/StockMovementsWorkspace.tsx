@@ -200,8 +200,7 @@ export function StockMovementsWorkspace({ entries, loading, error, onReload }: {
   const emptyText = search.trim() ? "No movements found." : activeFilterCount ? "No movements match these filters." : "No stock movements yet.";
 
   return <div className="ia-sm-page">
-    <header className="ia-sm-heading"><div><h2>Stock Movements</h2></div><button type="button" onClick={onReload}>Refresh</button></header>
-    <section className="ia-sm-tools" aria-label="Stock movement search and filters"><label><span>Search movements</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search materials, storage, staff..." /></label><button type="button" aria-haspopup="dialog" onClick={() => { setDraftFilters(filters); setFiltersOpen(true); }}>Filters{activeFilterCount > 0 && <strong aria-label={`${activeFilterCount} active filters`}>{activeFilterCount}</strong>}</button></section>
+    <section className="ia-sm-tools" aria-label="Stock movement search and filters"><label><span>Search movements</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search materials, storage, staff..." /></label><button type="button" aria-haspopup="dialog" onClick={() => { setDraftFilters(filters); setFiltersOpen(true); }}>Filters{activeFilterCount > 0 && <strong aria-label={`${activeFilterCount} active filters`}>{activeFilterCount}</strong>}</button><button type="button" onClick={onReload}>Refresh</button></section>
 
     {loading ? <div className="ia-sm-state" role="status">Loading stock movements...</div>
       : error ? <div className="ia-sm-error" role="alert"><strong>We couldn&apos;t load stock movements.</strong><span>Check your connection and try again.</span><button type="button" onClick={onReload}>Try again</button></div>

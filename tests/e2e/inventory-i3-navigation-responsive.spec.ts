@@ -5,10 +5,14 @@ import { expect, test, type Page } from "@playwright/test";
 const styles = readFileSync(resolve(process.cwd(), "src/modules/inventory/styles/inventoryDashboard.css"), "utf8");
 
 const navigation = (mobile: boolean) => `<nav class="${mobile ? "ia-mobile-menu-nav" : "ia-sidebar-nav"}" aria-label="${mobile ? "Inventory destinations" : "Inventory navigation"}">
-  <button>Dashboard</button>
-  <div class="ia-nav-sequence"><div class="ia-sidebar-group ia-w2-group"><button class="ia-sidebar-group-toggle group-active" aria-expanded="false"><span>Stock</span><span class="ia-sidebar-chevron">›</span></button><div class="ia-sidebar-subnav" hidden><button>Current Stock</button><button>Stock Movements</button></div></div><button class="ia-kitchen-request-link"><span>Kitchen Requests</span><strong>12</strong></button></div>
-  <div class="ia-nav-sequence"><div class="ia-sidebar-group ia-w2-group"><button class="ia-sidebar-group-toggle" aria-expanded="false"><span>Purchasing</span><span class="ia-sidebar-chevron">›</span></button><div class="ia-sidebar-subnav" hidden><button>Purchase Orders</button><button>Suppliers</button></div></div></div>
-  <div class="ia-nav-sequence"><div class="ia-sidebar-group ia-w2-group"><button class="ia-sidebar-group-toggle" aria-expanded="false"><span>Setup</span><span class="ia-sidebar-chevron">›</span></button><div class="ia-sidebar-subnav" hidden><button>Materials</button><button>Storage</button></div></div></div>
+  <button class="active" aria-current="page"><span>Overview</span></button>
+  <button><span>Current Stock</span></button>
+  <button><span>Stock Movements</span></button>
+  <button class="ia-kitchen-request-link"><span>Kitchen Requests</span><strong>12</strong></button>
+  <button><span>Purchase Orders</span></button>
+  <button><span>Suppliers</span></button>
+  <button><span>Materials</span></button>
+  <button><span>Storage</span></button>
 </nav>`;
 
 const fixture = `<main class="ia-shell">
@@ -16,7 +20,7 @@ const fixture = `<main class="ia-shell">
   <button class="ia-mobile-menu-scrim" aria-label="Close inventory navigation" hidden></button>
   <aside class="ia-mobile-menu" aria-label="Inventory mobile navigation" hidden><div class="ia-mobile-menu-heading"><div><strong>Inventory</strong><span>Grand Royal Restaurant With A Long Name</span></div><button aria-label="Close inventory navigation">×</button></div>${navigation(true)}<div class="ia-mobile-menu-user"><strong>Inventory Officer With A Long Name</strong><span>Inventory Officer</span><button>Logout</button></div></aside>
   <aside class="ia-sidebar" aria-label="Inventory navigation"><div class="ia-brand"><strong>ServeFlow</strong></div>${navigation(false)}<div class="ia-user"><strong>Inventory Officer</strong><span>Inventory Officer</span><button>Logout</button></div></aside>
-  <section class="ia-workspace"><div class="ia-navigation-placeholder"><span>Stock</span><h2>Current Stock workspace remains unchanged</h2><p>Navigation must leave enough room for the operational workspace.</p></div></section>
+  <section class="ia-workspace"><div class="ia-cs-tools"><label class="ia-cs-search"><span>Search stock</span><input placeholder="Material, storage, or category"></label><button>Filters</button><button>Stock Action</button></div></section>
 </main>`;
 
 async function loadFixture(page: Page, width: number, height: number) {
@@ -29,8 +33,7 @@ async function loadFixture(page: Page, width: number, height: number) {
     trigger.addEventListener('click', () => setOpen(true));
     scrim.addEventListener('click', () => setOpen(false));
     menu.querySelector('[aria-label="Close inventory navigation"]').addEventListener('click', () => setOpen(false));
-    menu.querySelectorAll('.ia-sidebar-group-toggle').forEach((button) => button.addEventListener('click', () => { const open = button.getAttribute('aria-expanded') === 'true'; button.setAttribute('aria-expanded', String(!open)); button.nextElementSibling.hidden = open; }));
-    menu.querySelectorAll('.ia-sidebar-subnav button, .ia-mobile-menu-nav > button, .ia-kitchen-request-link').forEach((button) => button.addEventListener('click', () => setOpen(false)));
+    menu.querySelectorAll('.ia-mobile-menu-nav > button').forEach((button) => button.addEventListener('click', () => setOpen(false)));
   </script>`);
 }
 
@@ -45,8 +48,12 @@ for (const viewport of mobileViewports) {
     await page.getByRole("button", { name: "Open inventory navigation" }).click();
     const drawer = page.getByRole("complementary", { name: "Inventory mobile navigation" });
     await expect(drawer).toBeVisible();
-    await drawer.locator(".ia-sidebar-group-toggle").filter({ hasText: "Stock" }).click();
-    await expect(drawer.getByRole("button", { name: "Stock Movements" })).toBeVisible();
+    for (const destination of ["Overview", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchase Orders", "Suppliers", "Materials", "Storage"]) {
+      await expect(drawer.getByRole("button", { name: new RegExp(`^${destination}`) })).toBeVisible();
+    }
+    await expect(drawer.getByRole("button", { name: "Stock", exact: true })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "Purchasing", exact: true })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "Setup", exact: true })).toHaveCount(0);
     await expect(drawer.getByText("Kitchen Requests")).toBeVisible();
     await expect(drawer.getByRole("button", { name: "Reports" })).toHaveCount(0);
     await expect(drawer.getByRole("button", { name: "Settings" })).toHaveCount(0);
@@ -75,7 +82,6 @@ for (const viewport of tabletViewports) {
     expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
     if (usesDrawer) {
       await page.getByRole("button", { name: "Open inventory navigation" }).click();
-      await page.locator(".ia-mobile-menu .ia-sidebar-group-toggle").filter({ hasText: "Purchasing" }).click();
       await expect(page.locator(".ia-mobile-menu").getByRole("button", { name: "Purchase Orders" })).toBeVisible();
     }
   });

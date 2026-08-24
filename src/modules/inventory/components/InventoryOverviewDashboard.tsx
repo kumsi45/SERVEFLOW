@@ -77,7 +77,6 @@ export function InventoryOverviewDashboard({
 
   return (
     <div className="ia-stack ia-i2-dashboard">
-      <header className="ia-i2-page-title"><h1>Dashboard</h1></header>
       <section className="ia-i2-section" aria-labelledby="i2-attention-title">
         <div className="ia-i2-title"><div><h2 id="i2-attention-title">Needs Attention</h2></div></div>
         {attentionLoading && knownActionCount === 0 && (

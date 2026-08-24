@@ -78,16 +78,12 @@ export function CurrentStockWorkspace({ rows, loading, error, onReload, onStartA
 
   return (
     <div className="ia-cs-page">
-      <header className="ia-cs-heading">
-        <div><h2>Current Stock</h2></div>
-        <button type="button" onClick={() => openActions(null)}>+ Stock Action</button>
-      </header>
-
       <section className="ia-cs-tools" aria-label="Current stock search and filters">
         <label className="ia-cs-search"><span>Search stock</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Material, storage, or category" /></label>
         <button className="ia-cs-filter-button" type="button" aria-haspopup="dialog" onClick={() => { setDraftFilters(filters); setFiltersOpen(true); }}>
           Filters{activeFilterCount > 0 && <strong aria-label={`${activeFilterCount} active filters`}>{activeFilterCount}</strong>}
         </button>
+        <button className="ia-cs-action-button" type="button" onClick={() => openActions(null)}>+ Stock Action</button>
       </section>
 
       {loading ? <div className="ia-cs-state" role="status">Loading current stock...</div>

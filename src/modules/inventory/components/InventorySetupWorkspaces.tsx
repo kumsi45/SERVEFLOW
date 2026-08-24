@@ -38,8 +38,7 @@ export function InventoryMaterialsWorkspace({ items, categories, units, canManag
   const hasFilters = Boolean(search.trim() || categoryId || status !== "active");
 
   return <div className="ia-setup-page ia-materials-page">
-    <header className="ia-setup-heading"><div><h2>Materials</h2></div><button type="button" onClick={onAdd}>Add Material</button></header>
-    <div className="ia-setup-tools"><label><span>Search materials</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search materials" /></label><details><summary>Filters{(categoryId || status !== "active") && <b>Active</b>}</summary><div><label>Category<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">All categories</option>{categories.filter((row) => row.status === "active").map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="active">Active</option><option value="archived">Archived</option><option value="all">All</option></select></label></div></details></div>
+    <div className="ia-setup-tools"><label><span>Search materials</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search materials" /></label><details><summary>Filters{(categoryId || status !== "active") && <b>Active</b>}</summary><div><label>Category<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">All categories</option>{categories.filter((row) => row.status === "active").map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="active">Active</option><option value="archived">Archived</option><option value="all">All</option></select></label></div></details><button type="button" onClick={onAdd}>Add Material</button></div>
     {visible.length ? <section className="ia-material-list" aria-label="Materials">
       <div className="ia-material-row header" aria-hidden="true"><span>Material</span><span>Category</span><span>Unit</span><span>Status</span><span>Action</span></div>
       {visible.map((item) => <article className={`ia-material-row ${item.status}`} key={item.id}>
@@ -60,7 +59,7 @@ export function InventoryStorageWorkspace({ locations, items, canManageLifecycle
     return counts;
   }, {}), [items]);
   return <div className="ia-setup-page ia-storage-page">
-    <header className="ia-setup-heading"><div><h2>Storage</h2></div><button type="button" onClick={onAdd}>Add Storage</button></header>
+    <div className="ia-setup-primary-action"><button type="button" onClick={onAdd}>Add Storage</button></div>
     {visible.length ? <section className="ia-storage-grid" aria-label="Storage locations">{visible.map((location) => {
       const count = materialCounts[location.id] ?? 0;
       return <article className={`ia-storage-card ${location.status}`} key={location.id}>

@@ -12,11 +12,13 @@
 .ia-cs-heading p,
 .ia-so-page > header p { margin: 1px 0 0; color: #64748b; font-size: 11px; }
 .ia-cs-heading > button { min-height: 44px; flex: 0 0 auto; padding: 8px 11px; border: 1px solid #1d4ed8; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; }
-.ia-cs-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.ia-cs-tools { display: grid; grid-template-columns: repeat(2, minmax(0, auto)); gap: 7px; }
 .ia-cs-search { min-width: 0; }
+.ia-cs-tools .ia-cs-search { grid-column: 1 / -1; }
 .ia-cs-search > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .ia-cs-search input { width: 100%; min-height: 46px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; font: inherit; }
 .ia-cs-filter-button { display: flex; min-height: 46px; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #334155; font-weight: 850; cursor: pointer; }
+.ia-cs-action-button { min-height: 46px; padding: 8px 11px; border: 1px solid #1d4ed8; border-radius: 10px; background: #1d4ed8; color: #fff; font-weight: 900; cursor: pointer; }
 .ia-cs-filter-button strong { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 10px; }
 .ia-cs-state,
 .ia-cs-error { display: grid; gap: 4px; padding: 20px 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #64748b; text-align: center; }
@@ -107,6 +109,8 @@
 .ia-so-page textarea:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
 
 @media (min-width: 700px) {
+  .ia-cs-tools { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .ia-cs-tools .ia-cs-search { grid-column: auto; }
   .ia-cs-mobile-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ia-so-primary-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ia-so-details > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -120,7 +124,7 @@
   .ia-cs-desktop-table { display: block; }
   .ia-cs-heading h2,
   .ia-so-page > header h2 { font-size: 22px; }
-  .ia-cs-tools { max-width: 760px; }
+  .ia-cs-tools { max-width: 860px; }
   .ia-so-primary-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 

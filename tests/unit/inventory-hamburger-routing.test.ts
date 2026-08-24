@@ -6,17 +6,20 @@ const page = readFileSync("src/modules/inventory/pages/InventoryDashboardPage.ts
 const types = readFileSync("src/modules/inventory/types.ts", "utf8");
 
 describe("inventory hamburger routing", () => {
-  it("uses the shared I3 destination tree in the mobile drawer", () => {
-    for (const label of ["Dashboard", "Stock", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchasing", "Purchase Orders", "Suppliers", "Setup", "Materials", "Storage", "Reports", "Settings"]) {
-      expect(page).toContain(label);
+  it("uses one flat eight-destination list in the mobile drawer", () => {
+    const destinations = page.slice(page.indexOf("const INVENTORY_DESTINATIONS"), page.indexOf("function isInventorySection"));
+    for (const label of ["Overview", "Current Stock", "Stock Movements", "Kitchen Requests", "Purchase Orders", "Suppliers", "Materials", "Storage"]) {
+      expect(destinations).toContain(`label: "${label}"`);
     }
+    for (const folder of ["Stock", "Purchasing", "Setup"]) expect(destinations).not.toContain(`label: "${folder}"`);
     expect(page).toContain("{navigationItems(true)}");
     expect(page).toContain('aria-label="Close inventory navigation"');
     expect(page).toContain("setMobileMenuOpen(false)");
   });
 
-  it("keeps management utilities out of the Inventory Officer drawer", () => {
-    expect(page).toContain('{staffRole !== "inventory_officer" && <>');
+  it("keeps secondary management utilities out of the primary drawer", () => {
+    expect(page).not.toContain('>Reports</button>');
+    expect(page).not.toContain('>Settings</button>');
   });
 
   it("allows every inventory report URL through the application router", () => {

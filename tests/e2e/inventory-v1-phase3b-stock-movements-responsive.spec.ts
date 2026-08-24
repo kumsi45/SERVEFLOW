@@ -12,7 +12,7 @@ const data = [
 ];
 const cards = data.map(([material, movement, storage, quantity, source, effect]) => `<button><div class="ia-sm-main"><strong>${material}</strong><span>${movement} · ${storage}</span></div><strong class="ia-sm-quantity ${effect}">${quantity}</strong>${movement === "Transfer" ? `<div class="ia-sm-route"><span>Main Store</span><b>→</b><span>Bar and Beverage Store</span></div>` : ""}<div class="ia-sm-source">${source}</div><div class="ia-sm-meta"><time>Aug 23, 5:41 PM</time><span>Inventory Officer With A Long Name</span></div></button>`).join("");
 const tableRows = data.map(([material, movement, storage, quantity, source, effect]) => `<tr><td>Aug 23, 5:41 PM</td><td>${movement}</td><td><strong>${material}</strong></td><td><span class="ia-sm-table-route">${storage}</span></td><td><strong class="ia-sm-quantity ${effect}">${quantity}</strong></td><td><span>${source}</span></td><td>Inventory Officer</td><td><button>Details</button></td></tr>`).join("");
-const markup = `<main class="ia-sm-page"><header class="ia-sm-heading"><div><h2>Stock Movements</h2></div><button>Refresh</button></header><section class="ia-sm-tools"><label><span>Search movements</span><input placeholder="Search materials, storage, staff..."></label><button>Filters<strong>2</strong></button></section><div class="ia-sm-mobile-list">${cards}</div><div class="ia-sm-desktop-table"><table><thead><tr><th>Date / Time</th><th>Movement</th><th>Material</th><th>Storage</th><th>Quantity</th><th>Source / Reason</th><th>Staff</th><th>Actions</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="ia-sm-load-more"><span>Showing 25 of 48</span><button>Load More</button></div></main>`;
+const markup = `<main class="ia-sm-page"><section class="ia-sm-tools"><label><span>Search movements</span><input placeholder="Search materials, storage, staff..."></label><button>Filters<strong>2</strong></button><button>Refresh</button></section><div class="ia-sm-mobile-list">${cards}</div><div class="ia-sm-desktop-table"><table><thead><tr><th>Date / Time</th><th>Movement</th><th>Material</th><th>Storage</th><th>Quantity</th><th>Source / Reason</th><th>Staff</th><th>Actions</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="ia-sm-load-more"><span>Showing 25 of 48</span><button>Load More</button></div></main>`;
 
 async function load(page: Page, width: number, height: number, body = markup) {
   await page.setViewportSize({ width, height });
@@ -30,7 +30,7 @@ for (const [width, height] of viewports) {
     await load(page, width, height);
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
-    await expect(page.getByRole("heading", { name: "Stock Movements" })).toBeVisible();
+    await expect(page.getByPlaceholder("Search materials, storage, staff...")).toBeVisible();
     await expect(page.getByPlaceholder("Search materials, storage, staff...")).toBeVisible();
     await expect(page.getByRole("button", { name: "Load More" })).toBeVisible();
     if (width < 1024) {

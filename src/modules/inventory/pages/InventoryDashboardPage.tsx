@@ -133,48 +133,23 @@ const INVENTORY_NAV: Array<{ key: InventorySection; label: string }> = [
   { key: "units", label: "Units" },
 ];
 
-type InventoryNavGroup = "stock" | "purchasing" | "setup";
+type InventoryDestination =
+  | { key: InventorySection; label: string }
+  | { key: "kitchen-requests"; label: string };
 
-const STOCK_NAV: Array<{ key: InventorySection; label: string }> = [
+const INVENTORY_DESTINATIONS: InventoryDestination[] = [
+  { key: "dashboard", label: "Overview" },
   { key: "current-stock", label: "Current Stock" },
   { key: "ledger", label: "Stock Movements" },
-];
-
-const SETUP_NAV: Array<{ key: InventorySection; label: string }> = [
+  { key: "kitchen-requests", label: "Kitchen Requests" },
+  { key: "purchase-orders", label: "Purchase Orders" },
+  { key: "suppliers", label: "Suppliers" },
   { key: "items", label: "Materials" },
   { key: "storage-locations", label: "Storage" },
 ];
 
-const PURCHASING_NAV: Array<{ key: InventorySection; label: string }> = [
-  { key: "purchase-orders", label: "Purchase Orders" },
-  { key: "suppliers", label: "Suppliers" },
-];
-
-const NAV_GROUPS: Array<{ key: InventoryNavGroup; label: string; items: Array<{ key: InventorySection; label: string }> }> = [
-  { key: "stock", label: "Stock", items: STOCK_NAV },
-  { key: "purchasing", label: "Purchasing", items: PURCHASING_NAV },
-  { key: "setup", label: "Setup", items: SETUP_NAV },
-];
-
-const STOCK_CONTEXT_SECTIONS = new Set<InventorySection>([
-  "current-stock", "movements", "stock-in", "stock-out", "transfers", "adjustments", "waste", "ledger",
-]);
-const PURCHASING_CONTEXT_SECTIONS = new Set<InventorySection>(["purchase-orders", "purchase-history", "suppliers"]);
-const SETUP_CONTEXT_SECTIONS = new Set<InventorySection>(["items", "categories", "units", "storage-locations"]);
-const REPORT_CONTEXT_SECTIONS = new Set<InventorySection>([
-  "inventory-reports", "inventory-value", "low-stock-assistant", "consumption", "waste-report", "movement-history", "export",
-]);
-const SETTINGS_CONTEXT_SECTIONS = new Set<InventorySection>(["inventory-settings", "help"]);
-
 function isInventorySection(value: string | undefined): value is InventorySection {
   return INVENTORY_NAV.some((item) => item.key === value);
-}
-
-function parentNavGroup(section: InventorySection): InventoryNavGroup | null {
-  if (STOCK_CONTEXT_SECTIONS.has(section)) return "stock";
-  if (PURCHASING_CONTEXT_SECTIONS.has(section)) return "purchasing";
-  if (SETUP_CONTEXT_SECTIONS.has(section)) return "setup";
-  return null;
 }
 
 function dateLabel(value: string) {
@@ -411,7 +386,6 @@ export function InventoryDashboardPage({
   const [kitchenRequestsActive, setKitchenRequestsActive] = useState(() => window.location.hash === "#kitchen-requests");
   const [inlineMasterTarget, setInlineMasterTarget] = useState<"category" | "unit" | "storage" | "supplier" | null>(null);
   const [detailIngredientId, setDetailIngredientId] = useState<string | null>(null);
-  const [expandedNavGroup, setExpandedNavGroup] = useState<InventoryNavGroup | null>(null);
   const [data, setData] = useState<InventoryAdminData>(EMPTY_DATA);
   const [currentStock, setCurrentStock] = useState<InventoryCurrentStockRow[]>([]);
   const [ledger, setLedger] = useState<InventoryLedgerEntry[]>([]);
@@ -631,8 +605,6 @@ export function InventoryDashboardPage({
     if (isInventorySection(initialSection)) {
       setSection(initialSection);
       setKitchenRequestsActive(initialSection === "dashboard" && window.location.hash === "#kitchen-requests");
-      const group = parentNavGroup(initialSection);
-      if (group) setExpandedNavGroup(group);
     }
   }, [initialSection]);
 
@@ -832,8 +804,6 @@ export function InventoryDashboardPage({
     setSection(next);
     setKitchenRequestsActive(false);
     setMobileMenuOpen(false);
-    const group = parentNavGroup(next);
-    if (group) setExpandedNavGroup(group);
     window.history.pushState({}, "", `/inventory/${next}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
     if (next === "dashboard") void loadDashboardInsights();
@@ -868,14 +838,6 @@ export function InventoryDashboardPage({
 
   function openRecipes() {
     window.location.assign("/inventory/recipes");
-  }
-
-  function toggleNavGroup(group: InventoryNavGroup) {
-    setExpandedNavGroup((current) => current === group ? null : group);
-  }
-
-  function navGroupActive(group: InventoryNavGroup) {
-    return parentNavGroup(section) === group;
   }
 
   async function logout() {
@@ -1134,24 +1096,22 @@ export function InventoryDashboardPage({
 
   const navigationItems = (mobile = false) => (
     <nav className={mobile ? "ia-mobile-menu-nav" : "ia-sidebar-nav"} aria-label={mobile ? "Inventory destinations" : undefined}>
-      <button className={!kitchenRequestsActive && section === "dashboard" ? "active" : ""} type="button" aria-current={!kitchenRequestsActive && section === "dashboard" ? "page" : undefined} onClick={() => navigate("dashboard")}>Dashboard</button>
-      {NAV_GROUPS.map((group) => <div className="ia-nav-sequence" key={group.key}>
-        <div className="ia-sidebar-group ia-w2-group">
-          <button className={`ia-sidebar-group-toggle ${navGroupActive(group.key) ? "group-active" : ""}`.trim()} type="button" aria-expanded={expandedNavGroup === group.key} aria-controls={`inventory-${mobile ? "mobile-" : ""}${group.key}-navigation`} onClick={() => toggleNavGroup(group.key)}>
-            <span>{group.label}</span><span className="ia-sidebar-chevron" aria-hidden="true">›</span>
-          </button>
-          {expandedNavGroup === group.key && <div className="ia-sidebar-subnav" id={`inventory-${mobile ? "mobile-" : ""}${group.key}-navigation`}>
-            {group.items.map((item) => <button className={section === item.key ? "active" : ""} type="button" key={item.key} aria-current={section === item.key ? "page" : undefined} onClick={() => navigate(item.key)}>{item.label}</button>)}
-          </div>}
-        </div>
-        {group.key === "stock" && <button className={kitchenRequestsActive ? "active ia-kitchen-request-link" : "ia-kitchen-request-link"} type="button" aria-current={kitchenRequestsActive ? "page" : undefined} onClick={openKitchenRequests}>
-          <span>Kitchen Requests</span>{actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} actionable requests`}>{actionableKitchenRequestCount}</strong>}
-        </button>}
-      </div>)}
-      {staffRole !== "inventory_officer" && <>
-        <button className={REPORT_CONTEXT_SECTIONS.has(section) ? "active" : ""} type="button" aria-current={REPORT_CONTEXT_SECTIONS.has(section) ? "page" : undefined} onClick={() => navigate("inventory-reports")}>Reports</button>
-        <button className={SETTINGS_CONTEXT_SECTIONS.has(section) ? "active" : ""} type="button" aria-current={SETTINGS_CONTEXT_SECTIONS.has(section) ? "page" : undefined} onClick={() => navigate("inventory-settings")}>Settings</button>
-      </>}
+      {INVENTORY_DESTINATIONS.map((item) => {
+        const kitchenDestination = item.key === "kitchen-requests";
+        const active = kitchenDestination
+          ? kitchenRequestsActive
+          : !kitchenRequestsActive && section === item.key;
+        return <button
+          className={`${active ? "active " : ""}${kitchenDestination ? "ia-kitchen-request-link" : ""}`.trim()}
+          type="button"
+          key={item.key}
+          aria-current={active ? "page" : undefined}
+          onClick={kitchenDestination ? openKitchenRequests : () => navigate(item.key)}
+        >
+          <span>{item.label}</span>
+          {kitchenDestination && actionableKitchenRequestCount > 0 && <strong aria-label={`${actionableKitchenRequestCount} actionable requests`}>{actionableKitchenRequestCount}</strong>}
+        </button>;
+      })}
     </nav>
   );
 

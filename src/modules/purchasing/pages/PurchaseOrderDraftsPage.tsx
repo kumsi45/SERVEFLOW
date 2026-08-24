@@ -91,7 +91,7 @@ export function PurchaseOrderDraftsPage({ restaurantId, suppliers, items, units,
   }
 
   return <div className="po-page">
-    <header className="po-heading"><div><h2>Purchase Orders</h2></div><button type="button" onClick={() => { setReceipt(null); setSelectedId(null); setForm(emptyForm()); }}>Create Purchase Order</button></header>
+    <div className="po-heading po-heading-action"><button type="button" onClick={() => { setReceipt(null); setSelectedId(null); setForm(emptyForm()); }}>Create Purchase Order</button></div>
     {error && <div className="po-alert" role="alert">{error}</div>}
     {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>&times;</button></div>}
     <div className="po-tabs" role="tablist" aria-label="Purchase order status">{(["open", "partially_received", "completed", "all"] as WorkTab[]).map((value) => { const label = value === "open" ? "Open" : value === "partially_received" ? "Partially Received" : value === "completed" ? "Completed" : "All"; const count = value === "all" ? orders.length : counts[value]; return <button type="button" role="tab" aria-selected={tab === value} key={value} onClick={() => setTab(value)}>{label}{count > 0 && <span>{count}</span>}</button>; })}</div>
