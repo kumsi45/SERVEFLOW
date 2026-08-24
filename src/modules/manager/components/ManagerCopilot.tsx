@@ -17,6 +17,7 @@ import {
   type ManagerCopilotSnapshot,
 } from "../services/managerCopilotService";
 import "../styles/managerCopilot.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -108,7 +109,6 @@ const suggestions: Record<string, string[]> = {
 
 export function ManagerCopilot({
   restaurantId,
-  restaurantName,
   managerName,
   section,
   currency,
@@ -296,9 +296,7 @@ export function ManagerCopilot({
                 </span>
                 <div>
                   <strong>ServeFlow Copilot</strong>
-                  <small>
-                    <i /> Live - {restaurantName}
-                  </small>
+                  <small><i /> Live operations</small>
                 </div>
               </div>
               <button
@@ -318,7 +316,7 @@ export function ManagerCopilot({
                   Some evidence unavailable: {snapshot.unavailable.join(", ")}
                 </small>
               ) : (
-                <small>Supported business data synchronized</small>
+                <small>Business data up to date</small>
               )}
             </div>
             <div
@@ -365,7 +363,7 @@ export function ManagerCopilot({
               )}
               {error && (
                 <div className="mcp-error" role="alert">
-                  <p>{error}</p>
+                  <p>{managerFacingMessage(error, "Copilot is unavailable right now. Try again.")}</p>
                   <button type="button" onClick={() => void refresh()}>
                     <RotateCw /> Retry
                   </button>

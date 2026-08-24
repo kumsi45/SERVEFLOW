@@ -7,6 +7,7 @@ import {
 import type { IngredientInventoryItem, Recipe, RecipeDraft, RecipeIngredient, RecipeIngredientDraft } from "../../recipes/types";
 import { loadManagerRecipeWorkspace, type ManagerRecipeSnapshot } from "../services/managerRecipeWorkspaceService";
 import "../styles/managerRecipeWorkspace.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string };
 type Filter = "all" | "prepared" | "direct" | "active" | "missing" | "incomplete" | "issues";
@@ -91,8 +92,8 @@ export function ManagerRecipeWorkspacePage({ restaurantId }: Props) {
   }
 
   return <main className="mrw-page">
-    <header className="mrw-header"><div><h1>Recipes</h1><p>Manage recipe standards, ingredient usage, preparation details, and inventory connections.</p></div><button type="button" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button></header>
-    {error && <div className="mrw-message error" role="alert">{error}</div>}{notice && <div className="mrw-message">{notice}</div>}
+    <header className="mrw-header"><div><h1>Recipes</h1></div><button type="button" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button></header>
+    {error && <div className="mrw-message error" role="alert">{managerFacingMessage(error, "Unable to load recipes. Try again.")}</div>}{notice && <div className="mrw-message">{notice}</div>}
 
     <section className="mrw-summary" aria-label="Recipe summary">
       <button type="button" onClick={() => setFilter("active")}><span>Active Recipes</span><strong>{counts.active}</strong></button>
@@ -188,7 +189,7 @@ export function ManagerRecipeIngredientSection({ ingredients, loading, saving, f
       {form.draft.inventoryItemId && <div className="mrw-inventory-selected" data-selected-inventory-item-id={form.draft.inventoryItemId}><span>Selected inventory item</span><strong>{itemName(form.draft)}</strong></div>}
       <div className="mrw-inventory-results" aria-live="polite">
         {searching ? <div className="mrw-inventory-state">Loading inventory...</div>
-          : searchError ? <div className="mrw-inventory-state error"><span>{searchError}</span><button type="button" onClick={onRetry}>Retry</button></div>
+          : searchError ? <div className="mrw-inventory-state error"><span>{managerFacingMessage(searchError, "Unable to load Inventory. Try again.")}</span><button type="button" onClick={onRetry}>Retry</button></div>
           : !query ? <div className="mrw-inventory-state">Search this restaurant&apos;s inventory.</div>
           : results.length ? results.map((item) => <button type="button" className="mrw-inventory-result" data-inventory-item-id={item.id} key={item.id} disabled={saving || ingredients.some((row, index) => index !== form.index && row.inventoryItemId === item.id)} onClick={() => onSelectItem(item)}><span><strong>{item.name}</strong><small>Inventory ingredient</small></span><small>Available: {item.current_quantity} {units.find((unit) => unit.id === item.unit_id)?.name ?? "units"}</small></button>)
           : <div className="mrw-inventory-state">No matching inventory items found.</div>}
@@ -371,7 +372,7 @@ export function RecipeEditor({ restaurantId, menu, snapshot, stationName, onClos
     finally { setSaving(false); }
   }
   return <div className="mrw-layer" role="presentation"><aside className="mrw-drawer" role="dialog" aria-modal="true" aria-label={`Edit ${menu.name}`}><header><div><span>{currentRecipe ? "Recipe Detail" : "Recipe Setup"}</span><h2>{menu.name}</h2></div><button type="button" onClick={onClose} aria-label="Close">×</button></header><div className="mrw-editor">
-    {editorError && <div className="mrw-message error" role="alert">{editorError}</div>}{editorNotice && <div className="mrw-message" role="status">{editorNotice}</div>}
+    {editorError && <div className="mrw-message error" role="alert">{managerFacingMessage(editorError, "Unable to complete the recipe action. Try again.")}</div>}{editorNotice && <div className="mrw-message" role="status">{editorNotice}</div>}
     <section className="mrw-current"><div><span>Category</span><strong>{menu.category_name ?? "Uncategorized"}</strong></div><div><span>Kitchen / station</span><strong>{stationName ?? "Not configured"}</strong></div><div><span>Recipe status</span><strong>{currentRecipe ? (currentRecipe.status === "active" ? "Active" : "Draft") : (draft.status === "active" ? "Active after save" : "Draft after save")}</strong></div><div><span>Last updated</span><strong>{currentRecipe ? new Date(currentRecipe.updated_at).toLocaleString() : "Not saved"}</strong></div></section>
     <label>Recipe name<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })}/></label>
     <label>Preparation time<div className="mrw-unit-input"><input type="number" min="0" value={draft.preparationTimeMinutes} onChange={(event) => setDraft({ ...draft, preparationTimeMinutes: event.target.value })}/><span>minutes</span></div></label>

@@ -18,6 +18,7 @@ import {
   type ManagerStockItem,
 } from "../services/managerInventoryWorkspaceService";
 import "../styles/managerInventoryWorkspace.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -163,10 +164,6 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       <header className="miw-header">
         <div>
           <h1>Inventory</h1>
-          <p>
-            Monitor stock health, approve operational requests, and prepare for
-            upcoming service.
-          </p>
         </div>
         <button type="button" onClick={openFullInventory}>
           Open Full Inventory <ExternalLink size={16} />
@@ -174,7 +171,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       </header>
       {error && (
         <div className="miw-message error" role="alert">
-          {error}
+          {managerFacingMessage(error, "Unable to load Inventory. Try again.")}
         </div>
       )}
 
@@ -328,7 +325,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       <section className="miw-panel">
         <header className="miw-toolbar">
           <div>
-            <span>Current ledger balance</span>
+            <span>Current stock levels</span>
             <h2>Stock Health</h2>
           </div>
           <div>
@@ -421,7 +418,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
                     minimum {formatQuantity(item.minimum)} · threshold gap{" "}
                     {formatQuantity(Math.max(0, item.minimum - item.current))}
                     {item.usage?.weeklyConsumption
-                      ? ` · ${formatQuantity(item.usage.weeklyConsumption)} used in supported 7-day history`
+                      ? ` · ${formatQuantity(item.usage.weeklyConsumption)} used in the last 7 days`
                       : ""}
                   </small>
                 </span>
@@ -431,8 +428,8 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
           </div>
         ) : (
           <div className="miw-healthy">
-            <CheckCircle2 size={18} /> No threshold or supported recent-usage
-            exception requires preparation.
+            <CheckCircle2 size={18} /> No stock threshold or recent-usage
+            issue requires preparation.
           </div>
         )}
       </section>
@@ -441,7 +438,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
         <section className="miw-panel">
           <header>
             <div>
-              <span>Supported request-history signals</span>
+              <span>Request and usage history</span>
               <h2>Usage &amp; Stock Exceptions</h2>
             </div>
           </header>
@@ -460,7 +457,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
                       ? "Fast-moving relative to other items in fulfilled request history"
                       : "Supplier lead-time reminder"}{" "}
                     · {formatQuantity(item.usage?.weeklyConsumption ?? 0)}{" "}
-                    {item.unit} in supported 7-day history
+                    {item.unit} in the last 7 days
                   </small>
                 </span>
                 <ArrowRight size={16} />
@@ -652,7 +649,7 @@ function StockDrawer({
               <dd>{item.storage}</dd>
             </div>
             <div>
-              <dt>7-day supported usage</dt>
+              <dt>7-day usage</dt>
               <dd>
                 {item.usage
                   ? `${formatQuantity(item.usage.weeklyConsumption)} ${item.unit}`
@@ -665,7 +662,7 @@ function StockDrawer({
             <p>
               {item.affectedMenuItems.length
                 ? item.affectedMenuItems.join(", ")
-                : "No supported menu or recipe link."}
+                : "No menu or recipe link."}
             </p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import {
   type ManagerMenuItem, type ManagerMenuSnapshot,
 } from "../services/managerMenuService";
 import "../styles/managerMenuWorkspace.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string; currency?: CurrencyConfig };
 type Tab = "overview" | "items" | "categories" | "preview";
@@ -91,10 +92,10 @@ export function ManagerMenuWorkspacePage({ restaurantId, currency }: Props) {
 
   return <main className="mmw-page">
     <div className="mmw-nav"><nav className="mmw-tabs" aria-label="Menu workspace">{tabs.map((entry) => <button type="button" key={entry.id} className={tab === entry.id ? "active" : ""} onClick={() => setTab(entry.id)}>{entry.label}</button>)}</nav><button type="button" className="mmw-appearance-button" onClick={() => setAppearanceOpen(true)}>Appearance</button></div>
-    {error && <div className="mmw-message error" role="alert">{error}</div>}{notice && <div className="mmw-message">{notice}</div>}
+    {error && <div className="mmw-message error" role="alert">{managerFacingMessage(error, "Unable to complete the menu action. Try again.")}</div>}{notice && <div className="mmw-message">{notice}</div>}
     <div className="mmw-summary" aria-label="Menu status summary">
       <button type="button" onClick={() => { setTab("items"); setAvailability("available"); }}><span>Available</span><strong>{counts.available}</strong></button>
-      <div><span>Sold out</span><strong>—</strong><small>Not supported separately</small></div>
+      <div><span>Sold out</span><strong>—</strong><small>Not tracked separately</small></div>
       <button type="button" onClick={() => { setTab("items"); setAvailability("hidden"); }}><span>Hidden</span><strong>{counts.hidden}</strong></button>
       <button type="button" onClick={() => { setTab("items"); setAvailability("recipe"); }}><span>Recipe missing</span><strong>{counts.missing}</strong></button>
     </div>
@@ -109,7 +110,7 @@ export function ManagerMenuWorkspacePage({ restaurantId, currency }: Props) {
 
     {tab === "categories" && <section className="mmw-panel"><header><div><span>Menu organization</span><h2>Categories</h2></div></header><div className="mmw-category-grid">{snapshot?.categories.map((entry) => { const items = snapshot.items.filter((item) => item.categoryId === entry.id); return <article key={entry.id}><strong>{entry.name}</strong><p>{entry.description || "No description"}</p><span>{items.length} items · {items.filter((item) => item.available).length} available</span></article>; })}{!snapshot?.categories.length && <div className="mmw-empty">No menu categories configured.</div>}</div></section>}
 
-    {tab === "preview" && <section className="mmw-panel mmw-preview"><header><div><span>Customer menu preview</span><h2>Currently orderable items</h2></div>{snapshot?.restaurantSlug && <a href={`/r/${encodeURIComponent(snapshot.restaurantSlug)}`} target="_blank" rel="noreferrer">Open live menu</a>}</header><p className="mmw-preview-note">This preview follows the current published contract: only available items appear.</p>{snapshot?.categories.map((entry) => { const items = snapshot.items.filter((item) => item.categoryId === entry.id && item.available); if (!items.length) return null; return <div className="mmw-preview-category" key={entry.id}><h3>{entry.name}</h3><div>{items.map((item) => <article key={item.id}>{item.imageUrl && <img src={item.imageUrl} alt=""/>}<span><strong>{item.name}</strong><small>{item.description || ""}</small></span><b>{formatCurrency(item.price, currency)}</b></article>)}</div></div>; })}{!counts.available && <div className="mmw-empty">No items are currently available on the customer menu.</div>}</section>}
+    {tab === "preview" && <section className="mmw-panel mmw-preview"><header><div><span>Customer menu preview</span><h2>Currently orderable items</h2></div>{snapshot?.restaurantSlug && <a href={`/r/${encodeURIComponent(snapshot.restaurantSlug)}`} target="_blank" rel="noreferrer">Open live menu</a>}</header><p className="mmw-preview-note">Only currently available items appear.</p>{snapshot?.categories.map((entry) => { const items = snapshot.items.filter((item) => item.categoryId === entry.id && item.available); if (!items.length) return null; return <div className="mmw-preview-category" key={entry.id}><h3>{entry.name}</h3><div>{items.map((item) => <article key={item.id}>{item.imageUrl && <img src={item.imageUrl} alt=""/>}<span><strong>{item.name}</strong><small>{item.description || ""}</small></span><b>{formatCurrency(item.price, currency)}</b></article>)}</div></div>; })}{!counts.available && <div className="mmw-empty">No items are currently available on the customer menu.</div>}</section>}
 
     {selected && <ItemEditor item={selected} snapshot={snapshot!} currency={currency} onClose={() => setSelected(null)} onSaved={async () => { setSelected(null); setNotice("Menu item updated."); await refresh(); }} onError={setError} restaurantId={restaurantId}/>} 
     {appearanceOpen && <div className="mmw-appearance-layer"><div className="mmw-appearance"><header><div><span>Secondary menu settings</span><h2>Customer menu appearance</h2></div><button type="button" onClick={() => setAppearanceOpen(false)} aria-label="Close appearance">×</button></header><div><Suspense fallback={<div className="mmw-empty">Loading appearance settings...</div>}><ThemeCustomizationStudio restaurantId={restaurantId} role="manager" /></Suspense></div></div></div>}

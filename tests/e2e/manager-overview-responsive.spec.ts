@@ -24,10 +24,17 @@ test("manager overview stays dense and contained across operational widths", asy
   `);
 
   for (const viewport of [
-    { width: 1440, height: 900 },
-    { width: 1180, height: 820 },
-    { width: 820, height: 1024 },
+    { width: 360, height: 800 },
+    { width: 375, height: 812 },
     { width: 390, height: 844 },
+    { width: 412, height: 915 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 820, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
   ]) {
     await page.setViewportSize(viewport);
     const geometry = await page.evaluate(() => {

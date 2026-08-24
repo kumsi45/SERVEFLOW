@@ -17,6 +17,7 @@ import {
 } from "../services/managerStaffOperationsService";
 import { managerStaffEmailRequired, validateManagerStaffCreation } from "../services/managerStaffCreationValidation";
 import "../styles/managerStaffOperations.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -85,7 +86,7 @@ function ShiftValue() {
   return <span className="mso-not-recorded" title="ServeFlow does not currently store explicit staff check-in records.">Not recorded</span>;
 }
 
-export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Props) {
+export function ManagerStaffOperationsPage({ restaurantId }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerStaffOperationsSnapshot | null>(null);
   const [activeTab, setActiveTab] = useState<StaffTab>("overview");
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
@@ -205,7 +206,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
   return (
     <main className="mso-page">
       <header className="mso-page-header">
-        <div><p>{restaurantName}</p><h1>Staff</h1><span>Live workforce status</span></div>
+        <div><h1>Staff</h1></div>
         <button type="button" className="mso-primary-action" onClick={() => setActiveTab("create")}>+ Add Staff</button>
       </header>
 
@@ -214,7 +215,7 @@ export function ManagerStaffOperationsPage({ restaurantId, restaurantName }: Pro
       </nav>
 
       {notice && <div className="mso-notice success" role="status">{notice}<button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button></div>}
-      {error && <div className="mso-notice error" role="alert">{error}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>×</button></div>}
+      {error && <div className="mso-notice error" role="alert">{managerFacingMessage(error, "Unable to complete the staff action. Try again.")}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>×</button></div>}
 
       {loading ? <section className="mso-state">Loading staff workspace…</section> : (
         <>

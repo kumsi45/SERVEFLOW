@@ -4,6 +4,7 @@ import { formatCurrency, type CurrencyConfig } from "../../../core/format/curren
 import { logManagerAiDecision, type AiDecision, type ManagerAiOperationsSnapshot, type ManagerAiRecommendation } from "../services/managerAiOperationsService";
 import { loadRestaurantIntelligence, type RestaurantIntelligenceSnapshot } from "../services/managerRestaurantIntelligenceService";
 import "../styles/managerAiOperations.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string; currency?: CurrencyConfig };
 type ChatMessage = { id: string; role: "manager" | "copilot"; text: string };
@@ -32,7 +33,7 @@ function answerFromSnapshot(question: string, snapshot: ManagerAiOperationsSnaps
   return "I can answer about traffic and rush periods, delayed orders, kitchen stations, staff workload, tables, pending bills, VIP guests, complaints, revenue forecasts, and inventory depletion using supported restaurant data.";
 }
 
-export function ManagerAiOperationsPage({ restaurantId, restaurantName, managerName, currency }: Props) {
+export function ManagerAiOperationsPage({ restaurantId, managerName, currency }: Props) {
   const [snapshot, setSnapshot] = useState<ManagerAiOperationsSnapshot | null>(null);
   const [intelligence, setIntelligence] = useState<RestaurantIntelligenceSnapshot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -49,8 +50,8 @@ export function ManagerAiOperationsPage({ restaurantId, restaurantName, managerN
   function ask(value = draft) { const question = value.trim(); if (!question) return; setMessages((current) => [...current, { id: crypto.randomUUID(), role: "manager", text: question }, { id: crypto.randomUUID(), role: "copilot", text: answerFromSnapshot(question, snapshot, intelligence) }]); setDraft(""); }
 
   return <main className="cop-page">
-    <section className="cop-welcome"><div><span>Operations Copilot</span><h1>{greeting()}, {managerName}.</h1><p>{restaurantName} · Live restaurant summary · Manager approval required for every action</p></div><div className={`cop-health ${scoreClass(snapshot?.health.overall ?? 0)}`}><strong>{snapshot?.health.overall ?? 0}%</strong><span>Restaurant health</span></div></section>
-    {(notice || error) && <div className={`cop-message ${error ? "error" : ""}`}>{error || notice}</div>}
+    <section className="cop-welcome"><div><span>Operations Copilot</span><h1>{greeting()}, {managerName}.</h1><p>Manager approval is required for every action.</p></div><div className={`cop-health ${scoreClass(snapshot?.health.overall ?? 0)}`}><strong>{snapshot?.health.overall ?? 0}%</strong><span>Operation health</span></div></section>
+    {(notice || error) && <div className={`cop-message ${error ? "error" : ""}`}>{error ? managerFacingMessage(error, "Operations Copilot is unavailable. Try again.") : notice}</div>}
     <section className="cop-summary" aria-label="Today's restaurant summary">
       <article><span>Revenue</span><strong>{formatCurrency(intelligence?.today.summary.revenue ?? 0, currency)}</strong><small>Live total</small></article>
       <article><span>Kitchen</span><strong>{health.get("Kitchen")?.score ?? 0}%</strong><small>{health.get("Kitchen")?.trend ?? "Loading"}</small></article>
@@ -61,7 +62,7 @@ export function ManagerAiOperationsPage({ restaurantId, restaurantName, managerN
     </section>
     <section className="cop-layout">
       <aside className="cop-actions"><header><div><span>Recommended Actions</span><h2>Manager decision queue</h2></div><b>{snapshot?.recommendations.length ?? 0}</b></header><div>{(snapshot?.recommendations ?? []).map((recommendation) => <article key={recommendation.id} className={recommendation.priority}><div><b>{priorityLabel(recommendation.priority)}</b><em>{recommendation.confidence}% confidence</em></div><h3>{recommendation.recommendation}</h3><p>{recommendation.reason}</p><small>{recommendation.expectedBenefit}</small><footer><button type="button" onClick={() => void decide(recommendation, "applied")}>Approve</button><button type="button" onClick={() => void decide(recommendation, "remind_later")}>Later</button><button type="button" onClick={() => void decide(recommendation, "ignored")}>Dismiss</button></footer></article>)}{snapshot?.recommendations.length === 0 && <p className="cop-empty">No manager action is recommended right now.</p>}</div></aside>
-      <section className="cop-chat"><header><div><span>Live Operational Intelligence</span><strong>Restaurant data synchronized</strong></div><i /></header><div className="cop-conversation"><article className="copilot"><span>Copilot</span><p>{greeting()}. I&apos;m monitoring supported kitchen, floor, staff, cashier, VIP, and complaint signals for {restaurantName}. What would you like to inspect?</p></article>{messages.map((message) => <article key={message.id} className={message.role}><span>{message.role === "manager" ? "You" : "Copilot"}</span>{message.text.split("\n").map((line) => <p key={line}>{line}</p>)}</article>)}</div><div className="cop-suggestions">{SUGGESTIONS.map((suggestion) => <button type="button" key={suggestion} onClick={() => ask(suggestion)}>{suggestion}</button>)}</div><form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about live restaurant operations..." aria-label="Ask Operations Copilot" /><button type="submit">Send</button></form></section>
+      <section className="cop-chat"><header><div><span>Live Operational Intelligence</span><strong>Business data up to date</strong></div><i /></header><div className="cop-conversation"><article className="copilot"><span>Copilot</span><p>{greeting()}. I&apos;m monitoring kitchen, service, staff, cashier, VIP, and complaint signals. What would you like to inspect?</p></article>{messages.map((message) => <article key={message.id} className={message.role}><span>{message.role === "manager" ? "You" : "Copilot"}</span>{message.text.split("\n").map((line) => <p key={line}>{line}</p>)}</article>)}</div><div className="cop-suggestions">{SUGGESTIONS.map((suggestion) => <button type="button" key={suggestion} onClick={() => ask(suggestion)}>{suggestion}</button>)}</div><form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about live operations..." aria-label="Ask Operations Copilot" /><button type="submit">Send</button></form></section>
     </section>
   </main>;
 }

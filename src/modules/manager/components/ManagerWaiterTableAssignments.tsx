@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ManagerWaiterAssignmentContext } from "../services/managerWaiterTableAssignmentService";
 import "../styles/managerWaiterTableAssignments.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   context: ManagerWaiterAssignmentContext | null;
@@ -119,7 +120,7 @@ export function ManagerWaiterTableAssignments({ context, state, syncNotice, requ
         <section className="mwta-step"><div className="mwta-step-title"><b>1</b><span><strong>Select Waiter</strong><small>Active Waiters only</small></span></div><label><span className="sr-only">Select Waiter</span><select value={pendingWaiterId} onChange={(event) => chooseWaiter(event.target.value)} disabled={working}><option value="">Select Waiter</option>{waiters.map((waiter) => <option key={waiter.staffId} value={waiter.staffId}>{waiter.displayName} — {countLabel(waiter.assignedTableCount, "table")}</option>)}</select></label>{waiters.length === 0 && <p className="mwta-inline-empty">No Waiters available.</p>}</section>
         <section className="mwta-step"><div className="mwta-step-title"><b>2</b><span><strong>Select Tables</strong><small>{countLabel(selectedTableIds.length, "table")} selected</small></span></div><div className="mwta-table-options">{tables.map((table) => <label key={table.tableId} className={selectedTableIds.includes(table.tableId) ? "selected" : ""}><input type="checkbox" checked={selectedTableIds.includes(table.tableId)} onChange={() => toggleTable(table.tableId)} disabled={working} /><span><strong>{table.tableLabel}</strong><small><em className={table.occupancyStatus}>{table.occupancyStatus === "occupied" ? "Occupied" : "Available"}</em>{table.currentWaiterName ? `Currently assigned to ${table.currentWaiterName}` : "Unassigned"}</small></span></label>)}</div></section>
         {selectedWaiter && <section className="mwta-summary" aria-live="polite"><strong>{countLabel(selectedTableIds.length, "table")} will be assigned to {selectedWaiter.displayName}.</strong>{reassignedTables.length > 0 && <p>{countLabel(reassignedTables.length, "table")} currently {reassignedTables.length === 1 ? "belongs" : "belong"} to {ownersLosingTables.join(", ")}. This changes current responsibility only.</p>}{removedFromWaiter.length > 0 && <p>{countLabel(removedFromWaiter.length, "table")} will move to Unassigned.</p>}<small>Existing orders, payments, kitchen state, and table occupancy will remain unchanged.</small></section>}
-        {error && <p className="mwta-error" role="alert">{error}</p>}
+        {error && <p className="mwta-error" role="alert">{managerFacingMessage(error, "Unable to update table assignments. Try again.")}</p>}
       </div>
       <footer><button type="button" className="secondary" disabled={working} onClick={() => setOpen(false)}>Cancel</button><button type="button" className="unassign" disabled={working || assignedSelectedTables.length === 0} onClick={() => void unassign()}>Move selected to Unassigned</button><button type="button" disabled={working || !selectedWaiter || selectedTableIds.length === 0} onClick={() => void assign()}>{working ? "Saving..." : reassignedTables.length > 0 ? "Confirm Assignment" : `Assign ${countLabel(selectedTableIds.length, "Table")}`}</button></footer>
     </section></div>}

@@ -413,7 +413,7 @@ export function investigateManagerQuestion(
     if (!inventory)
       return unsupported(
         "Inventory evidence is currently unavailable.",
-        "I cannot estimate stock risk without the tenant-scoped inventory response.",
+        "I cannot estimate stock risk while Inventory data is unavailable.",
         ["Inventory"],
       );
     const evidence = [

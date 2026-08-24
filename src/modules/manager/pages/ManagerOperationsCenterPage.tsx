@@ -10,6 +10,7 @@ import { loadInventoryCurrentStock } from "../../inventory/services/inventorySto
 import type { InventoryCurrentStockRow } from "../../inventory/types";
 import { loadManagerCashierOperations, reviewManagerCashierExpense, type ManagerCashierExpense, type ManagerCashierOperationsSnapshot } from "../services/managerCashierOperationsService";
 import "../styles/managerOperationsCenter.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = { restaurantId: string; currency?: CurrencyConfig };
 type ActionFilter = "all" | "urgent" | "approvals" | "service";
@@ -364,7 +365,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   if (operationsState === "unavailable") return <main className="moc-page"><div className="moc-message error" role="alert">Unable to load Live Operations.</div></main>;
 
   return <main className="moc-page">
-    {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
+    {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error ? managerFacingMessage(error, "Unable to complete the Live Operations action. Try again.") : notice}</div>}
     {requestsUnavailable && <div className="moc-message error" role="alert">Kitchen requests unavailable.</div>}
 
     <nav className="moc-workspace-tabs" aria-label="Live Operations workspace">

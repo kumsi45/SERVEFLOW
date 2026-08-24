@@ -11,6 +11,7 @@ import {
   type ManagerCustomerSession,
 } from "../services/managerCustomerExperienceService";
 import "../styles/managerCustomerExperience.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -190,7 +191,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
         ))}
       </nav>
 
-      {(notice || error) && <div className={`mcx-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error || notice}</div>}
+      {(notice || error) && <div className={`mcx-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error ? managerFacingMessage(error, "Unable to complete the guest action. Try again.") : notice}</div>}
 
       {activeTab === "attention" && (
         <section className="mcx-workspace" aria-label="Needs Attention">
@@ -214,7 +215,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
                 );
               })}
             </div>
-          ) : <div className="mcx-empty"><strong>No guest attention needed</strong><span>Current service sessions have no supported manager exceptions.</span></div>}
+          ) : <div className="mcx-empty"><strong>No guest attention needed</strong><span>Current service sessions have no manager exceptions.</span></div>}
         </section>
       )}
 
@@ -237,7 +238,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
                 );
               })}
             </div>
-          ) : <div className="mcx-empty"><strong>No complaints recorded</strong><span>New supported complaints will appear here.</span></div>}
+          ) : <div className="mcx-empty"><strong>No complaints recorded</strong><span>New complaints will appear here.</span></div>}
         </section>
       )}
 
@@ -257,14 +258,14 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
                 </article>
               ))}
             </div>
-          ) : <div className="mcx-empty"><strong>No special requests need attention</strong><span>Only unserved requests supported by current order notes appear here.</span></div>}
+          ) : <div className="mcx-empty"><strong>No special requests need attention</strong><span>Unserved requests from current order notes appear here.</span></div>}
         </section>
       )}
 
       {activeTab === "lookup" && (
         <section className="mcx-workspace" aria-label="Guest Lookup">
           <label className="mcx-search"><span>Search guests</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, phone, order or service location..." /></label>
-          {!query.trim() ? <div className="mcx-empty"><strong>Search current service sessions</strong><span>Use a supported customer name, phone, order number, or configured table number.</span></div> : lookupResults.length > 0 ? (
+          {!query.trim() ? <div className="mcx-empty"><strong>Search current service sessions</strong><span>Search by customer name, phone, order number, or service location.</span></div> : lookupResults.length > 0 ? (
             <div className="mcx-row-list mcx-lookup-list">
               <div className="mcx-row mcx-row-head" aria-hidden="true"><span>Customer</span><span>Location / Order</span><span>Phone</span><span>Status</span><span /></div>
               {lookupResults.map((session) => (
@@ -277,7 +278,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
                 </article>
               ))}
             </div>
-          ) : <div className="mcx-empty"><strong>No matching guest or service session</strong><span>Try a different supported name, phone, order, or table value.</span></div>}
+          ) : <div className="mcx-empty"><strong>No matching guest or service session</strong><span>Try a different name, phone, order, or service location.</span></div>}
         </section>
       )}
 

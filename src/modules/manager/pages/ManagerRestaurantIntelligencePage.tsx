@@ -8,6 +8,7 @@ import {
   type RestaurantIntelligenceSnapshot,
 } from "../services/managerRestaurantIntelligenceService";
 import "../styles/managerRestaurantIntelligence.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -90,7 +91,6 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
     <main className="mri-page" aria-busy={loading}>
       <h1 className="sr-only">Business Intelligence</h1>
       <section className="mri-toolbar" aria-label="Business Intelligence controls">
-        <p>Forward-looking guidance for upcoming service, operational risks, and preparation.</p>
         <div className="mri-toolbar-controls">
           <div className="mri-horizons" aria-label="Intelligence time horizon">
             <button type="button" className={horizon === "today" ? "active" : ""} onClick={() => selectHorizon("today")}>Today</button>
@@ -101,12 +101,12 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
         </div>
       </section>
 
-      {error && <div className="mri-error" role="alert">{error}</div>}
-      {loading && !data && <div className="mri-loading" role="status">Loading tenant intelligence…</div>}
+      {error && <div className="mri-error" role="alert">{managerFacingMessage(error, "Unable to load business insights. Try again.")}</div>}
+      {loading && !data && <div className="mri-loading" role="status">Loading business insights…</div>}
 
       {intelligence && data && <>
         <section className="mri-next" id="bi-next-service" aria-labelledby="bi-next-title">
-          <header><div><span>Next Service</span><h2 id="bi-next-title">{intelligence.nextService.name}</h2>{intelligence.nextService.window && <p>{intelligence.nextService.window}</p>}</div><b className={intelligence.nextService.supported ? "supported" : "limited"}>{intelligence.nextService.supported ? "History supported" : "Building history"}</b></header>
+          <header><div><span>Next Service</span><h2 id="bi-next-title">{intelligence.nextService.name}</h2>{intelligence.nextService.window && <p>{intelligence.nextService.window}</p>}</div><b className={intelligence.nextService.supported ? "supported" : "limited"}>{intelligence.nextService.supported ? "History available" : "Building history"}</b></header>
           {intelligence.nextService.supported ? <>
             <div className="mri-readiness">
               <div><span>Demand</span><strong className={intelligence.nextService.demand === "Elevated" ? "attention" : "healthy"}>{intelligence.nextService.demand}</strong></div>
@@ -122,7 +122,7 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
         <div className="mri-decision-grid">
           <section className="mri-section" id="bi-risks" aria-labelledby="bi-risks-title">
             <header><div><span>Prepare before impact</span><h2 id="bi-risks-title">Operational Risks</h2></div>{intelligence.risks.length > 0 && <b>{intelligence.risks.length}</b>}</header>
-            <div className="mri-signal-list">{intelligence.risks.length ? intelligence.risks.map((signal) => <SignalCard key={signal.id} signal={signal} />) : <div className="mri-healthy"><i /> <span><strong>No significant operational risks detected.</strong><small>Current supported thresholds are within their normal range.</small></span></div>}</div>
+            <div className="mri-signal-list">{intelligence.risks.length ? intelligence.risks.map((signal) => <SignalCard key={signal.id} signal={signal} />) : <div className="mri-healthy"><i /> <span><strong>No significant operational risks detected.</strong><small>Current thresholds are within their normal range.</small></span></div>}</div>
           </section>
 
           <section className="mri-section" aria-labelledby="bi-opportunities-title">

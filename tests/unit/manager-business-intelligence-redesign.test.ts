@@ -33,7 +33,7 @@ describe("Manager Business Intelligence redesign", () => {
   it("renames the workspace and removes dashboard and Copilot duplication", () => {
     expect(layout).toContain('label: "Business Intelligence"');
     expect(layout).not.toContain("ml-header-context");
-    expect(page).toContain("Forward-looking guidance for upcoming service, operational risks, and preparation.");
+    expect(page).not.toContain("Forward-looking guidance for upcoming service, operational risks, and preparation.");
     for (const removed of ["Restaurant Intelligence", "Current Revenue", "Operational Health", "Future Actions", "Active Risks", "AI Operations Assistant", "Open Copilot", "mri-kpis", "mri-copilot"]) expect(page).not.toContain(removed);
   });
 

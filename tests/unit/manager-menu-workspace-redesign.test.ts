@@ -18,7 +18,7 @@ describe("Manager Menu operational workspace", () => {
 
   it("shows compact operational states without inventing sold-out semantics", () => {
     for (const label of ["Available", "Sold out", "Hidden", "Recipe missing"]) expect(page).toContain(label);
-    expect(page).toContain("Not supported separately");
+    expect(page).toContain("Not tracked separately");
     expect(page).toContain('item.available ? "Available" : "Hidden"');
     expect(page).not.toContain("setSoldOut");
   });
@@ -41,7 +41,7 @@ describe("Manager Menu operational workspace", () => {
   it("keeps appearance secondary and provides a truthful customer preview", () => {
     expect(page).toContain("mmw-appearance-button");
     expect(page).toContain("ThemeCustomizationStudio");
-    expect(page).toContain("only available items appear");
+    expect(page).toContain("Only currently available items appear");
     expect(page).toContain('target="_blank"');
   });
 

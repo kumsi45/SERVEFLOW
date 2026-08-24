@@ -7,6 +7,7 @@ import {
 import { fetchManagerDashboardSnapshot } from "../services/managerDashboardService";
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
 import "../styles/managerDashboard.css";
+import { managerFacingMessage } from "../managerPresentation";
 
 type Props = {
   restaurantId: string;
@@ -315,7 +316,7 @@ export function ManagerDashboardPage({
 
   return (
     <main className="md-overview">
-      {status === "error" && <p className="md-overview-error">{error}</p>}
+      {status === "error" && <p className="md-overview-error">{managerFacingMessage(error, "Unable to load the Manager dashboard. Try again.")}</p>}
 
       <section className="md-pulse" aria-labelledby="shift-pulse-title">
         <div className="md-block-heading">
