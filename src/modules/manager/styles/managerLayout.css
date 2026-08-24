@@ -27,6 +27,94 @@
   background: #fff;
 }
 
+.ml-mobile-drawer,
+.ml-mobile-brand {
+  display: none;
+}
+
+.ml-mobile-drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 10px 14px 10px 18px;
+  border-bottom: 1px solid var(--manager-border);
+}
+
+.ml-mobile-drawer-heading button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: #344054;
+  background: #f2f4f7;
+}
+
+.ml-mobile-drawer-heading button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ml-mobile-drawer-nav {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ml-mobile-drawer-nav a {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-radius: 9px;
+  color: #344054;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.ml-mobile-drawer-nav a .ml-nav-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #344054;
+  background: #f2f4f7;
+}
+
+.ml-mobile-drawer-nav a.is-active {
+  color: #fff;
+  background: var(--manager-primary);
+}
+
+.ml-mobile-drawer-nav a.is-active .ml-nav-icon {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ml-mobile-account {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding: 14px;
+  border-top: 1px solid var(--manager-border);
+}
+
+.ml-mobile-account > button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  color: #b42318;
+  background: #fef3f2;
+  font: inherit;
+  font-weight: 780;
+}
+
 .ml-sidebar-brand {
   padding: 28px 24px 24px;
 }
@@ -622,12 +710,24 @@
     overflow-y: visible;
   }
 
-  .ml-sidebar {
+  .ml-desktop-sidebar {
+    display: none;
+  }
+
+  .ml-mobile-drawer {
     position: fixed;
-    left: 0;
+    z-index: 40;
+    top: 0;
+    right: 0;
     bottom: 0;
-    transform: translateX(-102%);
     width: min(320px, 86vw);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(102%);
+    border-left: 1px solid var(--manager-border);
+    background: #fff;
+    box-shadow: -24px 0 60px rgba(15, 23, 42, 0.22);
     transition: transform 180ms ease;
   }
 
@@ -689,7 +789,7 @@
     overflow: visible;
   }
 
-  .ml-sidebar.is-open {
+  .ml-mobile-drawer.is-open {
     transform: translateX(0);
   }
 
@@ -711,14 +811,80 @@
     font-size: 0;
   }
 
-  .ml-menu-button::before {
-    content: "\2630";
-    font-size: 22px;
-    line-height: 1;
+  .ml-menu-button svg {
+    width: 22px;
+    height: 22px;
   }
 
   .ml-header {
     grid-template-columns: minmax(220px, 1fr) auto;
+  }
+
+  .ml-mobile-brand {
+    display: block;
+    min-width: 0;
+  }
+
+  .ml-header-left,
+  .ml-clock,
+  .ml-profile {
+    display: none;
+  }
+
+  .ml-header-meta {
+    margin-left: auto;
+  }
+
+  .ml-content {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .ml-bottom-nav {
+    position: fixed;
+    z-index: 32;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: calc(66px + env(safe-area-inset-bottom));
+    padding: 7px max(4px, env(safe-area-inset-left)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-right));
+    border-top: 1px solid var(--manager-border);
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .ml-bottom-nav a {
+    min-width: 0;
+    min-height: 52px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    color: #667085;
+    font-size: 10px;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .ml-bottom-nav .ml-nav-icon {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: #475467;
+    background: #f1f4f7;
+  }
+
+  .ml-bottom-nav .is-active {
+    color: var(--manager-primary);
+  }
+
+  .ml-bottom-nav .is-active .ml-nav-icon {
+    color: #fff;
+    background: var(--manager-primary);
   }
 
   .mks-page .manager-tabs,
@@ -796,22 +962,9 @@
     padding: 14px 12px calc(92px + env(safe-area-inset-bottom));
   }
 
-  .ml-sidebar {
+  .ml-mobile-drawer {
     width: min(340px, 88vw);
-    border-radius: 0 24px 24px 0;
-    box-shadow: 24px 0 60px rgba(15, 23, 42, 0.22);
-  }
-
-  .ml-sidebar-brand {
-    padding: 22px 20px 16px;
-  }
-
-  .ml-sidebar-nav {
-    padding: 8px 16px;
-  }
-
-  .ml-sidebar-footer {
-    padding: 18px;
+    border-radius: 24px 0 0 24px;
   }
 
   .ml-logo {
@@ -842,8 +995,7 @@
     margin-left: auto;
   }
   .ml-menu-button {
-    position: absolute;
-    left: 12px;
+    position: static;
   }
 
   .ml-bottom-nav {

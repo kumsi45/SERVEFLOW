@@ -29,7 +29,7 @@ describe("Manager sidebar icon system", () => {
   });
 
   it("uses the same icon container and geometry on desktop and mobile", () => {
-    expect(layout.match(/className="ml-nav-icon"/g)?.length).toBe(2);
+    expect(layout.match(/className="ml-nav-icon"/g)?.length).toBe(3);
     expect(styles).toContain(".ml-nav-icon svg");
     expect(styles).toContain("width: 17px");
     expect(styles).toContain("height: 17px");
