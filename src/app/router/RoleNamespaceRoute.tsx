@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { canAccessInventory } from "../../core/permissions/inventoryAccess";
 import { canReadRecipes } from "../../core/permissions/recipeAccess";
 import { getCurrentStaffSession } from "../../modules/staff-auth/services/staffAuthService";
+import type { StaffRestaurant } from "../../modules/staff-auth/types";
 import { getActiveWaiterSession } from "../../modules/waiter-auth/services/waiterAuthService";
 
 const ProtectedCashierRoute = lazy(() => import("../../modules/staff-auth/pages/ProtectedCashierRoute").then((module) => ({ default: module.ProtectedCashierRoute })));
@@ -16,7 +17,7 @@ export type RoleNamespace = "owner" | "manager" | "waiter" | "cashier" | "kitche
 
 type State =
   | { status: "loading" }
-  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen" | "inventory" | "inventory_officer"; restaurantId: string }
+  | { status: "authorized"; role: "owner" | "manager" | "cashier" | "kitchen" | "inventory" | "inventory_officer"; restaurantId: string; restaurant: StaffRestaurant }
   | { status: "waiter"; restaurantSlug: string }
   | { status: "unavailable" };
 
@@ -61,7 +62,7 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
       const savedRestaurantId = window.sessionStorage.getItem(`serveflow.active-restaurant:${namespace}`);
       const restaurant = roleMatch.find((candidate) => candidate.id === savedRestaurantId) ?? roleMatch[0];
       window.sessionStorage.setItem(`serveflow.active-restaurant:${namespace}`, restaurant.id);
-      setState({ status: "authorized", role: restaurant.role, restaurantId: restaurant.id });
+      setState({ status: "authorized", role: restaurant.role, restaurantId: restaurant.id, restaurant });
     }
     void resolve().catch(() => { if (mounted) setState({ status: "unavailable" }); });
     return () => { mounted = false; };
@@ -72,12 +73,12 @@ export function RoleNamespaceRoute({ namespace, section }: { namespace: RoleName
   if (state.status === "authorized") {
     return <Suspense fallback={<main className="route-message"><p>Opening workspace...</p></main>}>
       {section === "recipes" && state.role === "manager"
-        ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
+        ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} accessContext={{ restaurantName: state.restaurant.name, managerName: state.restaurant.displayName || "Manager", currency: { currencyCode: state.restaurant.currencyCode, currencySymbol: state.restaurant.currencySymbol, locale: state.restaurant.locale } }} />
         : section === "recipes" && canReadRecipes(state.role)
         ? <RecipeManagementPage restaurantId={state.restaurantId} role={state.role} />
         : namespace === "inventory" ? <ProtectedInventoryRoute restaurantId={state.restaurantId} section={section} />
         : state.role === "owner" ? <ProtectedOwnerRoute restaurantId={state.restaurantId} section={section} />
-        : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} />
+        : state.role === "manager" ? <ProtectedManagerRoute restaurantId={state.restaurantId} section={section} accessContext={{ restaurantName: state.restaurant.name, managerName: state.restaurant.displayName || "Manager", currency: { currencyCode: state.restaurant.currencyCode, currencySymbol: state.restaurant.currencySymbol, locale: state.restaurant.locale } }} />
         : state.role === "cashier" ? <ProtectedCashierRoute restaurantId={state.restaurantId} section={section} />
         : <ProtectedKitchenRoute restaurantId={state.restaurantId} />}
     </Suspense>;

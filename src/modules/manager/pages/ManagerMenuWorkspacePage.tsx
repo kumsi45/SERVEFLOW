@@ -38,12 +38,12 @@ export function ManagerMenuWorkspacePage({ restaurantId, currency }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try { setSnapshot(await loadManagerMenu(restaurantId)); setError(null); }
+  const refresh = useCallback(async (force = true) => {
+    try { setSnapshot(await loadManagerMenu(restaurantId, force)); setError(null); }
     catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Unable to load menu."); }
   }, [restaurantId]);
-  useEffect(() => { void refresh(); }, [refresh]);
-  useTenantRealtime({ channelName: "manager-menu", restaurantId, tables: ["menu_items", "categories", "kitchen_stations", "recipes"], refresh });
+  useEffect(() => { void refresh(false); }, [refresh]);
+  useTenantRealtime({ channelName: "manager-menu", restaurantId, tables: ["menu_items", "categories", "kitchen_stations", "recipes"], refresh, skipInitialConnectRefresh: true });
 
   const categoryNames = useMemo(() => new Map((snapshot?.categories ?? []).map((entry) => [entry.id, entry.name])), [snapshot]);
   const stationNames = useMemo(() => new Map((snapshot?.stations ?? []).map((entry) => [entry.id, entry.name])), [snapshot]);

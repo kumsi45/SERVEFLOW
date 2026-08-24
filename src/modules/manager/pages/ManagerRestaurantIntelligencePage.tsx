@@ -59,10 +59,10 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
   const [loading, setLoading] = useState(true);
   const [horizon, setHorizon] = useState<Horizon>("next-service");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = true) => {
     try {
       setLoading(true);
-      setData(await loadRestaurantIntelligence(restaurantId));
+      setData(await loadRestaurantIntelligence(restaurantId, force));
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Business Intelligence is unavailable.");
@@ -71,13 +71,14 @@ export function ManagerRestaurantIntelligencePage({ restaurantId }: Props) {
     }
   }, [restaurantId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(false); }, [load]);
 
   useTenantRealtime({
     channelName: "restaurant-intelligence",
     restaurantId,
     tables: ["orders", "order_items", "restaurant_staff", "restaurant_table_waiter_assignments", "manager_customer_complaints", "kitchen_inventory_requests", "inventory_items"],
     refresh: load,
+    skipInitialConnectRefresh: true,
   });
 
   const intelligence = useMemo(() => data ? buildBusinessIntelligence(data) : null, [data]);

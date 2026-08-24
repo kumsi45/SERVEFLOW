@@ -40,9 +40,9 @@ export function ManagerAiOperationsPage({ restaurantId, managerName, currency }:
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const refresh = useCallback(async () => { try { const next = await loadRestaurantIntelligence(restaurantId); setIntelligence(next); setSnapshot(next.operations); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operations Copilot unavailable."); } }, [restaurantId]);
-  useEffect(() => { void refresh(); }, [refresh]);
-  useTenantRealtime({ channelName: "manager-ai-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "kitchen_stations", "restaurant_staff", "restaurant_table_waiter_assignments", "manager_customer_complaints", "kitchen_inventory_requests", "inventory_items", "manager_ai_recommendation_decisions"], refresh });
+  const refresh = useCallback(async (force = true) => { try { const next = await loadRestaurantIntelligence(restaurantId, force); setIntelligence(next); setSnapshot(next.operations); setError(null); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Operations Copilot unavailable."); } }, [restaurantId]);
+  useEffect(() => { void refresh(false); }, [refresh]);
+  useTenantRealtime({ channelName: "manager-ai-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "kitchen_stations", "restaurant_staff", "restaurant_table_waiter_assignments", "manager_customer_complaints", "kitchen_inventory_requests", "inventory_items", "manager_ai_recommendation_decisions"], refresh, skipInitialConnectRefresh: true });
 
   const health = useMemo(() => new Map((snapshot?.health.breakdown ?? []).map((item) => [item.label, item])), [snapshot]);
   const problems = snapshot?.alerts.length ?? 0;

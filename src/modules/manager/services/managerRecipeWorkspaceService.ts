@@ -1,7 +1,8 @@
 import { supabase } from "../../../core/database";
 import { fetchMenuRecipeLinks, type MenuRecipeLink } from "../../menu-recipes/services/menuRecipeService";
-import { fetchActiveIngredientUnits, fetchRecipeIngredients, fetchRecipes, searchActiveInventoryItems } from "../../recipes/services/recipeService";
+import { fetchActiveIngredientUnits, fetchRecipeIngredientsForRecipes, fetchRecipes, searchActiveInventoryItems } from "../../recipes/services/recipeService";
 import type { IngredientInventoryItem, IngredientUnit, Recipe, RecipeIngredient } from "../../recipes/types";
+import { loadManagerCachedData } from "./managerDataCache";
 
 export type RecipeStation = { id: string; name: string };
 export type ManagerRecipeSnapshot = {
@@ -42,7 +43,7 @@ async function fetchManagerRecipes(restaurantId: string): Promise<Recipe[]> {
   return recipes;
 }
 
-export async function loadManagerRecipeWorkspace(restaurantId: string): Promise<ManagerRecipeSnapshot> {
+async function loadManagerRecipeWorkspaceUncached(restaurantId: string): Promise<ManagerRecipeSnapshot> {
   const [menuItems, recipes, inventoryItems, units, stationResult] = await Promise.all([
     fetchMenuRecipeLinks(restaurantId),
     fetchManagerRecipes(restaurantId),
@@ -52,13 +53,19 @@ export async function loadManagerRecipeWorkspace(restaurantId: string): Promise<
   ]);
   if (stationResult.error) throw new Error(stationResult.error.message);
 
-  const ingredientPairs = await Promise.all(recipes.map(async (recipe) => [recipe.id, await fetchRecipeIngredients(restaurantId, recipe.id)] as const));
+  const ingredients = await fetchRecipeIngredientsForRecipes(restaurantId, recipes.map((recipe) => recipe.id));
+  const ingredientsByRecipe = Object.fromEntries(recipes.map((recipe) => [recipe.id, [] as RecipeIngredient[]]));
+  for (const ingredient of ingredients) (ingredientsByRecipe[ingredient.recipe_id] ??= []).push(ingredient);
   return {
     menuItems,
     recipes,
-    ingredientsByRecipe: Object.fromEntries(ingredientPairs),
+    ingredientsByRecipe,
     inventoryItems,
     units,
     stations: (stationResult.data ?? []).map((row) => ({ id: String(row.id), name: String(row.name) })),
   };
+}
+
+export function loadManagerRecipeWorkspace(restaurantId: string, force = false): Promise<ManagerRecipeSnapshot> {
+  return loadManagerCachedData({ restaurantId, resource: "recipes", maxAgeMs: 60_000, force, loader: () => loadManagerRecipeWorkspaceUncached(restaurantId) });
 }

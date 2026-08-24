@@ -66,6 +66,20 @@ export async function fetchRecipeIngredients(restaurantId: string, recipeId: str
   });
 }
 
+export async function fetchRecipeIngredientsForRecipes(restaurantId: string, recipeIds: string[]): Promise<RecipeIngredient[]> {
+  if (!recipeIds.length) return [];
+  const { data, error } = await supabase.from("recipe_ingredients")
+    .select("id,restaurant_id,recipe_id,inventory_item_id,quantity_required,unit_id,optional_notes,sort_order,created_at,updated_at,inventory_items!recipe_ingredients_item_restaurant_fk(name,status),inventory_units!recipe_ingredients_unit_restaurant_fk(name,status)")
+    .eq("restaurant_id", restaurantId).in("recipe_id", recipeIds)
+    .order("sort_order").order("created_at");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const item = Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items;
+    const unit = Array.isArray(row.inventory_units) ? row.inventory_units[0] : row.inventory_units;
+    return { ...row, quantity_required: Number(row.quantity_required), inventory_item_name: String((item as { name?: string } | null)?.name ?? "Inventory Item"), unit_name: String((unit as { name?: string } | null)?.name ?? "Unit"), inventory_item_status: (item as { status?: string } | null)?.status, unit_status: (unit as { status?: string } | null)?.status } as RecipeIngredient;
+  });
+}
+
 export async function searchActiveInventoryItems(restaurantId: string, search: string): Promise<IngredientInventoryItem[]> {
   let query = supabase.from("inventory_items").select("id,name,unit_id")
     .eq("restaurant_id", restaurantId).eq("status", "active").order("name").limit(50);

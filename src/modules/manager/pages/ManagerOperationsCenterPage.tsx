@@ -19,6 +19,14 @@ type ActionPriority = "critical" | "attention" | "normal";
 type ManagerAction = { id: string; title: string; detail: string; age: string; priority: ActionPriority; category: "approvals" | "service"; tableId?: string; requestId?: string };
 type RecentOperation = { id: string; at: string; label: string };
 type OperationsView = "service" | "cashier";
+const OPERATIONS_LOAD_TIMEOUT_MS = 15_000;
+
+function withOperationsTimeout<T>(request: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error("Manager operations request timed out.")), OPERATIONS_LOAD_TIMEOUT_MS);
+    request.then(resolve, reject).finally(() => window.clearTimeout(timeoutId));
+  });
+}
 
 function elapsed(minutes: number | null) {
   if (minutes == null) return "";
@@ -224,29 +232,46 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const [requestedAssignmentTableId, setRequestedAssignmentTableId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [secondaryError, setSecondaryError] = useState<string | null>(null);
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
   const localAssignmentAt = useRef(0);
 
   const refresh = useCallback(async () => {
     setRequestsLoading(true);
-    try {
-      const [nextDashboard, nextInventoryRequestsResult, nextInventoryStock, nextCashierOps] = await Promise.all([fetchManagerDashboardSnapshot(restaurantId), loadInventoryRequests(restaurantId).then((items) => ({ items, available: true as const })).catch(() => ({ items: [] as InventoryRequest[], available: false as const })), loadInventoryCurrentStock(restaurantId), loadManagerCashierOperations(restaurantId)]);
+    setSecondaryError(null);
+    const dashboardLoad = withOperationsTimeout(fetchManagerDashboardSnapshot(restaurantId)).then((nextDashboard) => {
       setDashboard(nextDashboard);
-      setInventoryRequests(nextInventoryRequestsResult.items);
-      setRequestsUnavailable(!nextInventoryRequestsResult.available);
-      setInventoryStock(nextInventoryStock);
-      setCashierOps(nextCashierOps);
       setOperationsState("ready");
       setError(null);
-    } catch (loadError) {
+    }).catch(() => {
       setOperationsState("unavailable");
       setError("Unable to load Live Operations.");
-    } finally { setRequestsLoading(false); }
+    });
+    const secondaryLoad = Promise.allSettled([
+      withOperationsTimeout(loadInventoryRequests(restaurantId)),
+      withOperationsTimeout(loadInventoryCurrentStock(restaurantId)),
+      withOperationsTimeout(loadManagerCashierOperations(restaurantId)),
+    ]).then(([requestsResult, stockResult, cashierResult]) => {
+      if (requestsResult.status === "fulfilled") {
+        setInventoryRequests(requestsResult.value);
+        setRequestsUnavailable(false);
+      } else {
+        setRequestsUnavailable(true);
+      }
+      if (stockResult.status === "fulfilled") setInventoryStock(stockResult.value);
+      if (cashierResult.status === "fulfilled") setCashierOps(cashierResult.value);
+      const failedAreas = [
+        stockResult.status === "rejected" ? "inventory availability" : null,
+        cashierResult.status === "rejected" ? "cashier supervision" : null,
+      ].filter(Boolean);
+      setSecondaryError(failedAreas.length ? `Some supporting data is temporarily unavailable: ${failedAreas.join(" and ")}.` : null);
+    }).finally(() => { setRequestsLoading(false); });
+    await Promise.all([dashboardLoad, secondaryLoad]);
   }, [restaurantId]);
 
   const refreshAssignments = useCallback(async () => {
     try {
-      const nextContext = await loadManagerWaiterTableAssignments(restaurantId);
+      const nextContext = await withOperationsTimeout(loadManagerWaiterTableAssignments(restaurantId));
       setAssignmentContext(nextContext);
       setAssignmentState("ready");
     } catch {
@@ -257,15 +282,15 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
   const refreshAssignmentsFromRealtime = useCallback(async () => {
     const followsLocalWrite = Date.now() - localAssignmentAt.current < 3000;
     if (!followsLocalWrite) setAssignmentSyncNotice("Assignment changed by another Manager. Refreshing...");
-    await Promise.all([refresh(), refreshAssignments()]);
+    await refreshAssignments();
     if (!followsLocalWrite) window.setTimeout(() => setAssignmentSyncNotice(null), 2400);
-  }, [refresh, refreshAssignments]);
+  }, [refreshAssignments]);
 
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { void refreshAssignments(); }, [refreshAssignments]);
   useEffect(() => { setShowAllOrderItems(false); }, [selectedTableId]);
-  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_staff", "kitchen_inventory_requests", "inventory_items", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"], refresh });
-  useTenantRealtime({ channelName: "manager-waiter-table-assignments", restaurantId, tables: ["restaurant_table_waiter_assignments"], refresh: refreshAssignmentsFromRealtime });
+  useTenantRealtime({ channelName: "manager-live-operations", restaurantId, tables: ["orders", "order_items", "order_invoices", "restaurant_tables", "restaurant_staff", "kitchen_inventory_requests", "inventory_items", "cashier_shifts", "cash_reconciliations", "shift_activity_logs", "cashier_shift_expenses", "cashier_cash_handovers"], refresh, skipInitialConnectRefresh: true });
+  useTenantRealtime({ channelName: "manager-waiter-table-assignments", restaurantId, tables: ["restaurant_table_waiter_assignments"], refresh: refreshAssignmentsFromRealtime, skipInitialConnectRefresh: true });
 
   const serviceLocations = useMemo(() => {
     const assignments = new Map((assignmentContext?.tables ?? []).map((table) => [table.tableId, table]));
@@ -366,6 +391,7 @@ export function ManagerOperationsCenterPage({ restaurantId, currency }: Props) {
 
   return <main className="moc-page">
     {(notice || error) && <div className={`moc-message ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{error ? managerFacingMessage(error, "Unable to complete the Live Operations action. Try again.") : notice}</div>}
+    {secondaryError && <div className="moc-message error" role="alert">{secondaryError}</div>}
     {requestsUnavailable && <div className="moc-message error" role="alert">Kitchen requests unavailable.</div>}
 
     <nav className="moc-workspace-tabs" aria-label="Live Operations workspace">

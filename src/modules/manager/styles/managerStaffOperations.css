@@ -32,6 +32,7 @@
 .mso-page-header > div > span { display: block; margin-top: 5px; color: #667085; font-size: 14px; }
 
 .mso-primary-action {
+  margin-left: auto;
   min-height: 44px;
   border: 1px solid #174ea6;
   border-radius: 10px;

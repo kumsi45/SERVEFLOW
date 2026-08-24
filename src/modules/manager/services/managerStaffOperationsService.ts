@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { loadManagerCachedData } from "./managerDataCache";
 
 export type ManagerStaffRole = "cashier" | "kitchen" | "waiter" | "reception" | "inventory" | "inventory_officer";
 export type ManagerDirectoryRole = ManagerStaffRole | "supervisor";
@@ -125,7 +126,7 @@ async function invokeManageStaff(payload: Record<string, unknown>) {
   return data ?? {};
 }
 
-export async function loadManagerStaffOperations(restaurantId: string): Promise<ManagerStaffOperationsSnapshot> {
+async function loadManagerStaffOperationsUncached(restaurantId: string): Promise<ManagerStaffOperationsSnapshot> {
   const [staffResult, stationsResult, tablesResult, assignmentsResult, ordersResult, itemsResult, activityResult, readinessResult] = await Promise.all([
     supabase.from("restaurant_staff").select("id,user_id,display_name,employee_id,contact_email,phone_number,shift_label,role,assigned_kitchen_station_id,active,last_login_at,last_logout_at,staff_session_active,waiter_session_active").eq("restaurant_id", restaurantId).not("role", "in", "(owner,manager)").order("display_name", { ascending: true }),
     supabase.from("kitchen_stations").select("id,name,active").eq("restaurant_id", restaurantId).order("priority", { ascending: true }),
@@ -216,6 +217,10 @@ export async function loadManagerStaffOperations(restaurantId: string): Promise<
     tables,
     activity,
   };
+}
+
+export function loadManagerStaffOperations(restaurantId: string, force = false): Promise<ManagerStaffOperationsSnapshot> {
+  return loadManagerCachedData({ restaurantId, resource: "staff", maxAgeMs: 30_000, force, loader: () => loadManagerStaffOperationsUncached(restaurantId) });
 }
 
 export function createManagerStaff(restaurantId: string, input: { fullName: string; email?: string; password?: string; pin?: string; phoneNumber?: string; shift?: string; role: ManagerStaffRole }) {

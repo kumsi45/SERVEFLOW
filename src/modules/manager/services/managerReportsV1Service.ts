@@ -2,6 +2,7 @@ import type { ReportingPeriodWindow } from "../../../core/analytics/historicalAn
 import { loadManagerFinancialReport, type ManagerFinancialReport } from "./managerFinancialReportsService";
 import { loadManagerCashierPeriodReport, loadManagerMenuPerformanceReport, type ManagerCashierPeriodReport, type ManagerMenuPerformanceReport } from "./managerR3ReportsService";
 import { loadManagerR4OperationalReport, type ManagerR4OperationalReport } from "./managerR4ReportsService";
+import { loadManagerCachedData } from "./managerDataCache";
 
 export type ManagerReportsV1Bundle = {
   generatedAt: string;
@@ -12,7 +13,7 @@ export type ManagerReportsV1Bundle = {
   operations: ManagerR4OperationalReport;
 };
 
-export async function loadManagerReportsV1(restaurantId: string, window: ReportingPeriodWindow): Promise<ManagerReportsV1Bundle> {
+async function loadManagerReportsV1Uncached(restaurantId: string, window: ReportingPeriodWindow): Promise<ManagerReportsV1Bundle> {
   const [financial, menu, cashier, operations] = await Promise.all([
     loadManagerFinancialReport(restaurantId, window),
     loadManagerMenuPerformanceReport(restaurantId, window),
@@ -20,6 +21,11 @@ export async function loadManagerReportsV1(restaurantId: string, window: Reporti
     loadManagerR4OperationalReport(restaurantId, window),
   ]);
   return { generatedAt: new Date().toISOString(), window, financial, menu, cashier, operations };
+}
+
+export function loadManagerReportsV1(restaurantId: string, window: ReportingPeriodWindow, force = false): Promise<ManagerReportsV1Bundle> {
+  const resource = `reports:${window.rangeStart}:${window.rangeEnd}`;
+  return loadManagerCachedData({ restaurantId, resource, maxAgeMs: 30_000, force, loader: () => loadManagerReportsV1Uncached(restaurantId, window) });
 }
 
 type ExportRow = Array<string | number | null | undefined>;

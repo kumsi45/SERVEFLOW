@@ -47,15 +47,14 @@ export function ManagerRecipeWorkspacePage({ restaurantId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = true) => {
     setLoading(true);
-    try { setSnapshot(await loadManagerRecipeWorkspace(restaurantId)); setError(null); }
+    try { setSnapshot(await loadManagerRecipeWorkspace(restaurantId, force)); setError(null); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Recipes could not be loaded."); }
     finally { setLoading(false); }
   }, [restaurantId]);
-  useEffect(() => { void refresh(); }, [refresh]);
-  useTenantRealtime({ channelName: "manager-recipe-workspace", restaurantId, tables: ["recipes", "menu_items"], refresh });
-  useTenantRealtime({ channelName: "manager-recipe-ingredients", restaurantId, tables: ["inventory_items", "recipe_ingredients"], refresh });
+  useEffect(() => { void refresh(false); }, [refresh]);
+  useTenantRealtime({ channelName: "manager-recipe-workspace", restaurantId, tables: ["recipes", "menu_items", "inventory_items", "recipe_ingredients"], refresh, skipInitialConnectRefresh: true });
 
   const recipeById = useMemo(() => new Map((snapshot?.recipes ?? []).map((recipe) => [recipe.id, recipe])), [snapshot]);
   const stationById = useMemo(() => new Map((snapshot?.stations ?? []).map((station) => [station.id, station.name])), [snapshot]);
@@ -92,7 +91,7 @@ export function ManagerRecipeWorkspacePage({ restaurantId }: Props) {
   }
 
   return <main className="mrw-page">
-    <header className="mrw-header"><div><h1>Recipes</h1></div><button type="button" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button></header>
+    <header className="mrw-header"><h1 className="sr-only">Recipes</h1><button type="button" onClick={() => setSetupPicker(true)}>+ Set Up Recipe</button></header>
     {error && <div className="mrw-message error" role="alert">{managerFacingMessage(error, "Unable to load recipes. Try again.")}</div>}{notice && <div className="mrw-message">{notice}</div>}
 
     <section className="mrw-summary" aria-label="Recipe summary">

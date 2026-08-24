@@ -4,6 +4,7 @@ export type StaffRestaurant = {
   id: string;
   name: string;
   role: StaffRole;
+  displayName?: string | null;
   currencyCode?: string | null;
   currencySymbol?: string | null;
   locale?: string | null;

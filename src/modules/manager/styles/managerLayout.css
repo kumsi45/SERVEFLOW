@@ -989,3 +989,4 @@
     grid-template-columns: 1fr;
   }
 }
+.ml-route-loading{display:flex;min-height:72px;align-items:center;justify-content:center;gap:9px;color:#667085;font-size:13px;font-weight:700}.ml-route-loading span{width:16px;height:16px;border:2px solid #d0d5dd;border-top-color:#2563eb;border-radius:50%;animation:ml-route-spin .7s linear infinite}@keyframes ml-route-spin{to{transform:rotate(360deg)}}

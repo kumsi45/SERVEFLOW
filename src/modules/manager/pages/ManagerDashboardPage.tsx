@@ -8,6 +8,7 @@ import { fetchManagerDashboardSnapshot } from "../services/managerDashboardServi
 import type { ManagerDashboardSnapshot, ManagerFloorTable } from "../types";
 import "../styles/managerDashboard.css";
 import { managerFacingMessage } from "../managerPresentation";
+import { withManagerDataTimeout } from "../services/managerDataCache";
 
 type Props = {
   restaurantId: string;
@@ -133,7 +134,7 @@ export function ManagerDashboardPage({
 
   const loadSnapshot = useCallback(async () => {
     try {
-      const nextSnapshot = await fetchManagerDashboardSnapshot(restaurantId);
+      const nextSnapshot = await withManagerDataTimeout(fetchManagerDashboardSnapshot(restaurantId));
       setSnapshot(nextSnapshot);
       setStatus("ready");
       setError(null);
@@ -171,6 +172,7 @@ export function ManagerDashboardPage({
       "cashier_shifts",
     ],
     refresh: loadSnapshot,
+    skipInitialConnectRefresh: true,
   });
 
   const floorTables = snapshot?.floorTables ?? [];

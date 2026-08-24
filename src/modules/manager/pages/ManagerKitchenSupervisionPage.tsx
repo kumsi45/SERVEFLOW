@@ -24,6 +24,7 @@ import {
 import { loadRestaurantAnalyticsTimezone } from "../services/managerOperationalReportsService";
 import "../styles/managerKitchenSupervision.css";
 import { managerFacingMessage } from "../managerPresentation";
+import { withManagerDataTimeout } from "../services/managerDataCache";
 
 type Props = { restaurantId: string; restaurantName: string; managerName: string };
 type KitchenView = "overview" | "orders" | "performance";
@@ -161,7 +162,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextSnapshot, nextRequestsResult, nextInventoryResult, nextTimezone] = await Promise.all([
+      const [nextSnapshot, nextRequestsResult, nextInventoryResult, nextTimezone] = await withManagerDataTimeout(Promise.all([
         loadManagerKitchenSupervision(restaurantId),
         loadInventoryRequests(restaurantId)
           .then((items) => ({ items, available: true as const }))
@@ -170,7 +171,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
           .then((items) => ({ items, available: true as const }))
           .catch(() => ({ items: [] as InventoryItem[], available: false as const })),
         loadRestaurantAnalyticsTimezone(restaurantId).catch(() => "Africa/Nairobi"),
-      ]);
+      ]));
       setSnapshot(nextSnapshot);
       setOperationsState("ready");
       setRequests(nextRequestsResult.items);
@@ -193,6 +194,7 @@ export function ManagerKitchenSupervisionPage({ restaurantId }: Props) {
     restaurantId,
     tables: ["kitchen_stations", "orders", "order_items", "restaurant_staff", "staff_activity_log", "kitchen_inventory_requests", "inventory_items"],
     refresh,
+    skipInitialConnectRefresh: true,
   });
 
   const stations = snapshot?.stations ?? [];

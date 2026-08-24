@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const recipeServiceMock = vi.hoisted(() => ({
   fetchActiveIngredientUnits: vi.fn(),
-  fetchRecipeIngredients: vi.fn(),
+  fetchRecipeIngredientsForRecipes: vi.fn(),
   fetchRecipes: vi.fn(),
   searchActiveInventoryItems: vi.fn(),
 }));
@@ -20,6 +20,7 @@ vi.mock("../../src/modules/menu-recipes/services/menuRecipeService", () => menuR
 vi.mock("../../src/core/database", () => ({ supabase: supabaseMock }));
 
 import { loadManagerRecipeWorkspace } from "../../src/modules/manager/services/managerRecipeWorkspaceService";
+import { clearManagerDataCache } from "../../src/modules/manager/services/managerDataCache";
 import type { Recipe } from "../../src/modules/recipes/types";
 
 function recipe(id: string): Recipe {
@@ -54,11 +55,12 @@ function mockKitchenStations() {
 describe("Manager Recipes pagination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearManagerDataCache();
     mockKitchenStations();
     menuRecipeServiceMock.fetchMenuRecipeLinks.mockResolvedValue([]);
     recipeServiceMock.searchActiveInventoryItems.mockResolvedValue([]);
     recipeServiceMock.fetchActiveIngredientUnits.mockResolvedValue([]);
-    recipeServiceMock.fetchRecipeIngredients.mockResolvedValue([]);
+    recipeServiceMock.fetchRecipeIngredientsForRecipes.mockResolvedValue([]);
   });
 
   it("starts recipe loading with a backend-valid first page and follows subsequent pages", async () => {

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const page = read("src/modules/manager/pages/ManagerRecipeWorkspacePage.tsx");
 const service = read("src/modules/manager/services/managerRecipeWorkspaceService.ts");
+const recipeService = read("src/modules/recipes/services/recipeService.ts");
 const styles = read("src/modules/manager/styles/managerRecipeWorkspace.css");
 const managerRoute = read("src/modules/staff-auth/pages/ProtectedManagerRoute.tsx");
 const roleRoute = read("src/app/router/RoleNamespaceRoute.tsx");
@@ -16,7 +17,7 @@ describe("Manager Recipes operational workspace", () => {
     expect(roleRoute).toContain('section === "recipes" && state.role === "manager"');
     expect(page).not.toContain(">Dashboard<");
     expect(page).not.toContain("Manage recipe standards, ingredient usage, preparation details, and inventory connections.");
-    expect(page).toContain("<h1>Recipes</h1>");
+    expect(page).toContain('<h1 className="sr-only">Recipes</h1>');
   });
 
   it("uses the four focused summaries and an exception-first attention section", () => {
@@ -39,12 +40,12 @@ describe("Manager Recipes operational workspace", () => {
     expect(page).toContain("removeRecipeIngredient");
   });
 
-  it("reuses tenant-scoped services and the split realtime subscriptions", () => {
+  it("reuses tenant-scoped services and one consolidated realtime subscription", () => {
     expect(service).toContain("fetchMenuRecipeLinks(restaurantId)");
-    expect(service).toContain("fetchRecipeIngredients(restaurantId, recipe.id)");
-    expect(service).toContain('.eq("restaurant_id", restaurantId)');
-    expect(page).toContain('tables: ["recipes", "menu_items"]');
-    expect(page).toContain('tables: ["inventory_items", "recipe_ingredients"]');
+    expect(service).toContain("fetchRecipeIngredientsForRecipes(restaurantId");
+    expect(recipeService).toContain('.eq("restaurant_id", restaurantId).in("recipe_id", recipeIds)');
+    expect(page).toContain('tables: ["recipes", "menu_items", "inventory_items", "recipe_ingredients"]');
+    expect(page.match(/useTenantRealtime\(/g)).toHaveLength(1);
     expect(page).not.toContain("service_role");
   });
 

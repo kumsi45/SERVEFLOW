@@ -13,6 +13,7 @@ import {
 } from "./managerOperationalReportsService";
 import { analyticsWindow, completedDaysWindow } from "../../../core/analytics/historicalAnalytics";
 import { supabase } from "../../../core/database";
+import { loadManagerCachedData } from "./managerDataCache";
 export type IntelligenceModule = {
   key: "traffic" | "staffing" | "kitchen" | "tables" | "revenue" | "inventory";
   title: string;
@@ -214,7 +215,7 @@ const best = <T>(rows: T[], value: (row: T) => number) =>
     (result, row) => (!result || value(row) > value(result) ? row : result),
     null,
   );
-export async function loadRestaurantIntelligence(
+async function loadRestaurantIntelligenceUncached(
   restaurantId: string,
 ): Promise<RestaurantIntelligenceSnapshot> {
   const now = new Date();
@@ -394,4 +395,8 @@ export async function loadRestaurantIntelligence(
     timezone,
     generatedAt: now.toISOString(),
   };
+}
+
+export function loadRestaurantIntelligence(restaurantId: string, force = false): Promise<RestaurantIntelligenceSnapshot> {
+  return loadManagerCachedData({ restaurantId, resource: "business-intelligence", maxAgeMs: 60_000, force, loader: () => loadRestaurantIntelligenceUncached(restaurantId) });
 }

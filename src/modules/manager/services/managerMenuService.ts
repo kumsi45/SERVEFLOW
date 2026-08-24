@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { loadManagerCachedData } from "./managerDataCache";
 
 export type ManagerMenuCategory = {
   id: string;
@@ -37,7 +38,7 @@ function related<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
-export async function loadManagerMenu(restaurantId: string): Promise<ManagerMenuSnapshot> {
+async function loadManagerMenuUncached(restaurantId: string): Promise<ManagerMenuSnapshot> {
   const [restaurantResult, categoryResult, stationResult, itemResult] = await Promise.all([
     supabase.from("restaurants").select("slug").eq("id", restaurantId).maybeSingle(),
     supabase.from("categories").select("id,name,description,display_order,hero_image_url").eq("restaurant_id", restaurantId).order("display_order").order("name"),
@@ -70,6 +71,10 @@ export async function loadManagerMenu(restaurantId: string): Promise<ManagerMenu
       };
     }),
   };
+}
+
+export function loadManagerMenu(restaurantId: string, force = false): Promise<ManagerMenuSnapshot> {
+  return loadManagerCachedData({ restaurantId, resource: "menu", maxAgeMs: 60_000, force, loader: () => loadManagerMenuUncached(restaurantId) });
 }
 
 export async function setManagerMenuItemAvailability(restaurantId: string, itemId: string, available: boolean) {

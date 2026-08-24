@@ -19,6 +19,7 @@ import {
 } from "../services/managerInventoryWorkspaceService";
 import "../styles/managerInventoryWorkspace.css";
 import { managerFacingMessage } from "../managerPresentation";
+import { withManagerDataTimeout } from "../services/managerDataCache";
 
 type Props = {
   restaurantId: string;
@@ -51,7 +52,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      setSnapshot(await loadManagerInventoryWorkspace(restaurantId));
+      setSnapshot(await withManagerDataTimeout(loadManagerInventoryWorkspace(restaurantId)));
       setError(null);
     } catch (loadError) {
       setError(
@@ -75,6 +76,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
       "recipe_ingredients",
     ],
     refresh,
+    skipInitialConnectRefresh: true,
   });
 
   const stock = snapshot?.stock ?? [];
@@ -162,9 +164,7 @@ export function ManagerInventoryWorkspacePage({ restaurantId }: Props) {
   return (
     <main className="miw-page">
       <header className="miw-header">
-        <div>
-          <h1>Inventory</h1>
-        </div>
+        <h1 className="sr-only">Inventory</h1>
         <button type="button" onClick={openFullInventory}>
           Open Full Inventory <ExternalLink size={16} />
         </button>

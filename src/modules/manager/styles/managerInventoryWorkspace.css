@@ -5,6 +5,7 @@
   color: #172033;
   background: #f6f7f9;
 }
+.miw-header > button{margin-left:auto}
 .miw-header {
   display: flex;
   align-items: flex-start;

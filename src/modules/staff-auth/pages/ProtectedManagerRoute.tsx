@@ -1,61 +1,103 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { supabase } from "../../../core/database";
 import { ManagerLayout } from "../../manager/components/ManagerLayout";
 import { ManagerWorkspaceChrome } from "../../manager/components/ManagerWorkspaceChrome";
 import { useStaffAuthSession } from "../hooks/useStaffAuthSession";
 import type { CurrencyConfig } from "../../../core/format/currency";
+import { managerPageLoaders } from "../../manager/managerPageModules";
+import { clearManagerDataCache } from "../../manager/services/managerDataCache";
 
-const ManagerDashboardPage = lazy(() => import("../../manager/pages/ManagerDashboardPage").then((module) => ({ default: module.ManagerDashboardPage })));
-const ManagerOperationsCenterPage = lazy(() => import("../../manager/pages/ManagerOperationsCenterPage").then((module) => ({ default: module.ManagerOperationsCenterPage })));
-const ManagerKitchenSupervisionPage = lazy(() => import("../../manager/pages/ManagerKitchenSupervisionPage").then((module) => ({ default: module.ManagerKitchenSupervisionPage })));
-const ManagerStaffOperationsPage = lazy(() => import("../../manager/pages/ManagerStaffOperationsPage").then((module) => ({ default: module.ManagerStaffOperationsPage })));
-const ManagerCustomerExperiencePage = lazy(() => import("../../manager/pages/ManagerCustomerExperiencePage").then((module) => ({ default: module.ManagerCustomerExperiencePage })));
-const ManagerOperationalReportsPage = lazy(() => import("../../manager/pages/ManagerOperationalReportsPage").then((module) => ({ default: module.ManagerOperationalReportsPage })));
-const ManagerRestaurantIntelligencePage = lazy(() => import("../../manager/pages/ManagerRestaurantIntelligencePage").then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
-const ManagerMenuWorkspacePage = lazy(() => import("../../manager/pages/ManagerMenuWorkspacePage").then((module) => ({ default: module.ManagerMenuWorkspacePage })));
-const ManagerRecipeWorkspacePage = lazy(() => import("../../manager/pages/ManagerRecipeWorkspacePage").then((module) => ({ default: module.ManagerRecipeWorkspacePage })));
-const ManagerInventoryWorkspacePage = lazy(() => import("../../manager/pages/ManagerInventoryWorkspacePage").then((module) => ({ default: module.ManagerInventoryWorkspacePage })));
+const ManagerDashboardPage = lazy(() => managerPageLoaders.dashboard().then((module) => ({ default: module.ManagerDashboardPage })));
+const ManagerOperationsCenterPage = lazy(() => managerPageLoaders.tables().then((module) => ({ default: module.ManagerOperationsCenterPage })));
+const ManagerKitchenSupervisionPage = lazy(() => managerPageLoaders.kitchen().then((module) => ({ default: module.ManagerKitchenSupervisionPage })));
+const ManagerStaffOperationsPage = lazy(() => managerPageLoaders.staff().then((module) => ({ default: module.ManagerStaffOperationsPage })));
+const ManagerCustomerExperiencePage = lazy(() => managerPageLoaders.customers().then((module) => ({ default: module.ManagerCustomerExperiencePage })));
+const ManagerOperationalReportsPage = lazy(() => managerPageLoaders.reports().then((module) => ({ default: module.ManagerOperationalReportsPage })));
+const ManagerRestaurantIntelligencePage = lazy(() => managerPageLoaders.intelligence().then((module) => ({ default: module.ManagerRestaurantIntelligencePage })));
+const ManagerMenuWorkspacePage = lazy(() => managerPageLoaders.menu().then((module) => ({ default: module.ManagerMenuWorkspacePage })));
+const ManagerRecipeWorkspacePage = lazy(() => managerPageLoaders.recipes().then((module) => ({ default: module.ManagerRecipeWorkspacePage })));
+const ManagerInventoryWorkspacePage = lazy(() => managerPageLoaders.inventory().then((module) => ({ default: module.ManagerInventoryWorkspacePage })));
 
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
   | { status: "authorized"; restaurantName: string; managerName: string; currency: CurrencyConfig };
 
-export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: { restaurantId: string; section?: string }) {
+const MANAGER_ACCESS_RECHECK_MS = 60_000;
+
+async function loadManagerAccess(userId: string, restaurantId: string): Promise<AccessState> {
+  const { data, error } = await supabase.from("restaurant_staff")
+    .select("display_name,restaurants(id,name,currency_code,currency_symbol,locale)")
+    .eq("user_id", userId)
+    .eq("restaurant_id", restaurantId)
+    .eq("role", "manager")
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  const restaurant = Array.isArray(data?.restaurants) ? data.restaurants[0] : data?.restaurants;
+  if (error || !data || !restaurant?.name) return { status: "unauthorized", reason: "access" };
+  return {
+    status: "authorized",
+    restaurantName: restaurant.name,
+    managerName: data.display_name || "Manager",
+    currency: {
+      currencyCode: restaurant.currency_code,
+      currencySymbol: restaurant.currency_symbol,
+      locale: restaurant.locale,
+    },
+  };
+}
+
+export function ProtectedManagerRoute({ restaurantId, section = "dashboard", accessContext }: { restaurantId: string; section?: string; accessContext?: { restaurantName: string; managerName: string; currency: CurrencyConfig } }) {
   const authSession = useStaffAuthSession();
-  const [access, setAccess] = useState<AccessState>({ status: "loading" });
+  const [access, setAccess] = useState<AccessState>(() => accessContext ? { status: "authorized", ...accessContext } : { status: "loading" });
+  const lastAccessCheck = useRef(accessContext ? Date.now() : 0);
 
   useEffect(() => {
     if (authSession.status === "loading") return;
     if (authSession.status === "unauthenticated") {
+      clearManagerDataCache();
       setAccess({ status: "unauthorized", reason: "session" });
       return;
     }
+    if (accessContext) {
+      lastAccessCheck.current = Date.now();
+      setAccess({ status: "authorized", ...accessContext });
+      return;
+    }
     let mounted = true;
-    void supabase.from("restaurant_staff")
-      .select("display_name,restaurants(id,name,currency_code,currency_symbol,locale)")
-      .eq("user_id", authSession.userId!)
-      .eq("restaurant_id", restaurantId)
-      .eq("role", "manager")
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!mounted) return;
-        const restaurant = Array.isArray(data?.restaurants) ? data.restaurants[0] : data?.restaurants;
-        if (error || !data || !restaurant?.name) setAccess({ status: "unauthorized", reason: "access" });
-        else setAccess({
-          status: "authorized",
-          restaurantName: restaurant.name,
-          managerName: data.display_name || "Manager",
-          currency: {
-            currencyCode: restaurant.currency_code,
-            currencySymbol: restaurant.currency_symbol,
-            locale: restaurant.locale,
-          },
-        });
-      });
+    void loadManagerAccess(authSession.userId!, restaurantId).then((next) => {
+      if (!mounted) return;
+      lastAccessCheck.current = Date.now();
+      if (next.status === "unauthorized") clearManagerDataCache();
+      setAccess(next);
+    });
     return () => { mounted = false; };
+  }, [accessContext, authSession.status, authSession.userId, restaurantId]);
+
+  useEffect(() => {
+    if (authSession.status !== "authenticated" || !authSession.userId) return;
+    let mounted = true;
+    let pending = false;
+    const revalidate = () => {
+      if (document.visibilityState !== "visible" || pending || Date.now() - lastAccessCheck.current < MANAGER_ACCESS_RECHECK_MS) return;
+      pending = true;
+      void loadManagerAccess(authSession.userId!, restaurantId).then((next) => {
+        if (!mounted) return;
+        lastAccessCheck.current = Date.now();
+        if (next.status === "unauthorized") clearManagerDataCache();
+        setAccess(next);
+      }).finally(() => { pending = false; });
+    };
+    const intervalId = window.setInterval(revalidate, MANAGER_ACCESS_RECHECK_MS);
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
   }, [authSession.status, authSession.userId, restaurantId]);
 
   if (access.status === "loading") return <main className="route-message"><p>Opening Manager Dashboard...</p></main>;
@@ -79,8 +121,8 @@ export function ProtectedManagerRoute({ restaurantId, section = "dashboard" }: {
   if (section === "inventory") page = <ManagerInventoryWorkspacePage {...props} />;
   return (
     <ManagerWorkspaceChrome restaurantId={restaurantId} section={section === "ai" ? "dashboard" : section}>
-      <ManagerLayout restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section} currency={access.currency}>
-        <Suspense fallback={<main className="route-message"><p>Loading manager module...</p></main>}>
+      <ManagerLayout key={restaurantId} restaurantId={restaurantId} restaurantName={access.restaurantName} managerName={access.managerName} section={section} currency={access.currency}>
+        <Suspense fallback={<div className="ml-route-loading" role="status"><span />Opening section…</div>}>
           {page}
         </Suspense>
       </ManagerLayout>

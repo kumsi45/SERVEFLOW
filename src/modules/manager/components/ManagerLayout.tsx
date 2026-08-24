@@ -7,6 +7,8 @@ import type { CurrencyConfig } from "../../../core/format/currency";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { ManagerCopilot } from "./ManagerCopilot";
+import { clearManagerDataCache, retainManagerTenantCache } from "../services/managerDataCache";
+import { preloadManagerSection } from "../managerPageModules";
 import "../styles/managerLayout.css";
 
 type Props = {
@@ -55,6 +57,8 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => { retainManagerTenantCache(restaurantId); }, [restaurantId]);
+
   function navigate(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
     event.preventDefault();
     if (href.startsWith("/inventory/")) {
@@ -66,6 +70,7 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
   }
 
   async function logout() {
+    clearManagerDataCache();
     await signOutStaff();
     window.location.replace("/staff-login");
   }
@@ -83,6 +88,9 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
               className={activeSection === item.key ? "is-active" : ""}
               href={item.href}
               key={item.key}
+              onPointerEnter={() => void preloadManagerSection(item.key)}
+              onFocus={() => void preloadManagerSection(item.key)}
+              onTouchStart={() => void preloadManagerSection(item.key)}
               onClick={(event) => navigate(event, item.href)}
             >
               <span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>
@@ -125,7 +133,7 @@ export function ManagerLayout({ restaurantId, restaurantName, managerName, secti
         </header>
         <div className="ml-content">{children}</div>
         <nav className="ml-bottom-nav" aria-label="Primary mobile navigation">
-          {MOBILE_NAV.map((item) => { const Icon = item.icon; return <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onClick={(event) => navigate(event, item.href)}><span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>{item.mobileLabel}</a>; })}
+          {MOBILE_NAV.map((item) => { const Icon = item.icon; return <a key={item.key} className={activeSection === item.key ? "is-active" : ""} href={item.href} onPointerDown={() => void preloadManagerSection(item.key)} onFocus={() => void preloadManagerSection(item.key)} onClick={(event) => navigate(event, item.href)}><span className="ml-nav-icon" aria-hidden="true"><Icon strokeWidth={1.9} /></span>{item.mobileLabel}</a>; })}
         </nav>
         <ManagerCopilot restaurantId={restaurantId} restaurantName={restaurantName} managerName={managerName} section={section} currency={currency}/>
       </section>

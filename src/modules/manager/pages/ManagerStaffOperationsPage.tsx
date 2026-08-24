@@ -99,9 +99,9 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
   const [actionPending, setActionPending] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", phoneNumber: "", password: "", confirmPassword: "", pin: "", role: "waiter" as ManagerStaffRole });
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = true) => {
     try {
-      const next = await loadManagerStaffOperations(restaurantId);
+      const next = await loadManagerStaffOperations(restaurantId, force);
       setSnapshot(next);
       setError(null);
     } catch (loadError) {
@@ -111,13 +111,14 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
     }
   }, [restaurantId]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(false); }, [refresh]);
 
   useTenantRealtime({
     channelName: "manager-staff-operations",
     restaurantId,
     tables: ["restaurant_staff", "staff_credential_readiness", "restaurant_table_waiter_assignments", "kitchen_stations", "orders", "order_items", "staff_activity_log"],
     refresh,
+    skipInitialConnectRefresh: true,
   });
 
   useEffect(() => {
@@ -206,7 +207,7 @@ export function ManagerStaffOperationsPage({ restaurantId }: Props) {
   return (
     <main className="mso-page">
       <header className="mso-page-header">
-        <div><h1>Staff</h1></div>
+        <h1 className="sr-only">Staff</h1>
         <button type="button" className="mso-primary-action" onClick={() => setActiveTab("create")}>+ Add Staff</button>
       </header>
 

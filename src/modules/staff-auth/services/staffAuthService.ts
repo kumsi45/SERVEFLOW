@@ -2,6 +2,7 @@ import { supabase } from "../../../core/database";
 import type { StaffDestination, StaffRestaurant, StaffRole, StaffSession } from "../types";
 
 type StaffRoleRow = {
+  display_name?: string | null;
   role?: StaffRole | null;
   restaurant_id?: string | null;
   active?: boolean | null;
@@ -41,6 +42,7 @@ function normalizeStaffRestaurant(row: StaffRoleRow): StaffRestaurant | null {
     id: row.restaurant_id,
     name: restaurant.name,
     role: row.role,
+    displayName: row.display_name ?? null,
     currencyCode: restaurant.currency_code ?? null,
     currencySymbol: restaurant.currency_symbol ?? null,
     locale: restaurant.locale ?? null,
@@ -108,7 +110,7 @@ async function clearSupabaseAuthSession() {
 async function getStaffSessionForUser(userId: string): Promise<StaffSession | null> {
   const { data, error } = await supabase
     .from("restaurant_staff")
-    .select("role,active,restaurant_id,restaurants(id,name,currency_code,currency_symbol,locale)")
+    .select("role,active,restaurant_id,display_name,restaurants(id,name,currency_code,currency_symbol,locale)")
     .eq("user_id", userId)
     .eq("active", true)
     .in("role", ["owner", "manager", "cashier", "kitchen", "inventory", "inventory_officer"]);

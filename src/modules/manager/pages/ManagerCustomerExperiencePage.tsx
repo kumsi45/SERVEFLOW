@@ -12,6 +12,7 @@ import {
 } from "../services/managerCustomerExperienceService";
 import "../styles/managerCustomerExperience.css";
 import { managerFacingMessage } from "../managerPresentation";
+import { withManagerDataTimeout } from "../services/managerDataCache";
 
 type Props = {
   restaurantId: string;
@@ -79,7 +80,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      setSnapshot(await loadManagerCustomerExperience(restaurantId));
+      setSnapshot(await withManagerDataTimeout(loadManagerCustomerExperience(restaurantId)));
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load guest attention data.");
@@ -95,6 +96,7 @@ export function ManagerCustomerExperiencePage({ restaurantId }: Props) {
     restaurantId,
     tables: ["orders", "order_items", "order_invoices", "restaurant_table_waiter_assignments", "manager_customer_complaints", "staff_activity_log"],
     refresh,
+    skipInitialConnectRefresh: true,
   });
 
   const sessionsById = useMemo(
