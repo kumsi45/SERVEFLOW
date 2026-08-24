@@ -5,11 +5,13 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { ArrowRight, Bot, RotateCw, Send, Sparkles, X } from "lucide-react";
 import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import type { CurrencyConfig } from "../../../core/format/currency";
 import { useTenantRealtime } from "../../../core/realtime/useTenantRealtime";
+import { supabase } from "../../../core/database";
 import {
   investigateManagerQuestion,
   loadManagerCopilotSnapshot,
@@ -20,6 +22,16 @@ import {
 import "../styles/managerCopilot.css";
 import { managerFacingMessage } from "../managerPresentation";
 import type { OpenManagerCopilotDetail } from "../managerLiveUpdates";
+import {
+  beginCopilotDiagnostic,
+  currentCopilotDiagnosticFlow,
+  getCopilotDiagnosticAttempt,
+  recordCopilotCheckpoint,
+  recordCopilotFailure,
+  subscribeCopilotDiagnostics,
+  type CopilotDiagnosticAttempt,
+  type CopilotDiagnosticFlow,
+} from "../managerCopilotDiagnostics";
 
 type Props = {
   restaurantId: string;
@@ -27,6 +39,9 @@ type Props = {
   managerName: string;
   section: string;
   currency?: CurrencyConfig;
+  snapshotLoader?: typeof loadManagerCopilotSnapshot;
+  questionInvestigator?: typeof investigateManagerQuestion;
+  realtimeEnabled?: boolean;
 };
 type Message =
   | { id: string; role: "manager"; text: string }
@@ -114,6 +129,9 @@ export function ManagerCopilot({
   managerName,
   section,
   currency,
+  snapshotLoader = loadManagerCopilotSnapshot,
+  questionInvestigator = investigateManagerQuestion,
+  realtimeEnabled = true,
 }: Props) {
   const context = (
     section === "ai" ? "dashboard" : section === "cashier" ? "tables" : section
@@ -124,47 +142,141 @@ export function ManagerCopilot({
     text: string;
     context: CopilotContext;
   } | null>(null);
+  const [selectedUpdate, setSelectedUpdate] = useState<{
+    title: string;
+    context: CopilotContext;
+  } | null>(null);
   const [snapshot, setSnapshot] = useState<ManagerCopilotSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [failedQuestion, setFailedQuestion] = useState<{
+    text: string;
+    context: CopilotContext;
+  } | null>(null);
   const [draft, setDraft] = useState("");
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [authenticated, setAuthenticated] = useState<"unknown" | "yes" | "no">(
+    "unknown",
+  );
+  const [snapshotDiagnosticStatus, setSnapshotDiagnosticStatus] = useState<
+    "idle" | "loading" | "success" | "failed"
+  >("idle");
+  const [copilotDiagnosticStatus, setCopilotDiagnosticStatus] = useState<
+    "idle" | "thinking" | "complete" | "failed"
+  >("idle");
+  const [online, setOnline] = useState(() => navigator.onLine);
   const [messages, setMessages] = useState<Message[]>(() =>
     restoreMessages(restaurantId),
   );
   const conversationRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const snapshotRef = useRef<ManagerCopilotSnapshot | null>(null);
+  const snapshotRequestRef = useRef<Promise<ManagerCopilotSnapshot> | null>(null);
+  const submittingRef = useRef(false);
+  const pendingAnswerRenderRef = useRef(false);
+  const diagnosticAttempt = useSyncExternalStore(
+    subscribeCopilotDiagnostics,
+    getCopilotDiagnosticAttempt,
+    getCopilotDiagnosticAttempt,
+  );
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      setAuthenticated(data.session ? "yes" : "no");
+      if (sessionError) {
+        console.error("[ManagerCopilot] session diagnostic failed", sessionError);
+      }
+    });
+  }, []);
+  useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
 
   const closeCopilot = useCallback(() => {
     setOpen(false);
     window.requestAnimationFrame(() => launcherRef.current?.focus());
   }, []);
-  useModalFocus(open, closeCopilot, panelRef, composerRef);
+  useModalFocus(open, closeCopilot, panelRef, closeButtonRef);
 
+  const loadSnapshot = useCallback(
+    async (force = false) => {
+      const flow = currentCopilotDiagnosticFlow();
+      if (import.meta.env.DEV) {
+        recordCopilotCheckpoint("Snapshot requested", "pending", flow);
+      }
+      if (!force && snapshotRef.current) {
+        if (import.meta.env.DEV) {
+          recordCopilotCheckpoint("Snapshot requested", "success", flow);
+          recordCopilotCheckpoint("Snapshot succeeded", "success", flow);
+        }
+        setSnapshotDiagnosticStatus("success");
+        return snapshotRef.current;
+      }
+      if (snapshotRequestRef.current) return snapshotRequestRef.current;
+      setSnapshotLoading(true);
+      setSnapshotDiagnosticStatus("loading");
+      const request = snapshotLoader(restaurantId)
+        .then((nextSnapshot) => {
+          snapshotRef.current = nextSnapshot;
+          setSnapshot(nextSnapshot);
+          setError(null);
+          setSnapshotDiagnosticStatus("success");
+          if (import.meta.env.DEV) {
+            recordCopilotCheckpoint("Snapshot requested", "success", flow);
+            recordCopilotCheckpoint("Snapshot succeeded", "success", flow);
+          }
+          return nextSnapshot;
+        })
+        .catch((loadError) => {
+          console.error("[ManagerCopilot] authorized snapshot load failed", loadError);
+          setError("Couldn't load current operations. Try again.");
+          setSnapshotDiagnosticStatus("failed");
+          if (import.meta.env.DEV) {
+            recordCopilotFailure(
+              "Snapshot failed",
+              "Manager operational data could not be loaded.",
+              loadError,
+              flow,
+            );
+          }
+          throw loadError;
+        })
+        .finally(() => {
+          snapshotRequestRef.current = null;
+          setSnapshotLoading(false);
+        });
+      snapshotRequestRef.current = request;
+      return request;
+    },
+    [restaurantId, snapshotLoader],
+  );
   const refresh = useCallback(async () => {
     if (!open) return;
-    setLoading(true);
     try {
-      setSnapshot(await loadManagerCopilotSnapshot(restaurantId));
-      setError(null);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "ServeFlow Copilot could not load operational evidence.",
-      );
-    } finally {
-      setLoading(false);
+      await loadSnapshot(true);
+    } catch {
+      // loadSnapshot renders a safe retry state and logs developer diagnostics.
     }
-  }, [open, restaurantId]);
+  }, [loadSnapshot, open]);
   useEffect(() => {
     void refresh();
   }, [refresh]);
-  useTenantRealtime({
+  const copilotRealtimeState = useTenantRealtime({
     channelName: "manager-global-copilot",
     restaurantId,
-    enabled: open,
+    enabled: open && realtimeEnabled,
     tables: ["inventory_items", "inventory_movements"],
     refresh,
     refreshOnConnect: false,
@@ -173,7 +285,16 @@ export function ManagerCopilot({
     const show = (event: Event) => {
       const detail = (event as CustomEvent<OpenManagerCopilotDetail>).detail;
       const nextContext = detail?.context ?? context;
+      if (import.meta.env.DEV && detail?.updateId) {
+        if (currentCopilotDiagnosticFlow() !== "notification") {
+          beginCopilotDiagnostic("notification");
+        }
+        recordCopilotCheckpoint("Context attached", "success", "notification");
+      }
       setActiveContext(nextContext);
+      setSelectedUpdate(
+        detail?.title ? { title: detail.title, context: nextContext } : null,
+      );
       if (detail?.prompt) {
         setQueuedQuestion({ text: detail.prompt, context: nextContext });
       }
@@ -182,6 +303,14 @@ export function ManagerCopilot({
     window.addEventListener("serveflow:open-copilot", show);
     return () => window.removeEventListener("serveflow:open-copilot", show);
   }, [context]);
+  useEffect(() => {
+    if (!open || !import.meta.env.DEV) return;
+    recordCopilotCheckpoint(
+      "Copilot opened",
+      "success",
+      currentCopilotDiagnosticFlow(),
+    );
+  }, [open]);
   useEffect(() => {
     if (section === "ai") setOpen(true);
     if (!open) setActiveContext(context);
@@ -216,16 +345,29 @@ export function ManagerCopilot({
       top: conversationRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, loading]);
+  }, [messages, snapshotLoading, submitting]);
+  useEffect(() => {
+    if (!pendingAnswerRenderRef.current || !import.meta.env.DEV) return;
+    pendingAnswerRenderRef.current = false;
+    const flow = currentCopilotDiagnosticFlow();
+    recordCopilotCheckpoint(
+      flow === "notification" ? "Answer rendered" : "Render completed",
+      "success",
+      flow,
+    );
+  }, [messages]);
   useEffect(() => {
     if (!open) return;
     document.documentElement.classList.add("manager-copilot-open");
     const viewport = window.visualViewport;
-    const syncViewport = () =>
+    const syncViewport = () => {
+      const height = viewport?.height ?? window.innerHeight;
+      if (!Number.isFinite(height) || height < 240) return;
       document.documentElement.style.setProperty(
         "--mcp-viewport-height",
-        `${viewport?.height ?? window.innerHeight}px`,
+        `${height}px`,
       );
+    };
     syncViewport();
     viewport?.addEventListener("resize", syncViewport);
     return () => {
@@ -235,67 +377,112 @@ export function ManagerCopilot({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open || !snapshot || loading || !queuedQuestion) return;
-    const question = queuedQuestion;
-    setQueuedQuestion(null);
-    ask(question.text, question.context);
-  }, [loading, open, queuedQuestion, snapshot]);
-
   const prompts = useMemo(
     () => suggestions[activeContext] ?? suggestions.dashboard,
     [activeContext],
   );
-  function ask(value = draft, questionContext = activeContext) {
-    const question = value.trim();
-    if (!question || loading) return;
-    const managerMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "manager",
-      text: question,
-    };
-    if (!snapshot) {
-      setMessages((current) => [...current, managerMessage]);
-      setDraft("");
-      setLoading(true);
+  const sendQuestion = useCallback(
+    async (
+      value: string,
+      questionContext: CopilotContext,
+      appendManagerMessage = true,
+    ) => {
+      const question = value.trim();
+      if (!question || submittingRef.current) return;
+      const flow = currentCopilotDiagnosticFlow();
+      if (import.meta.env.DEV) {
+        recordCopilotCheckpoint("sendQuestion entered", "success", flow);
+        recordCopilotCheckpoint(
+          "Manager context available",
+          managerName.trim() ? "success" : "failed",
+          flow,
+        );
+        recordCopilotCheckpoint(
+          "Restaurant context available",
+          restaurantId.trim() ? "success" : "failed",
+          flow,
+        );
+      }
+      submittingRef.current = true;
+      setSubmitting(true);
+      setCopilotDiagnosticStatus("thinking");
       setError(null);
-      void loadManagerCopilotSnapshot(restaurantId)
-        .then((nextSnapshot) => {
-          setSnapshot(nextSnapshot);
-          const answer = investigateManagerQuestion(
-            question,
-            nextSnapshot,
-            currency,
-            questionContext,
+      setFailedQuestion(null);
+      setDraft("");
+      if (appendManagerMessage) {
+        setMessages((current) => [
+          ...current,
+          { id: crypto.randomUUID(), role: "manager", text: question },
+        ]);
+      }
+      let snapshotResolved = false;
+      try {
+        const authorizedSnapshot = snapshotRef.current ?? (await loadSnapshot());
+        snapshotResolved = true;
+        if (import.meta.env.DEV && snapshotRef.current) {
+          recordCopilotCheckpoint("Snapshot requested", "success", flow);
+          recordCopilotCheckpoint("Snapshot succeeded", "success", flow);
+        }
+        if (import.meta.env.DEV) {
+          recordCopilotCheckpoint("Investigator started", "pending", flow);
+        }
+        const answer = questionInvestigator(
+          question,
+          authorizedSnapshot,
+          currency,
+          questionContext,
+        );
+        if (import.meta.env.DEV) {
+          recordCopilotCheckpoint("Investigator started", "success", flow);
+          recordCopilotCheckpoint("Investigator completed", "success", flow);
+          recordCopilotCheckpoint("Answer committed to state", "success", flow);
+        }
+        pendingAnswerRenderRef.current = true;
+        setMessages((current) => [
+          ...current,
+          { id: crypto.randomUUID(), role: "copilot", answer },
+        ]);
+        setCopilotDiagnosticStatus("complete");
+      } catch (questionError) {
+        console.error("[ManagerCopilot] question failed", questionError);
+        setFailedQuestion({ text: question, context: questionContext });
+        setError("Couldn't load this answer. Try again.");
+        setCopilotDiagnosticStatus("failed");
+        if (import.meta.env.DEV && snapshotResolved) {
+          recordCopilotFailure(
+            "sendQuestion entered",
+            "The Copilot answer could not be completed.",
+            questionError,
+            flow,
           );
-          setMessages((current) => [
-            ...current,
-            { id: crypto.randomUUID(), role: "copilot", answer },
-          ]);
-        })
-        .catch((loadError) => {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "ServeFlow Copilot could not answer this question.",
-          );
-        })
-        .finally(() => setLoading(false));
-      return;
-    }
-    const answer = investigateManagerQuestion(
-      question,
-      snapshot,
+        }
+      } finally {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
+    },
+    [
       currency,
-      questionContext,
-    );
-    setMessages((current) => [
-      ...current,
-      managerMessage,
-      { id: crypto.randomUUID(), role: "copilot", answer },
-    ]);
-    setDraft("");
-  }
+      loadSnapshot,
+      managerName,
+      questionInvestigator,
+      restaurantId,
+    ],
+  );
+
+  useEffect(() => {
+    if (!open || !queuedQuestion || submittingRef.current) return;
+    const question = queuedQuestion;
+    setQueuedQuestion(null);
+    if (import.meta.env.DEV) {
+      recordCopilotCheckpoint(
+        "Contextual send started",
+        "success",
+        "notification",
+      );
+    }
+    void sendQuestion(question.text, question.context);
+  }, [open, queuedQuestion, sendQuestion]);
   function navigate(href: string) {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -303,8 +490,25 @@ export function ManagerCopilot({
   }
   function submit(event: FormEvent) {
     event.preventDefault();
-    ask();
+    if (import.meta.env.DEV) {
+      recordCopilotCheckpoint("Send tapped", "success", "manual");
+    }
+    void sendQuestion(draft, activeContext);
   }
+  const showStarter =
+    messages.length === 0 &&
+    !selectedUpdate &&
+    !snapshotLoading &&
+    !submitting &&
+    !error;
+  const hasVisibleConversationState = Boolean(
+    showStarter ||
+      selectedUpdate ||
+      messages.length ||
+      snapshotLoading ||
+      submitting ||
+      error,
+  );
 
   return (
     <>
@@ -313,8 +517,10 @@ export function ManagerCopilot({
         ref={launcherRef}
         type="button"
         onClick={() => {
+          if (import.meta.env.DEV) beginCopilotDiagnostic("manual");
           setActiveContext(context);
           setQueuedQuestion(null);
+          setSelectedUpdate(null);
           setOpen(true);
         }}
         aria-label="Open ServeFlow Copilot"
@@ -352,14 +558,40 @@ export function ManagerCopilot({
                   </small>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={closeCopilot}
-                aria-label="Close Copilot"
-              >
-                <X />
-              </button>
+              <div className="mcp-header-actions">
+                {import.meta.env.DEV && (
+                  <button type="button" onClick={() => setDebugOpen(true)}>
+                    Debug
+                  </button>
+                )}
+                <button
+                  ref={closeButtonRef}
+                  type="button"
+                  onClick={closeCopilot}
+                  aria-label="Close Copilot"
+                >
+                  <X />
+                </button>
+              </div>
             </header>
+            {import.meta.env.DEV && debugOpen && (
+              <CopilotDiagnosticSheet
+                attempt={diagnosticAttempt}
+                authenticated={authenticated}
+                managerReady={Boolean(managerName.trim())}
+                restaurantReady={Boolean(restaurantId.trim())}
+                snapshotStatus={snapshotDiagnosticStatus}
+                copilotStatus={copilotDiagnosticStatus}
+                realtimeStatus={
+                  !online || !realtimeEnabled
+                    ? "Disconnected"
+                    : copilotRealtimeState === "connected"
+                      ? "Connected"
+                      : "Reconnecting"
+                }
+                onClose={() => setDebugOpen(false)}
+              />
+            )}
             {snapshot?.unavailable.length ? (
               <div className="mcp-evidence-note" role="status">
                 Some evidence unavailable: {snapshot.unavailable.join(", ")}
@@ -370,7 +602,16 @@ export function ManagerCopilot({
               ref={conversationRef}
               aria-live="polite"
             >
-              {!messages.length && (
+              {selectedUpdate && (
+                <article className="mcp-update-context" role="status">
+                  <span>Update needing review</span>
+                  <strong>{selectedUpdate.title}</strong>
+                  <small>
+                    Copilot is checking authorized {contextLabels[selectedUpdate.context]} evidence.
+                  </small>
+                </article>
+              )}
+              {showStarter && (
                 <>
                   <div className="mcp-empty">
                     <h2>
@@ -386,8 +627,10 @@ export function ManagerCopilot({
                       <button
                         type="button"
                         key={prompt}
-                        disabled={loading}
-                        onClick={() => ask(prompt)}
+                        disabled={submitting}
+                        onClick={() =>
+                          void sendQuestion(prompt, activeContext)
+                        }
                       >
                         {prompt}
                       </button>
@@ -409,22 +652,39 @@ export function ManagerCopilot({
                   />
                 ),
               )}
-              {loading && (
+              {(snapshotLoading || submitting) && (
                 <article className="mcp-message copilot loading">
                   <span>Copilot</span>
                   <p>
                     <i />
                     <i />
-                    <i /> Investigating current ServeFlow data…
+                    <i /> {submitting ? "Thinking..." : "Loading current operations..."}
                   </p>
                 </article>
               )}
               {error && (
                 <div className="mcp-error" role="alert">
-                  <p>{managerFacingMessage(error, "Copilot is unavailable right now. Try again.")}</p>
-                  <button type="button" onClick={() => void refresh()}>
+                  <p>{managerFacingMessage(error, "Couldn't load this answer. Try again.")}</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      failedQuestion
+                        ? void sendQuestion(
+                            failedQuestion.text,
+                            failedQuestion.context,
+                            false,
+                          )
+                        : void refresh()
+                    }
+                  >
                     <RotateCw /> Retry
                   </button>
+                </div>
+              )}
+              {!hasVisibleConversationState && (
+                <div className="mcp-empty mcp-render-guard" role="status">
+                  <h2>Copilot is ready.</h2>
+                  <p>Ask about current operations below.</p>
                 </div>
               )}
             </div>
@@ -435,11 +695,20 @@ export function ManagerCopilot({
                   ref={composerRef}
                   rows={1}
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    if (import.meta.env.DEV) {
+                      recordCopilotCheckpoint(
+                        "Input changed",
+                        "success",
+                        currentCopilotDiagnosticFlow(),
+                      );
+                    }
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      ask();
+                      void sendQuestion(draft, activeContext);
                     }
                   }}
                   placeholder="Ask about current operations…"
@@ -447,7 +716,7 @@ export function ManagerCopilot({
               </label>
               <button
                 type="submit"
-                disabled={!draft.trim() || loading}
+                disabled={!draft.trim() || submitting}
                 aria-label="Send question"
               >
                 <Send />
@@ -462,6 +731,131 @@ export function ManagerCopilot({
       )}
     </>
   );
+}
+
+const manualDiagnosticCheckpoints = [
+  "Copilot opened",
+  "Input changed",
+  "Send tapped",
+  "sendQuestion entered",
+  "Manager context available",
+  "Restaurant context available",
+  "Snapshot requested",
+  "Snapshot succeeded",
+  "Snapshot failed",
+  "Investigator started",
+  "Investigator completed",
+  "Answer committed to state",
+  "Render completed",
+];
+
+const notificationDiagnosticCheckpoints = [
+  "Realtime update received",
+  "Notification created",
+  "Notification tapped",
+  "Copilot open requested",
+  "Copilot opened",
+  "Context attached",
+  "Contextual send started",
+  "Snapshot requested",
+  "Investigator started",
+  "Answer rendered",
+];
+
+function CopilotDiagnosticSheet({
+  attempt,
+  authenticated,
+  managerReady,
+  restaurantReady,
+  snapshotStatus,
+  copilotStatus,
+  realtimeStatus,
+  onClose,
+}: {
+  attempt: CopilotDiagnosticAttempt | null;
+  authenticated: "unknown" | "yes" | "no";
+  managerReady: boolean;
+  restaurantReady: boolean;
+  snapshotStatus: "idle" | "loading" | "success" | "failed";
+  copilotStatus: "idle" | "thinking" | "complete" | "failed";
+  realtimeStatus: "Connected" | "Reconnecting" | "Disconnected";
+  onClose: () => void;
+}) {
+  const flow: CopilotDiagnosticFlow = attempt?.flow ?? "manual";
+  const checkpoints =
+    flow === "notification"
+      ? notificationDiagnosticCheckpoints
+      : manualDiagnosticCheckpoints;
+  const entries = new Map(
+    attempt?.entries.map((entry) => [entry.checkpoint, entry]) ?? [],
+  );
+  return (
+    <section
+      className="mcp-diagnostic"
+      role="region"
+      aria-label="Copilot mobile diagnostic"
+    >
+      <header>
+        <div>
+          <strong>Copilot diagnostic</strong>
+          <small>{flow === "notification" ? "Notification" : "Manual send"}</small>
+        </div>
+        <button type="button" onClick={onClose}>Close</button>
+      </header>
+      <div className="mcp-diagnostic-scroll">
+        <dl className="mcp-diagnostic-build">
+          <div><dt>Build mode</dt><dd>Development</dd></div>
+          <div><dt>Build timestamp</dt><dd>{__SERVEFLOW_BUILD_ID__}</dd></div>
+        </dl>
+        <dl className="mcp-diagnostic-context">
+          <DiagnosticStatus label="Authenticated" value={authenticated === "unknown" ? "Checking" : authenticated === "yes" ? "Yes" : "No"} />
+          <DiagnosticStatus label="Manager context" value={managerReady ? "Ready" : "Missing"} />
+          <DiagnosticStatus label="Restaurant context" value={restaurantReady ? "Ready" : "Missing"} />
+          <DiagnosticStatus label="Restaurant ID" value={restaurantReady ? "Present" : "Missing"} />
+          <DiagnosticStatus label="Snapshot" value={capitalize(snapshotStatus)} />
+          <DiagnosticStatus label="Copilot" value={capitalize(copilotStatus)} />
+          <DiagnosticStatus label="Realtime" value={realtimeStatus} />
+        </dl>
+        <ol className="mcp-diagnostic-checkpoints">
+          {checkpoints.map((checkpoint) => {
+            const entry = entries.get(checkpoint);
+            const symbol = !entry
+              ? "—"
+              : entry.status === "failed"
+                ? "✕"
+                : entry.status === "pending"
+                  ? "…"
+                  : "✓";
+            return (
+              <li className={entry?.status ?? "unreached"} key={checkpoint}>
+                <span aria-hidden="true">{symbol}</span>
+                <b>{checkpoint}</b>
+                <time>{entry ? `${entry.elapsedMs} ms` : "Not reached"}</time>
+              </li>
+            );
+          })}
+        </ol>
+        {attempt?.error && (
+          <div className="mcp-diagnostic-error" role="alert">
+            <strong>Sanitized error</strong>
+            <dl>
+              <DiagnosticStatus label="Stage" value={attempt.error.stage} />
+              <DiagnosticStatus label="Error type" value={attempt.error.type} />
+              <DiagnosticStatus label="Safe message" value={attempt.error.safeMessage} />
+            </dl>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DiagnosticStatus({ label, value }: { label: string; value: string }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function CopilotResponse({

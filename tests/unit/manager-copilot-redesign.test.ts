@@ -16,6 +16,9 @@ const component = read("src/modules/manager/components/ManagerCopilot.tsx");
 const styles = read("src/modules/manager/styles/managerCopilot.css");
 const chrome = read("src/modules/manager/components/ManagerWorkspaceChrome.tsx");
 const chromeStyles = read("src/modules/manager/styles/managerWorkspaceChrome.css");
+const liveUpdates = read("src/modules/manager/managerLiveUpdates.ts");
+const diagnostics = read("src/modules/manager/managerCopilotDiagnostics.ts");
+const viteConfig = read("vite.config.ts");
 
 const emptySnapshot: ManagerCopilotSnapshot = {
   intelligence: null,
@@ -51,7 +54,7 @@ describe("global Manager ServeFlow Copilot", () => {
     expect(component).not.toContain("Confirm Reassignment");
     expect(component).toContain('event.key === "Enter"');
     expect(component).toContain("onSubmit={submit}");
-    expect(component).toContain(".finally(() => setLoading(false))");
+    expect(component).toContain("const sendQuestion = useCallback");
   });
 
   it("fails closed for unsupported attendance and profit questions", () => {
@@ -113,7 +116,49 @@ describe("global Manager ServeFlow Copilot", () => {
       title: "Live service activity changed",
     });
     expect(JSON.stringify(update)).not.toContain("hidden-record");
-    expect(chrome).toContain("context: update.context");
-    expect(chrome).toContain("prompt: update.copilotPrompt");
+    expect(chrome).toContain("openManagerCopilotForUpdate(update)");
+    expect(liveUpdates).toContain("context: update.context");
+    expect(liveUpdates).toContain("title: update.title");
+    expect(liveUpdates).toContain("prompt: update.copilotPrompt");
+  });
+
+  it("uses one optimistic send pipeline without coupling Send to snapshot refresh", () => {
+    expect(component).toContain('role: "manager", text: question');
+    expect(component).toContain("snapshotRef.current ?? (await loadSnapshot())");
+    expect(component).toContain("void sendQuestion(question.text, question.context)");
+    expect(component).toContain("void sendQuestion(draft, activeContext)");
+    expect(component).toContain("disabled={!draft.trim() || submitting}");
+    expect(component).not.toContain("disabled={!draft.trim() || snapshotLoading}");
+    expect(component).toContain("Couldn't load this answer. Try again.");
+  });
+
+  it("guards every open conversation against a blank render state", () => {
+    expect(component).toContain("mcp-update-context");
+    expect(component).toContain("hasVisibleConversationState");
+    expect(component).toContain("mcp-render-guard");
+    expect(component).toContain("Loading current operations...");
+    expect(component).toContain("Thinking...");
+    expect(styles).toContain("pointer-events: auto");
+  });
+
+  it("keeps snapshot and conversation storage tenant scoped", () => {
+    expect(component).toContain("snapshotLoader(restaurantId)");
+    expect(component).toContain("storageKey(restaurantId)");
+    expect(component).not.toContain("record.restaurant_id");
+  });
+
+  it("gates safe on-screen runtime diagnostics to development builds", () => {
+    expect(component).toContain("import.meta.env.DEV && debugOpen");
+    expect(component).toContain("Copilot mobile diagnostic");
+    expect(component).toContain("Authenticated");
+    expect(component).toContain("Restaurant ID");
+    expect(component).not.toContain("access_token");
+    expect(component).not.toContain("raw realtime payload");
+    expect(diagnostics).toContain("beginCopilotDiagnostic");
+    expect(diagnostics).toContain("recordCopilotFailure");
+    expect(chrome).toContain('"Realtime update received"');
+    expect(chrome).toContain('"Notification created"');
+    expect(chrome).toContain('"Notification tapped"');
+    expect(viteConfig).toContain("__SERVEFLOW_BUILD_ID__");
   });
 });

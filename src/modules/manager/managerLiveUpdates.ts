@@ -11,6 +11,7 @@ export type ManagerLiveUpdate = {
 
 export type OpenManagerCopilotDetail = {
   context?: CopilotContext;
+  title?: string;
   prompt?: string;
   updateId?: string;
 };
@@ -93,4 +94,13 @@ export function openManagerCopilot(detail?: OpenManagerCopilotDetail) {
       detail,
     }),
   );
+}
+
+export function openManagerCopilotForUpdate(update: ManagerLiveUpdate) {
+  openManagerCopilot({
+    context: update.context,
+    title: update.title,
+    prompt: update.copilotPrompt,
+    updateId: update.id,
+  });
 }

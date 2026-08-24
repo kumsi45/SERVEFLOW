@@ -33,6 +33,7 @@
   background: rgba(16, 24, 40, 0.32);
 }
 .mcp-panel {
+  position: relative;
   display: flex;
   width: min(460px, 100%);
   height: var(--mcp-viewport-height, 100dvh);
@@ -110,7 +111,23 @@
   text-overflow: ellipsis;
   vertical-align: middle;
 }
-.mcp-header > button {
+.mcp-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mcp-header-actions > button {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  color: #475467;
+  background: #f2f4f7;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+.mcp-header-actions > button[aria-label="Close Copilot"] {
   display: grid;
   flex: 0 0 44px;
   width: 44px;
@@ -121,8 +138,147 @@
   color: #475467;
   background: #f2f4f7;
 }
-.mcp-header > button svg {
+.mcp-header-actions > button svg {
   width: 20px;
+}
+.mcp-diagnostic {
+  position: absolute;
+  z-index: 10;
+  inset: 8px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cfd6e1;
+  border-radius: 12px;
+  color: #172033;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.22);
+}
+.mcp-diagnostic > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #e5e9ef;
+}
+.mcp-diagnostic > header strong,
+.mcp-diagnostic > header small {
+  display: block;
+}
+.mcp-diagnostic > header strong {
+  font-size: 13px;
+}
+.mcp-diagnostic > header small {
+  margin-top: 2px;
+  color: #667085;
+  font-size: 9px;
+}
+.mcp-diagnostic > header button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #cfd6e1;
+  border-radius: 8px;
+  color: #344054;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+.mcp-diagnostic-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px;
+}
+.mcp-diagnostic dl {
+  margin: 0;
+}
+.mcp-diagnostic-build,
+.mcp-diagnostic-context {
+  display: grid;
+  gap: 6px;
+}
+.mcp-diagnostic-build {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e9ef;
+}
+.mcp-diagnostic-context {
+  padding: 10px 0;
+}
+.mcp-diagnostic dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 8px;
+}
+.mcp-diagnostic dt,
+.mcp-diagnostic dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.mcp-diagnostic dt {
+  color: #667085;
+}
+.mcp-diagnostic dd {
+  font-weight: 750;
+}
+.mcp-diagnostic-checkpoints {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 0;
+  border-top: 1px solid #e5e9ef;
+  list-style: none;
+}
+.mcp-diagnostic-checkpoints li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  font-size: 9px;
+}
+.mcp-diagnostic-checkpoints li > span {
+  color: #98a2b3;
+  font-size: 13px;
+  text-align: center;
+}
+.mcp-diagnostic-checkpoints li.success > span {
+  color: #067647;
+}
+.mcp-diagnostic-checkpoints li.pending > span {
+  color: #b54708;
+}
+.mcp-diagnostic-checkpoints li.failed > span {
+  color: #b42318;
+}
+.mcp-diagnostic-checkpoints b {
+  font-size: 9px;
+}
+.mcp-diagnostic-checkpoints time {
+  color: #667085;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.mcp-diagnostic-error {
+  padding: 10px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  color: #912018;
+  background: #fef3f2;
+}
+.mcp-diagnostic-error > strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 10px;
+}
+.mcp-diagnostic-error dl {
+  display: grid;
+  gap: 5px;
 }
 .mcp-evidence-note {
   padding: 7px 15px;
@@ -158,6 +314,31 @@
   margin: 6px 0 0;
   color: #667085;
   font-size: 12px;
+}
+.mcp-update-context {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #bfd4ff;
+  border-left: 3px solid #155eef;
+  border-radius: 11px;
+  color: #344054;
+  background: #f5f8ff;
+}
+.mcp-update-context span {
+  color: #175cd3;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mcp-update-context strong {
+  font-size: 13px;
+}
+.mcp-update-context small {
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.4;
 }
 .mcp-message {
   max-width: 92%;
@@ -324,6 +505,8 @@
   font-weight: 750;
 }
 .mcp-composer {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
   align-items: end;
@@ -331,6 +514,7 @@
   padding: 9px 11px max(9px, env(safe-area-inset-bottom));
   border-top: 1px solid #e6eaf0;
   background: #fff;
+  pointer-events: auto;
 }
 .mcp-composer label {
   min-width: 0;
@@ -399,6 +583,9 @@
   }
   .mcp-header {
     padding: 9px 11px;
+  }
+  .mcp-diagnostic {
+    inset: 6px 6px max(6px, env(safe-area-inset-bottom));
   }
   .mcp-title small b {
     max-width: 118px;
