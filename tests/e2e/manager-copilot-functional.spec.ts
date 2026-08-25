@@ -70,6 +70,180 @@ test("development diagnostic traces the real manual send path at mobile widths",
   }
 });
 
+test("post-Send rerender survives Android browsers without crypto.randomUUID", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Crypto.prototype, "randomUUID", {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.name));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${harness}?delay=60`);
+  await page.getByRole("button", { name: "Open ServeFlow Copilot" }).click();
+  const input = page.getByRole("textbox", { name: "Ask ServeFlow Copilot" });
+  await input.fill("What needs attention?");
+  await page.getByRole("button", { name: "Send question" }).click();
+
+  await expect(input).toHaveValue("");
+  await expect(page.locator(".mcp-message.manager")).toContainText("What needs attention?");
+  await expect(page.locator(".mcp-message.copilot").filter({ hasText: "Authorized answer" })).toBeVisible();
+  await expect(page.locator("#root")).toBeVisible();
+  await expect(page.getByTestId("manager-shell")).toBeVisible();
+  await expect(page.locator(".mcp-layer")).toBeVisible();
+  expect(pageErrors).toEqual([]);
+
+  await page.getByRole("button", { name: "Debug" }).click();
+  const diagnostic = page.getByRole("region", { name: "Copilot mobile diagnostic" });
+  for (const checkpoint of [
+    "sendQuestion entered",
+    "Input cleared",
+    "User message append completed",
+    "Copilot rerender completed",
+    "Investigator started",
+    "Investigator completed",
+    "Assistant message append completed",
+    "Portal still mounted",
+    "Manager shell still mounted",
+  ]) {
+    await expect(diagnostic.locator("li.success").filter({ hasText: checkpoint })).toHaveCount(1);
+  }
+});
+
+test("malformed stored and investigator messages normalize without blanking the app", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${harness}?delay=40&malformedStoredMessage=1&malformedAnswer=1`);
+  await page.getByRole("button", { name: "Open ServeFlow Copilot" }).click();
+  await expect(page.locator(".mcp-message.manager")).toHaveCount(1);
+  await expect(page.locator(".mcp-message.manager")).toContainText("Recovered question");
+  await expect(page.locator(".mcp-message.copilot").first()).toContainText(
+    "Copilot could not format this answer",
+  );
+
+  await page.getByRole("textbox", { name: "Ask ServeFlow Copilot" }).fill("Malformed answer probe");
+  await page.getByRole("button", { name: "Send question" }).click();
+  await expect(page.locator(".mcp-message.manager").last()).toContainText("Malformed answer probe");
+  await expect(page.locator(".mcp-message.copilot").last()).toContainText(
+    "Copilot could not format this answer",
+  );
+  await expect(page.locator("#root")).toBeVisible();
+  await expect(page.getByTestId("manager-shell")).toBeVisible();
+  await expect(page.locator(".mcp-layer")).toBeVisible();
+});
+
+test("Copilot render boundary preserves the Manager shell and provides a safe recovery", async ({ page }) => {
+  await page.goto(`${harness}?boundaryCrash=1`);
+  await page.getByRole("button", { name: "Trigger Copilot render crash" }).click();
+  const fallback = page.getByRole("alertdialog", { name: "Copilot display error" });
+  await expect(fallback).toBeVisible();
+  await expect(fallback).toContainText("Copilot encountered a display error.");
+  await expect(fallback).toContainText("Error typeTypeError");
+  await expect(fallback).not.toContainText("render probe detail");
+  await expect(page.locator("#root")).toBeVisible();
+  await expect(page.getByTestId("manager-shell")).toContainText("Manager shell remains mounted");
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(fallback).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Trigger Copilot render crash" })).toBeVisible();
+});
+
+test("development capture records an unhandled rejection without unmounting Copilot", async ({ page }) => {
+  await page.goto(`${harness}?delay=40`);
+  await page.getByRole("button", { name: "Open ServeFlow Copilot" }).click();
+  await page.getByTestId("unhandled-rejection").evaluate((button: HTMLButtonElement) => button.click());
+  await page.getByRole("button", { name: "Debug" }).click();
+  const diagnostic = page.getByRole("region", { name: "Copilot mobile diagnostic" });
+  await expect(
+    diagnostic.locator("li.failed").filter({ hasText: "Unhandled rejection captured" }),
+  ).toHaveCount(1);
+  await expect(diagnostic).toContainText("A background Copilot operation was rejected.");
+  await expect(diagnostic).not.toContainText("rejection probe detail");
+  await expect(page.locator("#root")).toBeVisible();
+  await expect(page.locator(".mcp-layer")).toBeVisible();
+});
+
+test("physical-style touch hit testing reaches the one real mobile composer", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Requires a touch-enabled browser context.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("https://**", (route) => route.abort());
+  await page.goto(`${harness}?shell=1&fixedOverlay=1`);
+  await page.getByRole("button", { name: "Open ServeFlow Copilot" }).evaluate(
+    (button: HTMLButtonElement) => button.click(),
+  );
+  const textarea = page.getByRole("textbox", { name: "Ask ServeFlow Copilot" });
+  const send = page.getByRole("button", { name: "Send question" });
+  await expect(textarea).toHaveCount(1);
+  await expect(textarea).toBeEditable();
+
+  async function hitStack(
+    locator: typeof textarea,
+    verticalPosition: "center" | "lower-edge" = "center",
+  ) {
+    return locator.evaluate((element, position) => {
+      const rect = element.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = position === "lower-edge" ? rect.bottom - 6 : rect.top + rect.height / 2;
+      const top = document.elementFromPoint(x, y);
+      return {
+        ownsTarget: top === element,
+        top: top ? `${top.tagName}.${Array.from(top.classList).join(".")}` : "NONE",
+        stack: document.elementsFromPoint(x, y).map(
+          (stackElement) => `${stackElement.tagName}.${Array.from(stackElement.classList).join(".")}`,
+        ),
+      };
+    }, verticalPosition);
+  }
+
+  async function expectComposerOwnsHitTargets() {
+    const textareaCenter = await hitStack(textarea);
+    const textareaLower = await hitStack(textarea, "lower-edge");
+    const sendCenter = await hitStack(send);
+    expect(textareaCenter.ownsTarget, textareaCenter.top).toBe(true);
+    expect(textareaLower.ownsTarget, textareaLower.top).toBe(true);
+    expect(sendCenter.ownsTarget, sendCenter.top).toBe(true);
+    expect(textareaCenter.stack.some((element) => element.includes("manager-fixed-overlay-probe"))).toBe(true);
+  }
+
+  for (const height of [844, 700, 600, 520]) {
+    await page.setViewportSize({ width: 390, height });
+    await expectComposerOwnsHitTargets();
+  }
+  await page.getByRole("button", { name: "Debug" }).tap();
+  const diagnostic = page.getByRole("region", { name: "Copilot mobile diagnostic" });
+  await expect(diagnostic.getByText("Textarea hit target").locator("..")).toContainText("TEXTAREA");
+  await expect(diagnostic.getByText("Send hit target").locator("..")).toContainText("BUTTON");
+  await page.getByRole("button", { name: "Close", exact: true }).tap();
+  await expect(page.getByRole("region", { name: "Copilot mobile diagnostic" })).toHaveCount(0);
+  await expectComposerOwnsHitTargets();
+  await expect(page.locator(".ml-bottom-nav")).toHaveCSS("display", "none");
+  await expect(page.locator("[inert]")).toHaveCount(0);
+
+  await textarea.tap();
+  await expect(textarea).toBeFocused();
+  await page.keyboard.insertText("What needs attention?");
+  await expect(textarea).toHaveValue("What needs attention?");
+  await expect(send).toBeEnabled();
+  await send.tap();
+  await expect(page.locator(".mcp-message.manager")).toContainText("What needs attention?");
+
+  await page.getByRole("button", { name: "Debug" }).tap();
+  const completedDiagnostic = page.getByRole("region", { name: "Copilot mobile diagnostic" });
+  for (const checkpoint of [
+    "Composer mounted",
+    "Textarea pointerdown",
+    "Textarea touchstart",
+    "Textarea focused",
+    "Textarea input",
+    "Textarea change",
+    "Send pointerdown",
+    "Send touchstart",
+    "Send click",
+    "Form submit",
+  ]) {
+    await expect(completedDiagnostic.locator("li.success").filter({ hasText: checkpoint })).toHaveCount(1);
+  }
+});
+
 test("visual viewport resize keeps Send tappable and close-reopen remains functional", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${harness}?delay=350`);
@@ -92,7 +266,7 @@ test("visual viewport resize keeps Send tappable and close-reopen remains functi
 
 test("failed answer shows a safe Retry and succeeds without duplicating the question", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${harness}?delay=500&failFirst=1`);
+  await page.goto(`${harness}?delay=100&failInvestigatorFirst=1`);
   await page.getByRole("button", { name: "Open ServeFlow Copilot" }).click();
   await page.getByPlaceholder("Ask about current operations…").fill("Who is overloaded?");
   await page.getByRole("button", { name: "Send question" }).click();

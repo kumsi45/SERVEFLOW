@@ -16,11 +16,13 @@ export type CopilotDiagnosticError = {
 export type CopilotDiagnosticAttempt = {
   flow: CopilotDiagnosticFlow;
   startedAt: number;
+  currentStage: string;
   entries: CopilotDiagnosticEntry[];
   error: CopilotDiagnosticError | null;
 };
 
 let attempt: CopilotDiagnosticAttempt | null = null;
+let currentStage = "Idle";
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -29,7 +31,14 @@ function notify() {
 
 export function beginCopilotDiagnostic(flow: CopilotDiagnosticFlow) {
   if (!import.meta.env.DEV) return;
-  attempt = { flow, startedAt: performance.now(), entries: [], error: null };
+  currentStage = "Diagnostic started";
+  attempt = {
+    flow,
+    startedAt: performance.now(),
+    currentStage,
+    entries: [],
+    error: null,
+  };
   notify();
 }
 
@@ -41,6 +50,7 @@ export function recordCopilotCheckpoint(
   if (!import.meta.env.DEV) return;
   if (!attempt || attempt.flow !== flow) beginCopilotDiagnostic(flow);
   if (!attempt) return;
+  currentStage = checkpoint;
   const existing = attempt.entries.find((entry) => entry.checkpoint === checkpoint);
   if (existing && existing.status === status) return;
   const entry = {
@@ -50,6 +60,7 @@ export function recordCopilotCheckpoint(
   };
   attempt = {
     ...attempt,
+    currentStage,
     entries: existing
       ? attempt.entries.map((current) =>
           current.checkpoint === checkpoint ? entry : current,
@@ -57,6 +68,17 @@ export function recordCopilotCheckpoint(
       : [...attempt.entries, entry],
   };
   notify();
+}
+
+export function setCopilotDiagnosticStage(stage: string) {
+  if (!import.meta.env.DEV) return;
+  currentStage = stage;
+  if (attempt) attempt = { ...attempt, currentStage };
+  notify();
+}
+
+export function getCopilotDiagnosticStage() {
+  return currentStage;
 }
 
 export function recordCopilotFailure(
@@ -74,8 +96,9 @@ export function recordCopilotFailure(
       : error instanceof Error && error.name === "TimeoutError"
         ? "TimeoutError"
         : "RuntimeError";
+  currentStage = stage;
   attempt = attempt
-    ? { ...attempt, error: { stage, type, safeMessage } }
+    ? { ...attempt, currentStage, error: { stage, type, safeMessage } }
     : attempt;
   notify();
 }

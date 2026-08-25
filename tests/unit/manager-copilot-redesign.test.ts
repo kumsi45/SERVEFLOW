@@ -13,6 +13,7 @@ const read = (path: string) =>
 const layout = read("src/modules/manager/components/ManagerLayout.tsx");
 const route = read("src/modules/staff-auth/pages/ProtectedManagerRoute.tsx");
 const component = read("src/modules/manager/components/ManagerCopilot.tsx");
+const errorBoundary = read("src/modules/manager/components/ManagerCopilotErrorBoundary.tsx");
 const styles = read("src/modules/manager/styles/managerCopilot.css");
 const chrome = read("src/modules/manager/components/ManagerWorkspaceChrome.tsx");
 const chromeStyles = read("src/modules/manager/styles/managerWorkspaceChrome.css");
@@ -79,13 +80,16 @@ describe("global Manager ServeFlow Copilot", () => {
   });
 
   it("uses a desktop drawer and full-screen mobile sheet with keyboard-safe sizing", () => {
-    expect(styles).toContain("--mcp-viewport-height");
+    expect(styles).toContain("height: 100dvh");
+    expect(styles).toContain("z-index: 1000");
+    expect(styles).toContain("isolation: isolate");
     expect(styles).toContain("@media (max-width: 767px)");
     expect(styles).toContain("font-size: 16px");
     expect(styles).toContain("overscroll-behavior: contain");
     expect(styles).toContain(".manager-copilot-open .ml-bottom-nav");
     expect(component).toContain("useModalFocus");
-    expect(component).toContain("window.visualViewport");
+    expect(component).toContain("createPortal");
+    expect(component).not.toContain("window.visualViewport");
   });
 
   it("deduplicates events and keeps actionable state after its banner expires", () => {
@@ -123,13 +127,18 @@ describe("global Manager ServeFlow Copilot", () => {
   });
 
   it("uses one optimistic send pipeline without coupling Send to snapshot refresh", () => {
-    expect(component).toContain('role: "manager", text: question');
+    expect(component).toContain('role: "manager"');
+    expect(component).toContain("text: question");
     expect(component).toContain("snapshotRef.current ?? (await loadSnapshot())");
     expect(component).toContain("void sendQuestion(question.text, question.context)");
     expect(component).toContain("void sendQuestion(draft, activeContext)");
     expect(component).toContain("disabled={!draft.trim() || submitting}");
     expect(component).not.toContain("disabled={!draft.trim() || snapshotLoading}");
     expect(component).toContain("Couldn't load this answer. Try again.");
+    expect(component).toContain("createBrowserUuid()");
+    expect(component).not.toContain("crypto.randomUUID()");
+    expect(component).toContain("normalizeCopilotAnswer");
+    expect(component).toContain("normalizeStoredMessage");
   });
 
   it("guards every open conversation against a blank render state", () => {
@@ -154,6 +163,31 @@ describe("global Manager ServeFlow Copilot", () => {
     expect(component).toContain("Restaurant ID");
     expect(component).not.toContain("access_token");
     expect(component).not.toContain("raw realtime payload");
+    expect(component).toContain('"Textarea pointerdown"');
+    expect(component).toContain('"Textarea touchstart"');
+    expect(component).toContain('"Textarea focused"');
+    expect(component).toContain('"Textarea input"');
+    expect(component).toContain('"Textarea change"');
+    expect(component).toContain('"Send pointerdown"');
+    expect(component).toContain('"Send touchstart"');
+    expect(component).toContain('"Send click"');
+    expect(component).toContain('"Form submit"');
+    expect(component).toContain("document.elementFromPoint");
+    expect(component).toContain("document.elementsFromPoint");
+    expect(component).toContain("Textarea hit target");
+    expect(component).toContain("Send hit target");
+    expect(component).toContain('"User message append completed"');
+    expect(component).toContain('"Copilot rerender completed"');
+    expect(component).toContain('"Assistant message append completed"');
+    expect(component).toContain('"Portal still mounted"');
+    expect(component).toContain('"Manager shell still mounted"');
+    expect(component).toContain('window.addEventListener("error"');
+    expect(component).toContain('window.addEventListener("unhandledrejection"');
+    expect(errorBoundary).toContain("getDerivedStateFromError");
+    expect(errorBoundary).toContain("componentDidCatch");
+    expect(errorBoundary).toContain("Copilot encountered a display error.");
+    expect(errorBoundary).toContain("import.meta.env.DEV");
+    expect(errorBoundary).not.toContain("access_token");
     expect(diagnostics).toContain("beginCopilotDiagnostic");
     expect(diagnostics).toContain("recordCopilotFailure");
     expect(chrome).toContain('"Realtime update received"');

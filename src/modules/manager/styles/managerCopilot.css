@@ -23,21 +23,104 @@
 }
 .mcp-layer {
   position: fixed;
-  z-index: 140;
+  z-index: 1000;
   inset: 0;
   display: flex;
   height: 100vh;
-  height: var(--mcp-viewport-height, 100dvh);
+  height: 100dvh;
   overflow: hidden;
+  isolation: isolate;
   justify-content: flex-end;
   background: rgba(16, 24, 40, 0.32);
+  pointer-events: auto;
+}
+.mcp-crash-layer {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  isolation: isolate;
+  background: rgba(16, 24, 40, 0.42);
+}
+.mcp-crash-panel {
+  width: min(440px, 100%);
+  padding: 20px;
+  border: 1px solid #fecdca;
+  border-radius: 14px;
+  color: #172033;
+  background: #fff;
+  box-shadow: 0 20px 54px rgba(16, 24, 40, 0.24);
+}
+.mcp-crash-panel h2,
+.mcp-crash-panel p {
+  margin: 0;
+}
+.mcp-crash-panel h2 {
+  color: #b42318;
+  font-size: 18px;
+}
+.mcp-crash-panel p {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.mcp-crash-panel dl {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.mcp-crash-panel dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+}
+.mcp-crash-panel dt,
+.mcp-crash-panel dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+.mcp-crash-panel dt {
+  color: #667085;
+}
+.mcp-crash-panel dd {
+  font-weight: 800;
+}
+.mcp-crash-panel footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.mcp-crash-panel button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cfd6e1;
+  border-radius: 9px;
+  color: #344054;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+}
+.mcp-crash-panel button:first-child {
+  border-color: #155eef;
+  color: #fff;
+  background: #155eef;
 }
 .mcp-panel {
   position: relative;
   display: flex;
   width: min(460px, 100%);
-  height: var(--mcp-viewport-height, 100dvh);
+  height: 100%;
   max-height: 100%;
+  min-height: 0;
   min-width: 0;
   flex-direction: column;
   color: #172033;
@@ -49,6 +132,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex: 0 0 auto;
   padding: 13px 15px;
   border-bottom: 1px solid #e5e9ef;
 }
@@ -514,12 +598,16 @@
   padding: 9px 11px max(9px, env(safe-area-inset-bottom));
   border-top: 1px solid #e6eaf0;
   background: #fff;
+  isolation: isolate;
   pointer-events: auto;
+  touch-action: manipulation;
 }
 .mcp-composer label {
   min-width: 0;
 }
 .mcp-composer textarea {
+  position: relative;
+  z-index: 1;
   box-sizing: border-box;
   display: block;
   width: 100%;
@@ -534,8 +622,12 @@
   font: inherit;
   font-size: 12px;
   line-height: 1.4;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 .mcp-composer > button {
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 44px;
   height: 44px;
@@ -544,12 +636,15 @@
   border-radius: 10px;
   color: #fff;
   background: #155eef;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 .mcp-composer > button:disabled {
   opacity: 0.45;
 }
 .mcp-composer svg {
   width: 17px;
+  pointer-events: none;
 }
 .mcp-disclaimer {
   padding: 0 11px 8px;
@@ -578,7 +673,7 @@
   }
   .mcp-panel {
     width: 100%;
-    height: var(--mcp-viewport-height, 100dvh);
+    height: 100%;
     box-shadow: none;
   }
   .mcp-header {
@@ -615,9 +710,12 @@
     display: none;
   }
   .manager-copilot-open .ml-bottom-nav,
+  .manager-copilot-open .mwc-status,
+  .manager-copilot-open .mwc-status-dot,
   .manager-copilot-open .mwc-live-banner,
   .manager-copilot-open .mwc-review-badge {
-    display: none;
+    display: none !important;
+    pointer-events: none !important;
   }
 }
 @media (max-width: 359px) {
