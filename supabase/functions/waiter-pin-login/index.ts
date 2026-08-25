@@ -14,7 +14,6 @@ const corsHeaders = {
 };
 const noStoreHeaders = { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" };
 const INVALID_MESSAGE = "PIN not recognized. Try again.";
-const CONFLICT_MESSAGE = "PIN cannot be used. Ask a manager.";
 const THROTTLED_MESSAGE = "Too many attempts. Try again shortly.";
 const RATE_WINDOW_MS = 2 * 60 * 1000;
 const RATE_LIMIT = 5;
@@ -37,6 +36,7 @@ type CredentialRow = {
     | { id: string; user_id: string; email: string | null; display_name: string; employee_id: string | null; role: string; active: boolean; restaurant_id: string }
     | Array<{ id: string; user_id: string; email: string | null; display_name: string; employee_id: string | null; role: string; active: boolean; restaurant_id: string }>;
 };
+type AttemptReservation = { event_id: number; allowed: boolean; recent_failures: number };
 
 function response(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: noStoreHeaders });
@@ -97,15 +97,13 @@ Deno.serve(async (request) => {
       waiterThrottleFingerprint(pepper, restaurant.id, clientAddress),
       waiterPinFingerprint(pepper, restaurant.id, pin),
     ]);
-    const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
-    const [rateResult, credentialResult] = await Promise.all([
-      service
-        .from("waiter_pin_auth_events")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", restaurant.id)
-        .eq("scope_fingerprint", scopeFingerprint)
-        .in("outcome", ["invalid", "conflict", "throttled"])
-        .gte("created_at", windowStart),
+    const [reservationResult, credentialResult] = await Promise.all([
+      service.rpc("reserve_waiter_pin_auth_attempt", {
+        target_restaurant_id: restaurant.id,
+        target_scope_fingerprint: scopeFingerprint,
+        target_window_seconds: Math.round(RATE_WINDOW_MS / 1000),
+        target_attempt_limit: RATE_LIMIT,
+      }),
       service
         .from("waiter_pin_credentials")
         .select("id,staff_id,failed_attempt_count,locked_until,restaurant_staff!inner(id,user_id,email,display_name,employee_id,role,active,restaurant_id)")
@@ -114,10 +112,15 @@ Deno.serve(async (request) => {
         .eq("active", true)
         .limit(2),
     ]);
-    const { count: recentFailures, error: rateError } = rateResult;
-    if (rateError) throw rateError;
-    if ((recentFailures ?? 0) >= RATE_LIMIT) {
-      await service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, scope_fingerprint: scopeFingerprint, outcome: "throttled" });
+    const reservation = one((reservationResult.data ?? []) as AttemptReservation[]);
+    if (reservationResult.error || !reservation?.event_id) throw reservationResult.error ?? new Error("Attempt reservation failed.");
+    const finalizeAttempt = (outcome: "success" | "invalid" | "conflict" | "throttled", credentialId?: string) =>
+      service
+        .from("waiter_pin_auth_events")
+        .update({ outcome, credential_id: credentialId ?? null })
+        .eq("id", reservation.event_id)
+        .eq("restaurant_id", restaurant.id);
+    if (!reservation.allowed) {
       return response(429, { error: THROTTLED_MESSAGE, code: "throttled", retryAfterSeconds: 30 });
     }
 
@@ -127,19 +130,19 @@ Deno.serve(async (request) => {
 
     if ((credentials ?? []).length !== 1) {
       const outcome = (credentials ?? []).length > 1 ? "conflict" : "invalid";
-      await service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, scope_fingerprint: scopeFingerprint, outcome });
-      return response(401, { error: outcome === "conflict" ? CONFLICT_MESSAGE : INVALID_MESSAGE, code: outcome === "conflict" ? "pin_conflict" : "invalid_pin" });
+      await finalizeAttempt(outcome);
+      return response(401, { error: INVALID_MESSAGE, code: "invalid_pin" });
     }
 
     const credential = credentials![0] as CredentialRow;
     const staff = one(credential.restaurant_staff);
     const lockedUntil = credential.locked_until ? new Date(credential.locked_until).getTime() : 0;
     if (!staff || !staff.active || staff.role !== "waiter" || staff.restaurant_id !== restaurant.id || lockedUntil > Date.now()) {
-      await service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, credential_id: credential.id, scope_fingerprint: scopeFingerprint, outcome: lockedUntil > Date.now() ? "throttled" : "invalid" });
+      await finalizeAttempt(lockedUntil > Date.now() ? "throttled" : "invalid", credential.id);
       return response(lockedUntil > Date.now() ? 429 : 401, { error: lockedUntil > Date.now() ? THROTTLED_MESSAGE : INVALID_MESSAGE, code: lockedUntil > Date.now() ? "throttled" : "invalid_pin" });
     }
     if (!staff.email || !staff.user_id || !staff.employee_id) {
-      await service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, credential_id: credential.id, scope_fingerprint: scopeFingerprint, outcome: "invalid" });
+      await finalizeAttempt("invalid", credential.id);
       return response(401, { error: INVALID_MESSAGE, code: "invalid_pin" });
     }
 
@@ -156,7 +159,7 @@ Deno.serve(async (request) => {
         locked_until: failures >= RATE_LIMIT ? new Date(Date.now() + CREDENTIAL_LOCK_MS).toISOString() : null,
         updated_at: new Date().toISOString(),
       }).eq("id", credential.id);
-      await service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, credential_id: credential.id, scope_fingerprint: scopeFingerprint, outcome: "invalid" });
+      await finalizeAttempt("invalid", credential.id);
       return response(401, { error: INVALID_MESSAGE, code: "invalid_pin" });
     }
 
@@ -171,7 +174,7 @@ Deno.serve(async (request) => {
     const auditFinalizeStartedAt = performance.now();
     await Promise.all([
       service.from("waiter_pin_credentials").update({ failed_attempt_count: 0, last_failed_at: null, locked_until: null, updated_at: new Date().toISOString() }).eq("id", credential.id),
-      service.from("waiter_pin_auth_events").insert({ restaurant_id: restaurant.id, credential_id: credential.id, scope_fingerprint: scopeFingerprint, outcome: "success" }),
+      finalizeAttempt("success", credential.id),
     ]);
     timings.auditFinalizeMs = Math.round(performance.now() - auditFinalizeStartedAt);
 
@@ -194,8 +197,8 @@ Deno.serve(async (request) => {
       elapsedMs: Math.round(performance.now() - requestStartedAt),
       timings,
     });
-  } catch (error) {
-    console.error("waiter-pin-login failed", error instanceof Error ? error.message : "unknown error");
+  } catch {
+    console.error("waiter-pin-login failed");
     return response(503, { error: "Connection unavailable.", code: "unavailable" });
   }
 });

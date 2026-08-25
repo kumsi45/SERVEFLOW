@@ -6,6 +6,12 @@ export type WaiterRestaurant = {
   currencyCode?: string | null;
   currencySymbol?: string | null;
   locale?: string | null;
+  tableStatus?: {
+    total: number;
+    available: number;
+    occupied: number;
+    other: number;
+  } | null;
 };
 
 export type WaiterSession = {

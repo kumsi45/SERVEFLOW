@@ -1,8 +1,26 @@
+import { useEffect, useState } from "react";
+
 export function ConnectionStatus({ online }: { online: boolean }) {
   return (
     <div className={`wlt-connection ${online ? "is-online" : "is-offline"}`} role="status">
       <span aria-hidden="true" /> {online ? "Online" : "Offline"}
     </div>
+  );
+}
+
+export function TerminalClock() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const update = () => setNow(new Date());
+    const timer = window.setInterval(update, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <time className="wlt-clock" dateTime={now.toISOString()} aria-label={`Local time ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}>
+      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    </time>
   );
 }
 

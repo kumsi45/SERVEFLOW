@@ -5,6 +5,7 @@ import { waiterPinFingerprint } from "../../supabase/functions/_shared/waiterPin
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const migration = read("supabase/migrations/228_phasea1_waiter_pin_authentication.sql");
+const concurrencyMigration = read("supabase/migrations/255_waiter_pin_attempt_concurrency.sql");
 const endpoint = read("supabase/functions/waiter-pin-login/index.ts");
 const manageStaff = read("supabase/functions/manage-staff/index.ts");
 const service = read("src/modules/waiter-auth/services/waiterAuthService.ts");
@@ -41,10 +42,29 @@ describe("Phase A1 waiter PIN authentication", () => {
     expect(endpoint).toContain("waiterSupabasePassword(pepper, restaurant.id, staff.employee_id)");
     expect(endpoint).toContain("signInWithPassword({ email: staff.email, password: authPassword })");
     expect(endpoint).toContain('staff.role !== "waiter"');
+    expect(endpoint).toContain("!staff.active");
+    expect(endpoint).toContain("staff.restaurant_id !== restaurant.id");
+    expect(endpoint).toContain('.eq("restaurant_id", restaurant.id)');
+    expect(endpoint).toContain("waiterPinFingerprint(pepper, restaurant.id, pin)");
+    expect(endpoint).not.toContain("payload.restaurantId");
     expect(endpoint).toContain("authData.user.id !== staff.user_id");
     expect(endpoint).toContain('rpc("record_waiter_login"');
+    expect(endpoint).toContain('rpc("reserve_waiter_pin_auth_attempt"');
+    expect(endpoint).not.toContain("pin_conflict");
+    expect(endpoint).not.toContain("PIN cannot be used");
     expect(endpoint).not.toContain("SUPABASE_SERVICE_ROLE_KEY,");
     expect(endpoint).not.toMatch(/pin:\s*pin[,}]/);
+    expect(endpoint).not.toContain('console.error("waiter-pin-login failed",');
+  });
+
+  it("atomically reserves attempts so concurrent guesses cannot bypass throttling", () => {
+    expect(concurrencyMigration).toContain("security definer");
+    expect(concurrencyMigration).toContain("pg_advisory_xact_lock");
+    expect(concurrencyMigration).toContain("waiter_pin_auth_events");
+    expect(concurrencyMigration).toContain("auth.role() <> 'service_role'");
+    expect(concurrencyMigration).toContain("revoke all on function public.reserve_waiter_pin_auth_attempt");
+    expect(concurrencyMigration).toContain("grant execute on function public.reserve_waiter_pin_auth_attempt");
+    expect(concurrencyMigration).not.toMatch(/target_pin|\bpin\s+text/i);
   });
 
   it("enrolls waiter creation and reset without storing plaintext PINs", () => {
@@ -57,12 +77,13 @@ describe("Phase A1 waiter PIN authentication", () => {
     expect(manageStaff).toContain('targetStaff.role === "waiter"');
   });
 
-  it("renders the minimal entry and masked keypad without a waiter directory", () => {
-    expect(page).toContain("Waiter Ordering Terminal");
-    expect(page).toContain("Waiter Login");
+  it("renders direct masked PIN entry without a waiter directory", () => {
     expect(page).toContain("Enter PIN");
     expect(page).toContain("signInWaiterWithPin");
+    expect(page).toContain("submitPin(nextPin)");
     expect(page).toContain("openWaiterDashboard(result.session.restaurant.slug)");
+    expect(page).not.toContain('type LoginView = "entry" | "pin"');
+    expect(page).not.toContain("Waiter Login");
     expect(page).not.toContain("loadWaiterTerminalProfiles");
     expect(page).not.toContain("resolveWaiterTerminalProfile");
     expect(page).not.toContain("WaiterGrid");
@@ -77,7 +98,10 @@ describe("Phase A1 waiter PIN authentication", () => {
     expect(service).toContain("consumePrefetchedWaiterTables");
     expect(service).toContain("get_waiter_dashboard_tables");
     expect(service).toContain("clearWaiterSensitiveClientState");
-    expect(service.indexOf("clearWaiterSensitiveClientState(session?.restaurant.slug)"))
+    expect(service).toContain("waiterAuthGeneration += 1");
+    expect(service).toContain("await waiterLogoutBarrier");
+    expect(service).toContain("options.signal?.aborted");
+    expect(service.indexOf("clearWaiterSensitiveClientState(session?.restaurant.slug, { preserveAuthSession: true })"))
       .toBeLessThan(service.indexOf('rpc("record_waiter_logout"'));
     expect(dashboard).toContain("const logout = signOutWaiter();");
     expect(dashboard.indexOf("setTables([])"))

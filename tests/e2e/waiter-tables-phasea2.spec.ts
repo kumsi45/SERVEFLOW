@@ -185,7 +185,7 @@ test("zero authoritative rows show the assignment empty state and logout remains
   await expect(page.getByText("Ask your manager for a table assignment.")).toBeVisible();
   await expect(page.locator(".a2-table")).toHaveCount(0);
   await page.getByRole("button", { name: "Logout" }).click();
-  await expect(page.getByRole("button", { name: "Waiter Login" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Enter PIN" })).toBeVisible();
 });
 
 test("table grid uses four, three, and two columns across required tablet and mobile widths", async ({ page }) => {

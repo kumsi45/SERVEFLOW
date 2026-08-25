@@ -12,6 +12,8 @@ const waiterTabId = sessionStorage.getItem(WAITER_TAB_ID_KEY) ?? createBrowserUu
 sessionStorage.setItem(WAITER_TAB_ID_KEY, waiterTabId);
 const WAITER_AUTH_STORAGE_KEY = `serveflow-waiter-auth:${waiterTabId}`;
 let prefetchedWaiterTables: { restaurantSlug: string; rows: unknown[] } | null = null;
+let waiterAuthGeneration = 0;
+let waiterLogoutBarrier: Promise<void> = Promise.resolve();
 
 if (!supabaseUrl) {
   throw new Error("Missing environment variable: VITE_SUPABASE_URL");
@@ -56,6 +58,10 @@ type WaiterContextRow = {
   currency_code?: string | null;
   currency_symbol?: string | null;
   locale?: string | null;
+  total_tables?: number | string | null;
+  available_tables?: number | string | null;
+  occupied_tables?: number | string | null;
+  other_tables?: number | string | null;
 };
 
 type WaiterIdentityRow = WaiterContextRow & {
@@ -79,6 +85,19 @@ type RestaurantStaffIdentityRow = {
 };
 
 function normalizeRestaurant(row: WaiterContextRow): WaiterTerminalContext {
+  const totalTables = row.total_tables == null ? null : Number(row.total_tables);
+  const availableTables = row.available_tables == null ? null : Number(row.available_tables);
+  const occupiedTables = row.occupied_tables == null ? null : Number(row.occupied_tables);
+  const otherTables = row.other_tables == null ? null : Number(row.other_tables);
+  const tableStatus = [totalTables, availableTables, occupiedTables, otherTables].every(Number.isFinite)
+    ? {
+        total: totalTables as number,
+        available: availableTables as number,
+        occupied: occupiedTables as number,
+        other: otherTables as number,
+      }
+    : null;
+
   return {
     id: row.restaurant_id,
     slug: row.restaurant_slug,
@@ -87,6 +106,7 @@ function normalizeRestaurant(row: WaiterContextRow): WaiterTerminalContext {
     currencyCode: row.currency_code ?? null,
     currencySymbol: row.currency_symbol ?? null,
     locale: row.locale ?? null,
+    tableStatus,
   };
 }
 
@@ -349,10 +369,20 @@ type PinLoginResponse = {
 export async function signInWaiterWithPin(
   restaurantSlug: string,
   pin: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<{ session: WaiterSession; serverElapsedMs: number | null }> {
   if (!/^\d{4}$/.test(pin)) {
     throw new Error("PIN not recognized. Try again.");
   }
+
+  await waiterLogoutBarrier;
+  const loginGeneration = waiterAuthGeneration;
+  const assertCurrentLogin = () => {
+    if (options.signal?.aborted || loginGeneration !== waiterAuthGeneration) {
+      throw new DOMException("Waiter login was cancelled.", "AbortError");
+    }
+  };
+  assertCurrentLogin();
 
   const response = await fetch(`${supabaseUrl}/functions/v1/waiter-pin-login`, {
     method: "POST",
@@ -366,11 +396,12 @@ export async function signInWaiterWithPin(
       pin,
       terminalId: getWaiterTerminalId(),
     }),
+    signal: options.signal,
   });
+  assertCurrentLogin();
   const payload = (await response.json().catch(() => ({}))) as PinLoginResponse;
   if (!response.ok) {
     if (payload.code === "throttled") throw new Error("Too many attempts. Try again shortly.");
-    if (payload.code === "pin_conflict") throw new Error("PIN cannot be used. Ask a manager.");
     if (payload.code === "unavailable") throw new Error("Connection unavailable.");
     throw new Error("PIN not recognized. Try again.");
   }
@@ -391,6 +422,7 @@ export async function signInWaiterWithPin(
   ) {
     throw new Error("Connection unavailable.");
   }
+  assertCurrentLogin();
 
   const tablesRequest = fetch(`${supabaseUrl}/rest/v1/rpc/get_waiter_dashboard_tables`, {
     method: "POST",
@@ -409,13 +441,19 @@ export async function signInWaiterWithPin(
     access_token: accessToken,
     refresh_token: refreshToken,
   });
-  if (authError || authData.user?.id !== waiter.userId) {
+  if (
+    authError ||
+    authData.user?.id !== waiter.userId ||
+    options.signal?.aborted ||
+    loginGeneration !== waiterAuthGeneration
+  ) {
     void tablesRequest;
     await waiterSupabase.auth.signOut({ scope: "local" });
     throw new Error("PIN not recognized. Try again.");
   }
 
   const prefetchedRows = await tablesRequest;
+  assertCurrentLogin();
   if (prefetchedRows) {
     prefetchedWaiterTables = { restaurantSlug: restaurant.slug, rows: prefetchedRows };
   }
@@ -451,12 +489,15 @@ export function consumePrefetchedWaiterTables(restaurantSlug: string) {
   return rows;
 }
 
-export function clearWaiterSensitiveClientState(restaurantSlug?: string) {
+export function clearWaiterSensitiveClientState(
+  restaurantSlug?: string,
+  options: { preserveAuthSession?: boolean } = {},
+) {
   const session = parseWaiterSession(sessionStorage.getItem(WAITER_SESSION_KEY));
   const slug = (restaurantSlug ?? session?.restaurant.slug ?? "").trim().toLowerCase();
   sessionStorage.removeItem(WAITER_SESSION_KEY);
   sessionStorage.removeItem("serveflow.waiter.restaurant-slug");
-  sessionStorage.removeItem(WAITER_AUTH_STORAGE_KEY);
+  if (!options.preserveAuthSession) sessionStorage.removeItem(WAITER_AUTH_STORAGE_KEY);
   prefetchedWaiterTables = null;
   if (slug) {
     localStorage.removeItem(profileStorageKey(slug));
@@ -468,23 +509,33 @@ export function clearWaiterSensitiveClientState(restaurantSlug?: string) {
 }
 
 export async function signOutWaiter() {
+  waiterAuthGeneration += 1;
   const session = parseWaiterSession(sessionStorage.getItem(WAITER_SESSION_KEY));
-  clearWaiterSensitiveClientState(session?.restaurant.slug);
-  if (session) {
-    try {
-      await waiterSupabase.rpc("record_waiter_logout", {
-        target_restaurant_id: session.restaurant.id,
-      });
-    } catch {
-      // Local waiter state is already cleared. Logout must continue even when
-      // the audit/update request is temporarily unavailable.
+  clearWaiterSensitiveClientState(session?.restaurant.slug, { preserveAuthSession: true });
+  const logoutTask = (async () => {
+    if (session) {
+      try {
+        await waiterSupabase.rpc("record_waiter_logout", {
+          target_restaurant_id: session.restaurant.id,
+        });
+      } catch {
+        // Local waiter state is already cleared. Logout must continue even when
+        // the audit/update request is temporarily unavailable.
+      }
     }
-  }
 
-  const { error } = await waiterSupabase.auth.signOut({ scope: "local" });
-  if (error && error.message !== "Auth session missing!") {
-    throw new Error(error.message);
-  }
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await waiterSupabase.auth.signOut({ scope: "local" }));
+    } finally {
+      sessionStorage.removeItem(WAITER_AUTH_STORAGE_KEY);
+    }
+    if (error && error.message !== "Auth session missing!") {
+      throw new Error(error.message);
+    }
+  })();
+  waiterLogoutBarrier = logoutTask.catch(() => undefined);
+  await logoutTask;
 }
 
 export async function switchWaiter(restaurantSlug: string, username: string, pin: string) {
