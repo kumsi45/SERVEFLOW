@@ -6,7 +6,7 @@
   --wlt-muted: #667b71;
   --wlt-line: rgba(45, 92, 70, .16);
   min-height: 100dvh;
-  background: #f3f7f4;
+  background: #f8fbfa;
   color: var(--wlt-ink);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
@@ -32,19 +32,21 @@
 .wlt-page::before {
   inset: 0;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, .84), rgba(239, 247, 242, .7)),
-    radial-gradient(circle at 14% 18%, rgba(23, 107, 71, .12), transparent 31%),
-    radial-gradient(circle at 88% 84%, rgba(225, 130, 68, .09), transparent 27%);
+    radial-gradient(ellipse 78% 44% at 12% -4%, rgba(73, 151, 244, .24), transparent 72%),
+    radial-gradient(ellipse 70% 34% at 92% 9%, rgba(155, 205, 255, .18), transparent 72%),
+    radial-gradient(ellipse 95% 44% at 20% 108%, rgba(58, 177, 105, .18), transparent 70%),
+    radial-gradient(ellipse 78% 38% at 92% 100%, rgba(119, 210, 150, .16), transparent 70%),
+    linear-gradient(180deg, #e8f3ff 0%, #f6faff 28%, #fff 48%, #fbfefc 65%, #e7f7ed 100%);
 }
 
 .wlt-page::after {
-  width: 440px;
-  height: 440px;
-  right: -220px;
-  bottom: -260px;
-  border: 1px solid rgba(23, 107, 71, .1);
-  border-radius: 50%;
-  box-shadow: 0 0 0 70px rgba(23, 107, 71, .025), 0 0 0 140px rgba(23, 107, 71, .018);
+  inset: 0;
+  background: radial-gradient(
+    ellipse 62% 42% at 54% 48%,
+    rgba(255, 255, 255, .9) 0%,
+    rgba(255, 255, 255, .58) 54%,
+    transparent 82%
+  );
 }
 
 .wlt-terminal-header,
