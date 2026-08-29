@@ -18,7 +18,6 @@ const styles = read("src/modules/manager/styles/managerCopilot.css");
 const chrome = read("src/modules/manager/components/ManagerWorkspaceChrome.tsx");
 const chromeStyles = read("src/modules/manager/styles/managerWorkspaceChrome.css");
 const liveUpdates = read("src/modules/manager/managerLiveUpdates.ts");
-const diagnostics = read("src/modules/manager/managerCopilotDiagnostics.ts");
 const viteConfig = read("vite.config.ts");
 
 const emptySnapshot: ManagerCopilotSnapshot = {
@@ -156,43 +155,30 @@ describe("global Manager ServeFlow Copilot", () => {
     expect(component).not.toContain("record.restaurant_id");
   });
 
-  it("gates safe on-screen runtime diagnostics to development builds", () => {
-    expect(component).toContain("import.meta.env.DEV && debugOpen");
-    expect(component).toContain("Copilot mobile diagnostic");
-    expect(component).toContain("Authenticated");
-    expect(component).toContain("Restaurant ID");
-    expect(component).not.toContain("access_token");
-    expect(component).not.toContain("raw realtime payload");
-    expect(component).toContain('"Textarea pointerdown"');
-    expect(component).toContain('"Textarea touchstart"');
-    expect(component).toContain('"Textarea focused"');
-    expect(component).toContain('"Textarea input"');
-    expect(component).toContain('"Textarea change"');
-    expect(component).toContain('"Send pointerdown"');
-    expect(component).toContain('"Send touchstart"');
-    expect(component).toContain('"Send click"');
-    expect(component).toContain('"Form submit"');
-    expect(component).toContain("document.elementFromPoint");
-    expect(component).toContain("document.elementsFromPoint");
-    expect(component).toContain("Textarea hit target");
-    expect(component).toContain("Send hit target");
-    expect(component).toContain('"User message append completed"');
-    expect(component).toContain('"Copilot rerender completed"');
-    expect(component).toContain('"Assistant message append completed"');
-    expect(component).toContain('"Portal still mounted"');
-    expect(component).toContain('"Manager shell still mounted"');
-    expect(component).toContain('window.addEventListener("error"');
-    expect(component).toContain('window.addEventListener("unhandledrejection"');
+  it("removes Manager-facing diagnostics and keeps a business-only fallback", () => {
+    for (const internalText of [
+      "Debug",
+      "Copilot diagnostic",
+      "Build timestamp",
+      "Snapshot requested",
+      "Textarea pointerdown",
+      "Send tapped",
+      "Investigator started",
+      "Answer committed to state",
+    ]) {
+      expect(component).not.toContain(internalText);
+    }
+    expect(styles).not.toContain("mcp-diagnostic");
+    expect(chrome).not.toContain("CopilotDiagnostic");
+    expect(chrome).not.toContain("Realtime update received");
     expect(errorBoundary).toContain("getDerivedStateFromError");
     expect(errorBoundary).toContain("componentDidCatch");
     expect(errorBoundary).toContain("Copilot encountered a display error.");
     expect(errorBoundary).toContain("import.meta.env.DEV");
+    expect(errorBoundary).not.toContain("Crash stage");
+    expect(errorBoundary).not.toContain("Error type");
+    expect(errorBoundary).not.toContain("Safe error message");
     expect(errorBoundary).not.toContain("access_token");
-    expect(diagnostics).toContain("beginCopilotDiagnostic");
-    expect(diagnostics).toContain("recordCopilotFailure");
-    expect(chrome).toContain('"Realtime update received"');
-    expect(chrome).toContain('"Notification created"');
-    expect(chrome).toContain('"Notification tapped"');
-    expect(viteConfig).toContain("__SERVEFLOW_BUILD_ID__");
+    expect(viteConfig).not.toContain("__SERVEFLOW_BUILD_ID__");
   });
 });

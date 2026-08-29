@@ -7,10 +7,6 @@ import {
   presentManagerLiveUpdate,
   type ManagerLiveUpdate,
 } from "../managerLiveUpdates";
-import {
-  beginCopilotDiagnostic,
-  recordCopilotCheckpoint,
-} from "../managerCopilotDiagnostics";
 import "../styles/managerWorkspaceChrome.css";
 
 type Props = {
@@ -58,14 +54,6 @@ export function ManagerWorkspaceChrome({
   const onRestaurantEvent = useCallback(
     (event: RestaurantEvent) => {
       if (seenEventIds.current.has(event.id)) return;
-      if (import.meta.env.DEV) {
-        beginCopilotDiagnostic("notification");
-        recordCopilotCheckpoint(
-          "Realtime update received",
-          "success",
-          "notification",
-        );
-      }
       seenEventIds.current.add(event.id);
       if (seenEventIds.current.size > 200) {
         const oldest = seenEventIds.current.values().next().value;
@@ -78,13 +66,6 @@ export function ManagerWorkspaceChrome({
       );
       const update = presentManagerLiveUpdate(event);
       if (!update) return;
-      if (import.meta.env.DEV) {
-        recordCopilotCheckpoint(
-          "Notification created",
-          "success",
-          "notification",
-        );
-      }
       setBanner(update);
       if (update.kind === "actionable") {
         setPendingUpdates((current) =>
@@ -118,18 +99,6 @@ export function ManagerWorkspaceChrome({
   }, [banner]);
 
   function reviewUpdate(update: ManagerLiveUpdate) {
-    if (import.meta.env.DEV) {
-      recordCopilotCheckpoint(
-        "Notification tapped",
-        "success",
-        "notification",
-      );
-      recordCopilotCheckpoint(
-        "Copilot open requested",
-        "success",
-        "notification",
-      );
-    }
     setPendingUpdates((current) =>
       current.filter((item) => item.id !== update.id),
     );

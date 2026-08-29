@@ -14,6 +14,4 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-declare const __SERVEFLOW_BUILD_ID__: string;
-
 declare module "*.css";
