@@ -288,11 +288,18 @@ test("entry and keypad remain fully visible at every required terminal size", as
   test.setTimeout(90_000);
   await mockTerminal(page);
   for (const viewport of [
+    { width: 360, height: 640 },
     { width: 360, height: 800 },
+    { width: 375, height: 667 },
     { width: 375, height: 812 },
+    { width: 390, height: 700 },
     { width: 390, height: 844 },
+    { width: 412, height: 732 },
     { width: 412, height: 915 },
     { width: 430, height: 932 },
+    { width: 640, height: 360 },
+    { width: 667, height: 375 },
+    { width: 740, height: 360 },
     { width: 768, height: 1024 },
     { width: 820, height: 1180 },
     { width: 1024, height: 768 },
@@ -325,14 +332,53 @@ test("entry and keypad remain fully visible at every required terminal size", as
     expect(geometry.horizontalOverflow).toBe(false);
     expect(geometry.verticalOverflow).toBe(false);
     expect(smallestKey).toBeGreaterThanOrEqual(44);
-    expect(await page.locator(".wlt-table-status").evaluateAll((nodes) =>
+    const visibleTableStatus = await page.locator(".wlt-table-status").evaluateAll((nodes) =>
       nodes.filter((node) => {
         const style = window.getComputedStyle(node);
         return style.display !== "none" && style.visibility !== "hidden" && node.getBoundingClientRect().height > 0;
       }).length,
-    )).toBe(1);
-    if (viewport.width > 620) await expect(page.locator(".wlt-terminal-context")).toBeVisible();
-    else await expect(page.locator(".wlt-terminal-context")).toBeHidden();
+    );
+    expect(visibleTableStatus).toBe(viewport.height <= 760 ? 0 : 1);
+    if (viewport.width <= 620) {
+      const mobileGeometry = await page.evaluate(() => {
+        const header = document.querySelector(".wlt-terminal-header")!.getBoundingClientRect();
+        const panel = document.querySelector(".wlt-pin-panel")!.getBoundingClientRect();
+        const firstKey = document.querySelector(".wlt-pin-pad button")!.getBoundingClientRect();
+        return { headerGap: panel.top - header.bottom, panelHeight: panel.height, keyHeight: firstKey.height };
+      });
+      expect(mobileGeometry.headerGap).toBeLessThanOrEqual(20);
+      expect(mobileGeometry.panelHeight).toBeLessThanOrEqual(viewport.height <= 760 ? 400 : 520);
+      expect(mobileGeometry.keyHeight).toBeLessThanOrEqual(60);
+    }
+    if (viewport.width > 620 && viewport.height > 480) {
+      await expect(page.locator(".wlt-terminal-context")).toBeVisible();
+    } else {
+      await expect(page.locator(".wlt-terminal-context")).toBeHidden();
+    }
+  }
+});
+
+test("reduced mobile visual viewport keeps PIN controls usable", async ({ page }) => {
+  await mockTerminal(page);
+  for (const viewport of [{ width: 390, height: 500 }, { width: 390, height: 420 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/waiter/grand-royal");
+    await expect(page.getByText("Waiter terminal")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Enter PIN" })).toBeVisible();
+    const geometry = await page.evaluate(() => {
+      const panel = document.querySelector(".wlt-pin-panel")!.getBoundingClientRect();
+      const buttons = [...document.querySelectorAll(".wlt-pin-pad button")].map((button) => button.getBoundingClientRect());
+      return {
+        panelTop: panel.top,
+        panelBottom: panel.bottom,
+        horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        minimumTarget: Math.min(...buttons.map((button) => Math.min(button.width, button.height))),
+      };
+    });
+    expect(geometry.panelTop).toBeGreaterThanOrEqual(0);
+    expect(geometry.panelBottom).toBeLessThanOrEqual(viewport.height + 1);
+    expect(geometry.horizontalOverflow).toBe(false);
+    expect(geometry.minimumTarget).toBeGreaterThanOrEqual(44);
   }
 });
 
