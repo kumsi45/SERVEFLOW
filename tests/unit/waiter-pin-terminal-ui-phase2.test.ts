@@ -49,6 +49,32 @@ describe("Phase 2 waiter PIN-first tablet terminal UI", () => {
     expect(tableStatusMigration).not.toContain("assigned_waiter");
   });
 
+  it("safely recreates the RPC when its OUT-column contract changes", () => {
+    const dropIndex = tableStatusMigration.indexOf(
+      "drop function if exists public.get_waiter_terminal_context(text);"
+    );
+    const createIndex = tableStatusMigration.indexOf(
+      "create function public.get_waiter_terminal_context("
+    );
+
+    expect(dropIndex).toBeGreaterThanOrEqual(0);
+    expect(createIndex).toBeGreaterThan(dropIndex);
+    expect(tableStatusMigration).not.toContain(
+      "create or replace function public.get_waiter_terminal_context("
+    );
+    expect(tableStatusMigration).not.toMatch(/drop function[^;]*\bcascade\b/i);
+    expect(tableStatusMigration).toContain("total_tables integer");
+    expect(tableStatusMigration).toContain("available_tables integer");
+    expect(tableStatusMigration).toContain("occupied_tables integer");
+    expect(tableStatusMigration).toContain("other_tables integer");
+    expect(tableStatusMigration).not.toContain(
+      "restaurants.id::text = normalized_input.raw_value"
+    );
+    expect(tableStatusMigration).toContain(
+      "to service_role;"
+    );
+  });
+
   it("provides stable verification, rate-limit, clock, and accessible input states", () => {
     expect(page).toContain("Verifying…");
     expect(page).toContain("Too many attempts. Try again shortly or contact a manager.");

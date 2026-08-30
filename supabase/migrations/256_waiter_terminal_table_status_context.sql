@@ -1,7 +1,9 @@
 -- Phase 2.1: expose pre-auth waiter-terminal table status as aggregate counts only.
 -- No row-level table/order fields are returned to anonymous clients.
 
-create or replace function public.get_waiter_terminal_context(
+drop function if exists public.get_waiter_terminal_context(text);
+
+create function public.get_waiter_terminal_context(
     target_restaurant_slug text
 )
 returns table (
@@ -34,16 +36,14 @@ target_restaurant as (
     where restaurants.active = true
       and (
           restaurants.slug = normalized_input.raw_value
-          or restaurants.id::text = normalized_input.raw_value
           or lower(trim(restaurants.name)) = normalized_input.raw_value
           or restaurants.slug = trim(both '-' from normalized_input.slug_value)
       )
     order by
         case
             when restaurants.slug = normalized_input.raw_value then 0
-            when restaurants.id::text = normalized_input.raw_value then 1
-            when lower(trim(restaurants.name)) = normalized_input.raw_value then 2
-            else 3
+            when lower(trim(restaurants.name)) = normalized_input.raw_value then 1
+            else 2
         end
     limit 1
 ),
@@ -92,6 +92,9 @@ $$;
 
 revoke all on function public.get_waiter_terminal_context(text)
 from public, anon, authenticated;
+
+grant execute on function public.get_waiter_terminal_context(text)
+to service_role;
 
 grant execute on function public.get_waiter_terminal_context(text)
 to anon, authenticated;
