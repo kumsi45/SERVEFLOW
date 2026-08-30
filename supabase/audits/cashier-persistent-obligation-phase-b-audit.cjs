@@ -59,6 +59,22 @@ async function asUser(db, userId, sql, params = []) {
   }
 }
 
+async function asAnon(db, sql, params = []) {
+  await db.query("set local role anon");
+  await db.query("select set_config('request.jwt.claim.sub', '', true)");
+  let operationError = null;
+  try {
+    return await db.query(sql, params);
+  } catch (error) {
+    operationError = error;
+    throw error;
+  } finally {
+    await db.query("reset role").catch(() => {
+      if (!operationError) throw new Error("Could not reset the database role.");
+    });
+  }
+}
+
 async function expectReject(db, label, operation, checks) {
   const savepoint = `phase_b_expected_rejection_${checks.length}`;
   await db.query(`savepoint ${savepoint}`);
@@ -144,7 +160,7 @@ async function hostedBehaviorTest(db) {
   }
 
   try {
-    for (const purpose of ["cashier", "customer"]) {
+    for (const purpose of ["cashier"]) {
       const email = `${auditTag}-${purpose}@serveflow.local`;
       const created = await service.auth.admin.createUser({
         email,
@@ -210,8 +226,13 @@ async function hostedBehaviorTest(db) {
         kitchen.id as kitchen_staff_id,
         kitchen.user_id as kitchen_user_id,
         kitchen.assigned_kitchen_station_id as kitchen_station_id,
-        tables.id as table_id,
-        tables.table_number,
+        qr_table.id as qr_table_id,
+        qr_table.table_number as qr_table_number,
+        qr_table.qr_token as qr_token,
+        waiter_table.id as waiter_table_id,
+        waiter_table.table_number as waiter_table_number,
+        cashier_table.id as cashier_table_id,
+        cashier_table.table_number as cashier_table_number,
         items.id as menu_item_id,
         items.price
       from restaurant_candidate
@@ -258,7 +279,39 @@ async function hostedBehaviorTest(db) {
           )
         order by tables.table_number desc
         limit 1
-      ) tables on true
+      ) qr_table on true
+      join lateral (
+        select tables.*
+        from public.restaurant_tables tables
+        where tables.restaurant_id = restaurant_candidate.id
+          and tables.active
+          and tables.id <> qr_table.id
+          and not exists (
+            select 1 from public.orders orders
+            where orders.restaurant_id = tables.restaurant_id
+              and orders.table_id = tables.id
+              and orders.dining_session_status = 'open'
+              and orders.table_released_at is null
+          )
+        order by tables.table_number desc
+        limit 1
+      ) waiter_table on true
+      join lateral (
+        select tables.*
+        from public.restaurant_tables tables
+        where tables.restaurant_id = restaurant_candidate.id
+          and tables.active
+          and tables.id not in (qr_table.id, waiter_table.id)
+          and not exists (
+            select 1 from public.orders orders
+            where orders.restaurant_id = tables.restaurant_id
+              and orders.table_id = tables.id
+              and orders.dining_session_status = 'open'
+              and orders.table_released_at is null
+          )
+        order by tables.table_number desc
+        limit 1
+      ) cashier_table on true
       join lateral (
         select items.*
         from public.menu_items items
@@ -276,24 +329,21 @@ async function hostedBehaviorTest(db) {
 
     const ids = base.rows[0];
     ids.no_shift_user_id = temporaryUsers.find((user) => user.purpose === "cashier").id;
-    ids.customer_user_id = temporaryUsers.find((user) => user.purpose === "customer").id;
     const other = await db.query(
-      "select id from public.restaurants where id <> $1 order by created_at desc limit 1",
+      "select id, slug from public.restaurants where id <> $1 order by created_at desc limit 1",
       [ids.restaurant_id],
     );
     if (other.rowCount !== 1) {
       throw new Error("Hosted audit requires a second restaurant for cross-tenant denial.");
     }
 
-    for (const userId of [ids.no_shift_user_id, ids.customer_user_id]) {
-      await db.query(
+    await db.query(
       `insert into public.users (id, restaurant_id, role)
        values ($1, $2, 'customer')
        on conflict (id) do update set restaurant_id = excluded.restaurant_id
        returning id`,
-        [userId, ids.restaurant_id],
-      );
-    }
+      [ids.no_shift_user_id, ids.restaurant_id],
+    );
 
     const insertedNoShiftStaff = await db.query(
       `insert into public.restaurant_staff (restaurant_id, user_id, role, display_name, active)
@@ -303,28 +353,99 @@ async function hostedBehaviorTest(db) {
     );
     createdIds.staff.push(insertedNoShiftStaff.rows[0].id);
 
-    const createCustomerOrder = async () => {
-      const result = await asUser(
+    const retirementBefore = await db.query(
+      `select
+         (select count(*) from public.orders)::int as orders,
+         (select count(*) from public.order_items)::int as items,
+         (select count(*) from public.order_invoices)::int as invoices,
+         (select count(*) from public.orders where dining_session_status = 'open')::int as open_sessions,
+         (select to_jsonb(tables) from public.restaurant_tables tables where tables.id = $1) as table_state`,
+      [ids.qr_table_id],
+    );
+    await expectReject(
+      db,
+      "Legacy generic customer RPC fails closed",
+      () => asUser(
         db,
-        ids.customer_user_id,
-        "select public.create_customer_order($1, $2::jsonb) as payload",
+        ids.no_shift_user_id,
+        "select public.create_customer_order($1, $2::jsonb)",
         [ids.slug, JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }])],
+      ),
+      checks,
+    );
+    const retirementAfter = await db.query(
+      `select
+         (select count(*) from public.orders)::int as orders,
+         (select count(*) from public.order_items)::int as items,
+         (select count(*) from public.order_invoices)::int as invoices,
+         (select count(*) from public.orders where dining_session_status = 'open')::int as open_sessions,
+         (select to_jsonb(tables) from public.restaurant_tables tables where tables.id = $1) as table_state`,
+      [ids.qr_table_id],
+    );
+    check(
+      "Retired generic customer RPC performs zero mutation",
+      JSON.stringify(retirementAfter.rows[0]) === JSON.stringify(retirementBefore.rows[0]),
+    );
+
+    const createQrOrder = async () => {
+      const result = await asAnon(
+        db,
+        `select public.create_public_qr_order($1, $2, $3, $4, $5, 'Cash', $6::jsonb) as payload`,
+        [
+          ids.slug,
+          String(ids.qr_table_number),
+          ids.qr_token,
+          crypto.randomUUID(),
+          auditTag,
+          JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }]),
+        ],
       );
       createdIds.orders.push(result.rows[0].payload.order_id);
       createdIds.invoices.push(result.rows[0].payload.invoice_id);
       return result.rows[0].payload;
     };
 
-    const oldCustomer = await createCustomerOrder();
+    await expectReject(
+      db,
+      "Invalid QR authority is denied",
+      () => asAnon(
+        db,
+        `select public.create_public_qr_order($1, $2, $3, $4, $5, 'Cash', $6::jsonb)`,
+        [ids.slug, String(ids.qr_table_number), crypto.randomUUID(), crypto.randomUUID(), auditTag,
+          JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }])],
+      ),
+      checks,
+    );
+
+    const oldQr = await createQrOrder();
     await db.query(
       `update public.orders set created_at = now() - interval '10 days', updated_at = now() - interval '10 days'
        where id = $1`,
-      [oldCustomer.order_id],
+      [oldQr.order_id],
     );
     await db.query(
       `update public.order_invoices set created_at = now() - interval '10 days', updated_at = now() - interval '10 days'
        where id = $1`,
-      [oldCustomer.invoice_id],
+      [oldQr.invoice_id],
+    );
+
+    await expectReject(
+      db,
+      "Waiter cross-tenant order creation is denied",
+      () => asUser(
+        db,
+        ids.waiter_user_id,
+        `select public.submit_waiter_order_batch($1, $2, $3, null, $4, $5::jsonb, $6::uuid)`,
+        [
+          other.rows[0].slug,
+          String(ids.waiter_table_number),
+          auditTag,
+          "Phase B cross-tenant denial audit",
+          JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }]),
+          crypto.randomUUID(),
+        ],
+      ),
+      checks,
     );
 
     const waiterResult = await asUser(
@@ -333,7 +454,7 @@ async function hostedBehaviorTest(db) {
       `select public.submit_waiter_order_batch($1, $2, $3, null, $4, $5::jsonb, $6::uuid) as payload`,
       [
         ids.slug,
-        String(ids.table_number),
+        String(ids.waiter_table_number),
         auditTag,
         "Phase B canonical served-unpaid audit",
         JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }]),
@@ -381,6 +502,7 @@ async function hostedBehaviorTest(db) {
 
     const customerIntegrity = await db.query(
       `select orders.order_source, orders.customer_user_id, orders.created_by_waiter_id,
+              orders.table_id, orders.table_number, orders.dining_session_status,
               orders.payment_timing, invoices.payment_status, invoices.invoice_source,
               count(distinct invoices.id)::int as invoice_count,
               count(items.id)::int as item_count,
@@ -392,18 +514,20 @@ async function hostedBehaviorTest(db) {
          on items.restaurant_id = invoices.restaurant_id and items.order_id = invoices.order_id
        where orders.id = $1
        group by orders.id, invoices.id`,
-      [oldCustomer.order_id],
+      [oldQr.order_id],
     );
     const customerState = customerIntegrity.rows[0];
     check(
-      "Authenticated customer order is atomic and canonical",
-      oldCustomer.order_source === "authenticated" &&
-        customerState.order_source === "authenticated" &&
-        customerState.customer_user_id === ids.customer_user_id &&
+      "Supported Customer QR order is atomic and canonical",
+      customerState.order_source === "public_qr" &&
+        customerState.customer_user_id === null &&
         customerState.created_by_waiter_id === null &&
+        customerState.table_id === ids.qr_table_id &&
+        String(customerState.table_number) === String(ids.qr_table_number) &&
+        customerState.dining_session_status === "open" &&
         customerState.payment_timing === "before_kitchen" &&
         customerState.payment_status === "pending" &&
-        customerState.invoice_source === "authenticated" &&
+        customerState.invoice_source === "public_qr" &&
         Number(customerState.invoice_count) === 1 &&
         Number(customerState.item_count) === 1 &&
         Number(customerState.linked_item_count) === 1,
@@ -416,12 +540,12 @@ async function hostedBehaviorTest(db) {
       [ids.restaurant_id],
     );
     const visibleIds = visibleNoShift.rows.map((row) => row.value.invoice_id);
-    check("A no-shift cashier can read unresolved obligations", visibleIds.includes(oldCustomer.invoice_id));
+    check("A no-shift cashier can read unresolved obligations", visibleIds.includes(oldQr.invoice_id));
 
     await expectReject(
       db,
       "A no-shift cashier cannot settle",
-      () => asUser(db, ids.no_shift_user_id, "select public.verify_dining_session_payment($1, 'Cash', null, null, null)", [oldCustomer.order_id]),
+      () => asUser(db, ids.no_shift_user_id, "select public.verify_dining_session_payment($1, 'Cash', null, null, null)", [oldQr.order_id]),
       checks,
     );
 
@@ -450,7 +574,7 @@ async function hostedBehaviorTest(db) {
       [ids.restaurant_id],
     );
     const queueIds = queue.rows.map((row) => row.value.invoice_id);
-    check("Unresolved invoices older than 36 hours stay in queue", queueIds.includes(oldCustomer.invoice_id));
+    check("Unresolved invoices older than 36 hours stay in queue", queueIds.includes(oldQr.invoice_id));
     const paidHistory = await db.query(
       `select invoices.id from public.order_invoices invoices
        where invoices.restaurant_id = $1 and invoices.payment_status = 'paid'
@@ -489,7 +613,38 @@ async function hostedBehaviorTest(db) {
     );
     const shiftA = shiftAResult.rows[0].id;
     createdIds.shifts.push(shiftA);
-    const cashierAOrder = await createCustomerOrder();
+    await expectReject(
+      db,
+      "Waiter cannot create a cashier order",
+      () => asUser(
+        db,
+        ids.waiter_user_id,
+        "select public.create_cashier_order($1, $2, 'Cash', $3::jsonb)",
+        [ids.restaurant_id, String(ids.cashier_table_number), JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }])],
+      ),
+      checks,
+    );
+    await expectReject(
+      db,
+      "Cashier cross-tenant order creation is denied",
+      () => asUser(
+        db,
+        ids.cashier_user_id,
+        "select public.create_cashier_order($1, $2, 'Cash', $3::jsonb)",
+        [other.rows[0].id, String(ids.cashier_table_number), JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }])],
+      ),
+      checks,
+    );
+    const cashierAResult = await asUser(
+      db,
+      ids.cashier_user_id,
+      "select public.create_cashier_order($1, $2, 'Cash', $3::jsonb) as payload",
+      [ids.restaurant_id, String(ids.cashier_table_number), JSON.stringify([{ menu_item_id: ids.menu_item_id, quantity: 1 }])],
+    );
+    const cashierAOrder = cashierAResult.rows[0].payload;
+    createdIds.orders.push(cashierAOrder.order_id);
+    createdIds.invoices.push(cashierAOrder.invoice_id);
+    check("Supported cashier order succeeds through cashier authority", Boolean(cashierAOrder.order_id && cashierAOrder.invoice_id));
     await asUser(db, ids.cashier_user_id, "select public.verify_dining_session_payment($1, 'Cash', null, null, null)", [cashierAOrder.order_id]);
     const cashierASettlement = await db.query(
       "select payment_status, verified_by, cashier_shift_id from public.order_invoices where id = $1",
@@ -500,6 +655,18 @@ async function hostedBehaviorTest(db) {
       cashierASettlement.rows[0].payment_status === "paid" &&
         cashierASettlement.rows[0].verified_by === ids.cashier_staff_id &&
         cashierASettlement.rows[0].cashier_shift_id === shiftA,
+    );
+    await asUser(db, ids.kitchen_user_id, "select public.start_order_preparation($1, $2, null)", [cashierAOrder.order_id, ids.kitchen_station_id]);
+    await asUser(db, ids.kitchen_user_id, "select public.mark_order_ready($1, $2, null)", [cashierAOrder.order_id, ids.kitchen_station_id]);
+    await asUser(db, ids.kitchen_user_id, "select public.mark_order_completed($1, $2, null)", [cashierAOrder.order_id, ids.kitchen_station_id]);
+    const cashierOrderTerminal = await db.query(
+      "select dining_session_status, table_released_at from public.orders where id = $1",
+      [cashierAOrder.order_id],
+    );
+    check(
+      "Supported cashier order completes before shift close",
+      cashierOrderTerminal.rows[0].dining_session_status === "closed" &&
+        cashierOrderTerminal.rows[0].table_released_at !== null,
     );
 
     await expectReject(
@@ -579,7 +746,7 @@ async function hostedBehaviorTest(db) {
     await expectReject(
       db,
       "Cashier A cannot settle while only Cashier B has an open shift",
-      () => asUser(db, ids.cashier_user_id, "select public.verify_dining_session_payment($1, 'Cash', null, null, null)", [oldCustomer.order_id]),
+      () => asUser(db, ids.cashier_user_id, "select public.verify_dining_session_payment($1, 'Cash', null, null, null)", [oldQr.order_id]),
       checks,
     );
     await asUser(
@@ -657,13 +824,28 @@ async function main() {
   try {
     if (process.argv.includes("--rollback-validate")) {
       const migrationSql = fs.readFileSync(
-        path.join(__dirname, "..", "migrations", "258_cashier_persistent_obligation_visibility.sql"),
+        path.join(__dirname, "..", "migrations", "259_retire_obsolete_generic_customer_order_rpc.sql"),
         "utf8",
       );
 
       try {
         await db.query("begin");
         await db.query(migrationSql);
+        const tombstone = await db.query(`select pg_get_functiondef(
+          'public.create_customer_order(text,jsonb)'::regprocedure
+        ) as definition`);
+        if (!tombstone.rows[0].definition.includes("This ordering method is not supported.")) {
+          throw new Error("Migration 259 tombstone was not installed.");
+        }
+        const supported = await db.query(`select to_regprocedure(name) is not null as exists
+          from unnest(array[
+            'public.create_public_qr_order(text,text,text,text,text,text,jsonb)',
+            'public.submit_waiter_order_batch(text,text,text,text,text,jsonb,uuid)',
+            'public.create_cashier_order(uuid,text,text,jsonb)'
+          ]) name`);
+        if (supported.rows.some((row) => !row.exists)) {
+          throw new Error("A supported V1 order-entry RPC is missing.");
+        }
         await db.query("rollback");
         console.log("ROLLBACK_VALIDATION PASS");
       } catch (error) {
@@ -708,6 +890,79 @@ async function main() {
       where invoices.payment_status in ('pending', 'held')
     `);
     console.log("SESSION_BASELINE " + JSON.stringify(sessionBaseline.rows[0]));
+
+    const performanceTarget = await db.query(`
+      select restaurant_id
+      from public.order_invoices
+      where payment_status in ('pending', 'held')
+      order by created_at
+      limit 1
+    `);
+    if (performanceTarget.rows[0]) {
+      const explain = await db.query(`
+        explain (format json)
+        select invoices.id, orders.id, tables.id, receipt.created_at, cancellation.requested_at
+        from public.order_invoices invoices
+        join public.orders orders
+          on orders.restaurant_id = invoices.restaurant_id
+         and orders.id = invoices.order_id
+        left join public.restaurant_tables tables
+          on tables.restaurant_id = orders.restaurant_id
+         and tables.id = orders.table_id
+        left join lateral (
+          select events.created_at
+          from public.receipt_generation_events events
+          where events.restaurant_id = invoices.restaurant_id
+            and events.invoice_id = invoices.id
+          order by events.created_at desc
+          limit 1
+        ) receipt on true
+        left join lateral (
+          select requests.requested_at
+          from public.order_cancellation_requests requests
+          where requests.restaurant_id = invoices.restaurant_id
+            and requests.order_id = invoices.order_id
+            and requests.status in ('pending_review', 'manager_review_required')
+          order by requests.requested_at desc
+          limit 1
+        ) cancellation on true
+        where invoices.restaurant_id = $1
+          and invoices.payment_status in ('pending', 'held')
+        order by case when orders.operational_status = 'served' then 0 else 1 end,
+          invoices.created_at, invoices.id
+      `, [performanceTarget.rows[0].restaurant_id]);
+      console.log("UNRESOLVED_EXPLAIN " + JSON.stringify(explain.rows[0]["QUERY PLAN"][0].Plan));
+    }
+
+    const indexes = await db.query(`
+      select tablename, indexname, indexdef
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename in (
+          'order_invoices', 'orders', 'restaurant_tables',
+          'receipt_generation_events', 'order_cancellation_requests'
+        )
+        and (
+          indexdef ilike '%restaurant_id%'
+          or indexdef ilike '%payment_status%'
+          or indexdef ilike '%invoice_id%'
+          or indexdef ilike '%order_id%'
+        )
+      order by tablename, indexname
+    `);
+    console.log("UNRESOLVED_INDEXES " + JSON.stringify(indexes.rows));
+
+    const retiredSecurity = await db.query(`
+      select
+        pg_get_userbyid(procedures.proowner) as owner,
+        procedures.prosecdef as security_definer,
+        procedures.proconfig as configuration,
+        procedures.proacl::text as acl,
+        obj_description(procedures.oid, 'pg_proc') as comment
+      from pg_proc procedures
+      where procedures.oid = 'public.create_customer_order(text,jsonb)'::regprocedure
+    `);
+    console.log("RETIRED_RPC_SECURITY " + JSON.stringify(retiredSecurity.rows[0]));
 
     const missingInvoices = await db.query(`
       select
@@ -761,6 +1016,7 @@ async function main() {
           'create_customer_order',
           'create_public_qr_order',
           'submit_waiter_order_batch',
+          'create_cashier_order',
           'get_cashier_payment_queue',
           'close_cashier_shift'
         )

@@ -1,7 +1,7 @@
-# Phase 3 Customer Ordering
+# Historical Phase 3 Customer Ordering
 
-Phase 3 adds authenticated customer ordering without changing the Phase 2 public
-QR menu route or behavior.
+This document records an obsolete authenticated generic-order proposal. It is
+not a supported ServeFlow V1 order-entry method.
 
 ## Route
 
@@ -11,29 +11,27 @@ The existing Phase 2 route remains:
 
 - `/r/:restaurantSlug`
 
-## Backend
+## Current V1 Contract
 
-Customer order creation is handled by:
+Restaurant customers order through canonical restaurant/table QR authority:
 
 ```sql
-public.create_customer_order(target_restaurant_slug text, requested_items jsonb)
+public.create_public_qr_order(...)
 ```
 
-The RPC:
+The supported flow validates the restaurant slug, table number, QR token, and
+browser/session context server-side before creating the table session, order,
+items, and invoice.
 
-- requires an authenticated Supabase user
-- requires the caller's `public.users.role` to be `customer`
-- requires the caller's `restaurant_id` to match the target restaurant slug
-- validates every menu item belongs to that restaurant
-- rejects unavailable menu items
-- calculates prices on the server
-- creates a pending order and its order items in one transaction
+`public.create_customer_order(text,jsonb)` is a fail-closed compatibility
+tombstone. It is not takeaway, delivery, or tableless ordering.
 
 ## Frontend
 
-The ordering module owns the cart and checkout UI. It calls the existing public
-menu RPC for menu display, then calls the Phase 3 order RPC for checkout.
+The ordering module owns the cart and checkout UI. It calls
+`submitPublicQrCustomerOrder`, which invokes the canonical Customer QR RPC.
 
 ## Boundary
 
-Phase 2 QR menu functionality is not modified by Phase 3.
+ServeFlow V1 order entry is limited to Customer QR, Waiter, and Cashier flows.
+Takeaway and delivery require separate future architecture phases.

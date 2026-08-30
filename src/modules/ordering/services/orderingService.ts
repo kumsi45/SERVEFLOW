@@ -57,45 +57,6 @@ export async function fetchOrderingMenuData(restaurantSlug: string): Promise<Ord
   return data;
 }
 
-export async function submitCustomerOrder(
-  restaurantSlug: string,
-  cartLines: CartLine[]
-): Promise<SubmittedOrder> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw new Error(userError.message);
-  }
-
-  if (!userData.user) {
-    throw new Error("Sign in as a customer to place an order.");
-  }
-
-  const requestedItems = cartLines.map((line) => ({
-    menu_item_id: line.menuItemId,
-    quantity: line.quantity,
-  }));
-
-  const { data, error } = await supabase.rpc("create_customer_order", {
-    target_restaurant_slug: restaurantSlug,
-    requested_items: requestedItems,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!isSubmittedOrder(data)) {
-    throw new Error("Order could not be confirmed.");
-  }
-
-  return {
-    ...data,
-    total_price: Number(data.total_price),
-    session_action: data.session_action === "appended" ? "appended" : "created",
-  };
-}
-
 export async function submitPublicQrCustomerOrder({
   restaurantSlug,
   tableNumber,

@@ -60,15 +60,17 @@ Order item creation requires a matching customer-owned pending order in the same
 
 Risk reduced: customers cannot create orders or order items for another user, another restaurant, or a non-pending order.
 
-Phase 3 browser checkout uses:
+ServeFlow V1 customer checkout uses canonical restaurant/table QR authority
+through:
 
 ```sql
-public.create_customer_order(target_restaurant_slug text, requested_items jsonb)
+public.create_public_qr_order(...)
 ```
 
-The function validates the authenticated customer profile, restaurant membership,
-menu item ownership, availability, and server-side prices before creating a
-pending order.
+The server validates the restaurant slug, table number, QR token, browser/session
+context, menu ownership, availability, and server-side prices. The obsolete
+`public.create_customer_order(text,jsonb)` contract is retained only as a
+fail-closed tombstone and performs no mutation.
 
 ### Kitchen Update Safety
 

@@ -12,6 +12,11 @@ const phaseA = readFileSync(
   "utf8",
 ).replaceAll("\r\n", "\n");
 
+const forwardRepair = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/259_retire_obsolete_generic_customer_order_rpc.sql"),
+  "utf8",
+).replaceAll("\r\n", "\n");
+
 function sectionBetween(start: string, end: string) {
   const startIndex = migration.indexOf(start);
   const endIndex = migration.indexOf(end, startIndex + start.length);
@@ -126,21 +131,14 @@ describe("cashier Phase B persistent obligation visibility", () => {
     expect(migration).toContain("returns jsonb");
   });
 
-  it("repairs authenticated customer orders atomically without touching QR or waiter RPCs", () => {
-    const customerOrder = sectionBetween(
-      "create or replace function public.create_customer_order",
-      "revoke all on function public.create_customer_order",
-    );
-
-    expect(customerOrder).toContain("insert into public.orders");
-    expect(customerOrder).toContain("'authenticated'");
-    expect(customerOrder).toContain("insert into public.order_invoices");
-    expect(customerOrder).toContain("insert into public.order_items");
-    expect(customerOrder).toContain("target_invoice.id");
-    expect(customerOrder).toContain("perform public.stamp_invoice_ownership");
-    expect(customerOrder).not.toContain("create_customer_order_phase258_base");
-    expect(migration).not.toContain("create_public_qr_order");
-    expect(migration).not.toContain("submit_waiter_order_batch");
+  it("supersedes the invalid generic customer repair with a fail-closed forward migration", () => {
+    expect(forwardRepair).toContain("create or replace function public.create_customer_order(");
+    expect(forwardRepair).toContain("returns jsonb");
+    expect(forwardRepair).toContain("This ordering method is not supported.");
+    expect(forwardRepair).not.toMatch(/insert\s+into|update\s+public\.|delete\s+from/i);
+    expect(forwardRepair).not.toContain("create_public_qr_order");
+    expect(forwardRepair).not.toContain("submit_waiter_order_batch");
+    expect(forwardRepair).not.toContain("create_cashier_order");
   });
 
   it("adds targeted indexes without broad production data repair", () => {
