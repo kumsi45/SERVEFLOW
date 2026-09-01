@@ -38,7 +38,9 @@ describe("Kitchen request relationship disambiguation", () => {
   it("isolates request failures without rendering a confirmed empty request state", () => {
     expect(kitchen).toContain('setRequestsState(nextRequestsResult.available ? "ready" : "unavailable")');
     expect(kitchen).toContain("Kitchen requests unavailable.");
-    expect(operations).toContain("setRequestsUnavailable(!nextInventoryRequestsResult.available)");
+    expect(operations).toContain('if (requestsResult.status === "fulfilled")');
+    expect(operations).toContain("setRequestsUnavailable(false)");
+    expect(operations).toContain("setRequestsUnavailable(true)");
     expect(operations).toContain("Kitchen requests unavailable.");
     expect(operations).toContain("!requestsUnavailable && visibleActions.length === 0");
   });

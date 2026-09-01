@@ -81,8 +81,8 @@ const livePreview = read(
 const resilientImage = read("src/core/presentation/ResilientImage.tsx");
 const smartImage = read("src/core/presentation/SmartImage.tsx");
 const modalFocus = read("src/core/accessibility/useModalFocus.ts");
-const managerRoute = read(
-  "src/modules/staff-auth/pages/ProtectedManagerRoute.tsx",
+const managerMenuWorkspace = read(
+  "src/modules/manager/pages/ManagerMenuWorkspacePage.tsx",
 );
 const qrPage = read("src/modules/qr-menu/pages/QRMenuPage.tsx");
 const ordersView = read(
@@ -398,8 +398,8 @@ describe("Phase 9.7 performance and cleanup boundaries", () => {
   );
 
   it("keeps the Studio route split and preview memoized", () => {
-    expect(managerRoute).toContain("const ThemeCustomizationStudio = lazy(");
-    expect(managerRoute).toContain("<Suspense");
+    expect(managerMenuWorkspace).toContain("const ThemeCustomizationStudio = lazy(");
+    expect(managerMenuWorkspace).toContain("<Suspense");
     expect(livePreview).toContain("memo(function ThemeLivePreview");
     expect(livePreview).toContain("useMemo(");
   });
