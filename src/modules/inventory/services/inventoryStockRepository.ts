@@ -1,4 +1,5 @@
 import { supabase } from "../../../core/database";
+import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import type {
   InventoryCurrentStockRow,
   InventoryLedgerEntry,
@@ -69,7 +70,7 @@ function errorMessage(error: { message?: string } | null | undefined) {
 function operationIdempotency(restaurantId: string, operation: string, payload: unknown) {
   const storageKey = `serveflow:inventory-operation:${restaurantId}:${operation}:${JSON.stringify(payload)}`;
   const stored = typeof window === "undefined" ? null : window.sessionStorage.getItem(storageKey);
-  const key = stored || globalThis.crypto.randomUUID();
+  const key = stored || createBrowserUuid();
   if (!stored && typeof window !== "undefined") window.sessionStorage.setItem(storageKey, key);
   return {
     key,

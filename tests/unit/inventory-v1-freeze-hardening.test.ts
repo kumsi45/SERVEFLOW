@@ -30,6 +30,9 @@ describe("Inventory V1 freeze hardening", () => {
     }
     expect(repository).toContain("window.sessionStorage.getItem(storageKey)");
     expect(repository).toContain("window.sessionStorage.removeItem(storageKey)");
+    expect(repository).toContain('import { createBrowserUuid } from "../../../core/browser/createBrowserUuid"');
+    expect(repository).toContain("stored || createBrowserUuid()");
+    expect(repository).not.toContain("globalThis.crypto.randomUUID()");
   });
 
   it("closes direct authenticated access to deprecated non-idempotent RPCs", () => {
