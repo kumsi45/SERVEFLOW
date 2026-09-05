@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 const ownerStyles = readFileSync(resolve(process.cwd(), "src/modules/owner/styles/ownerDashboard.css"), "utf8");
+const brandStyles = readFileSync(resolve(process.cwd(), "src/core/presentation/serveFlowBrand.css"), "utf8");
 const aiStyles = readFileSync(resolve(process.cwd(), "src/modules/owner/components/ai/ownerAiAdvisor.css"), "utf8");
 
 const primary = ["Home", "Orders", "Tables", "Finance", "Menu"];
@@ -18,7 +19,7 @@ function navButton(label: string, active = false) {
 
 function markup() {
   return `<div class="od-root">
-    <header class="od-mobile-appbar"><div class="od-mobile-page-context"><span>A Very Long Current Business Name</span><h1>Dashboard</h1></div><div class="od-mobile-appbar-actions"><button class="od-mobile-notification" aria-label="Notifications">${icon()}<span class="od-notif-dot"></span></button><button aria-label="Open owner navigation">${icon()}</button></div></header>
+    <header class="od-mobile-appbar"><div class="od-mobile-owner-brand"><div class="sf-brand" data-variant="compact"><span class="sf-brand-mark"><img src="/serveflowlogo.png" alt=""></span><span class="sf-brand-copy"><span class="sf-brand-name">ServeFlow</span></span></div></div><div class="od-mobile-appbar-actions"><button class="od-mobile-notification" aria-label="Notifications">${icon()}<span class="od-notif-dot"></span></button><button aria-label="Open owner navigation">${icon()}</button></div></header>
     <aside class="od-sidebar"><div class="od-sidebar-brand">ServeFlow</div><nav class="od-nav">${["Overview", "Operations", "People", "Money", "Business"].map((group) => `<section class="od-nav-section"><div class="od-nav-section-label">${group}</div>${navButton(group === "Overview" ? "Dashboard" : group)}</section>`).join("")}</nav><div class="od-sidebar-footer">Grand Royal<br>Business owner</div></aside>
     <div class="od-main"><header class="od-topbar">Owner / Dashboard</header><main class="od-page"><h1>Owner content</h1><div style="height:1100px"></div><div id="content-end">Content end</div></main></div>
     <button class="sf-ai-launcher"><span class="sf-ai-launcher-mark">AI</span><span>Business Advisor</span></button>
@@ -29,7 +30,7 @@ function markup() {
 
 async function load(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
-  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${ownerStyles}${aiStyles}</style>${markup()}`);
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${brandStyles}${ownerStyles}${aiStyles}</style>${markup()}`);
 }
 
 test("desktop Owner sidebar uses the new hierarchy without mobile navigation overlap", async ({ page }) => {
@@ -54,6 +55,9 @@ for (const viewport of [
     const bottom = page.locator('.od-mobile-bottom-nav');
     await expect(page.locator('.od-sidebar')).toBeHidden();
     await expect(page.locator('.od-mobile-appbar')).toBeVisible();
+    await expect(page.locator('.od-mobile-appbar .sf-brand-name')).toBeVisible();
+    await expect(page.locator('.od-mobile-appbar .sf-brand-name')).toHaveText('ServeFlow');
+    await expect(page.locator('.od-mobile-appbar')).not.toContainText('A Very Long Current Business Name');
     expect(await page.locator('.od-mobile-appbar-actions > button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))).toEqual(['Notifications', 'Open owner navigation']);
     await expect(bottom.locator(':scope > button')).toHaveCount(5);
     await expect(bottom.locator(':scope > button')).toHaveText(primary);

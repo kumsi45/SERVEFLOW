@@ -53,6 +53,9 @@ describe("Owner navigation architecture", () => {
 
   it("keeps notification left of the right-edge menu and uses compact drawer treatment", () => {
     const mobileHeader = source.slice(source.indexOf('className="od-mobile-appbar"'), source.indexOf("{mobileMenuOpen &&"));
+    expect(mobileHeader).toContain('<ServeFlowBrand variant="compact" />');
+    expect(mobileHeader).not.toContain("{restaurantName}");
+    expect(mobileHeader).not.toContain("{currentNavLabel}");
     expect(mobileHeader.indexOf('aria-label="Notifications"')).toBeLessThan(mobileHeader.indexOf('aria-label="Open owner navigation"'));
     expect(styles).toContain("width: min(84vw, 360px)");
     expect(styles).toContain("min-height: 52px");

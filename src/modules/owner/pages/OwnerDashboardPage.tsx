@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
+  AlertTriangle,
+  ArrowRight,
   BarChart3,
   Bell,
   Boxes,
   ChefHat,
+  CircleCheck,
   CircleHelp,
   ClipboardList,
   CreditCard,
@@ -261,6 +264,61 @@ type OdPayment = {
   paid_at: string | null;
   created_at: string;
 };
+
+function normalizeOwnerPayments(data: unknown): OdPayment[] {
+  return (Array.isArray(data) ? data : []).map((value) => {
+    const row = value as JsonRecord;
+    return {
+      id: String(row.id),
+      order_id: String(row.order_id),
+      status: String(row.status ?? "paid"),
+      payment_status: String(row.payment_status),
+      total_price: Number(row.total_price),
+      payment_method:
+        typeof row.payment_method === "string" ? row.payment_method : null,
+      verified_at: typeof row.paid_at === "string" ? row.paid_at : null,
+      paid_at: typeof row.paid_at === "string" ? row.paid_at : null,
+      created_at: String(row.created_at ?? ""),
+    };
+  });
+}
+
+async function loadOwnerHomeComparisonPayments(
+  restaurantId: string,
+  timezone: string,
+) {
+  const yesterday = analyticsWindow("yesterday", timezone);
+  const today = analyticsWindow("today", timezone);
+  const { data, error } = await supabase
+    .from("order_invoices")
+    .select(
+      "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
+    )
+    .eq("restaurant_id", restaurantId)
+    .eq("payment_status", "paid")
+    .gte("paid_at", yesterday.rangeStart)
+    .lt("paid_at", today.rangeEnd);
+
+  if (error) throw new Error(error.message);
+  return normalizeOwnerPayments(data);
+}
+
+type OwnerUnresolvedObligation = {
+  amount_due: number;
+  created_at: string;
+  served_unpaid: boolean;
+};
+
+function normalizeOwnerUnresolvedObligations(data: unknown) {
+  return (Array.isArray(data) ? data : []).map((value) => {
+    const row = value as JsonRecord;
+    return {
+      amount_due: Number(row.amount_due ?? 0),
+      created_at: String(row.created_at ?? ""),
+      served_unpaid: Boolean(row.served_unpaid),
+    } satisfies OwnerUnresolvedObligation;
+  });
+}
 
 type JsonRecord = Record<string, unknown>;
 
@@ -712,6 +770,13 @@ export function OwnerDashboardPage({
   const [utilityPanel, setUtilityPanel] = useState<OwnerUtilityPanelKind | null>(null);
   const [orders, setOrders] = useState<OdOrder[]>([]);
   const [payments, setPayments] = useState<OdPayment[]>([]);
+  const [homeComparisonPayments, setHomeComparisonPayments] = useState<
+    OdPayment[]
+  >([]);
+  const [homeComparisonLoading, setHomeComparisonLoading] = useState(true);
+  const [homeComparisonError, setHomeComparisonError] = useState<string | null>(
+    null,
+  );
   const [staff, setStaff] = useState<OdStaff[]>([]);
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
@@ -776,6 +841,12 @@ export function OwnerDashboardPage({
     month: emptyReportData().summary,
   });
   const [dashboardReportsLoading, setDashboardReportsLoading] = useState(true);
+  const [dashboardDataAvailable, setDashboardDataAvailable] = useState(false);
+  const [unresolvedObligations, setUnresolvedObligations] = useState<
+    OwnerUnresolvedObligation[]
+  >([]);
+  const [obligationsLoading, setObligationsLoading] = useState(true);
+  const [obligationsError, setObligationsError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -784,6 +855,7 @@ export function OwnerDashboardPage({
       try {
         setLoading(true);
         setError(null);
+        setDashboardDataAvailable(false);
 
         const [
           { data: orderData, error: orderError },
@@ -981,6 +1053,7 @@ export function OwnerDashboardPage({
             normalizeKitchenStation(row),
           ),
         );
+        setDashboardDataAvailable(true);
       } catch (loadError) {
         if (mounted)
           setError(
@@ -994,6 +1067,73 @@ export function OwnerDashboardPage({
     }
 
     void load();
+    return () => {
+      mounted = false;
+    };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    let mounted = true;
+    const timezone = restaurantConfig
+      ? jsonString(restaurantConfig.profile, "timezone", "Africa/Nairobi")
+      : "Africa/Nairobi";
+
+    async function loadHomeComparison() {
+      try {
+        setHomeComparisonLoading(true);
+        setHomeComparisonError(null);
+        const comparisonPayments = await loadOwnerHomeComparisonPayments(
+          restaurantId,
+          timezone,
+        );
+        if (mounted) setHomeComparisonPayments(comparisonPayments);
+      } catch (comparisonError) {
+        if (!mounted) return;
+        setHomeComparisonPayments([]);
+        setHomeComparisonError(
+          comparisonError instanceof Error
+            ? comparisonError.message
+            : "Failed to load the daily comparison.",
+        );
+      } finally {
+        if (mounted) setHomeComparisonLoading(false);
+      }
+    }
+
+    void loadHomeComparison();
+    return () => {
+      mounted = false;
+    };
+  }, [restaurantConfig, restaurantId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUnresolvedObligations() {
+      try {
+        setObligationsLoading(true);
+        setObligationsError(null);
+        const { data, error: obligationError } = await supabase.rpc(
+          "get_restaurant_unresolved_obligations",
+          { target_restaurant_id: restaurantId },
+        );
+        if (!mounted) return;
+        if (obligationError) throw new Error(obligationError.message);
+        setUnresolvedObligations(normalizeOwnerUnresolvedObligations(data));
+      } catch (obligationError) {
+        if (!mounted) return;
+        setUnresolvedObligations([]);
+        setObligationsError(
+          obligationError instanceof Error
+            ? obligationError.message
+            : "Failed to load payment due obligations.",
+        );
+      } finally {
+        if (mounted) setObligationsLoading(false);
+      }
+    }
+
+    void loadUnresolvedObligations();
     return () => {
       mounted = false;
     };
@@ -1220,6 +1360,8 @@ export function OwnerDashboardPage({
                 })),
               );
             });
+          void refreshUnresolvedObligations();
+          void refreshHomeComparison();
         },
       )
       .onTable({
@@ -1401,6 +1543,13 @@ export function OwnerDashboardPage({
   const activeStaff = staff.filter(
     (member) => isOperationalStaff(member) && member.active,
   ).length;
+  const staffWorking = staff.filter(
+    (member) =>
+      isOperationalStaff(member) &&
+      member.active &&
+      (member.staff_session_active === true ||
+        member.waiter_session_active === true),
+  ).length;
   const kitchenStaff = staff.filter(
     (member) => member.role === "kitchen" && member.active,
   );
@@ -1533,6 +1682,50 @@ export function OwnerDashboardPage({
     setStaff((data ?? []) as OdStaff[]);
   }
 
+  async function refreshHomeComparison() {
+    try {
+      setHomeComparisonLoading(true);
+      setHomeComparisonError(null);
+      setHomeComparisonPayments(
+        await loadOwnerHomeComparisonPayments(
+          restaurantId,
+          activeOwnerTimezone,
+        ),
+      );
+    } catch (comparisonError) {
+      setHomeComparisonPayments([]);
+      setHomeComparisonError(
+        comparisonError instanceof Error
+          ? comparisonError.message
+          : "Failed to refresh the daily comparison.",
+      );
+    } finally {
+      setHomeComparisonLoading(false);
+    }
+  }
+
+  async function refreshUnresolvedObligations() {
+    try {
+      setObligationsLoading(true);
+      setObligationsError(null);
+      const { data, error: obligationError } = await supabase.rpc(
+        "get_restaurant_unresolved_obligations",
+        { target_restaurant_id: restaurantId },
+      );
+      if (obligationError) throw new Error(obligationError.message);
+      setUnresolvedObligations(normalizeOwnerUnresolvedObligations(data));
+    } catch (obligationError) {
+      setUnresolvedObligations([]);
+      setObligationsError(
+        obligationError instanceof Error
+          ? obligationError.message
+          : "Failed to refresh payment due obligations.",
+      );
+    } finally {
+      setObligationsLoading(false);
+    }
+  }
+
   async function refreshMenu() {
     const [
       { data: menuData, error: menuError },
@@ -1636,6 +1829,7 @@ export function OwnerDashboardPage({
     allRevenue,
     avgOrderValue,
     activeStaff,
+    staffWorking,
     kitchenStaff,
     cashierStaff,
     activeShifts,
@@ -1656,6 +1850,14 @@ export function OwnerDashboardPage({
     todayAverageBill,
     todayLargestBill,
     todayVatCollected,
+    restaurantTables,
+    unresolvedObligations,
+    obligationsLoading,
+    obligationsError,
+    homeComparisonPayments,
+    homeComparisonLoading,
+    homeComparisonError,
+    dataAvailable: dashboardDataAvailable,
     r,
     cx,
     cy,
@@ -1692,9 +1894,8 @@ export function OwnerDashboardPage({
   return (
     <div className="od-root">
       <header className="od-mobile-appbar">
-        <div className="od-mobile-page-context">
-          <span>{restaurantName}</span>
-          <h1>{currentNavLabel}</h1>
+        <div className="od-mobile-owner-brand">
+          <ServeFlowBrand variant="compact" />
         </div>
         <div className="od-mobile-appbar-actions">
           <button className="od-mobile-notification" type="button" aria-label="Notifications" onClick={() => setUtilityPanel("notifications")}>
@@ -1832,7 +2033,7 @@ export function OwnerDashboardPage({
         {error && <div className="od-error">Warning: {error}</div>}
 
         {nav === "overview" && (
-          <ExecutiveOverviewV10
+          <OwnerHomeOverview
             data={dashboardData}
             ownerName={ownerName}
             onNavigate={handleDashboardNavigate}
@@ -1964,6 +2165,7 @@ type DashboardData = {
   allRevenue: number;
   avgOrderValue: number;
   activeStaff: number;
+  staffWorking: number;
   kitchenStaff: OdStaff[];
   cashierStaff: OdStaff[];
   activeShifts: OwnerActiveShift[];
@@ -1991,6 +2193,14 @@ type DashboardData = {
   todayAverageBill: number;
   todayLargestBill: number;
   todayVatCollected: number;
+  restaurantTables: RestaurantTable[];
+  unresolvedObligations: OwnerUnresolvedObligation[];
+  obligationsLoading: boolean;
+  obligationsError: string | null;
+  homeComparisonPayments: OdPayment[];
+  homeComparisonLoading: boolean;
+  homeComparisonError: string | null;
+  dataAvailable: boolean;
   r: number;
   cx: number;
   cy: number;
@@ -1998,482 +2208,242 @@ type DashboardData = {
   dashboardReportsLoading: boolean;
 };
 
-type OverviewRange = "today" | "yesterday" | "week" | "month" | "custom";
-
-function ExecutiveOverviewV10({ data, now, ownerName, onNavigate }: {
+function OwnerHomeOverview({ data, now, ownerName, onNavigate }: {
   data: DashboardData;
   now: Date;
   ownerName?: string;
   onNavigate: (nav: OwnerNavTarget) => void;
 }) {
-  const recentOrders = [...data.orders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
-  const recentPayments = [...data.payments].sort((a, b) => new Date(b.paid_at ?? b.created_at).getTime() - new Date(a.paid_at ?? a.created_at).getTime()).slice(0, 4);
-  const customers = new Set(data.todayOrders.map((order) => order.customer_name?.trim()).filter(Boolean)).size;
-  const kitchenActive = data.activeOrders.filter((order) => ["accepted", "preparing", "ready"].includes(order.operational_status)).length;
-  const pendingPayments = data.todayOrders.filter((order) => order.operational_status === "new").length;
-  const completedOrders = data.completedToday.length;
-  const todayStart = analyticsWindow("today", activeOwnerTimezone, undefined, undefined, now).rangeStart;
-  const todayPayments = data.payments.filter((payment) => Boolean(payment.paid_at) && payment.paid_at! >= todayStart);
-  const cashRevenue = todayPayments.filter((payment) => canonicalPaymentMethod(payment.payment_method) === "Cash").reduce((sum, payment) => sum + payment.total_price, 0);
-  const digitalRevenue = todayPayments.filter((payment) => canonicalPaymentMethod(payment.payment_method) !== "Cash").reduce((sum, payment) => sum + payment.total_price, 0);
-  const totalRevenue = cashRevenue + digitalRevenue;
-  const health = [
-    ["Orders today", String(data.todayOrders.length), `${data.activeOrders.length} currently active`, "neutral"],
-    ["Kitchen status", kitchenActive ? `${kitchenActive} active` : "Clear", kitchenActive ? "Orders moving through kitchen" : "No active queue", kitchenActive ? "warning" : "positive"],
-    ["Inventory alerts", "Review", "Open inventory health", "neutral"],
-    ["Staff working", String(data.activeStaff), `${data.kitchenStaff.length} kitchen team`, "positive"],
-    ["Pending payments", String(pendingPayments), pendingPayments ? "Needs attention" : "Everything settled", pendingPayments ? "warning" : "positive"],
-  ];
-  const performance = [
-    ["Today's revenue", fmtMoney(data.todayRevenue), "Verified sales", "↗"],
-    ["Average order", fmtMoney(Math.round(data.avgOrderValue)), `${data.todayOrders.length} orders today`, "≈"],
-    ["Customers", String(customers), "Named customers today", "◎"],
-    ["Completed orders", String(completedOrders), `${data.activeOrders.length} active`, "✓"],
-  ];
-  const actions: Array<[string, string, string, OwnerNavTarget, boolean?]> = [
-    ["New Order", "Open order workspace", "+", "orders", true],
-    ["New Menu Item", "Add to your menu", "◇", "menu"],
-    ["Adjust Inventory", "Update stock levels", "▦", "inventory"],
-    ["Record Expense", "Open financial reports", "−", "reports"],
-    ["Generate Report", "Export performance", "↗", "reports"],
-  ];
-
-  return <main className="od-page od-v10-overview">
-    <header className="od-v10-header">
-      <div className="od-v10-heading">
-        <span className="od-v10-eyebrow">Live operations</span>
-        <h1>{getOwnerGreeting(now).greeting}, {ownerName || "Owner"}</h1>
-      </div>
-    </header>
-
-    {data.loading ? <div className="od-v10-skeleton-grid" aria-label="Loading dashboard">{Array.from({ length: 10 }).map((_, index) => <div key={index} className="od-skeleton od-skel-kpi" />)}</div> : <>
-      <section className="od-v10-health" aria-labelledby="business-health-title">
-        <header><div><h2 id="business-health-title">Today's operations</h2></div><span className="od-live-indicator">Live now</span></header>
-        <div className="od-v10-health-grid"><article className="od-v10-health-item od-v10-revenue-kpi"><span>Today's revenue</span><div><section><small>Cash</small><strong>{fmtMoney(cashRevenue)}</strong></section><section><small>Digital</small><strong>{fmtMoney(digitalRevenue)}</strong></section><section className="total"><small>Total</small><strong>{fmtMoney(totalRevenue)}</strong></section></div></article>{health.map(([name, value, detail, tone]) => <button key={name} type="button" className={`od-v10-health-item ${tone}`} onClick={() => name === "Inventory alerts" && onNavigate("inventory")} disabled={name !== "Inventory alerts"}><span>{name}</span><strong>{value}</strong><small>{detail}</small></button>)}</div>
-      </section>
-
-      <section className="od-v10-performance" aria-label="Performance summary">{performance.map(([name, value, detail, icon]) => <article key={name} className="od-v10-performance-card"><div><span>{name}</span><b>{icon}</b></div><strong>{value}</strong><small>{detail}</small></article>)}</section>
-
-      <section className="od-v10-layout">
-        <div className="od-v10-main-column">
-          <article className="od-v10-panel od-v10-revenue-panel"><header><div><span className="od-v10-eyebrow">Revenue today</span><h2>Payment summary</h2></div></header><div className="od-v10-revenue-split"><div><span>Cash</span><strong>{fmtMoney(cashRevenue)}</strong></div><div><span>Digital</span><strong>{fmtMoney(digitalRevenue)}</strong></div><div className="total"><span>Total</span><strong>{fmtMoney(totalRevenue)}</strong></div></div></article>
-          <article className="od-v10-panel"><header><div><span className="od-v10-eyebrow">Activity timeline</span><h2>Recent orders</h2></div><button type="button" onClick={() => onNavigate("orders")}>View all</button></header><div className="od-v10-timeline">{recentOrders.length ? recentOrders.map((order) => <button type="button" key={order.id} onClick={() => onNavigate("orders")}><span className="od-v10-timeline-icon">{order.status === "completed" ? "✓" : "•"}</span><span><strong>{fmtOrderLabel(order)}</strong><small>{order.table_number ? `Table ${order.table_number}` : "Takeout"} · {order.item_count} items · {fmtTimeAgo(order.created_at)}</small></span><span className="od-v10-timeline-end"><b>{fmtMoney(order.total_price)}</b><small className={statusClass(order.operational_status)}>{statusLabel(order.operational_status)}</small></span></button>) : <div className="od-v10-empty">Orders will appear here as your team starts serving customers.</div>}</div></article>
-        </div>
-        <aside className="od-v10-side-column">
-          <article className="od-v10-panel od-v10-actions-panel"><header><div><span className="od-v10-eyebrow">Shortcuts</span><h2>Quick actions</h2></div></header><div>{actions.map(([name, detail, icon, target, primary]) => <button type="button" key={name} className={primary ? "primary" : ""} onClick={() => onNavigate(target)}><span>{icon}</span><span><strong>{name}</strong><small>{detail}</small></span><b>›</b></button>)}</div></article>
-          <article className="od-v10-panel od-v10-payments"><header><div><span className="od-v10-eyebrow">Payments</span><h2>Latest payments</h2></div></header><div>{recentPayments.length ? recentPayments.map((payment) => <div key={payment.id}><span><strong>{canonicalPaymentMethod(payment.payment_method)}</strong><small>{fmtTimeAgo(payment.paid_at ?? payment.created_at)}</small></span><b>{fmtMoney(payment.total_price)}</b></div>) : <div className="od-v10-empty">No completed payments yet.</div>}</div></article>
-        </aside>
-      </section>
-    </>}
-  </main>;
-}
-
-function OverviewPage({
-  data,
-  now,
-}: {
-  data: DashboardData;
-  staff: OdStaff[];
-  ownerName?: string;
-  onNavigate: (nav: NavId) => void;
-  now: Date;
-}) {
-  const [range, setRange] = useState<OverviewRange>("today");
-  const [customStart, setCustomStart] = useState(() =>
-    now.toISOString().slice(0, 10),
+  const todayRange = analyticsWindow(
+    "today",
+    activeOwnerTimezone,
+    undefined,
+    undefined,
+    now,
   );
-  const [customEnd, setCustomEnd] = useState(() =>
-    now.toISOString().slice(0, 10),
+  const yesterdayRange = analyticsWindow(
+    "yesterday",
+    activeOwnerTimezone,
+    undefined,
+    undefined,
+    now,
   );
-
-  const { start, end, label } = useMemo(() => {
-    const canonicalWindow = analyticsWindow(
-      range,
-      activeOwnerTimezone,
-      customStart,
-      customEnd,
-      now,
+  const paymentsInRange = (rangeStart: string, rangeEnd: string) =>
+    data.homeComparisonPayments.filter(
+      (payment) =>
+        payment.payment_status === "paid" &&
+        Boolean(payment.paid_at) &&
+        payment.paid_at! >= rangeStart &&
+        payment.paid_at! < rangeEnd,
     );
-    const endOfRange = new Date(now);
-    endOfRange.setHours(23, 59, 59, 999);
-    const startOfRange = new Date(now);
-    startOfRange.setHours(0, 0, 0, 0);
-    if (range === "yesterday") {
-      startOfRange.setDate(startOfRange.getDate() - 1);
-      endOfRange.setDate(endOfRange.getDate() - 1);
-    }
-    if (range === "week")
-      startOfRange.setDate(
-        startOfRange.getDate() - ((startOfRange.getDay() + 6) % 7),
-      );
-    if (range === "month") startOfRange.setDate(1);
-    if (range === "custom") {
-      const selectedStart = new Date(`${customStart}T00:00:00`);
-      const selectedEnd = new Date(`${customEnd}T23:59:59.999`);
-      return {
-        start: new Date(canonicalWindow.rangeStart).getTime(),
-        end: new Date(canonicalWindow.rangeEnd).getTime(),
-        label: `${selectedStart.toLocaleDateString()} – ${selectedEnd.toLocaleDateString()}`,
-      };
-    }
+  const summarizePayments = (rangeStart: string, rangeEnd: string) => {
+    const payments = paymentsInRange(rangeStart, rangeEnd);
+    const revenue = payments.reduce(
+      (sum, payment) => sum + payment.total_price,
+      0,
+    );
+    const orders = new Set(payments.map((payment) => payment.order_id)).size;
     return {
-      start: new Date(canonicalWindow.rangeStart).getTime(),
-      end: new Date(canonicalWindow.rangeEnd).getTime(),
-      label:
-        range === "today"
-          ? "Today"
-          : range === "yesterday"
-            ? "Yesterday"
-            : range === "week"
-              ? "This Week"
-              : "This Month",
+      payments,
+      revenue,
+      orders,
+      averageOrder: orders ? revenue / orders : 0,
     };
-  }, [customEnd, customStart, now, range]);
-
-  const inRange = (iso: string | null) =>
-    Boolean(iso) &&
-    new Date(iso!).getTime() >= start &&
-    new Date(iso!).getTime() < end;
-  const rangeOrders = data.orders.filter((order) => inRange(order.created_at));
-  const rangePayments = data.payments.filter((payment) =>
-    inRange(payment.paid_at),
+  };
+  const today = summarizePayments(todayRange.rangeStart, todayRange.rangeEnd);
+  const elapsedToday = Math.max(
+    0,
+    now.getTime() - new Date(todayRange.rangeStart).getTime(),
   );
-  const cashRevenue = rangePayments
+  const yesterdayComparableEnd = new Date(
+    Math.min(
+      new Date(yesterdayRange.rangeEnd).getTime(),
+      new Date(yesterdayRange.rangeStart).getTime() + elapsedToday,
+    ),
+  ).toISOString();
+  const yesterday = summarizePayments(
+    yesterdayRange.rangeStart,
+    yesterdayComparableEnd,
+  );
+  const cashRevenue = today.payments
     .filter(
       (payment) => canonicalPaymentMethod(payment.payment_method) === "Cash",
     )
     .reduce((sum, payment) => sum + payment.total_price, 0);
-  const digitalRevenue = rangePayments
-    .filter(
-      (payment) => canonicalPaymentMethod(payment.payment_method) !== "Cash",
-    )
-    .reduce((sum, payment) => sum + payment.total_price, 0);
-  const totalRevenue = cashRevenue + digitalRevenue;
-  const pendingPayments = rangeOrders.filter(
-    (order) => order.operational_status === "new",
+  const digitalRevenue = today.revenue - cashRevenue;
+  const financialAvailable =
+    !data.homeComparisonLoading && !data.homeComparisonError;
+  const moneyValue = (value: number) =>
+    financialAvailable ? fmtMoney(value) : "Unavailable";
+  const paymentDueCount = data.unresolvedObligations.length;
+  const paymentDueAmount = data.unresolvedObligations.reduce(
+    (sum, obligation) => sum + obligation.amount_due,
+    0,
+  );
+  const occupiedTables = new Set(
+    data.orders
+      .filter(
+        (order) =>
+          order.dining_session_status === "open" && Boolean(order.table_number),
+      )
+      .map((order) => order.table_number),
+  ).size;
+  const activeTableCount = data.restaurantTables.filter(
+    (table) => table.active,
   ).length;
-  const kitchenWaiting = rangeOrders.filter(
-    (order) =>
-      order.operational_status === "accepted" ||
-      order.operational_status === "preparing",
-  ).length;
-  const ordersInProgress = rangeOrders.filter((order) =>
+  const kitchenActive = data.activeOrders.filter((order) =>
     ["accepted", "preparing", "ready"].includes(order.operational_status),
   ).length;
-  const activeRangeOrders = rangeOrders.filter((order) =>
-    ACTIVE_ORDER_STATUSES.includes(order.operational_status),
-  );
-  const activeTables = new Set(
-    activeRangeOrders.map((order) => order.table_number).filter(Boolean),
-  ).size;
-  const namedCustomers = new Set(
-    rangeOrders
-      .map((order) => order.customer_name?.trim().toLowerCase())
-      .filter(Boolean),
-  );
-  const anonymousCustomers = rangeOrders.filter(
-    (order) => !order.customer_name?.trim(),
-  ).length;
-  const customers = namedCustomers.size + anonymousCustomers;
-  const averageBill = rangePayments.length
-    ? totalRevenue / rangePayments.length
-    : 0;
-  const kitchenDurations = rangeOrders
-    .filter((order) => order.completed_at && order.payment_verified_at)
-    .map((order) =>
-      Math.max(
-        0,
-        new Date(order.completed_at!).getTime() -
-          new Date(order.payment_verified_at!).getTime(),
-      ),
-    );
-  const averageKitchenMinutes = kitchenDurations.length
-    ? Math.round(
-        kitchenDurations.reduce((sum, duration) => sum + duration, 0) /
-          kitchenDurations.length /
-          60000,
-      )
-    : 0;
-  const kpis = [
+  const comparisonLabel = (current: number, previous: number) => {
+    if (previous === 0) return current === 0 ? "No change" : "New today";
+    const change = Math.round(((current - previous) / previous) * 100);
+    if (change === 0) return "No change";
+    return `${change > 0 ? "↑" : "↓"} ${Math.abs(change)}%`;
+  };
+  const comparisonRows = [
     {
-      label: "Pending Payments",
-      value: `${pendingPayments}`,
-      detail: "Awaiting verification",
-      urgent: pendingPayments > 0,
+      label: "Revenue",
+      today: fmtMoney(today.revenue),
+      yesterday: fmtMoney(yesterday.revenue),
+      change: comparisonLabel(today.revenue, yesterday.revenue),
     },
     {
-      label: "Kitchen Waiting",
-      value: `${kitchenWaiting}`,
-      detail: "Paid or preparing",
-      urgent: kitchenWaiting > 0,
+      label: "Orders",
+      today: String(today.orders),
+      yesterday: String(yesterday.orders),
+      change: comparisonLabel(today.orders, yesterday.orders),
     },
     {
-      label: "Orders In Progress",
-      value: `${ordersInProgress}`,
-      detail: "Live kitchen workflow",
-    },
-    {
-      label: "Active Tables",
-      value: `${activeTables}`,
-      detail: "Currently serving",
-    },
-    { label: "Today's Customers", value: `${customers}`, detail: label },
-    {
-      label: "Average Bill Today",
-      value: fmtMoney(Math.round(averageBill)),
-      detail: label,
-    },
-    {
-      label: "Average Kitchen Time",
-      value: `${averageKitchenMinutes} min`,
-      detail: label,
-    },
-    {
-      label: "Active Staff",
-      value: `${data.activeStaff}`,
-      detail: "Available now",
+      label: "Avg. order",
+      today: fmtMoney(today.averageOrder),
+      yesterday: fmtMoney(yesterday.averageOrder),
+      change: comparisonLabel(today.averageOrder, yesterday.averageOrder),
     },
   ];
+  const activity = [
+    ...today.payments.map((payment) => {
+      const order = data.orders.find((candidate) => candidate.id === payment.order_id);
+      return {
+        key: `payment-${payment.id}`,
+        occurredAt: payment.paid_at ?? payment.created_at,
+        label: `${order?.table_number ? `Table ${order.table_number}` : order ? fmtOrderLabel(order) : "Order"} payment verified`,
+        amount: payment.total_price,
+      };
+    }),
+    ...data.completedToday
+      .filter((order) => {
+        const occurredAt = order.completed_at ?? order.created_at;
+        return (
+          occurredAt >= todayRange.rangeStart && occurredAt < todayRange.rangeEnd
+        );
+      })
+      .map((order) => ({
+        key: `served-${order.id}`,
+        occurredAt: order.completed_at ?? order.created_at,
+        label: `${fmtOrderLabel(order)} served`,
+        amount: order.total_price,
+      })),
+  ]
+    .sort(
+      (left, right) =>
+        new Date(right.occurredAt).getTime() -
+        new Date(left.occurredAt).getTime(),
+    )
+    .slice(0, 3);
 
   return (
-    <div className="od-page od-executive-overview">
-      <div className="od-page-header">
-        <div>
-          <h1 className="od-page-title">Executive Overview</h1>
-          <p className="od-page-subtitle">
-            Live operational performance for {data.restaurantName} · {label}
-          </p>
-        </div>
-        <div className="od-overview-filter" aria-label="Overview date range">
-          {(
-            ["today", "yesterday", "week", "month", "custom"] as OverviewRange[]
-          ).map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={range === option ? "active" : ""}
-              onClick={() => setRange(option)}
-            >
-              {option === "week"
-                ? "This Week"
-                : option === "month"
-                  ? "This Month"
-                  : option.charAt(0).toUpperCase() + option.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-      {range === "custom" ? (
-        <div className="od-custom-range">
-          <label>
-            From
-            <input
-              type="date"
-              value={customStart}
-              max={customEnd}
-              onChange={(event) => setCustomStart(event.target.value)}
-            />
-          </label>
-          <label>
-            To
-            <input
-              type="date"
-              value={customEnd}
-              min={customStart}
-              onChange={(event) => setCustomEnd(event.target.value)}
-            />
-          </label>
-        </div>
-      ) : null}
+    <main className="od-page od-owner-home od-owner-home-refined">
+      <header className="od-home-header">
+        <h1>{getOwnerGreeting(now).greeting}, {ownerName || "Owner"}</h1>
+        <p className="od-home-business-name">{data.restaurantName}</p>
+      </header>
+
       {data.loading ? (
-        <div className="od-executive-grid">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <div key={index} className="od-skeleton od-skel-kpi" />
+        <div className="od-home-loading" aria-label="Loading Owner Home">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="od-skeleton" />
           ))}
         </div>
       ) : (
-        <>
-          <section
-            className="od-revenue-card"
-            aria-label="Revenue for selected range"
-          >
-            <header>
-              <div>
-                <span>Revenue</span>
-                <strong>{label}</strong>
+        <div className="od-home-layout">
+          <section className="od-home-section od-home-money" aria-labelledby="owner-revenue-title">
+            <div className="od-home-section-heading"><h2 id="owner-revenue-title">Today&apos;s Revenue</h2></div>
+            <div className="od-home-money-total">
+              <strong>{moneyValue(today.revenue)}</strong>
+              {!financialAvailable && <small>Today&apos;s collection is unavailable.</small>}
+            </div>
+            <div className="od-home-money-grid">
+              <div><span>Cash</span><strong>{moneyValue(cashRevenue)}</strong></div>
+              <div><span>Digital</span><strong>{moneyValue(digitalRevenue)}</strong></div>
+              <div><span>Orders</span><strong>{financialAvailable ? today.orders : "Unavailable"}</strong></div>
+              <div><span>Avg. order</span><strong>{moneyValue(today.averageOrder)}</strong></div>
+            </div>
+          </section>
+
+          <section className="od-home-section od-home-attention" aria-labelledby="owner-money-watch-title">
+            <div className="od-home-section-heading"><h2 id="owner-money-watch-title">Money to Watch</h2></div>
+            {data.obligationsLoading ? (
+              <div className="od-home-inline-state" role="status">Checking unsettled money…</div>
+            ) : data.obligationsError ? (
+              <div className="od-home-attention-state unavailable"><AlertTriangle aria-hidden="true" /><div><strong>Unavailable</strong><span>Could not confirm unresolved bills.</span></div></div>
+            ) : paymentDueCount > 0 ? (
+              <button className="od-home-attention-action" type="button" onClick={() => onNavigate("orders")}>
+                <AlertTriangle aria-hidden="true" />
+                <span><strong>Payment due</strong><small>{paymentDueCount} {paymentDueCount === 1 ? "bill" : "bills"} • {fmtMoney(paymentDueAmount)}</small></span>
+                <ArrowRight aria-hidden="true" />
+              </button>
+            ) : (
+              <div className="od-home-attention-state clear"><CircleCheck aria-hidden="true" /><div><strong>All settled</strong></div></div>
+            )}
+          </section>
+
+          <section className="od-home-section od-home-live" aria-labelledby="owner-business-health-title">
+            <div className="od-home-section-heading"><h2 id="owner-business-health-title">Business Health</h2></div>
+            <div className="od-home-health-grid">
+              <article><span>Tables</span><strong>{data.dataAvailable ? `${occupiedTables} / ${activeTableCount} occupied` : "Unavailable"}</strong></article>
+              <article><span>Kitchen</span><strong>{data.dataAvailable ? (kitchenActive ? `${kitchenActive} active orders` : "No active orders") : "Unavailable"}</strong></article>
+              <article><span>Staff</span><strong>{data.dataAvailable ? `${data.staffWorking} working` : "Unavailable"}</strong></article>
+            </div>
+          </section>
+
+          <section className="od-home-section od-home-comparison" aria-labelledby="owner-comparison-title">
+            <div className="od-home-section-heading"><h2 id="owner-comparison-title">Today vs Yesterday</h2></div>
+            {!financialAvailable ? (
+              <div className="od-home-inline-state unavailable">Daily comparison is unavailable.</div>
+            ) : (
+              <div className="od-home-comparison-list">
+                {comparisonRows.map((row) => (
+                  <div key={row.label}>
+                    <span>{row.label}<small>Yesterday by now {row.yesterday}</small></span>
+                    <strong>{row.today}</strong>
+                    <b className={row.change.startsWith("↑") ? "up" : row.change.startsWith("↓") ? "down" : "flat"}>{row.change}</b>
+                  </div>
+                ))}
               </div>
-              <span className="od-live-indicator">Live</span>
-            </header>
-            <div>
-              <article>
-                <span>Cash</span>
-                <strong>{fmtMoney(cashRevenue)}</strong>
-              </article>
-              <article>
-                <span>Digital</span>
-                <strong>{fmtMoney(digitalRevenue)}</strong>
-              </article>
-              <article className="total">
-                <span>Total</span>
-                <strong>{fmtMoney(totalRevenue)}</strong>
-              </article>
-            </div>
+            )}
           </section>
-          <section className="od-executive-grid">
-            {kpis.map((kpi) => (
-              <article
-                key={kpi.label}
-                className={`od-executive-kpi${kpi.urgent ? " urgent" : ""}`}
-              >
-                <div className="od-kpi-label">{kpi.label}</div>
-                <strong>{kpi.value}</strong>
-                <span>{kpi.detail}</span>
-              </article>
-            ))}
+
+          <section className="od-home-section od-home-activity" aria-labelledby="owner-activity-title">
+            <div className="od-home-section-heading inline"><h2 id="owner-activity-title">Recent Activity</h2><button type="button" onClick={() => onNavigate("orders")}>View all</button></div>
+            {!financialAvailable || !data.dataAvailable ? (
+              <div className="od-home-inline-state unavailable">Recent activity is unavailable.</div>
+            ) : activity.length === 0 ? (
+              <div className="od-home-inline-state">No recent activity today</div>
+            ) : (
+              <div className="od-home-activity-list">
+                {activity.map((event) => (
+                  <button type="button" key={event.key} onClick={() => onNavigate("orders")}>
+                    <time dateTime={event.occurredAt}>{new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", timeZone: activeOwnerTimezone }).format(new Date(event.occurredAt))}</time>
+                    <span>{event.label}</span>
+                    <strong>{fmtMoney(event.amount)}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
-        </>
+        </div>
       )}
-    </div>
-  );
-}
-
-function OwnerMobileOverview({
-  data,
-  ownerName,
-  onNavigate,
-  now,
-}: {
-  data: DashboardData;
-  ownerName?: string;
-  onNavigate: (nav: NavId) => void;
-  now: Date;
-}) {
-  const { dashboardLabel, greeting } = getOwnerGreeting(now);
-  const recentOrders = [...data.orders]
-    .sort(
-      (left, right) =>
-        new Date(right.created_at).getTime() -
-        new Date(left.created_at).getTime(),
-    )
-    .slice(0, 3);
-  const mobileKpis = [
-    {
-      icon: "$",
-      label: "Today's Revenue",
-      value: data.dashboardReportsLoading
-        ? "Loading..."
-        : fmtMoney(data.todayRevenue),
-      delta: "12%",
-      tone: "up",
-    },
-    {
-      icon: "[]",
-      label: "Active Orders",
-      value: `${data.activeOrders.length}`,
-      delta: "8%",
-      tone: "up",
-    },
-    {
-      icon: "o",
-      label: "New Customers",
-      value: `${Math.max(data.completedToday.length, data.orders.filter((order) => order.customer_name).length)}`,
-      delta: "0%",
-      tone: "flat",
-    },
-  ];
-  const quickActions = [
-    { icon: "+", label: "New Order", nav: "orders" as NavId, primary: true },
-    { icon: "#", label: "Generate QR", nav: "qr" as NavId },
-    { icon: "x", label: "Manage Menu", nav: "menu" as NavId },
-    { icon: "+", label: "Add Staff", nav: "staff" as NavId },
-  ];
-
-  return (
-    <section className="od-mobile-overview" aria-label="Mobile owner dashboard">
-      <div className="od-mobile-greeting">
-        <span>{dashboardLabel}</span>
-        <h2>
-          {greeting}, {ownerName || "Admin"}
-        </h2>
-      </div>
-
-      <div className="od-mobile-kpis">
-        {mobileKpis.map((kpi, index) => (
-          <article
-            key={kpi.label}
-            className={`od-mobile-kpi${index === 0 ? " featured" : ""}`}
-          >
-            <div className="od-mobile-kpi-top">
-              <span className="od-mobile-kpi-icon">{kpi.icon}</span>
-              <span className={`od-mobile-delta ${kpi.tone}`}>
-                + {kpi.delta}
-              </span>
-            </div>
-            <span className="od-mobile-kpi-label">{kpi.label}</span>
-            <strong>{kpi.value}</strong>
-          </article>
-        ))}
-      </div>
-
-      <div className="od-mobile-section-heading">
-        <h3>Quick Actions</h3>
-      </div>
-      <div className="od-mobile-actions">
-        {quickActions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            className={action.primary ? "primary" : ""}
-            onClick={() => onNavigate(action.nav)}
-          >
-            <span>{action.icon}</span>
-            {action.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="od-mobile-section-heading inline">
-        <h3>Recent Activity</h3>
-        <button type="button" onClick={() => onNavigate("orders")}>
-          View All
-        </button>
-      </div>
-      <div className="od-mobile-activity">
-        {recentOrders.length === 0 ? (
-          <div className="od-mobile-empty">
-            No recent owner-visible orders yet.
-          </div>
-        ) : (
-          recentOrders.map((order) => (
-            <button
-              key={order.id}
-              type="button"
-              className="od-mobile-activity-row"
-              onClick={() => onNavigate("orders")}
-            >
-              <span className="od-mobile-activity-icon">[]</span>
-              <span className="od-mobile-activity-main">
-                <strong>{fmtOrderLabel(order)}</strong>
-                <span>
-                  {order.table_number
-                    ? `Table ${order.table_number}`
-                    : "Takeout"}{" "}
-                  - {order.item_count || 0} items
-                </span>
-              </span>
-              <span className="od-mobile-activity-side">
-                <span
-                  className={`od-mobile-status ${statusClass(order.operational_status)}`}
-                >
-                  {statusLabel(order.operational_status)}
-                </span>
-                <strong>{fmtMoney(order.total_price)}</strong>
-              </span>
-            </button>
-          ))
-        )}
-      </div>
-    </section>
+    </main>
   );
 }
 
@@ -2522,7 +2492,7 @@ function QuickActions() {
   return (
     <div className="od-card">
       <div className="od-card-header">
-        <div className="od-card-title">Quick Actions</div>
+        <div className="od-card-title">Legacy shortcuts</div>
       </div>
       <div className="od-quick-actions">
         {actions.map((action) => (
