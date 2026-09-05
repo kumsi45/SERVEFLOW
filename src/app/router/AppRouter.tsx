@@ -11,7 +11,7 @@ import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPag
 import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleNamespace } from "./RoleNamespaceRoute";
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
-  owner: ["dashboard", "orders", "menu", "staff", "reports", "settings", "analytics", "tables", "recipes"],
+  owner: ["dashboard", "orders", "menu", "kitchen", "staff", "customers", "reports", "settings", "analytics", "tables", "recipes"],
   manager: ["dashboard", "kitchen", "cashier", "tables", "staff", "reports", "customers", "intelligence", "ai", "recipes", "menu", "inventory"],
   waiter: ["dashboard", "tables", "orders", "dining-sessions"],
   cashier: ["dashboard", "payments", "checkout", "bills"],

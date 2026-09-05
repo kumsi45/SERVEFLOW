@@ -2154,3 +2154,224 @@
 @media(max-width:640px){.od-settings-workspaces{grid-template-columns:1fr}.od-settings-workspaces>button{min-height:64px}}
 @media(prefers-reduced-motion:reduce){.od-settings-workspaces>button{transition:none}}
 @media(prefers-color-scheme:dark){.od-root[data-theme="dark"] .od-settings-workspaces>button{border-color:#2f4b3e;background:#15251d;color:#eef7f2}.od-root[data-theme="dark"] .od-settings-workspaces>button.active{border-color:#4e9d76;background:#193729}}
+
+/* Owner navigation architecture */
+.od-nav-icon svg,
+.od-sidebar-utility svg {
+  width: 17px;
+  height: 17px;
+}
+
+.od-sidebar-utility span {
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 760px) {
+  .od-mobile-appbar {
+    height: 62px;
+    padding: 0 14px 0 16px;
+    background: rgba(255, 255, 255, 0.97);
+  }
+
+  .od-mobile-page-context {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .od-mobile-page-context > span {
+    overflow: hidden;
+    color: #66776f;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .od-mobile-appbar .od-mobile-page-context h1 {
+    overflow: hidden;
+    max-width: min(58vw, 260px);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: 18px;
+    letter-spacing: -.02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .od-mobile-appbar-actions {
+    gap: 4px;
+  }
+
+  .od-mobile-appbar-actions button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+  }
+
+  .od-mobile-appbar-actions button:hover,
+  .od-mobile-appbar-actions button:focus-visible {
+    background: #edf6f1;
+    color: #176b47;
+  }
+
+  .od-mobile-appbar-actions svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .od-mobile-notification .od-notif-dot {
+    top: 8px;
+    right: 8px;
+  }
+
+  .od-mobile-menu-layer {
+    inset: 62px 0 0;
+  }
+
+  .od-mobile-menu {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(84vw, 360px);
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: 0;
+    animation: od-owner-drawer-in .18s ease-out both;
+  }
+
+  .od-mobile-menu-head {
+    flex: 0 0 auto;
+    min-height: 64px;
+    padding: 9px 12px;
+  }
+
+  .od-mobile-menu-head .od-restaurant-avatar {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border-radius: 11px;
+  }
+
+  .od-mobile-menu-head .od-restaurant-name {
+    max-width: min(175px, 47vw);
+    font-size: 13px;
+  }
+
+  .od-mobile-menu-head button {
+    width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 24px;
+  }
+
+  .od-mobile-menu-nav {
+    flex: 1 0 auto;
+    gap: 3px;
+    padding: 10px 12px;
+  }
+
+  .od-mobile-menu-nav > button {
+    min-height: 52px;
+    border-radius: 10px;
+    gap: 11px;
+    padding: 5px 10px;
+    color: #44574e;
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  .od-mobile-menu-nav > button > span {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border: 0;
+    border-radius: 9px;
+    background: #f0f5f2;
+  }
+
+  .od-mobile-menu-nav svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .od-mobile-menu-separator {
+    height: 1px;
+    margin: 7px 8px;
+    background: #e7ede9;
+  }
+
+  .od-mobile-menu-signout {
+    position: static;
+    width: auto;
+    min-height: 52px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    margin: 3px 20px calc(8px + env(safe-area-inset-bottom));
+    padding: 6px 10px 0;
+    border: 0;
+    border-top: 1px solid #e7ede9;
+    border-radius: 0;
+    background: transparent;
+    color: #b42318;
+    box-shadow: none;
+  }
+
+  .od-mobile-menu-signout svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .od-mobile-bottom-nav {
+    min-height: 64px;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    border-top-color: #dfe7e2;
+    background: rgba(255, 255, 255, .98);
+  }
+
+  .od-mobile-bottom-nav button {
+    min-width: 0;
+    min-height: 52px;
+    gap: 2px;
+    padding: 3px 1px;
+    border-radius: 10px;
+    color: #718078;
+    font-size: 9px;
+  }
+
+  .od-mobile-bottom-nav button span {
+    display: grid;
+    place-items: center;
+    font-size: inherit;
+  }
+
+  .od-mobile-bottom-nav button svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .od-mobile-bottom-nav button.active {
+    background: #edf7f1;
+    color: #176b47;
+  }
+}
+
+@keyframes od-owner-drawer-in {
+  from { transform: translateX(14px); opacity: .75; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-mobile-menu { animation: none; }
+}

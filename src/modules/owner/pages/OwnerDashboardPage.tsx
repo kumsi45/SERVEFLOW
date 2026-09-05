@@ -1,6 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
+  BarChart3,
+  Bell,
+  Boxes,
+  ChefHat,
+  CircleHelp,
+  ClipboardList,
+  CreditCard,
+  House,
+  Info,
+  LayoutGrid,
+  LogOut,
+  Menu as MenuIcon,
+  Settings,
+  UserRound,
+  Users,
+  Utensils,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
+import {
   assertAbsoluteQrPayload,
   buildAbsolutePublicUrl,
 } from "../../../core/config/appUrl";
@@ -350,24 +370,75 @@ type NavId =
   | "qr"
   | "customers"
   | "reports"
-  | "printing"
   | "settings";
 
 type OwnerNavTarget = NavId | "inventory" | "recipes";
 
-const NAV_SECTIONS: Array<{ label: string | null; items: Array<{ id: OwnerNavTarget; icon: string; label: string }> }> = [
-  { label: null, items: [{ id: "overview", icon: "⌂", label: "Dashboard" }] },
+type OwnerNavItem = { id: OwnerNavTarget; icon: LucideIcon; label: string };
+
+const NAV_SECTIONS: Array<{ label: string; items: OwnerNavItem[] }> = [
+  { label: "Overview", items: [{ id: "overview", icon: House, label: "Dashboard" }] },
   { label: "Operations", items: [
-    { id: "orders", icon: "≡", label: "Orders" }, { id: "menu", icon: "◇", label: "Menu" },
-    { id: "stations", icon: "♨", label: "Kitchen" }, { id: "inventory", icon: "▦", label: "Inventory" },
-    { id: "customers", icon: "○", label: "Customers" }, { id: "staff", icon: "♙", label: "Staff" },
+    { id: "orders", icon: ClipboardList, label: "Orders" },
+    { id: "qr", icon: LayoutGrid, label: "Tables" },
+    { id: "menu", icon: Utensils, label: "Menu" },
+    { id: "stations", icon: ChefHat, label: "Kitchen" },
+    { id: "inventory", icon: Boxes, label: "Inventory" },
   ] },
-  { label: "Business", items: [{ id: "analytics", icon: "$", label: "Finance" }, { id: "reports", icon: "↗", label: "Reports" }] },
-  { label: "Business management", items: [
-    { id: "qr", icon: "#", label: "QR & Tables" }, { id: "printing", icon: "▤", label: "Printing" }, { id: "settings", icon: "⚙", label: "Settings" },
+  { label: "People", items: [
+    { id: "staff", icon: Users, label: "Staff" },
+    { id: "customers", icon: UserRound, label: "Customers" },
   ] },
+  { label: "Money", items: [
+    { id: "analytics", icon: WalletCards, label: "Finance" },
+    { id: "reports", icon: BarChart3, label: "Reports" },
+  ] },
+  { label: "Business", items: [{ id: "settings", icon: Settings, label: "Settings" }] },
 ];
 const NAV_ITEMS = NAV_SECTIONS.flatMap((section) => section.items);
+
+const MOBILE_SECONDARY_NAV: OwnerNavItem[] = [
+  { id: "stations", icon: ChefHat, label: "Kitchen" },
+  { id: "inventory", icon: Boxes, label: "Inventory" },
+  { id: "staff", icon: Users, label: "Staff" },
+  { id: "customers", icon: UserRound, label: "Customers" },
+  { id: "reports", icon: BarChart3, label: "Reports" },
+  { id: "settings", icon: Settings, label: "Settings" },
+];
+
+const MOBILE_PRIMARY_NAV: OwnerNavItem[] = [
+  { id: "overview", icon: House, label: "Home" },
+  { id: "orders", icon: ClipboardList, label: "Orders" },
+  { id: "qr", icon: LayoutGrid, label: "Tables" },
+  { id: "analytics", icon: WalletCards, label: "Finance" },
+  { id: "menu", icon: Utensils, label: "Menu" },
+];
+
+const OWNER_SECTION_NAV: Record<string, NavId> = {
+  dashboard: "overview",
+  orders: "orders",
+  tables: "qr",
+  menu: "menu",
+  kitchen: "stations",
+  staff: "staff",
+  customers: "customers",
+  analytics: "analytics",
+  reports: "reports",
+  settings: "settings",
+};
+
+const OWNER_NAV_PATH: Record<NavId, string> = {
+  overview: "/owner/dashboard",
+  orders: "/owner/orders",
+  qr: "/owner/tables",
+  menu: "/owner/menu",
+  stations: "/owner/kitchen",
+  staff: "/owner/staff",
+  customers: "/owner/customers",
+  analytics: "/owner/analytics",
+  reports: "/owner/reports",
+  settings: "/owner/settings",
+};
 
 const ACTIVE_ORDER_STATUSES: OperationalStatus[] = [
   "new",
@@ -395,21 +466,8 @@ function statusClass(status: string) {
   return "pending";
 }
 
-function navIconLabel(id: NavId) {
-  const labels: Record<NavId, string> = {
-    overview: "[]",
-    orders: "=",
-    analytics: "|",
-    menu: "x",
-    stations: "KS",
-    staff: "+",
-    qr: "#",
-    customers: "o",
-    reports: "|",
-    printing: "P",
-    settings: "*",
-  };
-  return labels[id];
+function OwnerNavIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return <Icon aria-hidden="true" strokeWidth={2} />;
 }
 
 function getMenuItemName(menuItem: unknown) {
@@ -643,21 +701,12 @@ export function OwnerDashboardPage({
 }: OwnerDashboardPageProps & { initialSection?: string }) {
   const now = useNow();
   const [nav, setNav] = useState<NavId>(
-    () =>
-      (
-        ({
-          dashboard: "overview",
-          orders: "orders",
-          menu: "menu",
-          staff: "staff",
-          reports: "reports",
-          settings: "settings",
-          analytics: "analytics",
-          tables: "qr",
-        }) as Record<string, NavId>
-      )[initialSection ?? ""] ?? "overview",
+    () => OWNER_SECTION_NAV[initialSection ?? ""] ?? "overview",
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuWasOpenRef = useRef(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<OwnerUtilityPanelKind | null>(null);
@@ -680,6 +729,37 @@ export function OwnerDashboardPage({
   activeOwnerTimezone = restaurantConfig
     ? jsonString(restaurantConfig.profile, "timezone", "Africa/Nairobi")
     : "Africa/Nairobi";
+
+  useEffect(() => {
+    setNav(OWNER_SECTION_NAV[initialSection ?? ""] ?? "overview");
+  }, [initialSection]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    const closeAtDesktop = () => {
+      if (window.innerWidth > 760) setMobileMenuOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", closeAtDesktop);
+    window.requestAnimationFrame(() => mobileMenuCloseButtonRef.current?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", closeAtDesktop);
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    if (mobileMenuWasOpenRef.current && !mobileMenuOpen) {
+      window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus());
+    }
+    mobileMenuWasOpenRef.current = mobileMenuOpen;
+  }, [mobileMenuOpen]);
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(
     [],
   );
@@ -1597,6 +1677,11 @@ export function OwnerDashboardPage({
       return;
     }
     setNav(nextNav);
+    const nextPath = OWNER_NAV_PATH[nextNav];
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
   }
 
   function handleMobileNavigate(nextNav: OwnerNavTarget) {
@@ -1607,18 +1692,24 @@ export function OwnerDashboardPage({
   return (
     <div className="od-root">
       <header className="od-mobile-appbar">
-        <h1>Dashboard</h1>
+        <div className="od-mobile-page-context">
+          <span>{restaurantName}</span>
+          <h1>{currentNavLabel}</h1>
+        </div>
         <div className="od-mobile-appbar-actions">
+          <button className="od-mobile-notification" type="button" aria-label="Notifications" onClick={() => setUtilityPanel("notifications")}>
+            <Bell aria-hidden="true" />
+            <span className="od-notif-dot" aria-hidden="true" />
+          </button>
           <button
+            ref={mobileMenuButtonRef}
             type="button"
-            aria-label="Open dashboard menu"
+            aria-label="Open owner navigation"
             aria-expanded={mobileMenuOpen}
+            aria-controls="owner-mobile-menu"
             onClick={() => setMobileMenuOpen((open) => !open)}
           >
-            <span className="od-mobile-menu-icon" aria-hidden="true" />
-          </button>
-          <button type="button" aria-label="Notifications" onClick={() => setUtilityPanel("notifications")}>
-            <span className="od-mobile-bell-icon" aria-hidden="true" />
+            <MenuIcon aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -1628,10 +1719,10 @@ export function OwnerDashboardPage({
           <button
             className="od-mobile-menu-backdrop"
             type="button"
-            aria-label="Close dashboard menu"
+            aria-label="Close owner navigation"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <aside className="od-mobile-menu" aria-label="Owner dashboard menu">
+          <aside id="owner-mobile-menu" className="od-mobile-menu" role="dialog" aria-modal="true" aria-label="Owner navigation">
             <div className="od-mobile-menu-head">
               <div className="od-restaurant-badge">
                 <div className="od-restaurant-avatar">
@@ -1643,49 +1734,30 @@ export function OwnerDashboardPage({
                 </div>
               </div>
               <button
+                ref={mobileMenuCloseButtonRef}
                 type="button"
-                aria-label="Close dashboard menu"
+                aria-label="Close owner navigation"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Close
+                <span aria-hidden="true">×</span>
               </button>
             </div>
             <nav
               className="od-mobile-menu-nav"
-              aria-label="Complete owner navigation"
+              aria-label="Owner secondary navigation"
             >
-              <button type="button" className={nav === "overview" ? "active" : ""} onClick={() => handleMobileNavigate("overview")}><span>⌂</span>Dashboard</button>
-              <div className="od-mobile-menu-group"><small>Operations</small>
-                <button type="button" className={nav === "orders" ? "active" : ""} onClick={() => handleMobileNavigate("orders")}><span>▣</span>Orders</button>
-                <button type="button" className={nav === "menu" ? "active" : ""} onClick={() => handleMobileNavigate("menu")}><span>◇</span>Menu</button>
-                <button type="button" className={nav === "stations" ? "active" : ""} onClick={() => handleMobileNavigate("stations")}><span>♨</span>Kitchen</button>
-                <button type="button" onClick={() => handleMobileNavigate("inventory")}><span>▦</span>Inventory</button>
-                <button type="button" className={nav === "customers" ? "active" : ""} onClick={() => handleMobileNavigate("customers")}><span>◎</span>Customers</button>
-                <button type="button" className={nav === "staff" ? "active" : ""} onClick={() => handleMobileNavigate("staff")}><span>♙</span>Staff</button>
-              </div>
-              <div className="od-mobile-menu-group"><small>Business</small>
-                <button type="button" className={nav === "analytics" ? "active" : ""} onClick={() => handleMobileNavigate("analytics")}><span>$</span>Finance</button>
-                <button type="button" className={nav === "reports" ? "active" : ""} onClick={() => handleMobileNavigate("reports")}><span>↗</span>Reports</button>
-              </div>
-              <div className="od-mobile-menu-group"><small>Management</small>
-                <button type="button" className={nav === "qr" ? "active" : ""} onClick={() => handleMobileNavigate("qr")}><span>#</span>QR & Tables</button>
-                <button type="button" className={nav === "printing" ? "active" : ""} onClick={() => handleMobileNavigate("printing")}><span>▤</span>Printing</button>
-              </div>
-              <div className="od-mobile-menu-group"><small>Help</small>
-                <button type="button" onClick={() => { setUtilityPanel("help"); setMobileMenuOpen(false); }}><span>?</span>Help Center</button>
-                <button type="button" onClick={() => { setUtilityPanel("about"); setMobileMenuOpen(false); }}><span>i</span>About ServeFlow</button>
-                <button type="button" onClick={() => { setUtilityPanel("feedback"); setMobileMenuOpen(false); }}><span>◌</span>Send Feedback</button>
-              </div>
-              <div className="od-mobile-menu-group"><small>System</small>
-                <button type="button" onClick={() => { setUtilityPanel("subscription"); setMobileMenuOpen(false); }}><span>◇</span>Subscription</button>
-              </div>
+              {MOBILE_SECONDARY_NAV.map((item) => <button type="button" key={item.id} className={nav === item.id ? "active" : ""} aria-current={nav === item.id ? "page" : undefined} onClick={() => handleMobileNavigate(item.id)}><span><OwnerNavIcon icon={item.icon} /></span>{item.label}</button>)}
+              <div className="od-mobile-menu-separator" aria-hidden="true" />
+              <button type="button" onClick={() => { setUtilityPanel("subscription"); setMobileMenuOpen(false); }}><span><CreditCard aria-hidden="true" /></span>Subscription</button>
+              <button type="button" onClick={() => { setUtilityPanel("help"); setMobileMenuOpen(false); }}><span><CircleHelp aria-hidden="true" /></span>Help &amp; Support</button>
+              <button type="button" onClick={() => { setUtilityPanel("about"); setMobileMenuOpen(false); }}><span><Info aria-hidden="true" /></span>About ServeFlow</button>
             </nav>
             <button
               className="od-mobile-menu-signout"
               type="button"
               onClick={handleSignOut}
             >
-              Sign Out
+              <LogOut aria-hidden="true" /> Sign out
             </button>
           </aside>
         </div>
@@ -1699,17 +1771,17 @@ export function OwnerDashboardPage({
 
         <nav className="od-nav" aria-label="Dashboard navigation">
           {NAV_SECTIONS.map((section, sectionIndex) => <section key={section.label ?? "dashboard"} className="od-nav-section">
-            {section.label ? <div className="od-nav-section-label">{section.label}</div> : null}
-            {section.items.map((item) => <button key={item.id} title={sidebarCollapsed ? item.label : undefined} className={`od-nav-item${nav === item.id ? " active" : ""}`} onClick={() => handleDashboardNavigate(item.id)}><span className="od-nav-icon">{item.icon}</span><span className="od-nav-label">{item.label}</span></button>)}
+            <div className="od-nav-section-label">{section.label}</div>
+            {section.items.map((item) => <button key={item.id} title={sidebarCollapsed ? item.label : undefined} className={`od-nav-item${nav === item.id ? " active" : ""}`} aria-current={nav === item.id ? "page" : undefined} onClick={() => handleDashboardNavigate(item.id)}><span className="od-nav-icon"><OwnerNavIcon icon={item.icon} /></span><span className="od-nav-label">{item.label}</span></button>)}
             {sectionIndex < NAV_SECTIONS.length - 1 ? <div className="od-nav-divider" /> : null}
           </section>)}
         </nav>
 
         <div className="od-sidebar-footer">
           <div className="od-sidebar-utility">
-            <button type="button" onClick={() => setUtilityPanel("subscription")}><span>◇</span><b>Subscription</b></button>
-            <button type="button" onClick={() => setUtilityPanel("help")}><span>?</span><b>Help & Support</b></button>
-            <button type="button" onClick={() => setUtilityPanel("about")}><span>i</span><b>About ServeFlow</b></button>
+            <button type="button" onClick={() => setUtilityPanel("subscription")}><span><CreditCard aria-hidden="true" /></span><b>Subscription</b></button>
+            <button type="button" onClick={() => setUtilityPanel("help")}><span><CircleHelp aria-hidden="true" /></span><b>Help &amp; Support</b></button>
+            <button type="button" onClick={() => setUtilityPanel("about")}><span><Info aria-hidden="true" /></span><b>About ServeFlow</b></button>
           </div>
           <div className="od-restaurant-badge">
             <div className="od-restaurant-avatar">
@@ -1832,7 +1904,6 @@ export function OwnerDashboardPage({
             restaurantName={restaurantName}
           />
         )}
-        {nav === "printing" && <div className="od-page"><div className="od-page-header"><div><h1 className="od-page-title">Printing</h1><p className="od-page-subtitle">Manage business receipts, order tickets, and print-ready documents from one place.</p></div></div><div className="od-card"><div className="od-card-header"><div><div className="od-card-title">Printing workspace</div><div className="od-card-subtitle">Printing preferences remain connected to the existing business configuration.</div></div></div><div className="od-empty">Printer setup and device controls will appear here when printing hardware is connected.</div></div></div>}
         {nav === "settings" && (
           <SettingsPage
             restaurantId={restaurantId}
@@ -1842,7 +1913,7 @@ export function OwnerDashboardPage({
             menuItems={menuItems}
             kitchenStations={kitchenStations}
             staff={staff}
-            onNavigate={(target) => setNav(target as NavId)}
+            onNavigate={(target) => handleDashboardNavigate(target as NavId)}
             onSettingsChanged={refreshRestaurantConfig}
           />
         )}
@@ -1861,20 +1932,15 @@ export function OwnerDashboardPage({
         className="od-mobile-bottom-nav"
         aria-label="Owner mobile navigation"
       >
-        {[
-          { id: "overview" as NavId, label: "Dashboard" },
-          { id: "orders" as NavId, label: "Orders" },
-          { id: "menu" as NavId, label: "Menu" },
-          { id: "stations" as NavId, label: "Kitchen" },
-          { id: "settings" as NavId, label: "Settings" },
-        ].map((item) => (
+        {MOBILE_PRIMARY_NAV.map((item) => (
           <button
             key={item.id}
             type="button"
             className={nav === item.id ? "active" : ""}
+            aria-current={nav === item.id ? "page" : undefined}
             onClick={() => handleMobileNavigate(item.id)}
           >
-            <span>{navIconLabel(item.id)}</span>
+            <span><OwnerNavIcon icon={item.icon} /></span>
             {item.label}
           </button>
         ))}
