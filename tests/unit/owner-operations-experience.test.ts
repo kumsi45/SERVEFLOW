@@ -2,13 +2,17 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const owner = readFileSync("src/modules/owner/pages/OwnerDashboardPage.tsx", "utf8");
+const ownerOrders = readFileSync(
+  "src/modules/owner/components/orders/OwnerOrdersView.tsx",
+  "utf8",
+);
 const ownerStyles = readFileSync("src/modules/owner/styles/ownerDashboard.css", "utf8");
 const inventoryStyles = readFileSync("src/modules/inventory/styles/inventoryDashboard.css", "utf8");
 
 describe("Phase 10B operations experience", () => {
   it("applies the shared operations surface to every owner module", () => {
     for (const name of ["orders", "menu", "kitchen", "customers", "staff", "qr"]) {
-      expect(owner).toContain(`od-${name}-experience`);
+      expect(`${owner}\n${ownerOrders}`).toContain(`od-${name}-experience`);
     }
   });
 
@@ -21,7 +25,7 @@ describe("Phase 10B operations experience", () => {
   });
 
   it("provides responsive order, menu, kitchen, staff, customer, and QR presentation", () => {
-    expect(ownerStyles).toContain(".od-orders-experience .od-kanban");
+    expect(ownerStyles).toContain(".od-orders-mobile-list");
     expect(ownerStyles).toContain(".od-menu-experience .od-table tbody");
     expect(ownerStyles).toContain(".od-kitchen-experience .od-station-grid");
     expect(ownerStyles).toContain(".od-staff-experience .od-staff-layout");

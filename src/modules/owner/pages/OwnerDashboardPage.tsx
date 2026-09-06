@@ -51,6 +51,7 @@ import { signOutStaff } from "../../staff-auth/services/staffAuthService";
 import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
 import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { OwnerAiAdvisor } from "../components/ai/OwnerAiAdvisor";
+import { OwnerOrdersView } from "../components/orders/OwnerOrdersView";
 import { PrintingPaymentConfigurationCenter } from "../components/settings/PrintingPaymentConfigurationCenter";
 import {
   searchActiveDirectInventoryItems,
@@ -78,6 +79,11 @@ import {
   type ManagedStaffMember,
   type StaffActivityLog,
 } from "../services/staffManagementService";
+import {
+  buildOwnerOrdersReadModel,
+  normalizeOwnerOrderInvoiceRow,
+  type OwnerOrderInvoiceRow,
+} from "../services/ownerOrdersReadModel";
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
@@ -153,22 +159,27 @@ type AnalyticsPeriod = "today" | "week" | "month";
 
 type OdOrder = {
   id: string;
+  restaurant_id: string;
   display_number: string | null;
   status: OwnerOrderStatus;
   operational_status: OperationalStatus;
   dining_session_status:
     "open" | "closed" | "abandoned" | "expired" | "checked_out" | string | null;
   customer_name: string | null;
+  table_id: string | null;
   table_number: string | null;
+  order_source: string | null;
+  created_by_waiter_id: string | null;
   payment_method: string | null;
   total_price: number;
   created_at: string;
   payment_verified_at: string | null;
   completed_at: string | null;
+  table_released_at: string | null;
   item_count: number;
 };
 
-type OdStaff = ManagedStaffMember;
+type OdStaff = ManagedStaffMember & { restaurant_id: string };
 
 function isOperationalStaff(member: Pick<OdStaff, "role">) {
   return member.role !== "owner";
@@ -245,6 +256,7 @@ type OdMenuUpload = {
 
 type OdOrderItem = {
   id: string;
+  restaurant_id: string;
   order_id: string;
   invoice_id: string | null;
   quantity: number;
@@ -252,6 +264,40 @@ type OdOrderItem = {
   menu_item_id: string | null;
   name: string;
 };
+
+const OWNER_ORDER_INVOICE_SELECT =
+  "id,restaurant_id,order_id,payment_status,total_price,grand_total,payment_method,invoice_source,created_by_staff_id,created_by_display_name,created_at";
+
+async function loadOwnerOrderInvoices(
+  restaurantId: string,
+  orderIds: readonly string[],
+) {
+  if (orderIds.length === 0) return [];
+  const chunks: string[][] = [];
+  for (let index = 0; index < orderIds.length; index += 50) {
+    chunks.push(orderIds.slice(index, index + 50));
+  }
+  const results = await Promise.all(
+    chunks.map((ids) =>
+      supabase
+        .from("order_invoices")
+        .select(OWNER_ORDER_INVOICE_SELECT)
+        .eq("restaurant_id", restaurantId)
+        .in("order_id", ids),
+    ),
+  );
+  const invoices: OwnerOrderInvoiceRow[] = [];
+  for (const result of results) {
+    if (result.error) throw new Error(result.error.message);
+    for (const value of result.data ?? []) {
+      const invoice = normalizeOwnerOrderInvoiceRow(
+        value as Record<string, unknown>,
+      );
+      if (invoice) invoices.push(invoice);
+    }
+  }
+  return invoices;
+}
 
 type OdPayment = {
   id: string;
@@ -781,6 +827,11 @@ export function OwnerDashboardPage({
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
   const [orderItems, setOrderItems] = useState<OdOrderItem[]>([]);
+  const [ownerOrderInvoices, setOwnerOrderInvoices] = useState<
+    OwnerOrderInvoiceRow[]
+  >([]);
+  const [ownerOrdersFinancialAvailable, setOwnerOrdersFinancialAvailable] =
+    useState(false);
   const [activeShifts, setActiveShifts] = useState<OwnerActiveShift[]>([]);
   const [restaurantConfig, setRestaurantConfig] =
     useState<RestaurantConfig | null>(null);
@@ -854,6 +905,7 @@ export function OwnerDashboardPage({
     async function load() {
       try {
         setLoading(true);
+        setOwnerOrdersFinancialAvailable(false);
         setError(null);
         setDashboardDataAvailable(false);
 
@@ -871,7 +923,7 @@ export function OwnerDashboardPage({
           supabase
             .from("orders")
             .select(
-              "id,display_number,status,operational_status,dining_session_status,customer_name,table_number,payment_method,total_price,created_at,payment_verified_at,completed_at",
+              "id,restaurant_id,display_number,status,operational_status,dining_session_status,customer_name,table_id,table_number,order_source,created_by_waiter_id,payment_method,total_price,created_at,payment_verified_at,completed_at,table_released_at",
             )
             .eq("restaurant_id", restaurantId)
             .order("created_at", { ascending: false })
@@ -879,7 +931,7 @@ export function OwnerDashboardPage({
           supabase
             .from("restaurant_staff")
             .select(
-              "id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+              "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
             )
             .eq("restaurant_id", restaurantId)
             .neq("role", "owner")
@@ -944,6 +996,7 @@ export function OwnerDashboardPage({
 
         const normalizedOrders = (orderData ?? []).map((row) => ({
           id: String(row.id),
+          restaurant_id: String(row.restaurant_id),
           display_number:
             typeof row.display_number === "string" ? row.display_number : null,
           status: String(row.status) as OwnerOrderStatus,
@@ -955,31 +1008,45 @@ export function OwnerDashboardPage({
               ? row.dining_session_status
               : null,
           customer_name: row.customer_name ?? null,
+          table_id: row.table_id ? String(row.table_id) : null,
           table_number: row.table_number ?? null,
+          order_source:
+            typeof row.order_source === "string" ? row.order_source : null,
+          created_by_waiter_id: row.created_by_waiter_id
+            ? String(row.created_by_waiter_id)
+            : null,
           payment_method: row.payment_method ?? null,
           total_price: Number(row.total_price),
           created_at: String(row.created_at),
           payment_verified_at: row.payment_verified_at ?? null,
           completed_at: row.completed_at ?? null,
+          table_released_at: row.table_released_at ?? null,
           item_count: 0,
         }));
 
         const orderIds = normalizedOrders.map((order) => order.id);
         let normalizedItems: OdOrderItem[] = [];
+        let normalizedOwnerInvoices: OwnerOrderInvoiceRow[] = [];
 
         if (orderIds.length > 0) {
-          const { data: itemData, error: itemError } = await supabase
-            .from("order_items")
-            .select(
-              "id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)",
-            )
-            .eq("restaurant_id", restaurantId)
-            .in("order_id", orderIds);
+          const [itemResult, invoiceRows] = await Promise.all([
+            supabase
+              .from("order_items")
+              .select(
+                "id,restaurant_id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)",
+              )
+              .eq("restaurant_id", restaurantId)
+              .in("order_id", orderIds),
+            loadOwnerOrderInvoices(restaurantId, orderIds),
+          ]);
+          const { data: itemData, error: itemError } = itemResult;
 
           if (itemError) throw new Error(itemError.message);
+          normalizedOwnerInvoices = invoiceRows;
 
           normalizedItems = (itemData ?? []).map((row) => ({
             id: String(row.id),
+            restaurant_id: String(row.restaurant_id),
             order_id: String(row.order_id),
             invoice_id:
               typeof row.invoice_id === "string" ? row.invoice_id : null,
@@ -1018,6 +1085,8 @@ export function OwnerDashboardPage({
           })),
         );
         setOrderItems(normalizedItems);
+        setOwnerOrderInvoices(normalizedOwnerInvoices);
+        setOwnerOrdersFinancialAvailable(true);
         setStaff((staffData ?? []) as OdStaff[]);
         setMenuItems(
           (menuData ?? []).map((row) => ({
@@ -1218,11 +1287,15 @@ export function OwnerDashboardPage({
             const existing = index >= 0 ? previous[index] : undefined;
             const order: OdOrder = {
               id: String(row.id),
+              restaurant_id:
+                typeof row.restaurant_id === "string"
+                  ? row.restaurant_id
+                  : (existing?.restaurant_id ?? restaurantId),
               display_number:
                 typeof row.display_number === "string"
                   ? row.display_number
                   : (existing?.display_number ?? null),
-              status: String(row.status) as OwnerOrderStatus,
+              status: String(row.status ?? existing?.status ?? "pending_payment") as OwnerOrderStatus,
               operational_status: canonicalOperationalStatus(
                 row.operational_status ?? existing?.operational_status,
               ),
@@ -1231,12 +1304,26 @@ export function OwnerDashboardPage({
                   ? row.dining_session_status
                   : (existing?.dining_session_status ?? null),
               customer_name: row.customer_name ?? null,
+              table_id:
+                typeof row.table_id === "string"
+                  ? row.table_id
+                  : (existing?.table_id ?? null),
               table_number: row.table_number ?? null,
+              order_source:
+                typeof row.order_source === "string"
+                  ? row.order_source
+                  : (existing?.order_source ?? null),
+              created_by_waiter_id:
+                typeof row.created_by_waiter_id === "string"
+                  ? row.created_by_waiter_id
+                  : (existing?.created_by_waiter_id ?? null),
               payment_method: row.payment_method ?? null,
-              total_price: Number(row.total_price),
-              created_at: String(row.created_at),
+              total_price: Number(row.total_price ?? existing?.total_price ?? 0),
+              created_at: String(row.created_at ?? existing?.created_at ?? ""),
               payment_verified_at: row.payment_verified_at ?? null,
               completed_at: row.completed_at ?? null,
+              table_released_at:
+                row.table_released_at ?? existing?.table_released_at ?? null,
               item_count: existing?.item_count ?? 0,
             };
             if (index >= 0) {
@@ -1272,37 +1359,55 @@ export function OwnerDashboardPage({
           const orderId = String(newRow?.order_id ?? oldRow?.order_id ?? "");
           if (!orderId) return;
 
-          if (payload.eventType === "INSERT" && newRow?.id) {
+          if (
+            (payload.eventType === "INSERT" || payload.eventType === "UPDATE") &&
+            newRow?.id
+          ) {
             const menuItem = newRow.menu_item_id
               ? menuItems.find((item) => item.id === newRow.menu_item_id)
               : null;
-            setOrderItems((previous) => [
-              ...previous,
-              {
+            setOrderItems((previous) => {
+              const existingIndex = previous.findIndex(
+                (item) => item.id === newRow.id,
+              );
+              const existing =
+                existingIndex >= 0 ? previous[existingIndex] : undefined;
+              const nextItem: OdOrderItem = {
                 id: String(newRow.id),
+                restaurant_id:
+                  typeof newRow.restaurant_id === "string"
+                    ? newRow.restaurant_id
+                    : (existing?.restaurant_id ?? restaurantId),
                 order_id: orderId,
                 invoice_id: newRow.invoice_id
                   ? String(newRow.invoice_id)
-                  : null,
+                  : (existing?.invoice_id ?? null),
                 menu_item_id: newRow.menu_item_id
                   ? String(newRow.menu_item_id)
-                  : null,
-                quantity: Number(newRow.quantity ?? 0),
-                price: Number(newRow.price ?? 0),
-                name: menuItem?.name ?? "Menu item",
-              },
-            ]);
-            setOrders((previous) =>
-              previous.map((order) =>
-                order.id === orderId
-                  ? {
-                      ...order,
-                      item_count:
-                        order.item_count + Number(newRow.quantity ?? 0),
-                    }
-                  : order,
-              ),
-            );
+                  : (existing?.menu_item_id ?? null),
+                quantity: Number(newRow.quantity ?? existing?.quantity ?? 0),
+                price: Number(newRow.price ?? existing?.price ?? 0),
+                name: menuItem?.name ?? existing?.name ?? "Menu item",
+              };
+              if (nextItem.restaurant_id !== restaurantId) return previous;
+              if (existingIndex < 0) return [...previous, nextItem];
+              const next = [...previous];
+              next[existingIndex] = nextItem;
+              return next;
+            });
+            if (payload.eventType === "INSERT") {
+              setOrders((previous) =>
+                previous.map((order) =>
+                  order.id === orderId
+                    ? {
+                        ...order,
+                        item_count:
+                          order.item_count + Number(newRow.quantity ?? 0),
+                      }
+                    : order,
+                ),
+              );
+            }
           }
 
           if (payload.eventType === "DELETE" && oldRow?.id) {
@@ -1331,7 +1436,35 @@ export function OwnerDashboardPage({
           table: "order_invoices",
           filter: `restaurant_id=eq.${restaurantId}`,
         },
-        () => {
+        (payload) => {
+          const deletedId = String(
+            (payload.old as { id?: string } | null)?.id ?? "",
+          );
+          if (payload.eventType === "DELETE") {
+            setOwnerOrderInvoices((previous) =>
+              previous.filter((invoice) => invoice.id !== deletedId),
+            );
+          } else {
+            const value = payload.new as Record<string, unknown>;
+            if (value?.id) {
+              setOwnerOrderInvoices((previous) => {
+                const index = previous.findIndex(
+                  (invoice) => invoice.id === value.id,
+                );
+                const invoice = normalizeOwnerOrderInvoiceRow(
+                  value,
+                  index >= 0 ? previous[index] : undefined,
+                );
+                if (!invoice || invoice.restaurant_id !== restaurantId) {
+                  return previous;
+                }
+                if (index < 0) return [...previous, invoice];
+                const next = [...previous];
+                next[index] = invoice;
+                return next;
+              });
+            }
+          }
           void supabase
             .from("order_invoices")
             .select(
@@ -1526,6 +1659,17 @@ export function OwnerDashboardPage({
       ),
     [orders],
   );
+  const ownerOrdersReadModel = useMemo(
+    () =>
+      buildOwnerOrdersReadModel({
+        restaurantId,
+        orders,
+        items: orderItems,
+        invoices: ownerOrderInvoices,
+        staff,
+      }),
+    [restaurantId, orders, orderItems, ownerOrderInvoices, staff],
+  );
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.operational_status === "new"),
     [orders],
@@ -1669,7 +1813,7 @@ export function OwnerDashboardPage({
     const { data, error: staffError } = await supabase
       .from("restaurant_staff")
       .select(
-        "id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+        "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
       )
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
@@ -2041,11 +2185,11 @@ export function OwnerDashboardPage({
           />
         )}
         {nav === "orders" && (
-          <OrdersPage
-            orders={orders}
-            activeOrders={activeOrders}
+          <OwnerOrdersView
+            orders={ownerOrdersReadModel}
             loading={loading}
-            restaurantName={restaurantName}
+            financialAvailable={ownerOrdersFinancialAvailable}
+            formatMoney={fmtMoney}
           />
         )}
         {nav === "analytics" && (
@@ -2618,182 +2762,6 @@ function RecentOrdersTable({
             )}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function OrdersPage({
-  orders,
-  activeOrders,
-  loading,
-  restaurantName,
-}: {
-  orders: OdOrder[];
-  activeOrders: OdOrder[];
-  loading: boolean;
-  restaurantName: string;
-}) {
-  const [tab, setTab] = useState<string>("active");
-  const tabs = [
-    ["active", "Active"],
-    ["new", "New"],
-    ["accepted", "Accepted"],
-    ["preparing", "Preparing"],
-    ["ready", "Ready"],
-    ["served", "Served"],
-    ["closed", "Closed"],
-  ];
-  const filtered =
-    tab === "active"
-      ? activeOrders
-      : orders.filter((order) => order.operational_status === tab);
-
-  return (
-    <div className="od-page od-operations-page od-orders-experience">
-      <div className="od-page-header">
-        <div>
-          <h1 className="od-page-title">Live Order Center</h1>
-          <p className="od-page-subtitle">
-            Real-time operational command center for {restaurantName}
-          </p>
-        </div>
-        <div className="od-active-pill-large">
-          <strong>{activeOrders.length}</strong>
-          <span>Active Orders</span>
-        </div>
-      </div>
-
-      <div className="od-kanban">
-        {(["new", "accepted", "preparing", "ready"] as OperationalStatus[]).map(
-          (status) => (
-            <div
-              key={status}
-              className={`od-order-lane ${statusClass(status)}`}
-            >
-              <div className="od-lane-header">
-                <span>{statusLabel(status)}</span>
-                <strong>
-                  {
-                    orders.filter(
-                      (order) => order.operational_status === status,
-                    ).length
-                  }
-                </strong>
-              </div>
-              {orders
-                .filter((order) => order.operational_status === status)
-                .slice(0, 3)
-                .map((order) => (
-                  <div key={order.id} className="od-order-card">
-                    <div className="od-order-card-top">
-                      <strong>{fmtOrderLabel(order)}</strong>
-                      <span>{fmtTimeAgo(order.created_at)}</span>
-                    </div>
-                    <div className="od-order-table">
-                      {order.table_number
-                        ? `Table ${order.table_number}`
-                        : "No table"}
-                    </div>
-                    <div className="od-order-customer">
-                      {order.customer_name || "Guest"}
-                    </div>
-                    <div className="od-order-card-bottom">
-                      <strong>{fmtMoney(order.total_price)}</strong>
-                      <span>{order.item_count || 0} items</span>
-                    </div>
-                  </div>
-                ))}
-              {orders.filter((order) => order.operational_status === status)
-                .length === 0 && <div className="od-lane-empty">No orders</div>}
-            </div>
-          ),
-        )}
-      </div>
-
-      <div className="od-tabs">
-        {tabs.map(([value, label]) => (
-          <button
-            key={value}
-            className={`od-tab${tab === value ? " active" : ""}`}
-            onClick={() => setTab(value)}
-          >
-            {label} (
-            {value === "active"
-              ? activeOrders.length
-              : orders.filter((order) => order.operational_status === value)
-                  .length}
-            )
-          </button>
-        ))}
-      </div>
-
-      <div className="od-card">
-        <div className="od-table-wrap">
-          <table className="od-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Table</th>
-                <th>Customer</th>
-                <th>Payment</th>
-                <th>Total</th>
-                <th>Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="od-empty">Loading orders...</div>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="od-empty">
-                      <div className="od-empty-icon">--</div>
-                      <div className="od-empty-msg">No orders in this view</div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      <span className="od-order-id">
-                        {fmtOrderLabel(order)}
-                      </span>
-                    </td>
-                    <td>
-                      {order.table_number
-                        ? `Table ${order.table_number}`
-                        : "No table"}
-                    </td>
-                    <td>{order.customer_name || "Guest"}</td>
-                    <td>{order.payment_method || "-"}</td>
-                    <td>
-                      <span className="od-amount">
-                        {fmtMoney(order.total_price)}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12, color: "var(--od-muted)" }}>
-                      {fmtDateTime(order.created_at)}
-                    </td>
-                    <td>
-                      <span
-                        className={`od-status-badge ${statusClass(order.operational_status)}`}
-                      >
-                        {statusLabel(order.operational_status)}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
