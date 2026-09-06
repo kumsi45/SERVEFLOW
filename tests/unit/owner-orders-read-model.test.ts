@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { OperationalStatus, PaymentStatus } from "../../src/core/payment/lifecycle";
 import {
   buildOwnerOrdersReadModel,
+  mergeOwnerOrderCoverage,
   normalizeOwnerOrderInvoiceRow,
+  ownerOrdersRealtimeRecovery,
   type OwnerOrderInvoiceRow,
   type OwnerOrderRow,
 } from "../../src/modules/owner/services/ownerOrdersReadModel";
@@ -386,16 +388,24 @@ describe("Owner Orders read-model integration", () => {
         "filter: `restaurant_id=eq.${restaurantId}`",
       );
     }
+    expect(page).toContain("menuItemsRef.current.find(");
+    expect(page).toContain("}, [restaurantId]);");
   });
 
   it("feeds the normalized contract to Owner Orders without adding mutation controls", () => {
     expect(page).toContain("orders={ownerOrdersReadModel}");
     expect(page).toContain("buildOwnerOrdersReadModel({");
-    const ordersPage = page.slice(
-      page.indexOf("function OrdersPage"),
-      page.indexOf("type FinancialPeriod"),
+    const view = readFileSync(
+      "src/modules/owner/components/orders/OwnerOrdersView.tsx",
+      "utf8",
     );
-    expect(ordersPage).not.toMatch(/update\(|delete\(|insert\(|rpc\(/);
+    const viewStart = view.indexOf("export function OwnerOrdersView");
+    expect(viewStart).toBeGreaterThan(-1);
+    const ownerOrdersView = view.slice(viewStart);
+    expect(ownerOrdersView).toContain("orders: OwnerOrderReadModel[]");
+    expect(ownerOrdersView).not.toMatch(
+      /\bsupabase\b|\.(?:rpc|insert|update|delete)\s*\(/,
+    );
   });
 
   it("retains owner-scoped RLS for orders, items, and invoices", () => {
@@ -422,5 +432,64 @@ describe("Owner Orders read-model integration", () => {
     expect(invoicePolicies).toContain(
       "public.is_active_restaurant_staff_member(restaurant_id)",
     );
+  });
+});
+
+describe("Owner Orders coverage and reconnect recovery", () => {
+  it("keeps active and canonical unresolved orders outside the 500-row history window and deduplicates overlap", () => {
+    const history = Array.from({ length: 500 }, (_, index) =>
+      order(`history-${index}`, {
+        operational_status: "closed",
+        created_at: new Date(Date.UTC(2026, 8, 6, 12, 0, index)).toISOString(),
+      }),
+    );
+    const active = order("old-active", {
+      operational_status: "preparing",
+      created_at: "2025-01-01T00:00:00.000Z",
+    });
+    const unresolved = order("old-served-due", {
+      operational_status: "served",
+      created_at: "2025-01-02T00:00:00.000Z",
+    });
+
+    const covered = mergeOwnerOrderCoverage(
+      history,
+      [active, history[0]],
+      [unresolved, active],
+    );
+
+    expect(covered).toHaveLength(502);
+    expect(covered.map((entry) => entry.id)).toContain("old-active");
+    expect(covered.map((entry) => entry.id)).toContain("old-served-due");
+    expect(covered.filter((entry) => entry.id === history[0].id)).toHaveLength(1);
+    expect(covered.filter((entry) => entry.id === active.id)).toHaveLength(1);
+    const served = build(covered, [
+      invoice("old-due", unresolved.id, "held"),
+    ]).find((entry) => entry.id === unresolved.id);
+    expect(served).toMatchObject({
+      operationalStatus: "served",
+      isServedPaymentDue: true,
+    });
+  });
+
+  it("refreshes only after a disconnect and lets an authoritative reload correct a missed settlement", () => {
+    expect(ownerOrdersRealtimeRecovery(false, "connected")).toEqual({
+      recoveryPending: false,
+      shouldRefresh: false,
+    });
+    const disconnected = ownerOrdersRealtimeRecovery(false, "reconnecting");
+    expect(disconnected).toEqual({
+      recoveryPending: true,
+      shouldRefresh: false,
+    });
+    expect(
+      ownerOrdersRealtimeRecovery(disconnected.recoveryPending, "connected"),
+    ).toEqual({ recoveryPending: false, shouldRefresh: true });
+
+    const servedOrder = order("settled-offline", {
+      operational_status: "served",
+    });
+    expect(build([servedOrder], [invoice("offline", servedOrder.id, "pending")])[0].financial.summary).toBe("payment_due");
+    expect(build([servedOrder], [invoice("offline", servedOrder.id, "paid")])[0].financial.summary).toBe("paid");
   });
 });

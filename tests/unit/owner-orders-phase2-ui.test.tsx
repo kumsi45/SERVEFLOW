@@ -19,6 +19,11 @@ import {
   type OwnerOrderRow,
 } from "../../src/modules/owner/services/ownerOrdersReadModel";
 
+const ownerOrdersViewSource = readFileSync(
+  "src/modules/owner/components/orders/OwnerOrdersView.tsx",
+  "utf8",
+);
+
 const TENANT = "owner-orders-phase2";
 
 function order(
@@ -202,7 +207,23 @@ describe("Owner Orders Phase 2 presentation", () => {
     expect(ownerOrderSourceLabel(models.find((entry) => entry.id === "mx6")!)).toBe("Mixed sources");
     expect(ownerOrderSourceLabel(models.find((entry) => entry.id === "lg5")!)).toBe("Legacy");
     const markup = renderView();
+    expect(ownerOrdersViewSource).toContain('<option value="customer_qr">Customer QR</option>');
+    expect(ownerOrdersViewSource).toContain('<option value="waiter">Waiter</option>');
+    expect(ownerOrdersViewSource).toContain('<option value="cashier">Cashier</option>');
+    expect(ownerOrdersViewSource).not.toContain('<option value="mixed">Mixed</option>');
+    expect(ownerOrdersViewSource).not.toContain('<option value="legacy">Legacy</option>');
+    expect(ownerOrdersViewSource).not.toContain('<option value="unknown">Unknown</option>');
     expect(markup).not.toMatch(/Takeaway|Delivery|Customer App/);
+  });
+
+  it("keeps exceptional financial states truthful while hiding them from the filter", () => {
+    const markup = renderView();
+    expect(markup).toContain("Mixed");
+    expect(markup).toContain("No Invoice");
+    expect(ownerFinancialLabel("unknown")).toBe("Unknown");
+    expect(ownerOrdersViewSource).not.toContain('<option value="mixed_terminal">Mixed</option>');
+    expect(ownerOrdersViewSource).not.toContain('<option value="no_invoice">No Invoice</option>');
+    expect(ownerOrdersViewSource).not.toContain('<option value="unknown">Unknown</option>');
   });
 
   it.each([
@@ -254,6 +275,25 @@ describe("Owner Orders Phase 2 presentation", () => {
     );
     expect(unavailable).toContain("Unavailable");
     expect(unavailable).not.toContain("ETB 0");
+    expect(unavailable).toContain("#QR1");
+    expect(unavailable).toContain("#WT2");
+    expect(unavailable).toContain("#WS3");
+    expect(unavailable).toMatch(/Active<\/span><strong>3<\/strong>/);
+    expect(unavailable).toMatch(/Ready<\/span><strong>1<\/strong>/);
+    expect(unavailable).toMatch(/Served<\/span><strong>1<\/strong>/);
+    expect(unavailable).not.toContain("No orders yet");
+  });
+
+  it("keeps finance unavailable distinct from every authoritative financial state", () => {
+    const unavailable = renderToStaticMarkup(
+      <OwnerOrdersView orders={models} loading={false} financialAvailable={false} formatMoney={(value) => `ETB ${value}`} />,
+    );
+    expect(unavailable).toContain('class="unavailable">Unavailable</strong>');
+    expect(unavailable).toContain("financial-unavailable");
+    expect(unavailable).not.toContain("financial-payment_due");
+    expect(unavailable).not.toContain("financial-paid");
+    expect(unavailable).not.toContain("financial-no_invoice");
+    expect(unavailable).not.toContain("financial-unknown");
   });
 
   it("uses relative time for recent orders and dates for history", () => {
@@ -320,11 +360,43 @@ describe("Owner Orders Phase 2 responsive contract", () => {
   it("keeps Owner Orders wired to the Phase 1 model with no mutations", () => {
     expect(page).toContain("orders={ownerOrdersReadModel}");
     expect(page).toContain("financialAvailable={ownerOrdersFinancialAvailable}");
-    expect(page).not.toContain("function OrdersPage");
-    const view = readFileSync(
-      "src/modules/owner/components/orders/OwnerOrdersView.tsx",
-      "utf8",
+    const viewStart = ownerOrdersViewSource.indexOf(
+      "export function OwnerOrdersView",
     );
-    expect(view).not.toMatch(/supabase|\.rpc\(|\.from\(/);
+    expect(viewStart).toBeGreaterThan(-1);
+    const ownerOrdersView = ownerOrdersViewSource.slice(viewStart);
+    expect(ownerOrdersView).toContain("orders: OwnerOrderReadModel[]");
+    expect(ownerOrdersView).not.toMatch(
+      /\bsupabase\b|\.(?:rpc|insert|update|delete)\s*\(/,
+    );
+  });
+
+  it("implements modal focus containment, Escape close, inert background, and trigger restoration", () => {
+    const detailStart = ownerOrdersViewSource.indexOf(
+      "export function OwnerOrderDetails",
+    );
+    const detailEnd = ownerOrdersViewSource.indexOf(
+      "export function OwnerOrdersView",
+    );
+    expect(detailStart).toBeGreaterThan(-1);
+    expect(detailEnd).toBeGreaterThan(detailStart);
+    const details = ownerOrdersViewSource.slice(detailStart, detailEnd);
+    expect(details).toContain('event.key === "Escape"');
+    expect(details).toContain('event.key !== "Tab"');
+    expect(details).toContain("last.focus()");
+    expect(details).toContain("first.focus()");
+    expect(ownerOrdersViewSource).toContain('element.setAttribute("inert", "")');
+    expect(ownerOrdersViewSource).toContain("detailTriggerRef.current?.focus()");
+  });
+
+  it("commits operational Orders before unrelated dashboard financial checks", () => {
+    const commit = page.indexOf("setOrders(ownerOrdersSnapshot.orders)");
+    const unrelatedFinancialFailure = page.indexOf(
+      "if (paymentError) throw new Error(paymentError.message)",
+    );
+    expect(commit).toBeGreaterThan(-1);
+    expect(unrelatedFinancialFailure).toBeGreaterThan(commit);
+    expect(page).toContain("financialAvailable: financialWarning === null");
+    expect(page).toContain("invoices: invoiceResult.invoices");
   });
 });

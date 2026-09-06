@@ -206,6 +206,7 @@ export function OwnerOrderDetails({
   onClose: () => void;
 }) {
   const attribution = order.creator.people;
+  const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -219,10 +220,39 @@ export function OwnerOrderDetails({
       }}
     >
       <aside
+        ref={dialogRef}
         className="od-order-detail"
         role="dialog"
         aria-modal="true"
         aria-labelledby="owner-order-detail-title"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onClose();
+            return;
+          }
+          if (event.key !== "Tab") return;
+          const focusable = Array.from(
+            dialogRef.current?.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            ) ?? [],
+          );
+          if (focusable.length === 0) {
+            event.preventDefault();
+            dialogRef.current?.focus();
+            return;
+          }
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }}
+        tabIndex={-1}
       >
         <header>
           <div>
@@ -312,6 +342,9 @@ export function OwnerOrdersView({
     useState<OwnerOrdersFilters["payment"]>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const detailTriggerRef = useRef<HTMLElement | null>(null);
+  const detailWasOpenRef = useRef(false);
   const filters = { search, primary, operational, source, payment };
   const filtered = useMemo(
     () => filterOwnerOrders(orders, filters),
@@ -331,19 +364,47 @@ export function OwnerOrdersView({
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSelectedOrderId(null);
     };
+    const background = Array.from(pageRef.current?.children ?? []).filter(
+      (element) => !element.classList.contains("od-order-detail-layer"),
+    ) as HTMLElement[];
+    const previousAriaHidden = background.map((element) =>
+      element.getAttribute("aria-hidden"),
+    );
+    background.forEach((element) => {
+      element.setAttribute("inert", "");
+      element.setAttribute("aria-hidden", "true");
+    });
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
+      background.forEach((element, index) => {
+        element.removeAttribute("inert");
+        const ariaHidden = previousAriaHidden[index];
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      });
     };
   }, [selectedOrderId]);
 
-  const openDetails = (order: OwnerOrderReadModel) =>
+  useEffect(() => {
+    if (selectedOrderId) {
+      detailWasOpenRef.current = true;
+      return;
+    }
+    if (!detailWasOpenRef.current) return;
+    detailWasOpenRef.current = false;
+    window.requestAnimationFrame(() => detailTriggerRef.current?.focus());
+  }, [selectedOrderId]);
+
+  const openDetails = (order: OwnerOrderReadModel, trigger: HTMLElement) => {
+    detailTriggerRef.current = trigger;
     setSelectedOrderId(order.id);
+  };
 
   return (
-    <div className="od-page od-orders-experience">
+    <div ref={pageRef} className="od-page od-orders-experience">
       <header className="od-orders-heading"><h1>Orders</h1></header>
 
       <section className="od-orders-summary" aria-label="Order summary">
@@ -387,8 +448,8 @@ export function OwnerOrdersView({
       {filtersOpen && (
         <div id="owner-orders-secondary-filters" className="od-orders-secondary-filters">
           <label>Operational status<select value={operational} onChange={(event) => setOperational(event.target.value as OwnerOrdersFilters["operational"])}><option value="all">All statuses</option><option value="new">New</option><option value="accepted">Accepted</option><option value="preparing">Preparing</option><option value="ready">Ready</option><option value="served">Served</option><option value="closed">Closed</option></select></label>
-          <label>Source<select value={source} onChange={(event) => setSource(event.target.value as OwnerOrdersFilters["source"])}><option value="all">All sources</option><option value="customer_qr">Customer QR</option><option value="waiter">Waiter</option><option value="cashier">Cashier</option><option value="mixed">Mixed</option><option value="legacy">Legacy</option><option value="unknown">Unknown</option></select></label>
-          <label>Payment<select value={payment} disabled={!financialAvailable} onChange={(event) => setPayment(event.target.value as OwnerOrdersFilters["payment"])}><option value="all">All payment states</option><option value="payment_due">Payment Due</option><option value="paid">Paid</option><option value="refunded">Refunded</option><option value="cancelled">Cancelled</option><option value="mixed_terminal">Mixed</option><option value="no_invoice">No Invoice</option><option value="unknown">Unknown</option></select></label>
+          <label>Source<select value={source} onChange={(event) => setSource(event.target.value as OwnerOrdersFilters["source"])}><option value="all">All sources</option><option value="customer_qr">Customer QR</option><option value="waiter">Waiter</option><option value="cashier">Cashier</option></select></label>
+          <label>Payment<select value={payment} disabled={!financialAvailable} onChange={(event) => setPayment(event.target.value as OwnerOrdersFilters["payment"])}><option value="all">All payment states</option><option value="payment_due">Payment Due</option><option value="paid">Paid</option><option value="refunded">Refunded</option><option value="cancelled">Cancelled</option></select></label>
           <button type="button" onClick={() => { setOperational("all"); setSource("all"); setPayment("all"); }}>Clear filters</button>
         </div>
       )}
@@ -414,7 +475,7 @@ export function OwnerOrdersView({
             <thead><tr><th>Order</th><th>Table</th><th>Source</th><th>Status</th><th>Payment</th><th>Total</th><th>Time</th></tr></thead>
             <tbody>
               {filtered.map((order) => (
-                <tr key={order.id} tabIndex={0} onClick={() => openDetails(order)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetails(order); } }}>
+                <tr key={order.id} tabIndex={0} onClick={(event) => openDetails(order, event.currentTarget)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetails(order, event.currentTarget); } }}>
                   <td><strong>{order.displayNumber ?? "Current order"}</strong><small>{order.itemCount} items</small></td>
                   <td>{order.tableNumber ? `T${order.tableNumber}` : "\u2014"}</td>
                   <td>{ownerOrderSourceLabel(order)}</td>
@@ -430,7 +491,7 @@ export function OwnerOrdersView({
 
         <div className="od-orders-mobile-list">
           {filtered.map((order) => (
-            <button type="button" className={`od-orders-mobile-row${order.isServedPaymentDue ? " served-payment-due" : ""}`} key={order.id} onClick={() => openDetails(order)}>
+            <button type="button" className={`od-orders-mobile-row${order.isServedPaymentDue ? " served-payment-due" : ""}`} key={order.id} onClick={(event) => openDetails(order, event.currentTarget)}>
               <span className="od-orders-mobile-top"><strong>{order.displayNumber ?? "Current order"}</strong><b>{formatMoney(order.total)}</b></span>
               <span className="od-orders-mobile-table">{order.tableNumber ? `Table ${order.tableNumber}` : "No table"}</span>
               <span className="od-orders-mobile-source">{ownerOrderSourceLabel(order)}</span>

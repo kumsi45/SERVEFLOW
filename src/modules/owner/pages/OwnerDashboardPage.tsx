@@ -80,8 +80,11 @@ import {
   type StaffActivityLog,
 } from "../services/staffManagementService";
 import {
+  OWNER_ACTIVE_OPERATIONAL_STATUSES,
   buildOwnerOrdersReadModel,
+  mergeOwnerOrderCoverage,
   normalizeOwnerOrderInvoiceRow,
+  ownerOrdersRealtimeRecovery,
   type OwnerOrderInvoiceRow,
 } from "../services/ownerOrdersReadModel";
 import "../styles/ownerDashboard.css";
@@ -265,8 +268,169 @@ type OdOrderItem = {
   name: string;
 };
 
+const OWNER_ORDER_HISTORY_LIMIT = 500;
+const OWNER_ORDER_PAGE_SIZE = 500;
+const OWNER_ORDER_SELECT =
+  "id,restaurant_id,display_number,status,operational_status,dining_session_status,customer_name,table_id,table_number,order_source,created_by_waiter_id,payment_method,total_price,created_at,payment_verified_at,completed_at,table_released_at";
+const OWNER_ORDER_ITEM_SELECT =
+  "id,restaurant_id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)";
 const OWNER_ORDER_INVOICE_SELECT =
   "id,restaurant_id,order_id,payment_status,total_price,grand_total,payment_method,invoice_source,created_by_staff_id,created_by_display_name,created_at";
+
+type OwnerOrdersSnapshot = {
+  orders: OdOrder[];
+  items: OdOrderItem[];
+  invoices: OwnerOrderInvoiceRow[];
+  financialAvailable: boolean;
+  financialWarning: string | null;
+};
+
+function normalizeOwnerOrderRow(value: Record<string, unknown>): OdOrder {
+  return {
+    id: String(value.id),
+    restaurant_id: String(value.restaurant_id),
+    display_number:
+      typeof value.display_number === "string" ? value.display_number : null,
+    status: String(value.status) as OwnerOrderStatus,
+    operational_status: canonicalOperationalStatus(value.operational_status),
+    dining_session_status:
+      typeof value.dining_session_status === "string"
+        ? value.dining_session_status
+        : null,
+    customer_name:
+      typeof value.customer_name === "string" ? value.customer_name : null,
+    table_id: typeof value.table_id === "string" ? value.table_id : null,
+    table_number:
+      typeof value.table_number === "string" ? value.table_number : null,
+    order_source:
+      typeof value.order_source === "string" ? value.order_source : null,
+    created_by_waiter_id:
+      typeof value.created_by_waiter_id === "string"
+        ? value.created_by_waiter_id
+        : null,
+    payment_method:
+      typeof value.payment_method === "string" ? value.payment_method : null,
+    total_price: Number(value.total_price),
+    created_at: String(value.created_at),
+    payment_verified_at:
+      typeof value.payment_verified_at === "string"
+        ? value.payment_verified_at
+        : null,
+    completed_at:
+      typeof value.completed_at === "string" ? value.completed_at : null,
+    table_released_at:
+      typeof value.table_released_at === "string"
+        ? value.table_released_at
+        : null,
+    item_count: 0,
+  };
+}
+
+async function loadAllActiveOwnerOrderRows(restaurantId: string) {
+  const rows: OdOrder[] = [];
+  for (let offset = 0; ; offset += OWNER_ORDER_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(OWNER_ORDER_SELECT)
+      .eq("restaurant_id", restaurantId)
+      .in("operational_status", [...OWNER_ACTIVE_OPERATIONAL_STATUSES])
+      .order("created_at", { ascending: false })
+      .range(offset, offset + OWNER_ORDER_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []).map((value) =>
+      normalizeOwnerOrderRow(value as Record<string, unknown>),
+    );
+    rows.push(...page);
+    if (page.length < OWNER_ORDER_PAGE_SIZE) return rows;
+  }
+}
+
+async function loadAllOwnerUnresolvedObligationRows(restaurantId: string) {
+  const rows: Record<string, unknown>[] = [];
+  for (let offset = 0; ; offset += OWNER_ORDER_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .rpc("get_restaurant_unresolved_obligations", {
+        target_restaurant_id: restaurantId,
+      })
+      .range(offset, offset + OWNER_ORDER_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as Record<string, unknown>[];
+    rows.push(...page);
+    if (page.length < OWNER_ORDER_PAGE_SIZE) return rows;
+  }
+}
+
+async function loadOwnerOrderRowsByIds(
+  restaurantId: string,
+  orderIds: readonly string[],
+) {
+  if (orderIds.length === 0) return [];
+  const chunks: string[][] = [];
+  for (let index = 0; index < orderIds.length; index += 50) {
+    chunks.push(orderIds.slice(index, index + 50));
+  }
+  const results = await Promise.all(
+    chunks.map((ids) =>
+      supabase
+        .from("orders")
+        .select(OWNER_ORDER_SELECT)
+        .eq("restaurant_id", restaurantId)
+        .in("id", ids),
+    ),
+  );
+  const rows: OdOrder[] = [];
+  for (const result of results) {
+    if (result.error) throw new Error(result.error.message);
+    rows.push(
+      ...(result.data ?? []).map((value) =>
+        normalizeOwnerOrderRow(value as Record<string, unknown>),
+      ),
+    );
+  }
+  return rows;
+}
+
+async function loadOwnerOrderItems(
+  restaurantId: string,
+  orderIds: readonly string[],
+) {
+  if (orderIds.length === 0) return [];
+  const chunks: string[][] = [];
+  for (let index = 0; index < orderIds.length; index += 50) {
+    chunks.push(orderIds.slice(index, index + 50));
+  }
+  const results = await Promise.all(
+    chunks.map((ids) =>
+      supabase
+        .from("order_items")
+        .select(OWNER_ORDER_ITEM_SELECT)
+        .eq("restaurant_id", restaurantId)
+        .in("order_id", ids),
+    ),
+  );
+  const items: OdOrderItem[] = [];
+  for (const result of results) {
+    if (result.error) throw new Error(result.error.message);
+    items.push(
+      ...(result.data ?? []).map((value) => {
+        const row = value as Record<string, unknown>;
+        return {
+          id: String(row.id),
+          restaurant_id: String(row.restaurant_id),
+          order_id: String(row.order_id),
+          invoice_id:
+            typeof row.invoice_id === "string" ? row.invoice_id : null,
+          menu_item_id:
+            typeof row.menu_item_id === "string" ? row.menu_item_id : null,
+          quantity: Number(row.quantity),
+          price: Number(row.price),
+          name: getMenuItemName(row.menu_items),
+        };
+      }),
+    );
+  }
+  return items;
+}
 
 async function loadOwnerOrderInvoices(
   restaurantId: string,
@@ -297,6 +461,96 @@ async function loadOwnerOrderInvoices(
     }
   }
   return invoices;
+}
+
+async function loadOwnerOrdersSnapshot(
+  restaurantId: string,
+): Promise<OwnerOrdersSnapshot> {
+  const [historyResult, activeOrders, obligationResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(OWNER_ORDER_SELECT)
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false })
+      .limit(OWNER_ORDER_HISTORY_LIMIT),
+    loadAllActiveOwnerOrderRows(restaurantId),
+    loadAllOwnerUnresolvedObligationRows(restaurantId).then(
+      (rows) => ({ rows, error: null as Error | null }),
+      (error: unknown) => ({
+        rows: [] as Record<string, unknown>[],
+        error: error instanceof Error ? error : new Error(String(error)),
+      }),
+    ),
+  ]);
+  if (historyResult.error) throw new Error(historyResult.error.message);
+
+  const historyOrders = (historyResult.data ?? []).map((value) =>
+    normalizeOwnerOrderRow(value as Record<string, unknown>),
+  );
+  let obligationOrders: OdOrder[] = [];
+  let financialWarning = obligationResult.error;
+  if (!financialWarning) {
+    const coveredIds = new Set(
+      [...historyOrders, ...activeOrders].map((order) => order.id),
+    );
+    const missingObligationOrderIds = [
+      ...new Set(
+        obligationResult.rows
+          .map((row) =>
+            typeof row.order_id === "string" ? row.order_id : null,
+          )
+          .filter((orderId): orderId is string => Boolean(orderId)),
+      ),
+    ].filter((orderId) => !coveredIds.has(orderId));
+    try {
+      obligationOrders = await loadOwnerOrderRowsByIds(
+        restaurantId,
+        missingObligationOrderIds,
+      );
+    } catch (error) {
+      financialWarning =
+        error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  const coveredOrders = mergeOwnerOrderCoverage(
+    historyOrders,
+    activeOrders,
+    obligationOrders,
+  );
+  const orderIds = coveredOrders.map((order) => order.id);
+  const [items, invoiceResult] = await Promise.all([
+    loadOwnerOrderItems(restaurantId, orderIds),
+    loadOwnerOrderInvoices(restaurantId, orderIds).then(
+      (invoices) => ({ invoices, error: null as Error | null }),
+      (error: unknown) => ({
+        invoices: [] as OwnerOrderInvoiceRow[],
+        error: error instanceof Error ? error : new Error(String(error)),
+      }),
+    ),
+  ]);
+  financialWarning ??= invoiceResult.error;
+
+  const itemCounts = new Map<string, number>();
+  for (const item of items) {
+    itemCounts.set(
+      item.order_id,
+      (itemCounts.get(item.order_id) ?? 0) + item.quantity,
+    );
+  }
+
+  return {
+    orders: coveredOrders.map((order) => ({
+      ...order,
+      item_count: itemCounts.get(order.id) ?? 0,
+    })),
+    items,
+    invoices: invoiceResult.invoices,
+    financialAvailable: financialWarning === null,
+    financialWarning: financialWarning
+      ? "Orders loaded, but financial status is temporarily unavailable."
+      : null,
+  };
 }
 
 type OdPayment = {
@@ -825,6 +1079,7 @@ export function OwnerDashboardPage({
   );
   const [staff, setStaff] = useState<OdStaff[]>([]);
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
+  const menuItemsRef = useRef<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
   const [orderItems, setOrderItems] = useState<OdOrderItem[]>([]);
   const [ownerOrderInvoices, setOwnerOrderInvoices] = useState<
@@ -832,6 +1087,10 @@ export function OwnerDashboardPage({
   >([]);
   const [ownerOrdersFinancialAvailable, setOwnerOrdersFinancialAvailable] =
     useState(false);
+  const [ownerOrdersWarning, setOwnerOrdersWarning] = useState<string | null>(
+    null,
+  );
+  const ownerOrdersRealtimeRecoveryPendingRef = useRef(false);
   const [activeShifts, setActiveShifts] = useState<OwnerActiveShift[]>([]);
   const [restaurantConfig, setRestaurantConfig] =
     useState<RestaurantConfig | null>(null);
@@ -899,6 +1158,8 @@ export function OwnerDashboardPage({
   const [obligationsLoading, setObligationsLoading] = useState(true);
   const [obligationsError, setObligationsError] = useState<string | null>(null);
 
+  menuItemsRef.current = menuItems;
+
   useEffect(() => {
     let mounted = true;
 
@@ -906,11 +1167,12 @@ export function OwnerDashboardPage({
       try {
         setLoading(true);
         setOwnerOrdersFinancialAvailable(false);
+        setOwnerOrdersWarning(null);
         setError(null);
         setDashboardDataAvailable(false);
 
         const [
-          { data: orderData, error: orderError },
+          ownerOrdersSnapshot,
           { data: staffData, error: staffError },
           { data: menuData, error: menuError },
           { data: categoryData, error: categoryError },
@@ -920,14 +1182,7 @@ export function OwnerDashboardPage({
           { data: paymentData, error: paymentError },
           { data: stationData, error: stationError },
         ] = await Promise.all([
-          supabase
-            .from("orders")
-            .select(
-              "id,restaurant_id,display_number,status,operational_status,dining_session_status,customer_name,table_id,table_number,order_source,created_by_waiter_id,payment_method,total_price,created_at,payment_verified_at,completed_at,table_released_at",
-            )
-            .eq("restaurant_id", restaurantId)
-            .order("created_at", { ascending: false })
-            .limit(500),
+          loadOwnerOrdersSnapshot(restaurantId),
           supabase
             .from("restaurant_staff")
             .select(
@@ -983,7 +1238,15 @@ export function OwnerDashboardPage({
           }),
         ]);
 
-        if (orderError) throw new Error(orderError.message);
+        if (!mounted) return;
+        setOrders(ownerOrdersSnapshot.orders);
+        setOrderItems(ownerOrdersSnapshot.items);
+        setOwnerOrderInvoices(ownerOrdersSnapshot.invoices);
+        setOwnerOrdersFinancialAvailable(
+          ownerOrdersSnapshot.financialAvailable,
+        );
+        setOwnerOrdersWarning(ownerOrdersSnapshot.financialWarning);
+
         if (staffError) throw new Error(staffError.message);
         if (menuError) throw new Error(menuError.message);
         if (categoryError) throw new Error(categoryError.message);
@@ -992,85 +1255,6 @@ export function OwnerDashboardPage({
         if (shiftError) throw new Error(shiftError.message);
         if (paymentError) throw new Error(paymentError.message);
         if (stationError) throw new Error(stationError.message);
-        if (!mounted) return;
-
-        const normalizedOrders = (orderData ?? []).map((row) => ({
-          id: String(row.id),
-          restaurant_id: String(row.restaurant_id),
-          display_number:
-            typeof row.display_number === "string" ? row.display_number : null,
-          status: String(row.status) as OwnerOrderStatus,
-          operational_status: canonicalOperationalStatus(
-            row.operational_status,
-          ),
-          dining_session_status:
-            typeof row.dining_session_status === "string"
-              ? row.dining_session_status
-              : null,
-          customer_name: row.customer_name ?? null,
-          table_id: row.table_id ? String(row.table_id) : null,
-          table_number: row.table_number ?? null,
-          order_source:
-            typeof row.order_source === "string" ? row.order_source : null,
-          created_by_waiter_id: row.created_by_waiter_id
-            ? String(row.created_by_waiter_id)
-            : null,
-          payment_method: row.payment_method ?? null,
-          total_price: Number(row.total_price),
-          created_at: String(row.created_at),
-          payment_verified_at: row.payment_verified_at ?? null,
-          completed_at: row.completed_at ?? null,
-          table_released_at: row.table_released_at ?? null,
-          item_count: 0,
-        }));
-
-        const orderIds = normalizedOrders.map((order) => order.id);
-        let normalizedItems: OdOrderItem[] = [];
-        let normalizedOwnerInvoices: OwnerOrderInvoiceRow[] = [];
-
-        if (orderIds.length > 0) {
-          const [itemResult, invoiceRows] = await Promise.all([
-            supabase
-              .from("order_items")
-              .select(
-                "id,restaurant_id,order_id,invoice_id,menu_item_id,quantity,price,menu_items!order_items_menu_item_same_restaurant(name)",
-              )
-              .eq("restaurant_id", restaurantId)
-              .in("order_id", orderIds),
-            loadOwnerOrderInvoices(restaurantId, orderIds),
-          ]);
-          const { data: itemData, error: itemError } = itemResult;
-
-          if (itemError) throw new Error(itemError.message);
-          normalizedOwnerInvoices = invoiceRows;
-
-          normalizedItems = (itemData ?? []).map((row) => ({
-            id: String(row.id),
-            restaurant_id: String(row.restaurant_id),
-            order_id: String(row.order_id),
-            invoice_id:
-              typeof row.invoice_id === "string" ? row.invoice_id : null,
-            menu_item_id: row.menu_item_id ? String(row.menu_item_id) : null,
-            quantity: Number(row.quantity),
-            price: Number(row.price),
-            name: getMenuItemName(row.menu_items),
-          }));
-        }
-
-        const itemCounts = new Map<string, number>();
-        for (const item of normalizedItems) {
-          itemCounts.set(
-            item.order_id,
-            (itemCounts.get(item.order_id) ?? 0) + item.quantity,
-          );
-        }
-
-        setOrders(
-          normalizedOrders.map((order) => ({
-            ...order,
-            item_count: itemCounts.get(order.id) ?? 0,
-          })),
-        );
         setPayments(
           (paymentData ?? []).map((row) => ({
             id: String(row.id),
@@ -1084,9 +1268,6 @@ export function OwnerDashboardPage({
             created_at: String(row.created_at),
           })),
         );
-        setOrderItems(normalizedItems);
-        setOwnerOrderInvoices(normalizedOwnerInvoices);
-        setOwnerOrdersFinancialAvailable(true);
         setStaff((staffData ?? []) as OdStaff[]);
         setMenuItems(
           (menuData ?? []).map((row) => ({
@@ -1260,6 +1441,29 @@ export function OwnerDashboardPage({
   }, [restaurantId, orders]);
 
   useEffect(() => {
+    let active = true;
+    let reconciliationSequence = 0;
+
+    async function reconcileOwnerOrders() {
+      const sequence = ++reconciliationSequence;
+      try {
+        const snapshot = await loadOwnerOrdersSnapshot(restaurantId);
+        if (!active || sequence !== reconciliationSequence) return;
+        setOrders(snapshot.orders);
+        setOrderItems(snapshot.items);
+        setOwnerOrderInvoices(snapshot.invoices);
+        setOwnerOrdersFinancialAvailable(snapshot.financialAvailable);
+        setOwnerOrdersWarning(snapshot.financialWarning);
+      } catch (refreshError) {
+        if (!active || sequence !== reconciliationSequence) return;
+        setError(
+          refreshError instanceof Error
+            ? refreshError.message
+            : "Failed to reconcile Owner Orders after reconnect.",
+        );
+      }
+    }
+
     const channel = createRestaurantEventConsumer(restaurantId)
       .onTable({
           event: "*",
@@ -1364,7 +1568,9 @@ export function OwnerDashboardPage({
             newRow?.id
           ) {
             const menuItem = newRow.menu_item_id
-              ? menuItems.find((item) => item.id === newRow.menu_item_id)
+              ? menuItemsRef.current.find(
+                  (item) => item.id === newRow.menu_item_id,
+                )
               : null;
             setOrderItems((previous) => {
               const existingIndex = previous.findIndex(
@@ -1604,12 +1810,23 @@ export function OwnerDashboardPage({
           });
         },
       )
-      .subscribe();
+      .subscribe((state) => {
+        const recovery = ownerOrdersRealtimeRecovery(
+          ownerOrdersRealtimeRecoveryPendingRef.current,
+          state,
+        );
+        ownerOrdersRealtimeRecoveryPendingRef.current =
+          recovery.recoveryPending;
+        if (recovery.shouldRefresh) void reconcileOwnerOrders();
+      });
 
     return () => {
+      active = false;
+      reconciliationSequence += 1;
+      ownerOrdersRealtimeRecoveryPendingRef.current = false;
       channel.unsubscribe();
     };
-  }, [restaurantId, menuItems]);
+  }, [restaurantId]);
 
   const todayStart = startOfTodayIso();
   const todayOrders = useMemo(
@@ -2174,7 +2391,11 @@ export function OwnerDashboardPage({
           </div>
         </header>
 
-        {error && <div className="od-error">Warning: {error}</div>}
+        {(error || ownerOrdersWarning) && (
+          <div className="od-error">
+            Warning: {error ?? ownerOrdersWarning}
+          </div>
+        )}
 
         {nav === "overview" && (
           <OwnerHomeOverview

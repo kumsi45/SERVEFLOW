@@ -19,7 +19,7 @@ function state(kind: string, label: string) {
 }
 
 function desktopRow(index: number) {
-  return `<tr tabindex="0"><td><strong>#GRSF-00${index}</strong><small>${index} items</small></td><td>T${index}</td><td>Waiter · A deliberately long creator name</td><td>${state("operational-preparing", "Preparing")}</td><td>${state(index === 3 ? "financial-payment_due" : "financial-paid", index === 3 ? "Payment Due" : "Paid")}</td><td><strong>ETB 747.50</strong></td><td>${index * 8}m</td></tr>`;
+  return `<tr tabindex="0"><td><strong>#GRSF-00${index}</strong><small>${index} items</small></td><td>T${index}</td><td>Waiter · A deliberately long creator name</td><td>${state("operational-preparing", "Preparing")}</td><td>${state(index === 3 ? "financial-payment_due" : "financial-paid", index === 3 ? "Payment Due" : "Paid")}</td><td><strong>ETB 125,780.50</strong></td><td>${index * 8}m</td></tr>`;
 }
 
 function mobileRow(index: number) {
@@ -27,13 +27,13 @@ function mobileRow(index: number) {
 }
 
 function markup() {
-  return `<div class="od-root"><main class="od-orders-experience">
+  return `<div class="od-root"><aside class="od-sidebar" aria-label="Owner sidebar"></aside><main class="od-main"><div class="od-orders-experience">
     <header class="od-orders-heading"><h1>Orders</h1></header>
     <section class="od-orders-summary"><div><span>Active</span><strong>3</strong></div><div class="attention"><span>Payment Due</span><strong>2<small> · ETB 1,275</small></strong></div><div><span>Ready</span><strong>1</strong></div><div><span>Served</span><strong>4</strong></div></section>
     <div class="od-orders-toolbar"><label class="od-orders-search"><svg></svg><input placeholder="Search orders..."></label><button class="od-orders-filter-trigger"><svg></svg><span>Filters</span></button></div>
     <nav class="od-orders-primary-filters">${["All", "Active", "Due", "Served", "Closed"].map((label, index) => `<button class="${index === 0 ? "active" : ""}"><span class="mobile-label">${label}</span><span class="desktop-label">${label === "Due" ? "Payment Due" : label}</span></button>`).join("")}</nav>
     <section class="od-orders-list"><div class="od-orders-desktop-table"><table><thead><tr>${["Order", "Table", "Source", "Status", "Payment", "Total", "Time"].map((heading) => `<th>${heading}</th>`).join("")}</tr></thead><tbody>${[1, 2, 3, 4, 5, 6].map(desktopRow).join("")}</tbody></table></div><div class="od-orders-mobile-list">${[1, 2, 3, 4, 5, 6].map(mobileRow).join("")}</div></section>
-  </main><button class="sf-ai-launcher"><span class="sf-ai-launcher-mark">AI</span><span>Business Advisor</span></button><nav class="od-mobile-bottom-nav">${["Home", "Orders", "Tables", "Finance", "Menu"].map((label) => `<button>${label}</button>`).join("")}</nav></div>`;
+  </div></main><button class="sf-ai-launcher"><span class="sf-ai-launcher-mark">AI</span><span>Business Advisor</span></button><nav class="od-mobile-bottom-nav">${["Home", "Orders", "Tables", "Finance", "Menu"].map((label) => `<button>${label}</button>`).join("")}</nav></div>`;
 }
 
 async function load(page: Page, width: number, height: number) {
@@ -56,6 +56,13 @@ for (const width of [1440, 1280, 1024, 768]) {
       clientWidth: node.clientWidth,
     }));
     expect(table.scrollWidth).toBeLessThanOrEqual(table.clientWidth);
+    const total = await page.locator(".od-orders-desktop-table tbody td:nth-child(6) strong").first().evaluate((node) => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+      text: node.textContent,
+    }));
+    expect(total.text).toBe("ETB 125,780.50");
+    expect(total.scrollWidth).toBeLessThanOrEqual(total.clientWidth);
   });
 }
 
@@ -109,4 +116,24 @@ test("Owner Order details sheet fits a 360px phone", async ({ page }) => {
     overflow: node.scrollWidth > node.clientWidth,
   }));
   expect(geometry).toEqual({ width: 360, right: 360, overflow: false });
+});
+
+test("Owner Order details traps focus, closes on Escape, and restores the trigger", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await page.goto("/tests/e2e/fixtures/owner-orders-modal.html");
+  const trigger = page.locator(".od-orders-desktop-table tbody tr");
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "#MODAL-1" });
+  const close = page.getByRole("button", { name: "Close order details" });
+  await expect(dialog).toBeVisible();
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await expect(page.locator(".od-orders-toolbar")).toHaveAttribute("inert", "");
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
 });

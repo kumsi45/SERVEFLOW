@@ -126,6 +126,35 @@ export type OwnerOrderReadModel = {
   isServedPaymentDue: boolean;
 };
 
+export function mergeOwnerOrderCoverage<T extends OwnerOrderRow>(
+  ...groups: ReadonlyArray<readonly T[]>
+): T[] {
+  const byId = new Map<string, T>();
+  for (const group of groups) {
+    for (const order of group) byId.set(order.id, order);
+  }
+  return [...byId.values()].sort(
+    (left, right) =>
+      new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+  );
+}
+
+export function ownerOrdersRealtimeRecovery(
+  recoveryPending: boolean,
+  state: "connecting" | "connected" | "reconnecting",
+) {
+  const shouldRefresh = recoveryPending && state === "connected";
+  return {
+    recoveryPending:
+      state === "reconnecting"
+        ? true
+        : shouldRefresh
+          ? false
+          : recoveryPending,
+    shouldRefresh,
+  };
+}
+
 const PAYMENT_STATUSES = new Set<string>([
   "pending",
   "held",
