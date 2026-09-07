@@ -143,7 +143,11 @@ describe("Owner Orders Phase 2 presentation", () => {
     expect(markup).not.toContain("od-kanban");
     expect(markup).not.toContain("od-order-lane");
     expect(markup).not.toContain("Active Orders");
-    expect(markup).toContain("<h1>Orders</h1>");
+    expect(markup).not.toContain("<h1>Orders</h1>");
+    expect(markup.indexOf('class="od-orders-summary"')).toBeGreaterThan(-1);
+    expect(markup.indexOf('class="od-orders-summary"')).toBeLessThan(
+      markup.indexOf('class="od-orders-toolbar"'),
+    );
   });
 
   it("summarizes Active, authoritative Payment Due amount, Ready, and Served", () => {

@@ -28,7 +28,6 @@ function mobileRow(index: number) {
 
 function markup() {
   return `<div class="od-root"><aside class="od-sidebar" aria-label="Owner sidebar"></aside><main class="od-main"><div class="od-orders-experience">
-    <header class="od-orders-heading"><h1>Orders</h1></header>
     <section class="od-orders-summary"><div><span>Active</span><strong>3</strong></div><div class="attention"><span>Payment Due</span><strong>2<small> · ETB 1,275</small></strong></div><div><span>Ready</span><strong>1</strong></div><div><span>Served</span><strong>4</strong></div></section>
     <div class="od-orders-toolbar"><label class="od-orders-search"><svg></svg><input placeholder="Search orders..."></label><button class="od-orders-filter-trigger"><svg></svg><span>Filters</span></button></div>
     <nav class="od-orders-primary-filters">${["All", "Active", "Due", "Served", "Closed"].map((label, index) => `<button class="${index === 0 ? "active" : ""}"><span class="mobile-label">${label}</span><span class="desktop-label">${label === "Due" ? "Payment Due" : label}</span></button>`).join("")}</nav>

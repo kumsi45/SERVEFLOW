@@ -405,8 +405,6 @@ export function OwnerOrdersView({
 
   return (
     <div ref={pageRef} className="od-page od-orders-experience">
-      <header className="od-orders-heading"><h1>Orders</h1></header>
-
       <section className="od-orders-summary" aria-label="Order summary">
         <div><span>Active</span><strong>{loading ? "\u2014" : summary.active}</strong></div>
         <div className={financialAvailable && summary.paymentDue > 0 ? "attention" : ""}>
