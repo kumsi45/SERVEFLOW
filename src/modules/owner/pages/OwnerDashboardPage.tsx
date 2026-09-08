@@ -87,6 +87,7 @@ import {
   ownerOrdersRealtimeRecovery,
   type OwnerOrderInvoiceRow,
 } from "../services/ownerOrdersReadModel";
+import { getOccupiedOwnerTableIds } from "../services/ownerTablesReadModel";
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
@@ -334,6 +335,27 @@ async function loadAllActiveOwnerOrderRows(restaurantId: string) {
       .select(OWNER_ORDER_SELECT)
       .eq("restaurant_id", restaurantId)
       .in("operational_status", [...OWNER_ACTIVE_OPERATIONAL_STATUSES])
+      .order("created_at", { ascending: false })
+      .range(offset, offset + OWNER_ORDER_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []).map((value) =>
+      normalizeOwnerOrderRow(value as Record<string, unknown>),
+    );
+    rows.push(...page);
+    if (page.length < OWNER_ORDER_PAGE_SIZE) return rows;
+  }
+}
+
+async function loadAllCanonicalOpenTableSessionRows(restaurantId: string) {
+  const rows: OdOrder[] = [];
+  for (let offset = 0; ; offset += OWNER_ORDER_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(OWNER_ORDER_SELECT)
+      .eq("restaurant_id", restaurantId)
+      .eq("dining_session_status", "open")
+      .is("table_released_at", null)
+      .not("table_id", "is", null)
       .order("created_at", { ascending: false })
       .range(offset, offset + OWNER_ORDER_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
@@ -1069,6 +1091,7 @@ export function OwnerDashboardPage({
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<OwnerUtilityPanelKind | null>(null);
   const [orders, setOrders] = useState<OdOrder[]>([]);
+  const [ownerTableSessions, setOwnerTableSessions] = useState<OdOrder[]>([]);
   const [payments, setPayments] = useState<OdPayment[]>([]);
   const [homeComparisonPayments, setHomeComparisonPayments] = useState<
     OdPayment[]
@@ -1173,6 +1196,7 @@ export function OwnerDashboardPage({
 
         const [
           ownerOrdersSnapshot,
+          canonicalOpenTableSessions,
           { data: staffData, error: staffError },
           { data: menuData, error: menuError },
           { data: categoryData, error: categoryError },
@@ -1183,6 +1207,7 @@ export function OwnerDashboardPage({
           { data: stationData, error: stationError },
         ] = await Promise.all([
           loadOwnerOrdersSnapshot(restaurantId),
+          loadAllCanonicalOpenTableSessionRows(restaurantId),
           supabase
             .from("restaurant_staff")
             .select(
@@ -1240,6 +1265,7 @@ export function OwnerDashboardPage({
 
         if (!mounted) return;
         setOrders(ownerOrdersSnapshot.orders);
+        setOwnerTableSessions(canonicalOpenTableSessions);
         setOrderItems(ownerOrdersSnapshot.items);
         setOwnerOrderInvoices(ownerOrdersSnapshot.invoices);
         setOwnerOrdersFinancialAvailable(
@@ -1447,9 +1473,13 @@ export function OwnerDashboardPage({
     async function reconcileOwnerOrders() {
       const sequence = ++reconciliationSequence;
       try {
-        const snapshot = await loadOwnerOrdersSnapshot(restaurantId);
+        const [snapshot, canonicalOpenTableSessions] = await Promise.all([
+          loadOwnerOrdersSnapshot(restaurantId),
+          loadAllCanonicalOpenTableSessionRows(restaurantId),
+        ]);
         if (!active || sequence !== reconciliationSequence) return;
         setOrders(snapshot.orders);
+        setOwnerTableSessions(canonicalOpenTableSessions);
         setOrderItems(snapshot.items);
         setOwnerOrderInvoices(snapshot.invoices);
         setOwnerOrdersFinancialAvailable(snapshot.financialAvailable);
@@ -1479,11 +1509,29 @@ export function OwnerDashboardPage({
             setOrders((previous) =>
               previous.filter((existing) => existing.id !== deletedId),
             );
+            setOwnerTableSessions((previous) =>
+              previous.filter((existing) => existing.id !== deletedId),
+            );
             return;
           }
 
           const row = payload.new as Partial<OdOrder>;
           if (!row?.id) return;
+          const realtimeTableSession = normalizeOwnerOrderRow(
+            row as Record<string, unknown>,
+          );
+          setOwnerTableSessions((previous) => {
+            const withoutCurrent = previous.filter(
+              (existing) => existing.id !== realtimeTableSession.id,
+            );
+            return realtimeTableSession.restaurant_id === restaurantId &&
+              realtimeTableSession.table_id !== null &&
+              realtimeTableSession.dining_session_status === "open" &&
+              realtimeTableSession.table_released_at === null &&
+              realtimeTableSession.status !== "cancelled"
+              ? [realtimeTableSession, ...withoutCurrent]
+              : withoutCurrent;
+          });
           setOrders((previous) => {
             const index = previous.findIndex(
               (existing) => existing.id === row.id,
@@ -2448,7 +2496,7 @@ export function OwnerDashboardPage({
             restaurantName={restaurantConfig?.name ?? restaurantName}
             restaurantSlug={restaurantConfig?.slug ?? ""}
             logoUrl={jsonString(restaurantConfig?.branding ?? {}, "logo_url")}
-            orders={orders}
+            orders={ownerTableSessions}
             tables={restaurantTables}
             onTableChanged={(updatedTable) => {
               setRestaurantTables((previous) =>
@@ -8398,32 +8446,14 @@ function QrTablesPage({
   const [workingTableId, setWorkingTableId] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const activeTableOrders = orders.filter(
-    (order) => order.dining_session_status === "open",
-  );
-  const activeTables = new Set(
-    activeTableOrders.map((order) => order.table_number).filter(Boolean),
-  );
-  const todayStart = startOfTodayIso();
+  const occupiedTableIds = getOccupiedOwnerTableIds(orders, restaurantId);
   const rows = tables.map((restaurantTable) => {
-    const number = String(restaurantTable.table_number);
-    const activeOrder = activeTableOrders.find(
-      (order) => order.table_number === number,
-    );
     return {
       table: restaurantTable,
-      occupied: Boolean(activeOrder),
-      ordersToday:
-        qrStats[restaurantTable.id]?.orders_today ??
-        orders.filter(
-          (order) =>
-            order.table_number === number && order.created_at >= todayStart,
-        ).length,
+      occupied: occupiedTableIds.has(restaurantTable.id),
+      ordersToday: qrStats[restaurantTable.id]?.orders_today ?? 0,
       lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
-      lastOrderAt:
-        qrStats[restaurantTable.id]?.last_order_at ??
-        orders.find((order) => order.table_number === number)?.created_at ??
-        null,
+      lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? null,
       scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
       orderingUrl: getOrderingUrl(
         restaurantTable.qr_url,
@@ -8444,7 +8474,6 @@ function QrTablesPage({
           const url = getOrderingUrl(table.qr_url, table.qr_path);
           if (!url) return [table.id, ""] as const;
           logOwnerQrDiagnostic("ownerDashboard:generatedQrUrl", {
-            generatedQrUrl: url,
             currentAppUrl: getOrderingUrlOrigin(url),
             restaurantId,
             tableNumber: table.table_number,
@@ -8737,7 +8766,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
       <div className="od-kpi-grid analytics">
         <div className="od-kpi-card">
           <div className="od-kpi-label">Occupied Tables</div>
-          <div className="od-kpi-value">{activeTables.size}</div>
+          <div className="od-kpi-value">{occupiedTableIds.size}</div>
         </div>
         <div className="od-kpi-card">
           <div className="od-kpi-label">Total Tables</div>
@@ -9232,7 +9261,6 @@ function SettingsPage({
             const url = getOrderingUrl(table.qr_url, table.qr_path);
             if (!url) return [table.table_number, ""] as const;
             logOwnerQrDiagnostic("ownerSettings:generatedQrUrl", {
-              generatedQrUrl: url,
               currentAppUrl: getOrderingUrlOrigin(url),
               restaurantId,
               tableNumber: table.table_number,

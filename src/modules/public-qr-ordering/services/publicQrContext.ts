@@ -158,10 +158,32 @@ export function buildPublicQrContextUrl(path: string, context: Pick<PublicQrCont
   return `${pathname}?${params.toString()}${hash ? `#${hash}` : ""}`;
 }
 
+export function sanitizePublicQrDiagnostic(
+  value: unknown,
+  key = "",
+): unknown {
+  if (/token|sessionkey|session_key/i.test(key)) return "[redacted]";
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizePublicQrDiagnostic(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entry]) => [
+        entryKey,
+        sanitizePublicQrDiagnostic(entry, entryKey),
+      ]),
+    );
+  }
+  if (typeof value === "string" && /(?:[?&#]|%3[fF])qr(?:=|%3[dD])/i.test(value)) {
+    return "[redacted]";
+  }
+  return value;
+}
+
 export function logPublicQrContext(stage: string, context: Record<string, unknown>) {
   const viteEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
 
   if (!viteEnv?.DEV || typeof window === "undefined") return;
 
-  console.debug("[ServeFlow QR]", stage, context);
+  console.debug("[ServeFlow QR]", stage, sanitizePublicQrDiagnostic(context));
 }
