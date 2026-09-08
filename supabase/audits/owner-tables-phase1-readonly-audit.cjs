@@ -69,20 +69,6 @@ async function main() {
   try {
     await db.query("begin");
     await db.query("set local row_security = on");
-    await db.query("set local role anon");
-    const before = await db.query(
-      "select qr_token, qr_url, qr_path from public.restaurant_tables limit 1",
-    );
-    assert(
-      before.rowCount === 1 &&
-        before.rows[0].qr_token &&
-        (before.rows[0].qr_url || before.rows[0].qr_path),
-      "pre-fix anon role can enumerate a live table QR capability",
-    );
-    await db.query("rollback");
-
-    await db.query("begin");
-    await db.query(migration);
 
     const policies = await db.query(`
       select policyname, roles, qual
@@ -637,16 +623,30 @@ async function main() {
       }
       assert(rejected, `${label} is rejected`);
     }
-    const rotatedToken = crypto.randomUUID();
-    await db.query(`
-      update public.restaurant_tables tables
-      set qr_token=$2,
-          qr_path=public.build_public_order_path(restaurants.slug, tables.table_number, $2),
-          qr_url=public.build_public_order_url(restaurants.slug, tables.table_number, $2),
-          qr_regenerated_at=now()
-      from public.restaurants restaurants
-      where tables.id=$1 and restaurants.id=tables.restaurant_id
-    `, [statsTable.rows[0].id, rotatedToken]);
+    const regenerated = await asJwtRole(
+      db,
+      "authenticated",
+      fixture.ownerA,
+      "select * from public.regenerate_restaurant_table_qr($1, $2)",
+      [fixture.restaurantA, statsTable.rows[0].id],
+    );
+    const regeneratedEvent = await db.query(`
+      select restaurant_id, performed_by_staff_id, details
+      from public.staff_activity_log
+      where restaurant_id=$1 and action='restaurant_table_qr_regenerated'
+      order by created_at desc
+      limit 1
+    `, [fixture.restaurantA]);
+    assert(
+      regeneratedEvent.rowCount === 1 &&
+        regeneratedEvent.rows[0].restaurant_id === fixture.restaurantA &&
+        regeneratedEvent.rows[0].performed_by_staff_id === fixture.staffA &&
+        regeneratedEvent.rows[0].details.table_id === statsTable.rows[0].id &&
+        regeneratedEvent.rows[0].details.table_number === 1 &&
+        !/qr_token|qr_path|qr_url|https?:/i.test(JSON.stringify(regeneratedEvent.rows[0].details)),
+      "single QR regeneration writes a correctly attributed secret-free audit event",
+    );
+    const rotatedToken = regenerated.rows[0].qr_token;
     let rotatedOldTokenRejected = false;
     try {
       await asJwtRole(
@@ -668,9 +668,30 @@ async function main() {
       [`owner-tables-phase1-a-${fixture.restaurantA}`, rotatedToken],
     );
     assert(rotatedCurrentToken.rowCount === 1, "the current rotated QR token remains valid");
-    await db.query(
-      "update public.restaurant_tables set active=false where id=$1",
-      [statsTable.rows[0].id],
+    const disabled = await asJwtRole(
+      db,
+      "authenticated",
+      fixture.ownerA,
+      "select * from public.set_restaurant_table_active($1, $2, false)",
+      [fixture.restaurantA, statsTable.rows[0].id],
+    );
+    const disabledEvent = await db.query(`
+      select restaurant_id, performed_by_staff_id, details
+      from public.staff_activity_log
+      where restaurant_id=$1 and action='restaurant_table_disabled'
+      order by created_at desc
+      limit 1
+    `, [fixture.restaurantA]);
+    assert(
+      disabled.rows[0].active === false &&
+        disabledEvent.rowCount === 1 &&
+        disabledEvent.rows[0].restaurant_id === fixture.restaurantA &&
+        disabledEvent.rows[0].performed_by_staff_id === fixture.staffA &&
+        disabledEvent.rows[0].details.table_id === statsTable.rows[0].id &&
+        disabledEvent.rows[0].details.previous_active === true &&
+        disabledEvent.rows[0].details.new_active === false &&
+        !/qr_token|qr_path|qr_url|https?:/i.test(JSON.stringify(disabledEvent.rows[0].details)),
+      "table disable writes a correctly attributed secret-free state-transition audit event",
     );
     let inactiveRejected = false;
     try {
@@ -685,6 +706,45 @@ async function main() {
       inactiveRejected = /Invalid or expired table QR/i.test(error.message);
     }
     assert(inactiveRejected, "inactive table QR is rejected by the guarded public path");
+    let inactiveOrderRejected = false;
+    try {
+      await asJwtRole(
+        db,
+        "anon",
+        null,
+        "select public.create_public_qr_order($1, '1', $2::text, $3::text, 'Disabled Table Guest', 'Cash', jsonb_build_array(jsonb_build_object('menu_item_id', $4::uuid, 'quantity', 1)))",
+        [`owner-tables-phase1-a-${fixture.restaurantA}`, rotatedToken, crypto.randomUUID(), fixture.menuItemA],
+      );
+    } catch (error) {
+      inactiveOrderRejected = /Invalid or expired table QR/i.test(error.message);
+    }
+    assert(inactiveOrderRejected, "inactive table rejects new public QR ordering");
+    const enabled = await asJwtRole(
+      db,
+      "authenticated",
+      fixture.ownerA,
+      "select * from public.set_restaurant_table_active($1, $2, true)",
+      [fixture.restaurantA, statsTable.rows[0].id],
+    );
+    const enabledEvent = await db.query(`
+      select restaurant_id, performed_by_staff_id, details
+      from public.staff_activity_log
+      where restaurant_id=$1 and action='restaurant_table_enabled'
+      order by created_at desc
+      limit 1
+    `, [fixture.restaurantA]);
+    assert(
+      enabled.rows[0].active === true &&
+        enabled.rows[0].qr_token === rotatedToken &&
+        enabledEvent.rowCount === 1 &&
+        enabledEvent.rows[0].restaurant_id === fixture.restaurantA &&
+        enabledEvent.rows[0].performed_by_staff_id === fixture.staffA &&
+        enabledEvent.rows[0].details.table_id === statsTable.rows[0].id &&
+        enabledEvent.rows[0].details.previous_active === false &&
+        enabledEvent.rows[0].details.new_active === true &&
+        !/qr_token|qr_path|qr_url|https?:/i.test(JSON.stringify(enabledEvent.rows[0].details)),
+      "table enable writes a secret-free audit event and preserves the QR token",
+    );
 
     await db.query("rollback");
     const rolledBackState = await db.query(`
@@ -693,17 +753,21 @@ async function main() {
           select 1 from pg_policies
           where schemaname='public' and tablename='restaurant_tables'
             and policyname='restaurant_tables_select_public_active'
-        ) public_policy_restored,
-        to_regprocedure('public.get_public_qr_menu_phase260_base(text)') is null hidden_base_absent,
+        not exists (
+          select 1 from pg_policies
+          where schemaname='public' and tablename='restaurant_tables'
+            and policyname='restaurant_tables_select_public_active'
+        ) public_policy_remains_absent,
+        to_regprocedure('public.get_public_qr_menu_phase260_base(text)') is not null hidden_base_remains,
         not exists (
           select 1 from public.restaurants where id in ($1, $2)
         ) fixtures_absent
     `, [fixture.restaurantA, fixture.restaurantB]);
     assert(
-      rolledBackState.rows[0].public_policy_restored &&
-        rolledBackState.rows[0].hidden_base_absent &&
+      rolledBackState.rows[0].public_policy_remains_absent &&
+        rolledBackState.rows[0].hidden_base_remains &&
         rolledBackState.rows[0].fixtures_absent,
-      "migration and hosted fixtures are absent after rollback",
+      "deployed migration remains effective and all hosted verification fixtures are absent after rollback",
     );
     console.log("ROLLBACK Hosted schema left unchanged.");
   } catch (error) {
