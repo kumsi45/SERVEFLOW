@@ -1,0 +1,11 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { expect, test, type Page } from "@playwright/test";
+
+const css = readFileSync(resolve(process.cwd(), "src/modules/owner/styles/ownerDashboard.css"), "utf8");
+const markup = `<meta name="viewport" content="width=device-width, initial-scale=1"><div class="od-root"><main class="od-main"><section class="od-page od-operations-page od-qr-experience"><section class="od-tables-summary"><div><strong>15</strong><span>Tables</span></div><div><strong>3</strong><span>Occupied</span></div><div><strong>11</strong><span>Available</span></div><div><strong>1</strong><span>Disabled</span></div></section><section class="od-tables-workspace"><div class="od-tables-toolbar"><input aria-label="Search tables"><select aria-label="Filter tables by status"><option>All</option></select><button>Print QR</button></div><div class="od-tables-desktop-list"><table class="od-tables-table"><tbody><tr><td>Table 01</td><td>Occupied</td></tr></tbody></table></div><div class="od-tables-mobile-list"><article class="od-tables-mobile-row"><div><strong>Table 01</strong></div><span>Occupied</span><div class="od-tables-mobile-meta"><span>QR Ready</span><span>4 orders today</span></div><button aria-label="Actions for Table 01">⋮</button></article></div></section></section></main><nav class="od-mobile-bottom-nav"><button>Tables</button></nav></div>`;
+
+async function load(page: Page, width: number) { await page.setViewportSize({ width, height: 800 }); await page.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;max-width:100%}${css}</style>${markup}`); }
+
+for (const width of [1440, 1280, 1024, 820, 768]) test(`tables desktop layout fits ${width}px`, async ({ page }) => { await load(page, width); await expect(page.locator(".od-tables-desktop-list")).toBeVisible(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); });
+for (const width of [430, 390, 360]) test(`tables use native mobile rows at ${width}px`, async ({ page }) => { await load(page, width); await expect(page.locator(".od-tables-desktop-list")).toBeHidden(); await expect(page.locator(".od-tables-mobile-list")).toBeVisible(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); });

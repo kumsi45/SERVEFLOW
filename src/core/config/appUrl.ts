@@ -85,6 +85,52 @@ export function buildAbsolutePublicUrl(pathOrUrl: string | null | undefined) {
   }
 }
 
+export type OwnerQrUrlResolution = {
+  url: string | null;
+  unavailableMessage: string | null;
+};
+
+export type OwnerQrUrlResolutionInput = {
+  qrUrl?: string | null;
+  qrPath?: string | null;
+  browserOrigin?: string | null;
+  development: boolean;
+};
+
+const PHONE_DEMO_ORIGIN_MESSAGE =
+  "Open ServeFlow using your computer's Network URL to test this QR from another device.";
+
+/** Resolves Owner QR material without changing any persisted table data. */
+export function resolveOwnerQrOrderingUrl({
+  qrUrl,
+  qrPath,
+  browserOrigin,
+  development,
+}: OwnerQrUrlResolutionInput): OwnerQrUrlResolution {
+  if (!development) {
+    const url = buildAbsolutePublicUrl(qrUrl?.trim() || qrPath?.trim());
+    return {
+      url: url || null,
+      unavailableMessage: url ? null : "This table QR code is unavailable.",
+    };
+  }
+
+  const path = qrPath?.trim() ?? "";
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    return { url: null, unavailableMessage: "This table QR code is unavailable." };
+  }
+
+  const origin = normalizeHttpOrigin(
+    browserOrigin ??
+      (typeof window === "undefined" ? null : window.location.origin),
+  );
+  if (!origin || isLoopbackOrigin(origin)) {
+    return { url: null, unavailableMessage: PHONE_DEMO_ORIGIN_MESSAGE };
+  }
+
+  return { url: `${origin}${path}`, unavailableMessage: null };
+}
+
 export function assertAbsoluteQrPayload(payload: string) {
   if (!/^https?:\/\//i.test(payload)) {
     throw new Error("Generated table QR payload must be an absolute public URL.");
