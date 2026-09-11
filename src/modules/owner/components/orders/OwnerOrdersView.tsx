@@ -325,11 +325,13 @@ export function OwnerOrderDetails({
 export function OwnerOrdersView({
   orders,
   loading,
+  available = true,
   financialAvailable,
   formatMoney,
 }: {
   orders: OwnerOrderReadModel[];
   loading: boolean;
+  available?: boolean;
   financialAvailable: boolean;
   formatMoney: (value: number) => string;
 }) {
@@ -406,7 +408,7 @@ export function OwnerOrdersView({
   return (
     <div ref={pageRef} className="od-page od-orders-experience">
       <section className="od-orders-summary" aria-label="Order summary">
-        <div><span>Active</span><strong>{loading ? "\u2014" : summary.active}</strong></div>
+        <div><span>Active</span><strong>{loading || !available ? "\u2014" : summary.active}</strong></div>
         <div className={financialAvailable && summary.paymentDue > 0 ? "attention" : ""}>
           <span>Payment Due</span>
           {financialAvailable ? (
@@ -415,8 +417,8 @@ export function OwnerOrdersView({
             <strong className="unavailable">Unavailable</strong>
           )}
         </div>
-        <div><span>Ready</span><strong>{loading ? "\u2014" : summary.ready}</strong></div>
-        <div><span>Served</span><strong>{loading ? "\u2014" : summary.served}</strong></div>
+        <div><span>Ready</span><strong>{loading || !available ? "\u2014" : summary.ready}</strong></div>
+        <div><span>Served</span><strong>{loading || !available ? "\u2014" : summary.served}</strong></div>
       </section>
 
       <div className="od-orders-toolbar">
@@ -500,7 +502,9 @@ export function OwnerOrdersView({
         </div>
 
         {!loading && filtered.length === 0 && (
-          <div className="od-orders-empty">{emptyMessage(filters)}</div>
+          <div className="od-orders-empty">
+            {available ? emptyMessage(filters) : "Orders are unavailable."}
+          </div>
         )}
         {loading && <div className="od-orders-empty">Loading orders...</div>}
       </section>

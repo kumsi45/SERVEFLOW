@@ -88,6 +88,15 @@ import {
   type OwnerOrderInvoiceRow,
 } from "../services/ownerOrdersReadModel";
 import { getOccupiedOwnerTableIds } from "../services/ownerTablesReadModel";
+import {
+  INITIAL_OWNER_CORE_STATUS,
+  hasAuthoritativeOwnerConfig,
+  isOwnerWorkspaceAvailable,
+  isOwnerWorkspaceLoading,
+  startOwnerCoreLoads,
+  type OwnerCoreResource,
+  type OwnerCoreResourceStatus,
+} from "../services/ownerPerformance";
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
@@ -282,6 +291,8 @@ type OwnerOrdersSnapshot = {
   orders: OdOrder[];
   items: OdOrderItem[];
   invoices: OwnerOrderInvoiceRow[];
+  unresolvedObligations: OwnerUnresolvedObligation[];
+  obligationsError: string | null;
   financialAvailable: boolean;
   financialWarning: string | null;
 };
@@ -568,6 +579,12 @@ async function loadOwnerOrdersSnapshot(
     })),
     items,
     invoices: invoiceResult.invoices,
+    unresolvedObligations: normalizeOwnerUnresolvedObligations(
+      obligationResult.rows,
+    ),
+    obligationsError: obligationResult.error
+      ? "Failed to load payment due obligations."
+      : null,
     financialAvailable: financialWarning === null,
     financialWarning: financialWarning
       ? "Orders loaded, but financial status is temporarily unavailable."
@@ -1164,17 +1181,10 @@ export function OwnerDashboardPage({
   const [kitchenStations, setKitchenStations] = useState<OdKitchenStation[]>(
     [],
   );
-  const [loading, setLoading] = useState(true);
+  const [coreResourceStatus, setCoreResourceStatus] = useState<
+    Record<OwnerCoreResource, OwnerCoreResourceStatus>
+  >(() => ({ ...INITIAL_OWNER_CORE_STATUS }));
   const [error, setError] = useState<string | null>(null);
-  const [dashboardReports, setDashboardReports] = useState<
-    Record<AnalyticsPeriod, OwnerReportSummary>
-  >({
-    today: emptyReportData().summary,
-    week: emptyReportData().summary,
-    month: emptyReportData().summary,
-  });
-  const [dashboardReportsLoading, setDashboardReportsLoading] = useState(true);
-  const [dashboardDataAvailable, setDashboardDataAvailable] = useState(false);
   const [unresolvedObligations, setUnresolvedObligations] = useState<
     OwnerUnresolvedObligation[]
   >([]);
@@ -1185,118 +1195,93 @@ export function OwnerDashboardPage({
 
   useEffect(() => {
     let mounted = true;
+    setCoreResourceStatus({ ...INITIAL_OWNER_CORE_STATUS });
+    setOwnerOrdersFinancialAvailable(false);
+    setOwnerOrdersWarning(null);
+    setObligationsLoading(true);
+    setObligationsError(null);
+    setHomeComparisonLoading(true);
+    setHomeComparisonError(null);
+    setError(null);
 
-    async function load() {
+    const markResource = (
+      resource: OwnerCoreResource,
+      status: OwnerCoreResourceStatus,
+    ) => {
+      if (!mounted) return;
+      setCoreResourceStatus((current) => ({ ...current, [resource]: status }));
+    };
+    const failResource = (resource: OwnerCoreResource, cause: unknown) => {
+      if (!mounted) return;
+      markResource(resource, "error");
+      if (resource === "restaurant") {
+        setHomeComparisonLoading(false);
+        setHomeComparisonError("Daily comparison is unavailable.");
+      }
+      setError(
+        cause instanceof Error ? cause.message : `Failed to load ${resource}.`,
+      );
+    };
+
+    async function loadOrders() {
       try {
-        setLoading(true);
-        setOwnerOrdersFinancialAvailable(false);
-        setOwnerOrdersWarning(null);
-        setError(null);
-        setDashboardDataAvailable(false);
-
-        const [
-          ownerOrdersSnapshot,
-          canonicalOpenTableSessions,
-          { data: staffData, error: staffError },
-          { data: menuData, error: menuError },
-          { data: categoryData, error: categoryError },
-          { data: restaurantData, error: restaurantError },
-          { data: tableData, error: tableError },
-          { data: shiftData, error: shiftError },
-          { data: paymentData, error: paymentError },
-          { data: stationData, error: stationError },
-        ] = await Promise.all([
-          loadOwnerOrdersSnapshot(restaurantId),
-          loadAllCanonicalOpenTableSessionRows(restaurantId),
-          supabase
-            .from("restaurant_staff")
-            .select(
-              "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
-            )
-            .eq("restaurant_id", restaurantId)
-            .neq("role", "owner")
-            .order("created_at", { ascending: true }),
-          supabase
-            .from("menu_items")
-            .select(
-              "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,direct_inventory_item_id,recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)",
-            )
-            .eq("restaurant_id", restaurantId)
-            .is("archived_at", null)
-            .order("name", { ascending: true }),
-          supabase
-            .from("categories")
-            .select("id,name")
-            .eq("restaurant_id", restaurantId)
-            .order("name", { ascending: true }),
-          supabase
-            .from("restaurants")
-            .select(
-              "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme,setup_status",
-            )
-            .eq("id", restaurantId)
-            .maybeSingle(),
-          supabase
-            .from("restaurant_tables")
-            .select(
-              "id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at",
-            )
-            .eq("restaurant_id", restaurantId)
-            .order("table_number", { ascending: true }),
-          supabase
-            .from("cashier_shifts")
-            .select("id,restaurant_id,opened_by,opened_at,opening_cash")
-            .eq("restaurant_id", restaurantId)
-            .is("closed_at", null)
-            .order("opened_at", { ascending: false }),
-          supabase
-            .from("order_invoices")
-            .select(
-              "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
-            )
-            .eq("restaurant_id", restaurantId)
-            .eq("payment_status", "paid")
-            .order("paid_at", { ascending: false })
-            .limit(1000),
-          supabase.rpc("get_owner_kitchen_stations", {
-            target_restaurant_id: restaurantId,
-          }),
-        ]);
-
+        const snapshot = await loadOwnerOrdersSnapshot(restaurantId);
         if (!mounted) return;
-        setOrders(ownerOrdersSnapshot.orders);
-        setOwnerTableSessions(canonicalOpenTableSessions);
-        setOrderItems(ownerOrdersSnapshot.items);
-        setOwnerOrderInvoices(ownerOrdersSnapshot.invoices);
-        setOwnerOrdersFinancialAvailable(
-          ownerOrdersSnapshot.financialAvailable,
-        );
-        setOwnerOrdersWarning(ownerOrdersSnapshot.financialWarning);
+        setOrders(snapshot.orders);
+        setOrderItems(snapshot.items);
+        setOwnerOrderInvoices(snapshot.invoices);
+        setUnresolvedObligations(snapshot.unresolvedObligations);
+        setObligationsError(snapshot.obligationsError);
+        setOwnerOrdersFinancialAvailable(snapshot.financialAvailable);
+        setOwnerOrdersWarning(snapshot.financialWarning);
+        markResource("orders", "ready");
+      } catch (cause) {
+        if (mounted) {
+          setObligationsError("Failed to load payment due obligations.");
+          failResource("orders", cause);
+        }
+      } finally {
+        if (mounted) setObligationsLoading(false);
+      }
+    }
 
-        if (staffError) throw new Error(staffError.message);
-        if (menuError) throw new Error(menuError.message);
-        if (categoryError) throw new Error(categoryError.message);
-        if (restaurantError) throw new Error(restaurantError.message);
-        if (tableError) throw new Error(tableError.message);
-        if (shiftError) throw new Error(shiftError.message);
-        if (paymentError) throw new Error(paymentError.message);
-        if (stationError) throw new Error(stationError.message);
-        setPayments(
-          (paymentData ?? []).map((row) => ({
-            id: String(row.id),
-            order_id: String(row.order_id),
-            status: String(row.status),
-            payment_status: String(row.payment_status),
-            total_price: Number(row.total_price),
-            payment_method: row.payment_method ?? null,
-            verified_at: row.paid_at ?? null,
-            paid_at: row.paid_at ?? null,
-            created_at: String(row.created_at),
-          })),
-        );
-        setStaff((staffData ?? []) as OdStaff[]);
+    async function loadTableSessions() {
+      try {
+        const rows = await loadAllCanonicalOpenTableSessionRows(restaurantId);
+        if (mounted) setOwnerTableSessions(rows);
+        markResource("tableSessions", "ready");
+      } catch (cause) {
+        failResource("tableSessions", cause);
+      }
+    }
+
+    async function loadStaff() {
+      const { data, error: staffError } = await supabase
+        .from("restaurant_staff")
+        .select(
+          "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+        )
+        .eq("restaurant_id", restaurantId)
+        .neq("role", "owner")
+        .order("created_at", { ascending: true });
+      if (staffError) throw new Error(staffError.message);
+      if (mounted) setStaff((data ?? []) as OdStaff[]);
+      markResource("staff", "ready");
+    }
+
+    async function loadMenu() {
+      const { data, error: menuError } = await supabase
+        .from("menu_items")
+        .select(
+          "id,name,description,ingredients,allergens,preparation_time_minutes,spice_level,dietary_tags,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,sodium_mg,price,available,category_id,kitchen_station_id,image_url,archived_at,recipe_id,direct_inventory_item_id,recipes!menu_items_recipe_same_restaurant(name,status),inventory_items!menu_items_direct_inventory_item_same_restaurant(name)",
+        )
+        .eq("restaurant_id", restaurantId)
+        .is("archived_at", null)
+        .order("name", { ascending: true });
+      if (menuError) throw new Error(menuError.message);
+      if (mounted)
         setMenuItems(
-          (menuData ?? []).map((row) => ({
+          (data ?? []).map((row) => ({
             ...row,
             price: Number(row.price),
             recipe_name: (Array.isArray(row.recipes) ? row.recipes[0] : row.recipes)?.name ?? null,
@@ -1305,54 +1290,137 @@ export function OwnerDashboardPage({
               (Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items)?.name ?? null,
           })) as OdMenuItem[],
         );
-        setCategories((categoryData ?? []) as OdCategory[]);
+      markResource("menu", "ready");
+    }
+
+    async function loadCategories() {
+      const { data, error: categoryError } = await supabase
+        .from("categories")
+        .select("id,name")
+        .eq("restaurant_id", restaurantId)
+        .order("name", { ascending: true });
+      if (categoryError) throw new Error(categoryError.message);
+      if (mounted) setCategories((data ?? []) as OdCategory[]);
+      markResource("categories", "ready");
+    }
+
+    async function loadRestaurant() {
+      const { data, error: restaurantError } = await supabase
+        .from("restaurants")
+        .select(
+          "id,name,slug,total_tables,table_count,profile,business_hours,kitchen_settings,ordering_settings,payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage,branding,notification_settings,security_settings,subscription_plan,billing_status,currency_code,currency_symbol,locale,date_format,time_format,menu_theme,setup_status",
+        )
+        .eq("id", restaurantId)
+        .maybeSingle();
+      if (restaurantError) throw new Error(restaurantError.message);
+      if (!data) throw new Error("Restaurant configuration is unavailable.");
+      if (mounted)
+        setRestaurantConfig(
+          buildRestaurantConfig(data as Record<string, unknown>, restaurantName),
+        );
+      markResource("restaurant", "ready");
+    }
+
+    async function loadTables() {
+      const { data, error: tableError } = await supabase
+        .from("restaurant_tables")
+        .select(
+          "id,restaurant_id,table_number,label,qr_path,qr_url,qr_created_at,qr_regenerated_at,active,created_at",
+        )
+        .eq("restaurant_id", restaurantId)
+        .order("table_number", { ascending: true });
+      if (tableError) throw new Error(tableError.message);
+      if (mounted)
+        setRestaurantTables(
+          (data ?? []).map((row) =>
+            normalizeRestaurantTable(row as Record<string, unknown>),
+          ),
+        );
+      markResource("tables", "ready");
+    }
+
+    async function loadShifts() {
+      const { data, error: shiftError } = await supabase
+        .from("cashier_shifts")
+        .select("id,restaurant_id,opened_by,opened_at,opening_cash")
+        .eq("restaurant_id", restaurantId)
+        .is("closed_at", null)
+        .order("opened_at", { ascending: false });
+      if (shiftError) throw new Error(shiftError.message);
+      if (mounted)
         setActiveShifts(
-          (shiftData ?? []).map((row) => ({
+          (data ?? []).map((row) => ({
             ...row,
             opening_cash: Number(row.opening_cash),
           })) as OwnerActiveShift[],
         );
-        if (restaurantData)
-          setRestaurantConfig(
-            buildRestaurantConfig(
-              restaurantData as Record<string, unknown>,
-              restaurantName,
-            ),
-          );
-        setRestaurantTables(
-          (tableData ?? []).map((row) =>
-            normalizeRestaurantTable(row as Record<string, unknown>),
-          ),
-        );
+      markResource("shifts", "ready");
+    }
+
+    async function loadPayments() {
+      const { data, error: paymentError } = await supabase
+        .from("order_invoices")
+        .select(
+          "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
+        )
+        .eq("restaurant_id", restaurantId)
+        .eq("payment_status", "paid")
+        .order("paid_at", { ascending: false })
+        .limit(1000);
+      if (paymentError) throw new Error(paymentError.message);
+      if (mounted) setPayments(normalizeOwnerPayments(data));
+      markResource("payments", "ready");
+    }
+
+    async function loadStations() {
+      const { data, error: stationError } = await supabase.rpc(
+        "get_owner_kitchen_stations",
+        { target_restaurant_id: restaurantId },
+      );
+      if (stationError) throw new Error(stationError.message);
+      if (mounted)
         setKitchenStations(
-          ((stationData ?? []) as Record<string, unknown>[]).map((row) =>
+          ((data ?? []) as Record<string, unknown>[]).map((row) =>
             normalizeKitchenStation(row),
           ),
         );
-        setDashboardDataAvailable(true);
-      } catch (loadError) {
-        if (mounted)
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Failed to load owner dashboard.",
-          );
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      markResource("stations", "ready");
     }
 
-    void load();
+    void Promise.all(
+      startOwnerCoreLoads(
+        {
+          orders: loadOrders,
+          tableSessions: loadTableSessions,
+          staff: loadStaff,
+          menu: loadMenu,
+          categories: loadCategories,
+          restaurant: loadRestaurant,
+          tables: loadTables,
+          shifts: loadShifts,
+          payments: loadPayments,
+          stations: loadStations,
+        },
+        failResource,
+      ),
+    );
     return () => {
       mounted = false;
     };
   }, [restaurantId]);
 
   useEffect(() => {
+    if (
+      !hasAuthoritativeOwnerConfig(restaurantConfig?.id, restaurantId) ||
+      !restaurantConfig
+    )
+      return;
     let mounted = true;
-    const timezone = restaurantConfig
-      ? jsonString(restaurantConfig.profile, "timezone", "Africa/Nairobi")
-      : "Africa/Nairobi";
+    const timezone = jsonString(
+      restaurantConfig.profile,
+      "timezone",
+      "Africa/Nairobi",
+    );
 
     async function loadHomeComparison() {
       try {
@@ -1383,90 +1451,6 @@ export function OwnerDashboardPage({
   }, [restaurantConfig, restaurantId]);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function loadUnresolvedObligations() {
-      try {
-        setObligationsLoading(true);
-        setObligationsError(null);
-        const { data, error: obligationError } = await supabase.rpc(
-          "get_restaurant_unresolved_obligations",
-          { target_restaurant_id: restaurantId },
-        );
-        if (!mounted) return;
-        if (obligationError) throw new Error(obligationError.message);
-        setUnresolvedObligations(normalizeOwnerUnresolvedObligations(data));
-      } catch (obligationError) {
-        if (!mounted) return;
-        setUnresolvedObligations([]);
-        setObligationsError(
-          obligationError instanceof Error
-            ? obligationError.message
-            : "Failed to load payment due obligations.",
-        );
-      } finally {
-        if (mounted) setObligationsLoading(false);
-      }
-    }
-
-    void loadUnresolvedObligations();
-    return () => {
-      mounted = false;
-    };
-  }, [restaurantId]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadDashboardReports() {
-      try {
-        setDashboardReportsLoading(true);
-        const reports = await Promise.all(
-          (["today", "week", "month"] as AnalyticsPeriod[]).map(
-            async (reportPeriod) => {
-              const { rangeStart, rangeEnd } =
-                getAnalyticsDateRange(reportPeriod);
-              const [reportPayload, billPayload] = await Promise.all([
-                loadOwnerReportData(restaurantId, rangeStart, rangeEnd),
-                loadOwnerDiningBillReportData(
-                  restaurantId,
-                  rangeStart,
-                  rangeEnd,
-                ),
-              ]);
-              return [
-                reportPeriod,
-                mergeOwnerBillMetrics(reportPayload, billPayload).summary,
-              ] as const;
-            },
-          ),
-        );
-        if (mounted)
-          setDashboardReports(
-            Object.fromEntries(reports) as Record<
-              AnalyticsPeriod,
-              OwnerReportSummary
-            >,
-          );
-      } catch (reportError) {
-        if (mounted)
-          setError(
-            reportError instanceof Error
-              ? reportError.message
-              : "Failed to load revenue summaries.",
-          );
-      } finally {
-        if (mounted) setDashboardReportsLoading(false);
-      }
-    }
-
-    void loadDashboardReports();
-    return () => {
-      mounted = false;
-    };
-  }, [restaurantId, orders]);
-
-  useEffect(() => {
     let active = true;
     let reconciliationSequence = 0;
 
@@ -1482,6 +1466,8 @@ export function OwnerDashboardPage({
         setOwnerTableSessions(canonicalOpenTableSessions);
         setOrderItems(snapshot.items);
         setOwnerOrderInvoices(snapshot.invoices);
+        setUnresolvedObligations(snapshot.unresolvedObligations);
+        setObligationsError(snapshot.obligationsError);
         setOwnerOrdersFinancialAvailable(snapshot.financialAvailable);
         setOwnerOrdersWarning(snapshot.financialWarning);
       } catch (refreshError) {
@@ -1876,6 +1862,17 @@ export function OwnerDashboardPage({
     };
   }, [restaurantId]);
 
+  const ordersLoading = isOwnerWorkspaceLoading("orders", coreResourceStatus);
+  const homeLoading = isOwnerWorkspaceLoading("overview", coreResourceStatus);
+  const homeDataAvailable = isOwnerWorkspaceAvailable(
+    "overview",
+    coreResourceStatus,
+  );
+  const tablesLoading = isOwnerWorkspaceLoading("qr", coreResourceStatus);
+  const tablesAvailable = isOwnerWorkspaceAvailable("qr", coreResourceStatus);
+  const menuLoading = isOwnerWorkspaceLoading("menu", coreResourceStatus);
+  const menuAvailable = isOwnerWorkspaceAvailable("menu", coreResourceStatus);
+
   const todayStart = startOfTodayIso();
   const todayOrders = useMemo(
     () => orders.filter((order) => order.created_at >= todayStart),
@@ -1912,11 +1909,6 @@ export function OwnerDashboardPage({
   const weekRevenue = revenueForPeriod("week");
   const monthRevenue = revenueForPeriod("month");
   const allRevenue = monthRevenue;
-  const todayBillsPrinted = dashboardReports.today.bills_printed;
-  const todayBillsReprinted = dashboardReports.today.bills_reprinted;
-  const todayAverageBill = dashboardReports.today.average_bill;
-  const todayLargestBill = dashboardReports.today.largest_bill;
-  const todayVatCollected = dashboardReports.today.vat_collected;
   const activeOrders = useMemo(
     () =>
       orders.filter((order) =>
@@ -1948,7 +1940,6 @@ export function OwnerDashboardPage({
       ),
     [orders, todayStart],
   );
-  const avgOrderValue = Math.round(dashboardReports.today.average_order_value);
   const activeStaff = staff.filter(
     (member) => isOperationalStaff(member) && member.active,
   ).length;
@@ -2236,7 +2227,6 @@ export function OwnerDashboardPage({
     weekRevenue,
     monthRevenue,
     allRevenue,
-    avgOrderValue,
     activeStaff,
     staffWorking,
     kitchenStaff,
@@ -2254,11 +2244,6 @@ export function OwnerDashboardPage({
     donutSlices,
     donutData,
     topItems,
-    todayBillsPrinted,
-    todayBillsReprinted,
-    todayAverageBill,
-    todayLargestBill,
-    todayVatCollected,
     restaurantTables,
     unresolvedObligations,
     obligationsLoading,
@@ -2266,12 +2251,11 @@ export function OwnerDashboardPage({
     homeComparisonPayments,
     homeComparisonLoading,
     homeComparisonError,
-    dataAvailable: dashboardDataAvailable,
+    dataAvailable: homeDataAvailable,
     r,
     cx,
     cy,
-    loading,
-    dashboardReportsLoading,
+    loading: homeLoading,
   };
   const currentNavLabel = NAV_ITEMS.find((item) => item.id === nav)?.label ?? "Dashboard";
 
@@ -2456,7 +2440,8 @@ export function OwnerDashboardPage({
         {nav === "orders" && (
           <OwnerOrdersView
             orders={ownerOrdersReadModel}
-            loading={loading}
+            loading={ordersLoading}
+            available={coreResourceStatus.orders === "ready"}
             financialAvailable={ownerOrdersFinancialAvailable}
             formatMoney={fmtMoney}
           />
@@ -2480,6 +2465,8 @@ export function OwnerDashboardPage({
             categories={categories}
             stations={kitchenStations}
             topItems={topItems}
+            loading={menuLoading}
+            available={menuAvailable}
             onMenuChanged={refreshMenu}
           />
         )}
@@ -2498,6 +2485,8 @@ export function OwnerDashboardPage({
             logoUrl={jsonString(restaurantConfig?.branding ?? {}, "logo_url")}
             orders={ownerTableSessions}
             tables={restaurantTables}
+            loading={tablesLoading}
+            available={tablesAvailable}
             onTableChanged={(updatedTable) => {
               setRestaurantTables((previous) =>
                 previous
@@ -2576,7 +2565,6 @@ type DashboardData = {
   weekRevenue: number;
   monthRevenue: number;
   allRevenue: number;
-  avgOrderValue: number;
   activeStaff: number;
   staffWorking: number;
   kitchenStaff: OdStaff[];
@@ -2601,11 +2589,6 @@ type DashboardData = {
   }[];
   donutData: { label: string; pct: number; color: string }[];
   topItems: { name: string; quantity: number; revenue: number }[];
-  todayBillsPrinted: number;
-  todayBillsReprinted: number;
-  todayAverageBill: number;
-  todayLargestBill: number;
-  todayVatCollected: number;
   restaurantTables: RestaurantTable[];
   unresolvedObligations: OwnerUnresolvedObligation[];
   obligationsLoading: boolean;
@@ -2618,7 +2601,6 @@ type DashboardData = {
   cx: number;
   cy: number;
   loading: boolean;
-  dashboardReportsLoading: boolean;
 };
 
 function OwnerHomeOverview({ data, now, ownerName, onNavigate }: {
@@ -5101,6 +5083,8 @@ type MenuPageProps = {
   categories: OdCategory[];
   stations: OdKitchenStation[];
   topItems: { name: string; quantity: number; revenue: number }[];
+  loading: boolean;
+  available: boolean;
   onMenuChanged: () => Promise<void>;
 };
 
@@ -5202,6 +5186,8 @@ function MenuPage({
   categories,
   stations,
   topItems,
+  loading,
+  available,
   onMenuChanged,
 }: MenuPageProps) {
   const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -5870,12 +5856,20 @@ function MenuPage({
                     <div className="od-empty">
                       <div className="od-empty-icon">--</div>
                       <div className="od-empty-msg">
-                        {items.length === 0
+                        {loading
+                          ? "Loading menu..."
+                          : !available
+                            ? "Menu is unavailable"
+                          : items.length === 0
                           ? "No menu items yet"
                           : "No menu items match these filters"}
                       </div>
                       <div className="od-empty-sub">
-                        {items.length === 0
+                        {loading
+                          ? "Menu items will appear when available"
+                          : !available
+                            ? "Could not confirm the current menu"
+                          : items.length === 0
                           ? "Add your first item or upload a menu photo"
                           : "Adjust search, category, availability, or station"}
                       </div>
@@ -8429,6 +8423,8 @@ function QrTablesPage({
   logoUrl,
   orders,
   tables,
+  loading,
+  available,
   onTableChanged,
 }: {
   restaurantId: string;
@@ -8437,6 +8433,8 @@ function QrTablesPage({
   logoUrl: string;
   orders: OdOrder[];
   tables: RestaurantTable[];
+  loading: boolean;
+  available: boolean;
   onTableChanged: (table: RestaurantTable) => void;
 }) {
   const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
@@ -8517,6 +8515,7 @@ function QrTablesPage({
   }, [restaurantId, tables]);
 
   useEffect(() => {
+    if (loading || !available) return;
     let mounted = true;
     async function loadQrStats() {
       try {
@@ -8566,7 +8565,7 @@ function QrTablesPage({
     return () => {
       mounted = false;
     };
-  }, [restaurantId, tables, orders]);
+  }, [available, loading, restaurantId, tables, orders]);
 
   async function regenerateQr(table: RestaurantTable) {
     try {
@@ -8794,10 +8793,10 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
   return (
     <div className="od-page od-operations-page od-qr-experience">
       <section className="od-tables-summary" aria-label="Table status summary">
-        <div><strong>{tables.length}</strong><span>Tables</span></div>
-        <div className="occupied"><strong>{rows.filter((row) => row.occupied).length}</strong><span>Occupied</span></div>
-        <div><strong>{rows.filter((row) => !row.occupied && !row.disabled).length}</strong><span>Available</span></div>
-        <div className="disabled"><strong>{rows.filter((row) => row.disabled).length}</strong><span>Disabled</span></div>
+        <div><strong>{loading || !available ? "—" : tables.length}</strong><span>Tables</span></div>
+        <div className="occupied"><strong>{loading || !available ? "—" : rows.filter((row) => row.occupied).length}</strong><span>Occupied</span></div>
+        <div><strong>{loading || !available ? "—" : rows.filter((row) => !row.occupied && !row.disabled).length}</strong><span>Available</span></div>
+        <div className="disabled"><strong>{loading || !available ? "—" : rows.filter((row) => row.disabled).length}</strong><span>Disabled</span></div>
       </section>
       {(qrError || notice) && (
         <div className={qrError ? "od-error-inline" : "od-success-inline"}>
@@ -8837,7 +8836,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
           </table>
         </div>
         <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday} orders today</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
-        {rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
+        {loading ? <div className="od-tables-empty">Loading tables...</div> : !available ? <div className="od-tables-empty">Tables are unavailable.</div> : rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
       </section>
       {previewTable && (
         <div

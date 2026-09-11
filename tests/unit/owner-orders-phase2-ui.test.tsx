@@ -394,11 +394,13 @@ describe("Owner Orders Phase 2 responsive contract", () => {
   });
 
   it("commits operational Orders before unrelated dashboard financial checks", () => {
-    const commit = page.indexOf("setOrders(ownerOrdersSnapshot.orders)");
+    const commit = page.indexOf("setOrders(snapshot.orders)");
+    const ready = page.indexOf('markResource("orders", "ready")');
     const unrelatedFinancialFailure = page.indexOf(
       "if (paymentError) throw new Error(paymentError.message)",
     );
     expect(commit).toBeGreaterThan(-1);
+    expect(ready).toBeGreaterThan(commit);
     expect(unrelatedFinancialFailure).toBeGreaterThan(commit);
     expect(page).toContain("financialAvailable: financialWarning === null");
     expect(page).toContain("invoices: invoiceResult.invoices");
