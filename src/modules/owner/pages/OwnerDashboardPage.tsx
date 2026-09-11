@@ -8451,6 +8451,7 @@ function QrTablesPage({
   const [openActionTableId, setOpenActionTableId] = useState<string | null>(null);
   const [workingTableId, setWorkingTableId] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const occupiedTableIds = getOccupiedOwnerTableIds(orders, restaurantId);
   const rows = tables.map((restaurantTable) => {
@@ -8777,9 +8778,10 @@ ${logo}
     );
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) {
-      setQrError(
+      setPrintError(
         "Could not open the print window. Please allow pop-ups for this site.",
       );
+      window.setTimeout(() => setPrintError(null), 4200);
       return;
     }
     printWindow.document
@@ -8802,6 +8804,12 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
           {qrError || notice}
         </div>
       )}
+      {printError && (
+        <div className="od-tables-toast" role="alert" aria-live="polite">
+          <span>{printError}</span>
+          <button type="button" aria-label="Dismiss print message" onClick={() => setPrintError(null)}>Dismiss</button>
+        </div>
+      )}
       <section className="od-tables-workspace">
         <div className="od-tables-toolbar">
           <label className="od-tables-search"><span className="sr-only">Search tables</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table" aria-label="Search tables" /></label>
@@ -8819,7 +8827,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
               {filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => (
                   <tr key={table.id}>
                     <td><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</td>
-                    <td><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/ /g, "-").replace("·", "")}`}>{statusLabel}</span></td>
+                    <td><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span></td>
                     <td><span className={qrReady ? "od-tables-qr ready" : "od-tables-qr"}>{qrReady ? "QR Ready" : "Unavailable"}</span></td>
                     <td>{ordersToday}</td><td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</td>
                     <td>{tableActionMenu(table)}</td>
@@ -8828,7 +8836,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
             </tbody>
           </table>
         </div>
-        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/ /g, "-").replace("·", "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday} orders today</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
+        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday} orders today</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
         {rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
       </section>
       {previewTable && (

@@ -40,4 +40,11 @@ describe("Owner Tables Phase 2A workspace", () => {
     expect(css).toContain(".od-qr-experience .od-tables-mobile-list{display:grid");
     expect(css).not.toContain(".od-tables-table{width:100%;min-width");
   });
+
+  it("keeps mobile controls compact and print failures transient", () => {
+    expect(css).toContain('grid-template-areas:"search search" "filter print"');
+    expect(css).toContain(".od-tables-mobile-row .od-tables-actions{grid-column:2;grid-row:2");
+    expect(page).toContain("printError");
+    expect(page).toContain("od-tables-toast");
+  });
 });
