@@ -31,7 +31,7 @@ describe("Owner Tables Phase 2A workspace", () => {
     expect(page).toContain('aria-label={`Actions for ${table.label}`}');
     expect(page).toContain('aria-haspopup="menu"');
     expect(page).toContain("View QR");
-    expect(page).toContain("Regenerate QR");
+    expect(page).toContain("Replace QR Code");
   });
 
   it("uses native mobile rows rather than a horizontally scrolling desktop table", () => {

@@ -33,6 +33,7 @@ import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { SmartImage } from "../../../core/presentation/SmartImage";
 import { createSmartImagePublicUrl, resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
+import { useModalFocus } from "../../../core/accessibility/useModalFocus";
 import { analyticsWindow } from "../../../core/analytics/historicalAnalytics";
 import {
   formatCompactCurrency,
@@ -8676,6 +8677,15 @@ function QrTablesPage({
   const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(
     null,
   );
+  const [detailsTableId, setDetailsTableId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    kind: "replace" | "active";
+    tableId: string;
+  } | null>(null);
+  const detailsDialogRef = useRef<HTMLDivElement>(null);
+  const detailsCloseRef = useRef<HTMLButtonElement>(null);
+  const confirmationDialogRef = useRef<HTMLDivElement>(null);
+  const confirmationCancelRef = useRef<HTMLButtonElement>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "occupied" | "available" | "disabled">("all");
   const [openActionTableId, setOpenActionTableId] = useState<string | null>(null);
@@ -8725,6 +8735,14 @@ function QrTablesPage({
       (statusFilter === "disabled" && row.disabled);
     return matchesSearch && matchesStatus;
   });
+  const selectedRow = detailsTableId
+    ? rows.find((row) => row.table.id === detailsTableId) ?? null
+    : null;
+  const confirmationRow = confirmation
+    ? rows.find((row) => row.table.id === confirmation.tableId) ?? null
+    : null;
+  useModalFocus(Boolean(selectedRow) && !confirmation, () => setDetailsTableId(null), detailsDialogRef, detailsCloseRef);
+  useModalFocus(Boolean(confirmationRow), () => setConfirmation(null), confirmationDialogRef, confirmationCancelRef);
 
   useEffect(() => {
     if (loading || !available) return;
@@ -8812,6 +8830,7 @@ function QrTablesPage({
   }, [available, loading, restaurantId, retainedScope, statsRefreshVersion]);
 
   async function regenerateQr(table: RestaurantTable) {
+    if (workingTableId) return;
     try {
       setWorkingTableId(table.id);
       setQrError(null);
@@ -8828,22 +8847,23 @@ function QrTablesPage({
         data as Record<string, unknown>,
       );
       onTableChanged(updatedTable);
-      setPreviewTable((current) =>
-        current?.id === updatedTable.id ? updatedTable : current,
-      );
-      setNotice(`QR regenerated for ${updatedTable.label}.`);
+      setPreviewTable(updatedTable);
+      setNotice(`QR code replaced for ${updatedTable.label}.`);
+      return true;
     } catch (regenerateError) {
       setQrError(
         regenerateError instanceof Error
           ? regenerateError.message
           : "Could not regenerate QR code.",
       );
+      return false;
     } finally {
       setWorkingTableId(null);
     }
   }
 
   async function setTableActive(table: RestaurantTable, active: boolean) {
+    if (workingTableId) return;
     try {
       setWorkingTableId(table.id);
       setQrError(null);
@@ -8861,19 +8881,27 @@ function QrTablesPage({
         data as Record<string, unknown>,
       );
       onTableChanged(updatedTable);
-      setPreviewTable((current) =>
-        current?.id === updatedTable.id ? updatedTable : current,
-      );
+      setPreviewTable((current) => current?.id === updatedTable.id ? updatedTable : current);
       setNotice(`${updatedTable.label} ${active ? "enabled" : "disabled"}.`);
+      return true;
     } catch (activeError) {
       setQrError(
         activeError instanceof Error
           ? activeError.message
           : "Could not update table status.",
       );
+      return false;
     } finally {
       setWorkingTableId(null);
     }
+  }
+
+  async function applyTableConfirmation() {
+    if (!confirmationRow || !confirmation || workingTableId) return;
+    const completed = confirmation.kind === "replace"
+      ? await regenerateQr(confirmationRow.table)
+      : await setTableActive(confirmationRow.table, !confirmationRow.table.active);
+    if (completed) setConfirmation(null);
   }
 
   const previewResolution = previewTable
@@ -8941,10 +8969,11 @@ function QrTablesPage({
         </button>
         {isOpen && (
           <div className="od-tables-action-menu" role="menu" aria-label={`Actions for ${table.label}`}>
+            <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); setDetailsTableId(table.id); }}>View details</button>
             <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); openQrPreview(table); }}>View QR</button>
             <button type="button" role="menuitem" onClick={() => { const resolution = getOrderingUrl(table.qr_url, table.qr_path); setOpenActionTableId(null); if (resolution.url) void printQrCards([{ table, orderingUrl: resolution.url }]); else setQrError(resolution.unavailableMessage ?? "This table QR code is unavailable."); }}>Print QR</button>
-            <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); void setTableActive(table, !table.active); }} disabled={workingTableId === table.id}>{table.active ? "Disable" : "Enable"}</button>
-            <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); void regenerateQr(table); }} disabled={workingTableId === table.id}>Regenerate QR</button>
+            <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); setConfirmation({ kind: "active", tableId: table.id }); }} disabled={workingTableId === table.id}>{table.active ? "Disable" : "Enable"}</button>
+            <button type="button" role="menuitem" onClick={() => { setOpenActionTableId(null); setConfirmation({ kind: "replace", tableId: table.id }); }} disabled={workingTableId === table.id}>Replace QR Code</button>
           </div>
         )}
       </div>
@@ -9098,7 +9127,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
             <tbody>
               {filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => (
                   <tr key={table.id}>
-                    <td><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</td>
+                    <td><button className="od-table-details-trigger" type="button" onClick={() => setDetailsTableId(table.id)}><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</button></td>
                     <td><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span></td>
                     <td><span className={qrReady ? "od-tables-qr ready" : "od-tables-qr"}>{qrReady ? "QR Ready" : "Unavailable"}</span></td>
                     <td>{ordersToday ?? "—"}</td><td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</td>
@@ -9108,9 +9137,30 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
             </tbody>
           </table>
         </div>
-        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday === null ? "Orders unavailable" : `${ordersToday} orders today`}</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
+        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><button className="od-table-details-trigger" type="button" onClick={() => setDetailsTableId(table.id)}><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</button><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday === null ? "Orders unavailable" : `${ordersToday} orders today`}</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
         {loading ? <div className="od-tables-empty">Loading tables...</div> : !available ? <div className="od-tables-empty">Tables are unavailable.</div> : rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
       </section>
+      {selectedRow && (
+        <div className="od-table-details-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsTableId(null); }}>
+          <aside className="od-table-details" ref={detailsDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="od-table-details-title">
+            <header><div><span>TABLE DETAILS</span><h2 id="od-table-details-title">Table {String(selectedRow.table.table_number).padStart(2, "0")}</h2>{selectedRow.table.label && selectedRow.table.label !== `Table ${selectedRow.table.table_number}` ? <p>{selectedRow.table.label}</p> : null}</div><button ref={detailsCloseRef} type="button" aria-label="Close table details" onClick={() => setDetailsTableId(null)}>×</button></header>
+            <section><h3>Current state</h3><dl className="od-table-details-state"><div><dt>Occupancy</dt><dd>{selectedRow.occupied ? "Occupied" : "Available"}</dd></div><div><dt>Ordering</dt><dd>{selectedRow.disabled ? "Disabled" : "Enabled"}</dd></div><div><dt>QR code</dt><dd>{selectedRow.qrReady ? "QR Ready" : "QR unavailable"}</dd></div></dl></section>
+            <section><h3>Today</h3><dl className="od-table-details-state"><div><dt>Orders</dt><dd>{selectedRow.ordersToday ?? "Unavailable"}</dd></div><div><dt>Last activity</dt><dd>{selectedRow.lastOrderAt ? fmtTimeAgo(selectedRow.lastOrderAt) : "Unavailable"}</dd></div>{selectedRow.lastScanAt ? <div><dt>Last QR scan</dt><dd>{fmtTimeAgo(selectedRow.lastScanAt)}</dd></div> : null}{selectedRow.scanCount !== null ? <div><dt>Scans</dt><dd>{selectedRow.scanCount}</dd></div> : null}</dl></section>
+            <section><h3>QR code</h3><div className="od-table-details-actions"><button type="button" onClick={() => openQrPreview(selectedRow.table)} disabled={!selectedRow.qrReady}>View QR</button><button type="button" onClick={() => { const resolution = getOrderingUrl(selectedRow.table.qr_url, selectedRow.table.qr_path); if (resolution.url) void printQrCards([{ table: selectedRow.table, orderingUrl: resolution.url }]); else setQrError(resolution.unavailableMessage ?? "This table QR code is unavailable."); }} disabled={!selectedRow.qrReady}>Print QR</button></div></section>
+            <section><h3>Table management</h3><button className="od-table-details-wide-action" type="button" onClick={() => setConfirmation({ kind: "active", tableId: selectedRow.table.id })} disabled={workingTableId === selectedRow.table.id}>{selectedRow.table.active ? "Disable Table" : "Enable Table"}</button></section>
+            <section className="od-table-details-security"><h3>QR security</h3><p>Replacing this QR disables every existing printed copy.</p><button type="button" onClick={() => setConfirmation({ kind: "replace", tableId: selectedRow.table.id })} disabled={workingTableId === selectedRow.table.id}>Replace QR Code</button></section>
+          </aside>
+        </div>
+      )}
+      {confirmationRow && confirmation && (
+        <div className="od-table-details-layer od-table-confirmation-layer" role="presentation">
+          <div className="od-table-confirmation" ref={confirmationDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="od-table-confirmation-title">
+            <h2 id="od-table-confirmation-title">{confirmation.kind === "replace" ? "Replace QR Code?" : `${confirmationRow.table.active ? "Disable" : "Enable"} Table?`}</h2>
+            <p>{confirmation.kind === "replace" ? `The current QR for Table ${String(confirmationRow.table.table_number).padStart(2, "0")} will stop working immediately. Printed copies must be replaced. Existing orders and table history are not deleted.` : confirmationRow.table.active ? "New QR orders will be blocked for this table. Existing sessions remain unchanged." : "New QR orders can be accepted for this table again."}</p>
+            <div><button ref={confirmationCancelRef} type="button" onClick={() => setConfirmation(null)} disabled={workingTableId !== null}>Cancel</button><button className={confirmation.kind === "replace" ? "od-table-security-confirm" : "od-btn-primary"} type="button" disabled={workingTableId !== null} onClick={() => void applyTableConfirmation()}>{workingTableId ? "Working..." : confirmation.kind === "replace" ? "Replace QR Code" : confirmationRow.table.active ? "Disable Table" : "Enable Table"}</button></div>
+          </div>
+        </div>
+      )}
       {previewTable && (
         <div
           className="od-modal-backdrop"
