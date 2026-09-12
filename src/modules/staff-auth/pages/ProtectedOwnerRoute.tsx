@@ -4,6 +4,7 @@ import { RestaurantSetupWizardPage } from "../../setup-wizard/pages/RestaurantSe
 import { useStaffAuthSession } from "../hooks/useStaffAuthSession";
 import { supabase } from "../../../core/database";
 import type { CurrencyConfig } from "../../../core/format/currency";
+import { clearOwnerRetainedResources } from "../../owner/services/ownerRetainedResources";
 
 type ProtectedOwnerRouteProps = {
   restaurantId: string;
@@ -15,7 +16,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 type AccessState =
   | { status: "loading" }
   | { status: "unauthorized"; reason: "session" | "access" }
-  | { status: "authorized"; restaurantId: string; restaurantName: string; ownerName: string; setupCompleted: boolean; currency: CurrencyConfig };
+  | { status: "authorized"; userId: string; requestedRestaurantId: string; restaurantId: string; restaurantName: string; ownerName: string; setupCompleted: boolean; currency: CurrencyConfig };
 
 export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRouteProps) {
   const authSession = useStaffAuthSession();
@@ -73,6 +74,8 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
 
         setAccessState({
           status: "authorized",
+          userId: authSession.userId!,
+          requestedRestaurantId: restaurantId,
           restaurantId: resolvedRestaurantId,
           restaurantName: restaurantData.name,
           ownerName: (data as { display_name?: string | null }).display_name || "Owner",
@@ -92,11 +95,19 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
     return () => { isMounted = false; };
   }, [authSession.status, authSession.userId, restaurantId]);
 
-  if (accessState.status === "loading") {
+  if (
+    accessState.status === "loading" ||
+    (accessState.status === "authorized" &&
+      (authSession.status !== "authenticated" ||
+        accessState.userId !== authSession.userId ||
+        accessState.requestedRestaurantId !== restaurantId))
+  ) {
+    clearOwnerRetainedResources();
     return <main className="route-message"><p>Loading owner dashboard...</p></main>;
   }
 
   if (accessState.status === "unauthorized") {
+    clearOwnerRetainedResources();
     if (accessState.reason === "session") {
       window.location.replace("/staff-login");
       return null;
@@ -118,6 +129,7 @@ export function ProtectedOwnerRoute({ restaurantId, section }: ProtectedOwnerRou
 
   return (
       <OwnerDashboardPage
+        ownerUserId={accessState.userId}
         restaurantId={accessState.restaurantId}
         restaurantName={accessState.restaurantName}
         ownerName={accessState.ownerName}

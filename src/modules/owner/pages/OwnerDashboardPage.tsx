@@ -97,6 +97,17 @@ import {
   type OwnerCoreResource,
   type OwnerCoreResourceStatus,
 } from "../services/ownerPerformance";
+import {
+  OWNER_RETAINED_POLICY,
+  OwnerRetainedAccessError,
+  activateOwnerRetainedScope,
+  assertOwnerRetainedRequestAccess,
+  clearOwnerRetainedResources,
+  ownerRetainedResourceKey,
+  readOwnerRetainedResource,
+  revalidateOwnerRetainedResource,
+  type OwnerRetainedScope,
+} from "../services/ownerRetainedResources";
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
@@ -845,6 +856,7 @@ const ACTIVE_ORDER_STATUSES: OperationalStatus[] = [
 ];
 
 type OwnerDashboardPageProps = {
+  ownerUserId: string;
   restaurantId: string;
   restaurantName: string;
   ownerName?: string;
@@ -1090,15 +1102,29 @@ function OwnerUtilityPanel({ panel, onClose }: { panel: OwnerUtilityPanelKind; o
 }
 
 export function OwnerDashboardPage({
+  ownerUserId,
   restaurantId,
   restaurantName,
   ownerName,
   currency,
   initialSection,
 }: OwnerDashboardPageProps & { initialSection?: string }) {
+  const retainedScope = useMemo<OwnerRetainedScope>(
+    () => ({ userId: ownerUserId, restaurantId }),
+    [ownerUserId, restaurantId],
+  );
+  const [ownerSessionClosing, setOwnerSessionClosing] = useState(false);
+  if (!ownerSessionClosing) activateOwnerRetainedScope(retainedScope);
   const now = useNow();
   const [nav, setNav] = useState<NavId>(
     () => OWNER_SECTION_NAV[initialSection ?? ""] ?? "overview",
+  );
+  const [financeSelection, setFinanceSelection] = useState<OwnerFinanceSelection>(
+    () => ({
+      period: "today",
+      customStart: toDateInputValue(new Date()),
+      customEnd: toDateInputValue(new Date()),
+    }),
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -1144,6 +1170,11 @@ export function OwnerDashboardPage({
   activeOwnerTimezone = restaurantConfig
     ? jsonString(restaurantConfig.profile, "timezone", "Africa/Nairobi")
     : "Africa/Nairobi";
+
+  useEffect(() => {
+    activateOwnerRetainedScope(retainedScope);
+    return () => clearOwnerRetainedResources();
+  }, [retainedScope]);
 
   useEffect(() => {
     setNav(OWNER_SECTION_NAV[initialSection ?? ""] ?? "overview");
@@ -2058,6 +2089,8 @@ export function OwnerDashboardPage({
   });
 
   async function handleSignOut() {
+    clearOwnerRetainedResources();
+    setOwnerSessionClosing(true);
     try {
       await signOutStaff();
     } finally {
@@ -2284,6 +2317,9 @@ export function OwnerDashboardPage({
     setMobileMenuOpen(false);
   }
 
+  if (ownerSessionClosing)
+    return <main className="route-message"><p>Signing out...</p></main>;
+
   return (
     <div className="od-root">
       <header className="od-mobile-appbar">
@@ -2447,7 +2483,14 @@ export function OwnerDashboardPage({
           />
         )}
         {nav === "analytics" && (
-          <AnalyticsPage data={dashboardData} restaurantId={restaurantId} />
+          <AnalyticsPage
+            key={`finance:${ownerUserId}:${restaurantId}`}
+            data={dashboardData}
+            restaurantId={restaurantId}
+            retainedScope={retainedScope}
+            selection={financeSelection}
+            onSelectionChanged={setFinanceSelection}
+          />
         )}
         {nav === "staff" && (
           <StaffPage
@@ -2460,6 +2503,7 @@ export function OwnerDashboardPage({
         )}
         {nav === "menu" && (
           <MenuPage
+            key={`menu:${ownerUserId}:${restaurantId}`}
             restaurantId={restaurantId}
             items={menuItems}
             categories={categories}
@@ -2467,6 +2511,7 @@ export function OwnerDashboardPage({
             topItems={topItems}
             loading={menuLoading}
             available={menuAvailable}
+            retainedScope={retainedScope}
             onMenuChanged={refreshMenu}
           />
         )}
@@ -2479,6 +2524,7 @@ export function OwnerDashboardPage({
         )}
         {nav === "qr" && (
           <QrTablesPage
+            key={`tables:${ownerUserId}:${restaurantId}`}
             restaurantId={restaurantId}
             restaurantName={restaurantConfig?.name ?? restaurantName}
             restaurantSlug={restaurantConfig?.slug ?? ""}
@@ -2487,6 +2533,7 @@ export function OwnerDashboardPage({
             tables={restaurantTables}
             loading={tablesLoading}
             available={tablesAvailable}
+            retainedScope={retainedScope}
             onTableChanged={(updatedTable) => {
               setRestaurantTables((previous) =>
                 previous
@@ -3019,6 +3066,11 @@ function RecentOrdersTable({
 }
 
 type FinancialPeriod = AnalyticsPeriod | "custom";
+type OwnerFinanceSelection = {
+  period: FinancialPeriod;
+  customStart: string;
+  customEnd: string;
+};
 type FinancialInvoice = {
   id: string;
   status: string;
@@ -3030,23 +3082,23 @@ type FinancialInvoice = {
 function AnalyticsPage({
   data,
   restaurantId,
+  retainedScope,
+  selection,
+  onSelectionChanged,
 }: {
   data: DashboardData;
   restaurantId: string;
+  retainedScope: OwnerRetainedScope;
+  selection: OwnerFinanceSelection;
+  onSelectionChanged: (selection: OwnerFinanceSelection) => void;
 }) {
-  const [period, setPeriod] = useState<FinancialPeriod>("today");
-  const [customStart, setCustomStart] = useState(() =>
-    toDateInputValue(new Date()),
-  );
-  const [customEnd, setCustomEnd] = useState(() =>
-    toDateInputValue(new Date()),
-  );
-  const [invoices, setInvoices] = useState<FinancialInvoice[]>([]);
-  const [loadingPeriodReport, setLoadingPeriodReport] = useState(true);
-  const [periodReportError, setPeriodReportError] = useState<string | null>(
-    null,
-  );
-
+  const { period, customStart, customEnd } = selection;
+  const setPeriod = (nextPeriod: FinancialPeriod) =>
+    onSelectionChanged({ ...selection, period: nextPeriod });
+  const setCustomStart = (nextStart: string) =>
+    onSelectionChanged({ ...selection, customStart: nextStart });
+  const setCustomEnd = (nextEnd: string) =>
+    onSelectionChanged({ ...selection, customEnd: nextEnd });
   const ranges = useMemo(() => {
     const selected =
       period === "custom"
@@ -3068,24 +3120,90 @@ function AnalyticsPage({
     };
   }, [customEnd, customStart, period]);
 
+  const financeDimensions = JSON.stringify({
+    period,
+    rangeStart: ranges.selected.rangeStart,
+    rangeEnd: ranges.selected.rangeEnd,
+    previousStart: ranges.previous.rangeStart,
+    previousEnd: ranges.previous.rangeEnd,
+  });
+  const financeResourceKey = ownerRetainedResourceKey(
+    retainedScope,
+    "finance-period",
+    financeDimensions,
+  );
+  const retainedFinance = readOwnerRetainedResource<FinancialInvoice[]>({
+    scope: retainedScope,
+    resource: "finance-period",
+    dimensions: financeDimensions,
+    ...OWNER_RETAINED_POLICY.financePeriod,
+  });
+  const [financeState, setFinanceState] = useState<{
+    key: string;
+    value: FinancialInvoice[] | null;
+    updatedAt: number | null;
+  }>(() => ({
+    key: financeResourceKey,
+    value: retainedFinance?.value ?? null,
+    updatedAt: retainedFinance?.updatedAt ?? null,
+  }));
+  const financeValue =
+    financeState.key === financeResourceKey
+      ? financeState.value
+      : retainedFinance?.value ?? null;
+  const invoices = financeValue ?? [];
+  const financeDataAvailable = financeValue !== null;
+  const [loadingPeriodReport, setLoadingPeriodReport] = useState(
+    !financeDataAvailable,
+  );
+  const [periodReportError, setPeriodReportError] = useState<string | null>(
+    null,
+  );
+  const financeError =
+    financeState.key === financeResourceKey ? periodReportError : null;
+  const financePlaceholder = financeError ? "Unavailable" : "Loading...";
+  const observedFinancePaymentsRef = useRef(data.payments);
+
   useEffect(() => {
     let mounted = true;
+    const paymentsChanged = observedFinancePaymentsRef.current !== data.payments;
+    observedFinancePaymentsRef.current = data.payments;
     async function loadPeriodReport() {
       try {
         setLoadingPeriodReport(true);
         setPeriodReportError(null);
-        const { data: rows, error } = await supabase
-          .from("order_invoices")
-          .select("id,status,payment_status,total_price,payment_method,paid_at")
-          .eq("restaurant_id", restaurantId)
-          .eq("payment_status", "paid")
-          .gte("paid_at", ranges.previous.rangeStart)
-          .lt("paid_at", ranges.selected.rangeEnd)
-          .order("paid_at", { ascending: true });
-        if (error) throw new Error(error.message);
-        if (mounted)
-          setInvoices(
-            (rows ?? [])
+        const retained = readOwnerRetainedResource<FinancialInvoice[]>({
+          scope: retainedScope,
+          resource: "finance-period",
+          dimensions: financeDimensions,
+          ...OWNER_RETAINED_POLICY.financePeriod,
+        });
+        if (mounted) {
+          setFinanceState({
+            key: financeResourceKey,
+            value: retained?.value ?? null,
+            updatedAt: retained?.updatedAt ?? null,
+          });
+        }
+        const nextInvoices = await revalidateOwnerRetainedResource({
+          scope: retainedScope,
+          resource: "finance-period",
+          dimensions: financeDimensions,
+          afterPending: paymentsChanged,
+          loader: async () => {
+            const { data: rows, error, status } = await supabase
+              .from("order_invoices")
+              .select(
+                "id,status,payment_status,total_price,payment_method,paid_at",
+              )
+              .eq("restaurant_id", restaurantId)
+              .eq("payment_status", "paid")
+              .gte("paid_at", ranges.previous.rangeStart)
+              .lt("paid_at", ranges.selected.rangeEnd)
+              .order("paid_at", { ascending: true });
+            assertOwnerRetainedRequestAccess(status);
+            if (error) throw new Error(error.message);
+            return (rows ?? [])
               .filter(
                 (row) => row.payment_status === "paid" && Boolean(row.paid_at),
               )
@@ -3095,15 +3213,30 @@ function AnalyticsPage({
                 total: Number(row.total_price),
                 method: canonicalPaymentMethod(row.payment_method),
                 verifiedAt: String(row.paid_at),
-              })),
-          );
+              }));
+          },
+        });
+        if (mounted) {
+          setFinanceState({
+            key: financeResourceKey,
+            value: nextInvoices,
+            updatedAt: Date.now(),
+          });
+        }
       } catch (loadError) {
-        if (mounted)
+        if (mounted) {
+          if (loadError instanceof OwnerRetainedAccessError)
+            setFinanceState({
+              key: financeResourceKey,
+              value: null,
+              updatedAt: null,
+            });
           setPeriodReportError(
             loadError instanceof Error
               ? loadError.message
               : "Could not load revenue report.",
           );
+        }
       } finally {
         if (mounted) setLoadingPeriodReport(false);
       }
@@ -3113,7 +3246,14 @@ function AnalyticsPage({
     return () => {
       mounted = false;
     };
-  }, [data.payments, ranges, restaurantId]);
+  }, [
+    data.payments,
+    financeDimensions,
+    financeResourceKey,
+    ranges,
+    restaurantId,
+    retainedScope,
+  ]);
 
   const selectedInvoices = invoices.filter((invoice) =>
     isInRange(
@@ -3244,8 +3384,10 @@ function AnalyticsPage({
         {["Revenue", "Expenses", "Profit", "Cash Register", "Payment Methods", "Taxes", "Refunds", "Daily Closing", "Financial Summary"].map((item, index) => <button type="button" key={item} className={index === 0 ? "active" : ""}><span>{["↗", "−", "+", "▤", "◇", "%", "↙", "✓", "◎"][index]}</span>{item}</button>)}
       </nav>
 
-      {periodReportError && (
-        <div className="od-error-inline">{periodReportError}</div>
+      {financeError && (
+        <div className="od-error-inline">
+          {financeError}{financeDataAvailable ? " Showing last known results." : ""}
+        </div>
       )}
       {period === "custom" ? (
         <div className="od-custom-range">
@@ -3275,38 +3417,39 @@ function AnalyticsPage({
           <article key={row.method}>
             <span>{row.method}</span>
             <strong>
-              {loadingPeriodReport ? "Loading..." : fmtMoney(row.total)}
+              {!financeDataAvailable ? financePlaceholder : fmtMoney(row.total)}
             </strong>
           </article>
         ))}
         <article className="total">
           <span>Total Revenue</span>
           <strong>
-            {loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}
+            {!financeDataAvailable ? financePlaceholder : fmtMoney(grossRevenue)}
           </strong>
         </article>
         <article>
           <span>VAT</span>
           <strong>
-            {loadingPeriodReport ? "Loading..." : fmtMoney(Math.round(vat))}
+            {!financeDataAvailable ? financePlaceholder : fmtMoney(Math.round(vat))}
           </strong>
         </article>
         <article>
           <span>Net Revenue</span>
           <strong>
-            {loadingPeriodReport
-              ? "Loading..."
+            {!financeDataAvailable
+              ? financePlaceholder
               : fmtMoney(Math.round(netRevenue))}
           </strong>
         </article>
         <article>
           <span>Gross Revenue</span>
           <strong>
-            {loadingPeriodReport ? "Loading..." : fmtMoney(grossRevenue)}
+            {!financeDataAvailable ? financePlaceholder : fmtMoney(grossRevenue)}
           </strong>
         </article>
       </div>
 
+      {financeDataAvailable ? <>
       <section className="od-financial-comparison">
         <div>
           <span>{comparisonLabel}</span>
@@ -3375,6 +3518,16 @@ function AnalyticsPage({
         <FinancialChart title="Weekly Revenue" rows={weekly} />
         <FinancialChart title="Monthly Revenue" rows={monthly} />
       </div>
+      </> : (
+        <div className="od-empty">
+          {financeError
+            ? "Financial data is unavailable."
+            : "Loading financial data..."}
+        </div>
+      )}
+      {loadingPeriodReport && financeDataAvailable ? (
+        <span className="sr-only" role="status">Refreshing financial data</span>
+      ) : null}
     </div>
   );
 }
@@ -5085,8 +5238,23 @@ type MenuPageProps = {
   topItems: { name: string; quantity: number; revenue: number }[];
   loading: boolean;
   available: boolean;
+  retainedScope: OwnerRetainedScope;
   onMenuChanged: () => Promise<void>;
 };
+
+async function loadOwnerMenuUploads(restaurantId: string) {
+  const { data, error, status } = await supabase
+    .from("menu_uploads")
+    .select("id,file_name,file_path,file_url,mime_type,size_bytes,created_at")
+    .eq("restaurant_id", restaurantId)
+    .order("created_at", { ascending: false });
+  assertOwnerRetainedRequestAccess(status);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    ...row,
+    size_bytes: Number(row.size_bytes),
+  })) as OdMenuUpload[];
+}
 
 function getCategoryName(categories: OdCategory[], categoryId: string) {
   return (
@@ -5188,6 +5356,7 @@ function MenuPage({
   topItems,
   loading,
   available,
+  retainedScope,
   onMenuChanged,
 }: MenuPageProps) {
   const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -5223,7 +5392,19 @@ function MenuPage({
   const [directInventorySearch, setDirectInventorySearch] = useState("");
   const [recipeOptions, setRecipeOptions] = useState<MenuRecipeOption[]>([]);
   const [directInventoryOptions, setDirectInventoryOptions] = useState<DirectInventoryOption[]>([]);
-  const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>([]);
+  const retainedMenuUploads = readOwnerRetainedResource<OdMenuUpload[]>({
+    scope: retainedScope,
+    resource: "menu-uploads",
+    ...OWNER_RETAINED_POLICY.menuUploads,
+  });
+  const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>(
+    () => retainedMenuUploads?.value ?? [],
+  );
+  const [menuUploadsAvailable, setMenuUploadsAvailable] = useState(
+    retainedMenuUploads !== null,
+  );
+  const [menuUploadsError, setMenuUploadsError] = useState<string | null>(null);
+  const [menuUploadsRefreshing, setMenuUploadsRefreshing] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -5280,48 +5461,64 @@ function MenuPage({
     let mounted = true;
 
     async function loadMenuUploads() {
-      const { data, error } = await supabase
-        .from("menu_uploads")
-        .select(
-          "id,file_name,file_path,file_url,mime_type,size_bytes,created_at",
-        )
-        .eq("restaurant_id", restaurantId)
-        .order("created_at", { ascending: false });
-
-      if (!mounted) return;
-      if (error) {
-        setMenuError(error.message);
-        return;
+      setMenuUploadsRefreshing(true);
+      try {
+        const retained = readOwnerRetainedResource<OdMenuUpload[]>({
+          scope: retainedScope,
+          resource: "menu-uploads",
+          ...OWNER_RETAINED_POLICY.menuUploads,
+        });
+        if (mounted && retained) {
+          setMenuUploads(retained.value);
+          setMenuUploadsAvailable(true);
+        }
+        const nextUploads = await revalidateOwnerRetainedResource({
+          scope: retainedScope,
+          resource: "menu-uploads",
+          loader: () => loadOwnerMenuUploads(restaurantId),
+        });
+        if (mounted) {
+          setMenuUploads(nextUploads);
+          setMenuUploadsAvailable(true);
+          setMenuUploadsError(null);
+        }
+      } catch (loadError) {
+        if (mounted) {
+          if (loadError instanceof OwnerRetainedAccessError) {
+            setMenuUploads([]);
+            setMenuUploadsAvailable(false);
+          }
+          setMenuUploadsError("Menu files could not be refreshed.");
+        }
+      } finally {
+        if (mounted) setMenuUploadsRefreshing(false);
       }
-
-      setMenuUploads(
-        (data ?? []).map((row) => ({
-          ...row,
-          size_bytes: Number(row.size_bytes),
-        })) as OdMenuUpload[],
-      );
     }
 
     void loadMenuUploads();
     return () => {
       mounted = false;
     };
-  }, [restaurantId]);
+  }, [restaurantId, retainedScope]);
 
   async function refreshMenuUploads() {
-    const { data, error } = await supabase
-      .from("menu_uploads")
-      .select("id,file_name,file_path,file_url,mime_type,size_bytes,created_at")
-      .eq("restaurant_id", restaurantId)
-      .order("created_at", { ascending: false });
-
-    if (error) throw new Error(error.message);
-    setMenuUploads(
-      (data ?? []).map((row) => ({
-        ...row,
-        size_bytes: Number(row.size_bytes),
-      })) as OdMenuUpload[],
-    );
+    try {
+      const nextUploads = await revalidateOwnerRetainedResource({
+        scope: retainedScope,
+        resource: "menu-uploads",
+        loader: () => loadOwnerMenuUploads(restaurantId),
+        afterPending: true,
+      });
+      setMenuUploads(nextUploads);
+      setMenuUploadsAvailable(true);
+      setMenuUploadsError(null);
+    } catch (refreshError) {
+      if (refreshError instanceof OwnerRetainedAccessError) {
+        setMenuUploads([]);
+        setMenuUploadsAvailable(false);
+      }
+      throw refreshError;
+    }
   }
 
   function openCreateModal() {
@@ -5724,9 +5921,9 @@ function MenuPage({
         </div>
       </div>
 
-      {(menuError || notice) && (
-        <div className={menuError ? "od-error-inline" : "od-success-inline"}>
-          {menuError || notice}
+      {(menuError || menuUploadsError || notice) && (
+        <div className={menuError || menuUploadsError ? "od-error-inline" : "od-success-inline"}>
+          {menuError || menuUploadsError || notice}
         </div>
       )}
 
@@ -5742,7 +5939,18 @@ function MenuPage({
           </div>
         </div>
         <div className="od-menu-upload-list">
-          {menuUploads.length === 0 ? (
+          {menuUploadsRefreshing && menuUploadsAvailable ? (
+            <span className="sr-only" role="status">Refreshing uploaded menu files</span>
+          ) : null}
+          {!menuUploadsAvailable ? (
+            <div className="od-empty compact">
+              <div className="od-empty-msg">
+                {menuUploadsError
+                  ? "Menu files are unavailable."
+                  : "Loading uploaded menu files..."}
+              </div>
+            </div>
+          ) : menuUploads.length === 0 ? (
             <div className="od-empty compact">
               <div className="od-empty-msg">No menu files uploaded</div>
               <div className="od-empty-sub">
@@ -8425,6 +8633,7 @@ function QrTablesPage({
   tables,
   loading,
   available,
+  retainedScope,
   onTableChanged,
 }: {
   restaurantId: string;
@@ -8435,12 +8644,24 @@ function QrTablesPage({
   tables: RestaurantTable[];
   loading: boolean;
   available: boolean;
+  retainedScope: OwnerRetainedScope;
   onTableChanged: (table: RestaurantTable) => void;
 }) {
-  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
+  const retainedTableStats =
+    readOwnerRetainedResource<Record<string, RestaurantTableQrStats>>({
+      scope: retainedScope,
+      resource: "table-stats",
+      ...OWNER_RETAINED_POLICY.tableStats,
+    });
   const [qrStats, setQrStats] = useState<
-    Record<string, RestaurantTableQrStats>
-  >({});
+    Record<string, RestaurantTableQrStats> | null
+  >(() => retainedTableStats?.value ?? null);
+  const [qrStatsError, setQrStatsError] = useState<string | null>(null);
+  const [qrStatsRefreshing, setQrStatsRefreshing] = useState(false);
+  const [previewQrCode, setPreviewQrCode] = useState<{
+    tableId: string;
+    dataUrl: string;
+  } | null>(null);
   const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(
     null,
   );
@@ -8451,6 +8672,8 @@ function QrTablesPage({
   const [qrError, setQrError] = useState<string | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const observedTablesRef = useRef(tables);
+  const observedTableSessionsRef = useRef(orders);
   const occupiedTableIds = getOccupiedOwnerTableIds(orders, restaurantId);
   const rows = tables.map((restaurantTable) => {
     const occupied = occupiedTableIds.has(restaurantTable.id);
@@ -8466,10 +8689,13 @@ function QrTablesPage({
         : occupied
           ? "Occupied"
           : "Available",
-      ordersToday: qrStats[restaurantTable.id]?.orders_today ?? 0,
-      lastScanAt: qrStats[restaurantTable.id]?.last_scan_at ?? null,
-      lastOrderAt: qrStats[restaurantTable.id]?.last_order_at ?? null,
-      scanCount: qrStats[restaurantTable.id]?.scan_count ?? null,
+      ordersToday:
+        qrStats === null
+          ? null
+          : qrStats[restaurantTable.id]?.orders_today ?? null,
+      lastScanAt: qrStats?.[restaurantTable.id]?.last_scan_at ?? null,
+      lastOrderAt: qrStats?.[restaurantTable.id]?.last_order_at ?? null,
+      scanCount: qrStats?.[restaurantTable.id]?.scan_count ?? null,
       orderingResolution: getOrderingUrl(
         restaurantTable.qr_url,
         restaurantTable.qr_path,
@@ -8490,82 +8716,89 @@ function QrTablesPage({
   });
 
   useEffect(() => {
-    let mounted = true;
-    async function generateQrCodes() {
-      const pairs = await Promise.all(
-        tables.map(async (table) => {
-          const resolution = getOrderingUrl(table.qr_url, table.qr_path);
-          if (!resolution.url) return [table.id, ""] as const;
-          logOwnerQrDiagnostic("ownerDashboard:generatedQrUrl", {
-            currentAppUrl: getOrderingUrlOrigin(resolution.url),
-            restaurantId,
-            tableNumber: table.table_number,
-          });
-          assertAbsoluteQrPayload(resolution.url);
-          const dataUrl = await QRCode.toDataURL(resolution.url, { width: 96, margin: 1 });
-          return [table.id, dataUrl] as const;
-        }),
-      );
-      if (mounted) setQrCodes(Object.fromEntries(pairs));
-    }
-    void generateQrCodes();
-    return () => {
-      mounted = false;
-    };
-  }, [restaurantId, tables]);
-
-  useEffect(() => {
     if (loading || !available) return;
     let mounted = true;
+    const tablesChanged = observedTablesRef.current !== tables;
+    const sessionsChanged = observedTableSessionsRef.current !== orders;
+    observedTablesRef.current = tables;
+    observedTableSessionsRef.current = orders;
     async function loadQrStats() {
+      setQrStatsRefreshing(true);
       try {
-        const { data, error } = await supabase.rpc("get_owner_table_qr_stats", {
-          target_restaurant_id: restaurantId,
+        setQrStatsError(null);
+        const retained =
+          readOwnerRetainedResource<Record<string, RestaurantTableQrStats>>({
+            scope: retainedScope,
+            resource: "table-stats",
+            ...OWNER_RETAINED_POLICY.tableStats,
+          });
+        if (mounted && retained) setQrStats(retained.value);
+        const normalizedStats = await revalidateOwnerRetainedResource({
+          scope: retainedScope,
+          resource: "table-stats",
+          afterPending: tablesChanged || sessionsChanged,
+          loader: async () => {
+            const { data, error, status } = await supabase.rpc(
+              "get_owner_table_qr_stats",
+              { target_restaurant_id: restaurantId },
+            );
+            assertOwnerRetainedRequestAccess(status);
+            if (error) throw new Error(error.message);
+            const statRows = Array.isArray(data) ? data : [];
+            return statRows.reduce<Record<string, RestaurantTableQrStats>>(
+              (accumulator, row) => {
+                if (!row || typeof row !== "object") return accumulator;
+                const payload = row as Record<string, unknown>;
+                const tableId =
+                  typeof payload.table_id === "string"
+                    ? payload.table_id
+                    : "";
+                if (!tableId) return accumulator;
+                const ordersToday = Number(payload.orders_today);
+                if (
+                  payload.orders_today === null ||
+                  payload.orders_today === undefined ||
+                  !Number.isFinite(ordersToday)
+                )
+                  return accumulator;
+                accumulator[tableId] = {
+                  table_id: tableId,
+                  orders_today: ordersToday,
+                  last_scan_at:
+                    typeof payload.last_scan_at === "string"
+                      ? payload.last_scan_at
+                      : null,
+                  last_order_at:
+                    typeof payload.last_order_at === "string"
+                      ? payload.last_order_at
+                      : null,
+                  scan_count:
+                    payload.scan_count === null ||
+                    typeof payload.scan_count === "undefined"
+                      ? null
+                      : Number(payload.scan_count),
+                };
+                return accumulator;
+              },
+              {},
+            );
+          },
         });
-        if (error) throw new Error(error.message);
-        const statRows = Array.isArray(data) ? data : [];
-        const normalizedStats = statRows.reduce<
-          Record<string, RestaurantTableQrStats>
-        >((accumulator, row) => {
-          if (!row || typeof row !== "object") return accumulator;
-          const payload = row as Record<string, unknown>;
-          const tableId =
-            typeof payload.table_id === "string" ? payload.table_id : "";
-          if (!tableId) return accumulator;
-          accumulator[tableId] = {
-            table_id: tableId,
-            orders_today: Number(payload.orders_today ?? 0),
-            last_scan_at:
-              typeof payload.last_scan_at === "string"
-                ? payload.last_scan_at
-                : null,
-            last_order_at:
-              typeof payload.last_order_at === "string"
-                ? payload.last_order_at
-                : null,
-            scan_count:
-              payload.scan_count === null ||
-              typeof payload.scan_count === "undefined"
-                ? null
-                : Number(payload.scan_count),
-          };
-          return accumulator;
-        }, {});
         if (mounted) setQrStats(normalizedStats);
       } catch (statsError) {
-        if (mounted)
-          setQrError(
-            statsError instanceof Error
-              ? statsError.message
-              : "Could not load QR statistics.",
-          );
+        if (mounted) {
+          if (statsError instanceof OwnerRetainedAccessError) setQrStats(null);
+          setQrStatsError("Could not refresh table activity.");
+        }
+      } finally {
+        if (mounted) setQrStatsRefreshing(false);
       }
     }
     void loadQrStats();
     return () => {
       mounted = false;
     };
-  }, [available, loading, restaurantId, tables, orders]);
+  }, [available, loading, restaurantId, retainedScope, tables, orders]);
 
   async function regenerateQr(table: RestaurantTable) {
     try {
@@ -8640,6 +8873,29 @@ function QrTablesPage({
     previewTable && previewUrl
       ? { table: previewTable, orderingUrl: previewUrl }
       : null;
+  useEffect(() => {
+    let mounted = true;
+    setPreviewQrCode(null);
+    if (!previewTable || !previewUrl) return () => undefined;
+    logOwnerQrDiagnostic("ownerDashboard:generatedQrUrl", {
+      currentAppUrl: getOrderingUrlOrigin(previewUrl),
+      restaurantId,
+      tableNumber: previewTable.table_number,
+    });
+    assertAbsoluteQrPayload(previewUrl);
+    void QRCode.toDataURL(previewUrl, { width: 360, margin: 1 }).then(
+      (dataUrl) => {
+        if (mounted)
+          setPreviewQrCode({ tableId: previewTable.id, dataUrl });
+      },
+      () => {
+        if (mounted) setQrError("Could not generate this QR preview.");
+      },
+    );
+    return () => {
+      mounted = false;
+    };
+  }, [previewTable, previewUrl, restaurantId]);
   const toPrintableTables = (candidateRows: typeof rows): PrintableQrTable[] =>
     candidateRows.flatMap(({ table, orderingResolution }) =>
       orderingResolution.url
@@ -8798,9 +9054,12 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         <div><strong>{loading || !available ? "—" : rows.filter((row) => !row.occupied && !row.disabled).length}</strong><span>Available</span></div>
         <div className="disabled"><strong>{loading || !available ? "—" : rows.filter((row) => row.disabled).length}</strong><span>Disabled</span></div>
       </section>
-      {(qrError || notice) && (
-        <div className={qrError ? "od-error-inline" : "od-success-inline"}>
-          {qrError || notice}
+      {(qrError || qrStatsError || notice) && (
+        <div className={qrError || qrStatsError ? "od-error-inline" : "od-success-inline"}>
+          {qrError || qrStatsError || notice}
+          {!qrError && qrStatsError && qrStats !== null
+            ? " Showing last known activity."
+            : ""}
         </div>
       )}
       {printError && (
@@ -8810,6 +9069,9 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         </div>
       )}
       <section className="od-tables-workspace">
+        {qrStatsRefreshing && qrStats !== null ? (
+          <span className="sr-only" role="status">Refreshing table activity</span>
+        ) : null}
         <div className="od-tables-toolbar">
           <label className="od-tables-search"><span className="sr-only">Search tables</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table" aria-label="Search tables" /></label>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="Filter tables by status">
@@ -8828,14 +9090,14 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
                     <td><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</td>
                     <td><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span></td>
                     <td><span className={qrReady ? "od-tables-qr ready" : "od-tables-qr"}>{qrReady ? "QR Ready" : "Unavailable"}</span></td>
-                    <td>{ordersToday}</td><td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</td>
+                    <td>{ordersToday ?? "—"}</td><td>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</td>
                     <td>{tableActionMenu(table)}</td>
                   </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday} orders today</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
+        <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><div><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</div><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday === null ? "Orders unavailable" : `${ordersToday} orders today`}</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
         {loading ? <div className="od-tables-empty">Loading tables...</div> : !available ? <div className="od-tables-empty">Tables are unavailable.</div> : rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
       </section>
       {previewTable && (
@@ -8883,10 +9145,10 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
               <div className="od-qr-table-number">
                 Table {previewTable.table_number}
               </div>
-              {qrCodes[previewTable.id] ? (
+              {previewQrCode?.tableId === previewTable.id ? (
                 <img
                   className="od-qr-large"
-                  src={qrCodes[previewTable.id]}
+                  src={previewQrCode.dataUrl}
                   alt={`QR code for table ${previewTable.table_number}`}
                 />
               ) : (
