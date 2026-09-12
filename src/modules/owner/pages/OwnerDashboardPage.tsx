@@ -108,6 +108,7 @@ import {
   revalidateOwnerRetainedResource,
   type OwnerRetainedScope,
 } from "../services/ownerRetainedResources";
+import { createOwnerRealtimeRefreshScheduler } from "../services/ownerRealtimeRefreshScheduler";
 import "../styles/ownerDashboard.css";
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
@@ -1209,6 +1210,7 @@ export function OwnerDashboardPage({
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(
     [],
   );
+  const [tableStatsRefreshVersion, setTableStatsRefreshVersion] = useState(0);
   const [kitchenStations, setKitchenStations] = useState<OdKitchenStation[]>(
     [],
   );
@@ -1511,6 +1513,36 @@ export function OwnerDashboardPage({
       }
     }
 
+    const realtimeRefresh = createOwnerRealtimeRefreshScheduler({
+      scope: { userId: ownerUserId, restaurantId },
+      refresh: {
+        financial: async () => {
+          await Promise.all([
+            refreshPayments().catch((cause) => {
+              if (active)
+                setError(cause instanceof Error ? cause.message : "Failed to refresh payments.");
+            }),
+            refreshUnresolvedObligations(),
+            refreshHomeComparison(),
+          ]);
+        },
+        "table-metadata": async () => {
+          await refreshRestaurantConfig().catch((cause) => {
+            if (active)
+              setError(cause instanceof Error ? cause.message : "Failed to refresh table configuration.");
+          });
+          if (active) setTableStatsRefreshVersion((version) => version + 1);
+        },
+        "table-stats": () => {
+          if (active) setTableStatsRefreshVersion((version) => version + 1);
+        },
+        menu: () => refreshMenu().catch((cause) => {
+          if (active)
+            setError(cause instanceof Error ? cause.message : "Failed to refresh menu items.");
+        }),
+      },
+    });
+
     const channel = createRestaurantEventConsumer(restaurantId)
       .onTable({
           event: "*",
@@ -1519,6 +1551,7 @@ export function OwnerDashboardPage({
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         (payload) => {
+          realtimeRefresh.mark("table-stats");
           const deletedId = String(
             (payload.old as { id?: string } | null)?.id ?? "",
           );
@@ -1736,36 +1769,7 @@ export function OwnerDashboardPage({
               });
             }
           }
-          void supabase
-            .from("order_invoices")
-            .select(
-              "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
-            )
-            .eq("restaurant_id", restaurantId)
-            .eq("payment_status", "paid")
-            .order("paid_at", { ascending: false })
-            .limit(1000)
-            .then(({ data, error: paymentError }) => {
-              if (paymentError) {
-                setError(paymentError.message);
-                return;
-              }
-              setPayments(
-                (data ?? []).map((row) => ({
-                  id: String(row.id),
-                  order_id: String(row.order_id),
-                  status: String(row.status),
-                  payment_status: String(row.payment_status),
-                  total_price: Number(row.total_price),
-                  payment_method: row.payment_method ?? null,
-                  verified_at: row.paid_at ?? null,
-                  paid_at: row.paid_at ?? null,
-                  created_at: String(row.created_at),
-                })),
-              );
-            });
-          void refreshUnresolvedObligations();
-          void refreshHomeComparison();
+          realtimeRefresh.mark("financial");
         },
       )
       .onTable({
@@ -1802,13 +1806,7 @@ export function OwnerDashboardPage({
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         () => {
-          void refreshRestaurantConfig().catch((refreshError) => {
-            setError(
-              refreshError instanceof Error
-                ? refreshError.message
-                : "Failed to refresh table configuration.",
-            );
-          });
+          realtimeRefresh.mark("table-metadata");
         },
       )
       .onTable({
@@ -1818,13 +1816,7 @@ export function OwnerDashboardPage({
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         () => {
-          void refreshMenu().catch((refreshError) => {
-            setError(
-              refreshError instanceof Error
-                ? refreshError.message
-                : "Failed to refresh menu items.",
-            );
-          });
+          realtimeRefresh.mark("menu");
         },
       )
       .onTable({
@@ -1889,9 +1881,10 @@ export function OwnerDashboardPage({
       active = false;
       reconciliationSequence += 1;
       ownerOrdersRealtimeRecoveryPendingRef.current = false;
+      realtimeRefresh.dispose();
       channel.unsubscribe();
     };
-  }, [restaurantId]);
+  }, [ownerUserId, restaurantId]);
 
   const ordersLoading = isOwnerWorkspaceLoading("orders", coreResourceStatus);
   const homeLoading = isOwnerWorkspaceLoading("overview", coreResourceStatus);
@@ -2135,6 +2128,20 @@ export function OwnerDashboardPage({
     } finally {
       setHomeComparisonLoading(false);
     }
+  }
+
+  async function refreshPayments() {
+    const { data, error: paymentError } = await supabase
+      .from("order_invoices")
+      .select(
+        "id,order_id,status,payment_status,total_price,payment_method,paid_at,created_at",
+      )
+      .eq("restaurant_id", restaurantId)
+      .eq("payment_status", "paid")
+      .order("paid_at", { ascending: false })
+      .limit(1000);
+    if (paymentError) throw new Error(paymentError.message);
+    setPayments(normalizeOwnerPayments(data));
   }
 
   async function refreshUnresolvedObligations() {
@@ -2534,6 +2541,7 @@ export function OwnerDashboardPage({
             loading={tablesLoading}
             available={tablesAvailable}
             retainedScope={retainedScope}
+            statsRefreshVersion={tableStatsRefreshVersion}
             onTableChanged={(updatedTable) => {
               setRestaurantTables((previous) =>
                 previous
@@ -2544,6 +2552,7 @@ export function OwnerDashboardPage({
                     (left, right) => left.table_number - right.table_number,
                   ),
               );
+              setTableStatsRefreshVersion((version) => version + 1);
             }}
           />
         )}
@@ -8634,6 +8643,7 @@ function QrTablesPage({
   loading,
   available,
   retainedScope,
+  statsRefreshVersion,
   onTableChanged,
 }: {
   restaurantId: string;
@@ -8645,6 +8655,7 @@ function QrTablesPage({
   loading: boolean;
   available: boolean;
   retainedScope: OwnerRetainedScope;
+  statsRefreshVersion: number;
   onTableChanged: (table: RestaurantTable) => void;
 }) {
   const retainedTableStats =
@@ -8798,7 +8809,7 @@ function QrTablesPage({
     return () => {
       mounted = false;
     };
-  }, [available, loading, restaurantId, retainedScope, tables, orders]);
+  }, [available, loading, restaurantId, retainedScope, statsRefreshVersion]);
 
   async function regenerateQr(table: RestaurantTable) {
     try {
