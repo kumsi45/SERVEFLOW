@@ -13,6 +13,15 @@ async function main() {
     const reproduce = process.argv[2] === '--rollback-reproduce';
     await db.query(reproduce ? 'begin' : 'begin read only');
     await db.query("set local statement_timeout = '15s'");
+    if (process.argv[2] === '--creation-map') {
+      const creators = await db.query(`select p.proname, pg_get_function_identity_arguments(p.oid) arguments
+        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+        where n.nspname='public' and p.prokind='f'
+          and pg_get_functiondef(p.oid) ~* 'insert\\s+into\\s+(public\\.)?orders\\s*\\('
+        order by p.proname,arguments`);
+      console.log(JSON.stringify(creators.rows,null,2));
+      return;
+    }
     if (reproduce) {
       const { randomUUID } = require('crypto');
       const business = await db.query('select id, slug from public.restaurants where active=true order by created_at limit 1');
@@ -55,7 +64,7 @@ async function main() {
     }
     const result = await db.query(`select p.proname, pg_get_function_identity_arguments(p.oid) arguments,
       pg_get_functiondef(p.oid) definition from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and (p.proname ~ '^(get_public_qr_order_session|get_public_qr_menu|log_public_qr_scan|get_smart_qr_portal_state|is_public_qr_dining_session_open|expire_stale_dining_sessions|create_public_qr_order|create_waiter_order|validate_public_qr|try_auto_release_settled_service_location|auto_release_dining_session_for_new_browser_scan)' )
+      where n.nspname='public' and (p.proname ~ '^(get_public_qr_order_session|get_public_qr_menu|log_public_qr_scan|get_smart_qr_portal_state|is_public_qr_dining_session_open|expire_stale_dining_sessions|create_public_qr_order|create_waiter_order|create_cashier_order|create_customer_order|append_items_to_order|split_waiter_party|validate_public_qr|try_auto_release_settled_service_location|auto_release_dining_session_for_new_browser_scan)' )
       order by p.proname, arguments`);
     const selected = process.argv[2];
     for (const row of result.rows) {
