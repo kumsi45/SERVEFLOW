@@ -8634,6 +8634,97 @@ function buildPdfFromJpegs(
   return new Blob(blobParts, { type: "application/pdf" });
 }
 
+type QrPrintCenterRow = {
+  table: RestaurantTable;
+  disabled: boolean;
+  qrReady: boolean;
+  orderingResolution: { url: string | null; unavailableMessage: string | null };
+};
+
+type QrPrintFormat = "compact" | "large" | "single";
+
+const QR_PRINT_FORMATS: Record<QrPrintFormat, { cardsPerPage: number; label: string }> = {
+  compact: { cardsPerPage: 6, label: "6 per page — Recommended" },
+  large: { cardsPerPage: 4, label: "4 per page" },
+  single: { cardsPerPage: 1, label: "1 per page" },
+};
+
+function QrPrintCenter({ restaurantName, logoUrl, rows, onClose }: {
+  restaurantName: string;
+  logoUrl: string;
+  rows: QrPrintCenterRow[];
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [format, setFormat] = useState<QrPrintFormat>("compact");
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => rows.filter((row) => row.table.active && row.qrReady && row.orderingResolution.url).map((row) => row.table.id));
+  const [images, setImages] = useState<Record<string, string>>({});
+  const imageSourcesRef = useRef<Record<string, string>>({});
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showLogo, setShowLogo] = useState(Boolean(logoUrl));
+  const [showServeFlow, setShowServeFlow] = useState(true);
+  useModalFocus(true, onClose, dialogRef, closeRef);
+
+  const selectedRows = rows.filter((row) => selectedIds.includes(row.table.id)).sort((a, b) => a.table.table_number - b.table.table_number);
+  const printableRows = selectedRows.filter((row) => row.qrReady && row.orderingResolution.url);
+  const unavailableCount = selectedRows.length - printableRows.length;
+  const disabledCount = selectedRows.filter((row) => row.disabled).length;
+  const cardsPerPage = QR_PRINT_FORMATS[format].cardsPerPage;
+  const pageCount = Math.ceil(printableRows.length / cardsPerPage);
+  const pages = Array.from({ length: pageCount }, (_, index) => printableRows.slice(index * cardsPerPage, (index + 1) * cardsPerPage));
+
+  useEffect(() => {
+    let active = true;
+    const missing = printableRows.filter((row) => imageSourcesRef.current[row.table.id] !== row.orderingResolution.url);
+    if (missing.length === 0) return () => { active = false; };
+    setGenerating(true);
+    void (async () => {
+      try {
+        const next: Record<string, string> = {};
+        for (const row of missing) {
+          const url = row.orderingResolution.url;
+          if (!url) continue;
+          next[row.table.id] = await QRCode.toDataURL(url, { width: 640, margin: 2 });
+          imageSourcesRef.current[row.table.id] = url;
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        }
+        if (active) setImages((previous) => ({ ...previous, ...next }));
+      } catch {
+        if (active) setError("Some QR previews could not be prepared. Try again.");
+      } finally {
+        if (active) setGenerating(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [printableRows.map((row) => `${row.table.id}:${row.orderingResolution.url ?? ""}`).join(",")]);
+
+  function toggleTable(id: string) {
+    setSelectedIds((previous) => previous.includes(id) ? previous.filter((value) => value !== id) : [...previous, id]);
+  }
+
+  function printSheet() {
+    if (printableRows.length === 0) {
+      setError("Select at least one table with a ready QR code.");
+      return;
+    }
+    const cards = printableRows.map((row) => {
+      const qr = images[row.table.id];
+      if (!qr) return "";
+      const logo = showLogo && logoUrl ? `<img class="sf-print-logo" src="${escapeHtml(logoUrl)}" alt="" />` : "";
+      return `<article class="sf-print-card">${logo}<strong>${escapeHtml(restaurantName)}</strong><b>TABLE ${String(row.table.table_number).padStart(2, "0")}</b><img class="sf-print-qr" src="${qr}" alt="" /><span>Scan to view menu &amp; order</span>${showServeFlow ? "<small>Powered by ServeFlow</small>" : ""}</article>`;
+    }).filter(Boolean);
+    const groups = Array.from({ length: Math.ceil(cards.length / cardsPerPage) }, (_, index) => cards.slice(index * cardsPerPage, (index + 1) * cardsPerPage).join(""));
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) { setError("Could not open the print window. Please allow pop-ups and try again."); return; }
+    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(restaurantName)} QR cards</title><style>@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:#10251b}.sf-print-page{width:190mm;min-height:277mm;display:grid;grid-template-columns:repeat(${format === "compact" ? 2 : format === "large" ? 2 : 1},1fr);grid-template-rows:repeat(${format === "compact" ? 3 : format === "large" ? 2 : 1},1fr);gap:5mm;page-break-after:always}.sf-print-page:last-child{page-break-after:auto}.sf-print-card{min-height:0;break-inside:avoid;display:grid;place-items:center;align-content:center;gap:3mm;padding:5mm;border:1px dashed #aab8b0;background:#fff;text-align:center}.sf-print-card strong{font-size:${format === "single" ? 22 : 13}px}.sf-print-card b{font-size:${format === "single" ? 30 : 18}px;letter-spacing:.05em}.sf-print-qr{width:${format === "single" ? 115 : format === "large" ? 72 : 54}mm;height:${format === "single" ? 115 : format === "large" ? 72 : 54}mm;image-rendering:auto}.sf-print-card span{font-size:${format === "single" ? 16 : 10}px;font-weight:700}.sf-print-card small{font-size:8px;color:#61736a}.sf-print-logo{width:14mm;height:14mm;object-fit:contain}@media print{body{background:#fff}}</style></head><body>${groups.map((cards) => `<main class="sf-print-page">${cards}</main>`).join("")}<script>window.addEventListener('load',()=>window.print());<\/script></body></html>`);
+    printWindow.document.close();
+  }
+
+  return <div className="od-print-center-layer" role="presentation"><section className="od-print-center" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="od-print-center-title"><header><div><span>QR PRINT CENTER</span><h2 id="od-print-center-title">Print QR cards</h2><p>{selectedRows.length} selected · {cardsPerPage} cards per page · {pageCount || 0} A4 pages</p></div><button ref={closeRef} type="button" aria-label="Close QR Print Center" onClick={onClose}>×</button></header><div className="od-print-center-body"><section className="od-print-controls"><fieldset><legend>Format</legend>{(Object.keys(QR_PRINT_FORMATS) as QrPrintFormat[]).map((value) => <label key={value}><input type="radio" name="qr-print-format" checked={format === value} onChange={() => setFormat(value)} /> {QR_PRINT_FORMATS[value].label}{value === "compact" ? <em>Recommended</em> : null}</label>)}</fieldset><div className="od-print-toggles"><label><input type="checkbox" checked={showLogo} disabled={!logoUrl} onChange={(event) => setShowLogo(event.target.checked)} /> Show logo</label><label><input type="checkbox" checked={showServeFlow} onChange={(event) => setShowServeFlow(event.target.checked)} /> Show Powered by ServeFlow</label></div><div className="od-print-select-head"><h3>Tables</h3><button type="button" onClick={() => setSelectedIds(rows.map((row) => row.table.id))}>Select all</button><button type="button" onClick={() => setSelectedIds([])}>Clear</button></div><div className="od-print-table-list">{rows.slice().sort((a, b) => a.table.table_number - b.table.table_number).map((row) => <label key={row.table.id}><input type="checkbox" checked={selectedIds.includes(row.table.id)} onChange={() => toggleTable(row.table.id)} /> Table {String(row.table.table_number).padStart(2, "0")} {row.disabled ? <small>Disabled</small> : null}{!row.qrReady || !row.orderingResolution.url ? <small>QR unavailable</small> : null}</label>)}</div>{disabledCount ? <p className="od-print-warning">{disabledCount} selected table{disabledCount === 1 ? " is" : "s are"} currently disabled.</p> : null}{unavailableCount ? <p className="od-print-warning">{unavailableCount} selected table{unavailableCount === 1 ? " has" : "s have"} an unavailable QR and will not print.</p> : null}<p className="od-print-guidance">Low-cost setup: print on A4, laminate or place under a transparent table cover.</p></section><section className="od-print-preview" aria-label={`Print preview: ${pageCount || 0} A4 pages`}><h3>Preview</h3>{pages.length ? pages.map((page, pageIndex) => <div className={`od-print-a4 ${format}`} key={pageIndex}><span>Page {pageIndex + 1} of {pageCount}</span><div>{page.map((row) => <article key={row.table.id}><strong>{restaurantName}</strong><b>TABLE {String(row.table.table_number).padStart(2, "0")}</b>{images[row.table.id] ? <img src={images[row.table.id]} alt={`QR code for table ${row.table.table_number}`} /> : <i>{generating ? "Preparing QR…" : "QR unavailable"}</i>}<small>Scan to view menu &amp; order</small></article>)}</div></div>) : <p>Select tables with ready QR codes to preview.</p>}</section></div><footer>{error ? <p role="alert">{error}</p> : null}<button type="button" onClick={onClose}>Cancel</button><button className="od-btn-primary" type="button" onClick={printSheet} disabled={generating || printableRows.length === 0}>{generating ? "Preparing…" : "Print / Save as PDF"}</button></footer></section></div>;
+}
+
 function QrTablesPage({
   restaurantId,
   restaurantName,
@@ -8677,6 +8768,7 @@ function QrTablesPage({
   const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(
     null,
   );
+  const [printCenterOpen, setPrintCenterOpen] = useState(false);
   const [detailsTableId, setDetailsTableId] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{
     kind: "replace" | "active";
@@ -9117,7 +9209,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="Filter tables by status">
             <option value="all">All</option><option value="occupied">Occupied</option><option value="available">Available</option><option value="disabled">Disabled</option>
           </select>
-          <button className="od-btn-primary od-tables-print" type="button" onClick={() => void printQrCards(allPrintables)} disabled={allPrintables.length === 0}>Print QR</button>
+          <button className="od-btn-primary od-tables-print" type="button" onClick={() => setPrintCenterOpen(true)} disabled={allPrintables.length === 0}>Print QR</button>
         </div>
         <div className="od-tables-desktop-list">
           <table className="od-tables-table">
@@ -9140,6 +9232,7 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         <div className="od-tables-mobile-list">{filteredRows.map(({ table, statusLabel, ordersToday, lastScanAt, lastOrderAt, qrReady }) => <article className="od-tables-mobile-row" key={table.id}><button className="od-table-details-trigger" type="button" onClick={() => setDetailsTableId(table.id)}><strong>Table {String(table.table_number).padStart(2, "0")}</strong>{table.label && table.label !== `Table ${table.table_number}` && <small>{table.label}</small>}</button><span className={`od-tables-status ${statusLabel.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}>{statusLabel}</span><div className="od-tables-mobile-meta"><span>{qrReady ? "QR Ready" : "QR unavailable"}</span><span>{ordersToday === null ? "Orders unavailable" : `${ordersToday} orders today`}</span><span>{lastOrderAt ? fmtTimeAgo(lastOrderAt) : lastScanAt ? fmtTimeAgo(lastScanAt) : "—"}</span></div>{tableActionMenu(table)}</article>)}</div>
         {loading ? <div className="od-tables-empty">Loading tables...</div> : !available ? <div className="od-tables-empty">Tables are unavailable.</div> : rows.length === 0 ? <div className="od-tables-empty">No tables yet.</div> : filteredRows.length === 0 && <div className="od-tables-empty">No tables match your search or status filter.</div>}
       </section>
+      {printCenterOpen && <QrPrintCenter restaurantName={restaurantName} logoUrl={logoUrl} rows={rows} onClose={() => setPrintCenterOpen(false)} />}
       {selectedRow && (
         <div className="od-table-details-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsTableId(null); }}>
           <aside className="od-table-details" ref={detailsDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="od-table-details-title">

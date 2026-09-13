@@ -8,6 +8,7 @@ const markup = `<meta name="viewport" content="width=device-width, initial-scale
 async function load(page: Page, width: number) { await page.setViewportSize({ width, height: 800 }); await page.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;max-width:100%}${css}</style>${markup}`); }
 
 const detailsMarkup = `<meta name="viewport" content="width=device-width, initial-scale=1"><div class="od-root"><main><button class="od-table-details-trigger">Table 01 with a deliberately long configured dining-room label</button></main><nav class="od-mobile-bottom-nav"><button>Tables</button></nav><div class="od-table-details-layer"><aside class="od-table-details" role="dialog" aria-modal="true"><header><div><span>TABLE DETAILS</span><h2>Table 01</h2><p>A deliberately long configured dining-room label</p></div><button aria-label="Close table details">×</button></header><section><h3>Current state</h3><dl class="od-table-details-state"><div><dt>Occupancy</dt><dd>Occupied</dd></div><div><dt>Ordering</dt><dd>Disabled</dd></div></dl></section><section><h3>QR code</h3><div class="od-table-details-actions"><button>View QR</button><button>Print QR</button></div></section><section class="od-table-details-security"><h3>QR security</h3><p>Replacing this QR disables every existing printed copy.</p><button>Replace QR Code</button></section></aside></div></div>`;
+const printMarkup = `<meta name="viewport" content="width=device-width, initial-scale=1"><div class="od-root"><div class="od-print-center-layer"><section class="od-print-center" role="dialog"><header><div><span>QR PRINT CENTER</span><h2>Print QR cards</h2></div><button aria-label="Close QR Print Center">×</button></header><div class="od-print-center-body"><section class="od-print-controls"><fieldset><legend>Format</legend><label><input type="radio"> 6 per page</label></fieldset><div class="od-print-table-list"><label><input type="checkbox"> Table 01</label></div></section><section class="od-print-preview"><h3>Preview</h3><div class="od-print-a4 compact"><span>Page 1 of 1</span><div><article><strong>Long Restaurant Name</strong><b>TABLE 01</b><i>Preparing QR…</i></article></div></div></section></div><footer><button>Cancel</button><button>Print / Save as PDF</button></footer></section></div></div>`;
 
 for (const [width, height] of [[360, 800], [390, 844], [430, 932], [768, 1024], [820, 1180], [1024, 768], [1280, 800], [1440, 900]]) test(`table details fits ${width}x${height}`, async ({ page }) => {
   await page.setViewportSize({ width, height });
@@ -20,6 +21,13 @@ for (const [width, height] of [[360, 800], [390, 844], [430, 932], [768, 1024], 
   expect(box?.height).toBeLessThanOrEqual(height);
   await expect(page.getByRole("button", { name: "Close table details" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Replace QR Code" })).toBeVisible();
+});
+for (const [width, height] of [[360, 800], [390, 844], [430, 932], [768, 1024], [820, 1180], [1024, 768], [1280, 800], [1440, 900]]) test(`print center fits ${width}x${height}`, async ({ page }) => {
+  await page.setViewportSize({ width, height });
+  await page.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;max-width:100%}${css}</style>${printMarkup}`);
+  await expect(page.locator(".od-print-center")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print / Save as PDF" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 for (const width of [1440, 1280, 1024, 820, 768]) test(`tables desktop layout fits ${width}px`, async ({ page }) => { await load(page, width); await expect(page.locator(".od-tables-desktop-list")).toBeVisible(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); });
