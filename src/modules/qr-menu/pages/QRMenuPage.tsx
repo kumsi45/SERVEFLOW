@@ -851,7 +851,7 @@ export function QRMenuPage({ restaurantSlug }: QRMenuPageProps) {
           <button type="button" onClick={retry}>Refresh</button>
         </div>
       ) : null}
-      {realtimeState !== "connected" ? (
+      {Boolean(activeSession?.order_id ?? submittedOrder?.order_id) && realtimeState === "reconnecting" ? (
         <div role="status" className="qr-realtime-state">
           Realtime reconnecting…
         </div>

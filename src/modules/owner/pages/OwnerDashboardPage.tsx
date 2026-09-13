@@ -1552,7 +1552,12 @@ export function OwnerDashboardPage({
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         (payload) => {
-          realtimeRefresh.mark("table-stats");
+          const nextTableId = (payload.new as { table_id?: string | null }).table_id ?? null;
+          const previousTableId = (payload.old as { table_id?: string | null }).table_id ?? null;
+          // Kitchen/status updates change the local occupancy row directly, but do
+          // not change the authoritative daily table-stat aggregate.
+          if (payload.eventType !== "UPDATE" || nextTableId !== previousTableId)
+            realtimeRefresh.mark("table-stats");
           const deletedId = String(
             (payload.old as { id?: string } | null)?.id ?? "",
           );
@@ -9201,8 +9206,8 @@ body{margin:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}.qr-
         </div>
       )}
       <section className="od-tables-workspace">
-        {qrStatsRefreshing && qrStats !== null ? (
-          <span className="sr-only" role="status">Refreshing table activity</span>
+        {qrStatsRefreshing && qrStats === null ? (
+          <span className="sr-only" role="status">Loading table activity</span>
         ) : null}
         <div className="od-tables-toolbar">
           <label className="od-tables-search"><span className="sr-only">Search tables</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table" aria-label="Search tables" /></label>
