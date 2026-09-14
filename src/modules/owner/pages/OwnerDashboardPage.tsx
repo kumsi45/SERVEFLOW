@@ -28,6 +28,7 @@ import {
   resolveOwnerQrOrderingUrl,
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
+import { downloadOwnerMenuFile } from "../services/ownerMenuFileAccess";
 import { ResilientImage } from "../../../core/presentation/ResilientImage";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { SmartImage } from "../../../core/presentation/SmartImage";
@@ -5691,9 +5692,6 @@ function MenuPage({
 
       if (uploadError) throw new Error(uploadError.message);
 
-      const { data: publicUrlData } = supabase.storage
-        .from("menu-files")
-        .getPublicUrl(path);
       const { error: insertError } = await supabase
         .from("menu_uploads")
         .insert({
@@ -5701,7 +5699,7 @@ function MenuPage({
           uploaded_by: userData.user.id,
           file_name: file.name,
           file_path: path,
-          file_url: publicUrlData.publicUrl,
+          file_url: path,
           mime_type: file.type,
           size_bytes: file.size,
         });
@@ -5721,6 +5719,27 @@ function MenuPage({
       );
     } finally {
       if (menuUploadInputRef.current) menuUploadInputRef.current.value = "";
+      setIsWorking(false);
+    }
+  }
+
+  async function handleViewMenuUpload(upload: OdMenuUpload) {
+    // Open synchronously so private retrieval does not trigger popup blocking.
+    const viewer = window.open("about:blank", "_blank");
+    if (!viewer) { setMenuError("Allow pop-ups to view this menu file."); return; }
+    viewer.opener = null;
+    try {
+      setIsWorking(true);
+      setMenuError(null);
+      const file = await downloadOwnerMenuFile(restaurantId, upload.file_path);
+      if (viewer.closed) return;
+      const localUrl = URL.createObjectURL(file);
+      viewer.location.replace(localUrl);
+      window.setTimeout(() => URL.revokeObjectURL(localUrl), 120_000);
+    } catch (cause) {
+      viewer.close();
+      setMenuError(cause instanceof Error ? cause.message : "Menu file could not be opened.");
+    } finally {
       setIsWorking(false);
     }
   }
@@ -5987,14 +6006,14 @@ function MenuPage({
                   </span>
                 </div>
                 <div className="od-row-actions">
-                  <a
+                  <button
                     className="od-btn-ghost"
-                    href={upload.file_url}
-                    target="_blank"
-                    rel="noreferrer"
+                    type="button"
+                    onClick={() => void handleViewMenuUpload(upload)}
+                    disabled={isWorking}
                   >
                     View
-                  </a>
+                  </button>
                   <button
                     className="od-btn-ghost danger"
                     type="button"
