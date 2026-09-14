@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 
 const page = readFileSync("src/modules/owner/pages/OwnerDashboardPage.tsx", "utf8");
 const css = readFileSync("src/modules/owner/styles/ownerDashboard.css", "utf8");
+const presentation = readFileSync("src/modules/owner/services/ownerQrPrintPresentation.ts", "utf8");
 
 describe("Owner Tables Phase 2C QR Print Center", () => {
   it("opens from the sole Tables print action with the recommended six-card default", () => {
     expect(page).toContain("setPrintCenterOpen(true)");
     expect(page).toContain('useState<QrPrintFormat>("compact")');
-    expect(page).toContain('compact: { cardsPerPage: 6');
-    expect(page).toContain("6 per page — Recommended");
+    expect(presentation).toContain('compact: { cardsPerPage: 6');
+    expect(presentation).toContain('label: "6 per page"');
   });
 
   it("keeps selection tenant-local, numeric, unique, and truthful about unavailable QR codes", () => {
@@ -30,9 +31,9 @@ describe("Owner Tables Phase 2C QR Print Center", () => {
 
   it("uses A4 print units, paginates cards, and excludes owner controls from print output", () => {
     const center = page.slice(page.indexOf("function QrPrintCenter"), page.indexOf("function QrTablesPage"));
-    expect(center).toContain("@page{size:A4 portrait;margin:10mm}");
-    expect(center).toContain("page-break-after:always");
-    expect(center).toContain("break-inside:avoid");
+    expect(presentation).toContain("@page{size:A4 portrait;margin:10mm}");
+    expect(presentation).toContain("page-break-after:always");
+    expect(presentation).toContain("break-inside:avoid");
     expect(center).toContain("Scan to view menu &amp; order");
     expect(center).not.toContain("Replace QR Code");
   });
