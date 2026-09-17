@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu as MenuIcon,
+  Pencil,
   Settings,
   UserRound,
   Users,
@@ -29,6 +30,12 @@ import {
 } from "../../../core/config/appUrl";
 import { supabase } from "../../../core/database";
 import { downloadOwnerMenuFile } from "../services/ownerMenuFileAccess";
+import {
+  createOwnerMenuItem,
+  finalizeOwnerMenuItemPhoto,
+  ownerMenuCreationRequest,
+  type OwnerMenuCreationPayload,
+} from "../services/ownerMenuItemCreation";
 import { ResilientImage } from "../../../core/presentation/ResilientImage";
 import { ServeFlowBrand } from "../../../core/presentation/ServeFlowBrand";
 import { SmartImage } from "../../../core/presentation/SmartImage";
@@ -5213,7 +5220,7 @@ function KitchenStationsPage({
                   />
                 </div>
               </div>
-              <label className="od-check-row">
+              <label className="od-check-row od-menu-availability">
                 <input
                   type="checkbox"
                   checked={formActive}
@@ -5376,13 +5383,14 @@ function MenuPage({
   retainedScope,
   onMenuChanged,
 }: MenuPageProps) {
-  const menuUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const menuModalRef = useRef<HTMLDivElement | null>(null);
   const [modal, setModal] = useState<MenuModalState>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<
     "all" | "available" | "unavailable"
   >("all");
+  const [openItemActionId, setOpenItemActionId] = useState<string | null>(null);
   const [stationFilter, setStationFilter] = useState("all");
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -5390,6 +5398,7 @@ function MenuPage({
   const [formPrice, setFormPrice] = useState("");
   const [formCategoryId, setFormCategoryId] = useState("");
   const [formNewCategory, setFormNewCategory] = useState("");
+  const [showNewCategory, setShowNewCategory] = useState(false);
   const [formStationId, setFormStationId] = useState("");
   const [formAvailable, setFormAvailable] = useState(true);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
@@ -5404,27 +5413,37 @@ function MenuPage({
   const [formSodiumMg, setFormSodiumMg] = useState("");
   const [formRecipeId, setFormRecipeId] = useState("");
   const [formDirectInventoryItemId, setFormDirectInventoryItemId] = useState("");
-  const [formTrackingType, setFormTrackingType] = useState<InventoryTrackingType>("recipe");
+  const [formTrackingType, setFormTrackingType] = useState<InventoryTrackingType>("no_tracking");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [directInventorySearch, setDirectInventorySearch] = useState("");
   const [recipeOptions, setRecipeOptions] = useState<MenuRecipeOption[]>([]);
   const [directInventoryOptions, setDirectInventoryOptions] = useState<DirectInventoryOption[]>([]);
-  const retainedMenuUploads = readOwnerRetainedResource<OdMenuUpload[]>({
-    scope: retainedScope,
-    resource: "menu-uploads",
-    ...OWNER_RETAINED_POLICY.menuUploads,
-  });
-  const [menuUploads, setMenuUploads] = useState<OdMenuUpload[]>(
-    () => retainedMenuUploads?.value ?? [],
-  );
-  const [menuUploadsAvailable, setMenuUploadsAvailable] = useState(
-    retainedMenuUploads !== null,
-  );
-  const [menuUploadsError, setMenuUploadsError] = useState<string | null>(null);
-  const [menuUploadsRefreshing, setMenuUploadsRefreshing] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const activeCreationRequestId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!modal) return;
+    const dialog = menuModalRef.current;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href]'
+    ) ?? []);
+    window.requestAnimationFrame(() => focusable()[0]?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isWorking) { setModal(null); return; }
+      if (event.key !== "Tab") return;
+      const controls = focusable();
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); previouslyFocused?.focus(); };
+  }, [isWorking, modal]);
 
   useEffect(() => {
     if (!modal || formTrackingType !== "recipe") return;
@@ -5457,7 +5476,8 @@ function MenuPage({
       const matchesSearch =
         !query ||
         item.name.toLowerCase().includes(query) ||
-        (item.description ?? "").toLowerCase().includes(query);
+        (item.description ?? "").toLowerCase().includes(query) ||
+        getCategoryName(categories, item.category_id).toLowerCase().includes(query);
       const matchesCategory =
         categoryFilter === "all" || item.category_id === categoryFilter;
       const matchesAvailability =
@@ -5474,71 +5494,8 @@ function MenuPage({
     });
   }, [availabilityFilter, categoryFilter, items, search, stationFilter]);
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadMenuUploads() {
-      setMenuUploadsRefreshing(true);
-      try {
-        const retained = readOwnerRetainedResource<OdMenuUpload[]>({
-          scope: retainedScope,
-          resource: "menu-uploads",
-          ...OWNER_RETAINED_POLICY.menuUploads,
-        });
-        if (mounted && retained) {
-          setMenuUploads(retained.value);
-          setMenuUploadsAvailable(true);
-        }
-        const nextUploads = await revalidateOwnerRetainedResource({
-          scope: retainedScope,
-          resource: "menu-uploads",
-          loader: () => loadOwnerMenuUploads(restaurantId),
-        });
-        if (mounted) {
-          setMenuUploads(nextUploads);
-          setMenuUploadsAvailable(true);
-          setMenuUploadsError(null);
-        }
-      } catch (loadError) {
-        if (mounted) {
-          if (loadError instanceof OwnerRetainedAccessError) {
-            setMenuUploads([]);
-            setMenuUploadsAvailable(false);
-          }
-          setMenuUploadsError("Menu files could not be refreshed.");
-        }
-      } finally {
-        if (mounted) setMenuUploadsRefreshing(false);
-      }
-    }
-
-    void loadMenuUploads();
-    return () => {
-      mounted = false;
-    };
-  }, [restaurantId, retainedScope]);
-
-  async function refreshMenuUploads() {
-    try {
-      const nextUploads = await revalidateOwnerRetainedResource({
-        scope: retainedScope,
-        resource: "menu-uploads",
-        loader: () => loadOwnerMenuUploads(restaurantId),
-        afterPending: true,
-      });
-      setMenuUploads(nextUploads);
-      setMenuUploadsAvailable(true);
-      setMenuUploadsError(null);
-    } catch (refreshError) {
-      if (refreshError instanceof OwnerRetainedAccessError) {
-        setMenuUploads([]);
-        setMenuUploadsAvailable(false);
-      }
-      throw refreshError;
-    }
-  }
-
   function openCreateModal() {
+    activeCreationRequestId.current = null;
     setMenuError(null);
     setNotice(null);
     setFormName("");
@@ -5547,6 +5504,7 @@ function MenuPage({
     setFormPrice("");
     setFormCategoryId(categories[0]?.id ?? "");
     setFormNewCategory(categories.length === 0 ? "Main Menu" : "");
+    setShowNewCategory(categories.length === 0);
     setFormStationId("");
     setFormAvailable(true);
     setFormImageFile(null);
@@ -5561,7 +5519,9 @@ function MenuPage({
     setFormSodiumMg("");
     setFormRecipeId("");
     setFormDirectInventoryItemId("");
-    setFormTrackingType("recipe");
+    // Basic creation deliberately uses the existing explicit no-tracking
+    // semantics. Recipe and direct inventory remain opt-in advanced options.
+    setFormTrackingType("no_tracking");
     setRecipeSearch("");
     setDirectInventorySearch("");
     setModal({ mode: "create" });
@@ -5581,6 +5541,7 @@ function MenuPage({
     setFormPrice(String(item.price));
     setFormCategoryId(item.category_id);
     setFormNewCategory("");
+    setShowNewCategory(false);
     setFormStationId(item.kitchen_station_id ?? activeStations[0]?.id ?? "");
     setFormAvailable(item.available);
     setFormImageFile(null);
@@ -5658,126 +5619,6 @@ function MenuPage({
     return createSmartImagePublicUrl("menu-photos", path);
   }
 
-  async function handleUploadMenuFile(file: File | null) {
-    if (!file) return;
-
-    try {
-      setIsWorking(true);
-      setMenuError(null);
-      setNotice(null);
-
-      const isAllowedType =
-        file.type.startsWith("image/") || file.type === "application/pdf";
-      if (!isAllowedType) throw new Error("Upload a menu image or PDF file.");
-      if (file.size > 10 * 1024 * 1024)
-        throw new Error("Menu file must be 10 MB or smaller.");
-
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        throw new Error(
-          userError?.message ||
-            "You must be signed in as the owner to upload a menu.",
-        );
-      }
-
-      const path = buildMenuFilePath(restaurantId, file);
-      const { error: uploadError } = await supabase.storage
-        .from("menu-files")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type,
-        });
-
-      if (uploadError) throw new Error(uploadError.message);
-
-      const { error: insertError } = await supabase
-        .from("menu_uploads")
-        .insert({
-          restaurant_id: restaurantId,
-          uploaded_by: userData.user.id,
-          file_name: file.name,
-          file_path: path,
-          file_url: path,
-          mime_type: file.type,
-          size_bytes: file.size,
-        });
-
-      if (insertError) {
-        await supabase.storage.from("menu-files").remove([path]);
-        throw new Error(insertError.message);
-      }
-
-      setNotice("Menu file uploaded.");
-      await refreshMenuUploads();
-    } catch (actionError) {
-      setMenuError(
-        actionError instanceof Error
-          ? actionError.message
-          : "Could not upload menu file.",
-      );
-    } finally {
-      if (menuUploadInputRef.current) menuUploadInputRef.current.value = "";
-      setIsWorking(false);
-    }
-  }
-
-  async function handleViewMenuUpload(upload: OdMenuUpload) {
-    // Open synchronously so private retrieval does not trigger popup blocking.
-    const viewer = window.open("about:blank", "_blank");
-    if (!viewer) { setMenuError("Allow pop-ups to view this menu file."); return; }
-    viewer.opener = null;
-    try {
-      setIsWorking(true);
-      setMenuError(null);
-      const file = await downloadOwnerMenuFile(restaurantId, upload.file_path);
-      if (viewer.closed) return;
-      const localUrl = URL.createObjectURL(file);
-      viewer.location.replace(localUrl);
-      window.setTimeout(() => URL.revokeObjectURL(localUrl), 120_000);
-    } catch (cause) {
-      viewer.close();
-      setMenuError(cause instanceof Error ? cause.message : "Menu file could not be opened.");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleDeleteMenuUpload(upload: OdMenuUpload) {
-    if (!window.confirm(`Delete ${upload.file_name}? This cannot be undone.`))
-      return;
-
-    try {
-      setIsWorking(true);
-      setMenuError(null);
-      setNotice(null);
-
-      const { error: deleteError } = await supabase
-        .from("menu_uploads")
-        .delete()
-        .eq("id", upload.id)
-        .eq("restaurant_id", restaurantId);
-      if (deleteError) throw new Error(deleteError.message);
-
-      const { error: storageError } = await supabase.storage
-        .from("menu-files")
-        .remove([upload.file_path]);
-      if (storageError) throw new Error(storageError.message);
-
-      setNotice("Menu file deleted.");
-      await refreshMenuUploads();
-    } catch (actionError) {
-      setMenuError(
-        actionError instanceof Error
-          ? actionError.message
-          : "Could not delete menu file.",
-      );
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
   async function handleSubmitMenuItem(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!modal) return;
@@ -5793,8 +5634,6 @@ function MenuPage({
         throw new Error("Item name must be at least 2 characters.");
       if (!Number.isFinite(price) || price <= 0)
         throw new Error("Price must be greater than zero.");
-      const categoryId = await ensureCategory();
-      const imageUrl = await uploadImageIfNeeded();
       const ingredients = parseIngredientInput(formIngredients);
       const preparationTimeMinutes = parseOptionalPositiveInteger(
         "Preparation time",
@@ -5813,6 +5652,88 @@ function MenuPage({
       if (formTrackingType === "ready_to_sell" && !formDirectInventoryItemId) {
         throw new Error("Choose the inventory ingredient sold by this menu item.");
       }
+      if (formImageFile && !formImageFile.type.startsWith("image/")) {
+        throw new Error("Menu photo must be an image file.");
+      }
+
+      if (modal.mode === "create") {
+        const creationPayload: OwnerMenuCreationPayload = {
+          name,
+          description: formDescription.trim() || null,
+          price,
+          category_id: formNewCategory.trim() ? null : formCategoryId || null,
+          new_category_name: formNewCategory.trim() || null,
+          tracking_mode:
+            formTrackingType === "ready_to_sell" ? "direct_inventory" : formTrackingType,
+          recipe_id: formTrackingType === "recipe" ? formRecipeId || null : null,
+          direct_inventory_item_id:
+            formTrackingType === "ready_to_sell" ? formDirectInventoryItemId : null,
+          kitchen_station_id: formStationId || null,
+          available: formAvailable,
+          ingredients: ingredients ?? [],
+          preparation_time_minutes: preparationTimeMinutes,
+          calories,
+          protein_g: proteinG,
+          carbohydrates_g: carbohydratesG,
+          fat_g: fatG,
+          fiber_g: fiberG,
+          sugar_g: sugarG,
+          sodium_mg: sodiumMg,
+          photo_content_type: formImageFile?.type || null,
+        };
+        const operation = ownerMenuCreationRequest(
+          restaurantId,
+          creationPayload,
+          activeCreationRequestId.current,
+        );
+        activeCreationRequestId.current = operation.requestId;
+        const created = await createOwnerMenuItem(
+          restaurantId,
+          operation.requestId,
+          creationPayload,
+        );
+
+        if (formImageFile) {
+          if (!created.photo_object_path) {
+            throw new Error("Item was created, but its photo could not be prepared. Try again.");
+          }
+          const { error: uploadError } = await supabase.storage
+            .from("menu-photos")
+            .upload(created.photo_object_path, formImageFile, {
+              cacheControl: "3600",
+              upsert: true,
+              contentType: formImageFile.type,
+            });
+          if (uploadError) {
+            await onMenuChanged();
+            throw new Error("Item was created, but the photo could not be uploaded. Try again.");
+          }
+          try {
+            await finalizeOwnerMenuItemPhoto(
+              restaurantId,
+              operation.requestId,
+              created.menu_item.id,
+              created.photo_object_path,
+            );
+          } catch {
+            await onMenuChanged();
+            throw new Error("Item was created, but the photo could not be attached. Try again.");
+          }
+        }
+
+        operation.complete();
+        activeCreationRequestId.current = null;
+        setNotice(created.auto_created_recipe ? "Menu item and recipe created automatically." : "Menu item created.");
+        setModal(null);
+        await onMenuChanged();
+        if (created.auto_created_recipe && created.recipe_id) {
+          window.location.assign(`/owner/recipes?edit=${encodeURIComponent(created.recipe_id)}`);
+        }
+        return;
+      }
+
+      const categoryId = await ensureCategory();
+      const imageUrl = await uploadImageIfNeeded();
       const recipeId = formTrackingType === "recipe" ? formRecipeId : "";
       const directInventoryItemId = formTrackingType === "ready_to_sell" ? formDirectInventoryItemId : "";
       let automaticallyCreatedRecipeId: string | null = null;
@@ -5849,19 +5770,13 @@ function MenuPage({
       };
 
       try {
-        if (modal.mode === "create") {
-          const { error } = await supabase.from("menu_items").insert(payload);
-          if (error) throw new Error(error.message);
-          setNotice(automaticallyCreatedRecipeId ? "Menu item and recipe created automatically." : "Menu item created.");
-        } else {
-          const { error } = await supabase
-            .from("menu_items")
-            .update(payload)
-            .eq("id", modal.item.id)
-            .eq("restaurant_id", restaurantId);
-          if (error) throw new Error(error.message);
-          setNotice(automaticallyCreatedRecipeId ? "Menu item updated and recipe created automatically." : "Menu item updated.");
-        }
+        const { error } = await supabase
+          .from("menu_items")
+          .update(payload)
+          .eq("id", modal.item.id)
+          .eq("restaurant_id", restaurantId);
+        if (error) throw new Error(error.message);
+        setNotice(automaticallyCreatedRecipeId ? "Menu item updated and recipe created automatically." : "Menu item updated.");
       } catch (cause) {
         if (automaticallyCreatedRecipeId) await softDeleteRecipe(restaurantId, automaticallyCreatedRecipeId).catch(() => undefined);
         throw cause;
@@ -5919,119 +5834,57 @@ function MenuPage({
     }
   }
 
+  async function handleAvailabilityChange(item: OdMenuItem) {
+    try {
+      setIsWorking(true);
+      setMenuError(null);
+      setNotice(null);
+      const { error } = await supabase
+        .from("menu_items")
+        .update({ available: !item.available })
+        .eq("id", item.id)
+        .eq("restaurant_id", restaurantId);
+      if (error) throw new Error(error.message);
+      setNotice(`${item.name} is now ${item.available ? "unavailable" : "available"}.`);
+      await onMenuChanged();
+    } catch (cause) {
+      setMenuError(cause instanceof Error ? cause.message : "Availability could not be updated.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   return (
     <div className="od-page od-operations-page od-menu-experience">
       <div className="od-page-header">
         <div>
-          <h1 className="od-page-title">Menu Management</h1>
           <p className="od-page-subtitle">
-            Manage your business menu, categories, pricing, and availability.
+            Manage what customers can order.
           </p>
         </div>
         <div className="od-header-actions">
-          <input
-            ref={menuUploadInputRef}
-            className="od-hidden-file-input"
-            type="file"
-            accept="image/*,application/pdf"
-            onChange={(event) =>
-              void handleUploadMenuFile(event.target.files?.[0] ?? null)
-            }
-            disabled={isWorking}
-          />
-          <button
-            className="od-btn-ghost"
-            type="button"
-            onClick={() => menuUploadInputRef.current?.click()}
-            disabled={isWorking}
-          >
-            Upload Menu
-          </button>
-          <button className="od-btn-ghost" type="button" disabled title="Smart Item Library workspace is coming soon">
-            Smart Item Library
-          </button>
           <button className="od-btn-primary" onClick={openCreateModal}>
-            Add Item
+            + Add Item
           </button>
         </div>
       </div>
 
-      {(menuError || menuUploadsError || notice) && (
-        <div className={menuError || menuUploadsError ? "od-error-inline" : "od-success-inline"}>
-          {menuError || menuUploadsError || notice}
+      {(menuError || notice) && (
+        <div className={menuError ? "od-error-inline" : "od-success-inline"}>
+          {menuError || notice}
         </div>
       )}
 
-      <TopItemsTable topItems={topItems} menuItems={items} />
-
-      <div className="od-card">
-        <div className="od-card-header">
-          <div>
-            <div className="od-card-title">Uploaded Menu Files</div>
-            <div className="od-card-subtitle">
-              Image and PDF menus saved to owner-managed storage.
-            </div>
-          </div>
-        </div>
-        <div className="od-menu-upload-list">
-          {menuUploadsRefreshing && menuUploadsAvailable ? (
-            <span className="sr-only" role="status">Refreshing uploaded menu files</span>
-          ) : null}
-          {!menuUploadsAvailable ? (
-            <div className="od-empty compact">
-              <div className="od-empty-msg">
-                {menuUploadsError
-                  ? "Menu files are unavailable."
-                  : "Loading uploaded menu files..."}
-              </div>
-            </div>
-          ) : menuUploads.length === 0 ? (
-            <div className="od-empty compact">
-              <div className="od-empty-msg">No menu files uploaded</div>
-              <div className="od-empty-sub">
-                Upload a menu image or PDF from the button above.
-              </div>
-            </div>
-          ) : (
-            menuUploads.map((upload) => (
-              <div className="od-menu-upload-row" key={upload.id}>
-                <div className="od-menu-upload-icon">
-                  {upload.mime_type === "application/pdf" ? "PDF" : "IMG"}
-                </div>
-                <div className="od-menu-upload-info">
-                  <strong>{upload.file_name}</strong>
-                  <span>
-                    {formatFileSize(upload.size_bytes)} -{" "}
-                    {fmtDateTime(upload.created_at)}
-                  </span>
-                </div>
-                <div className="od-row-actions">
-                  <button
-                    className="od-btn-ghost"
-                    type="button"
-                    onClick={() => void handleViewMenuUpload(upload)}
-                    disabled={isWorking}
-                  >
-                    View
-                  </button>
-                  <button
-                    className="od-btn-ghost danger"
-                    type="button"
-                    onClick={() => void handleDeleteMenuUpload(upload)}
-                    disabled={isWorking}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+      <div className="od-menu-summary" aria-label="Menu summary">
+        <span><strong>{items.length}</strong> Total items</span>
+        <span><strong>{items.filter((item) => item.available).length}</strong> Available</span>
+        <span><strong>{items.filter((item) => !item.available).length}</strong> Unavailable</span>
+        <span><strong>{categories.length}</strong> Categories</span>
       </div>
 
       <div className="od-card">
         <div className="od-card-header">
-          <div className="od-card-title">Menu Inventory</div>
+          <div className="od-card-title">Menu items</div>
           <div className="od-staff-filters">
             <input
               value={search}
@@ -6064,18 +5917,6 @@ function MenuPage({
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
             </select>
-            <select
-              value={stationFilter}
-              onChange={(event) => setStationFilter(event.target.value)}
-              aria-label="Filter menu by kitchen station"
-            >
-              <option value="all">All Stations</option>
-              {activeStations.map((station) => (
-                <option key={station.id} value={station.id}>
-                  {station.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
         <div className="od-table-wrap">
@@ -6084,18 +5925,15 @@ function MenuPage({
               <tr>
                 <th>Item Name</th>
                 <th>Category</th>
-                <th>Station</th>
-                <th>Prep Time</th>
                 <th>Price</th>
                 <th>Availability</th>
-                <th>Stock Tracking</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={5}>
                     <div className="od-empty">
                       <div className="od-empty-icon">--</div>
                       <div className="od-empty-msg">
@@ -6113,8 +5951,8 @@ function MenuPage({
                           : !available
                             ? "Could not confirm the current menu"
                           : items.length === 0
-                          ? "Add your first item or upload a menu photo"
-                          : "Adjust search, category, availability, or station"}
+                          ? "Add your first item to start taking orders."
+                          : "Adjust search, category, or availability."}
                       </div>
                     </div>
                   </td>
@@ -6127,25 +5965,10 @@ function MenuPage({
                         <OwnerMenuThumbnail item={item} />
                         <div>
                           <strong>{item.name}</strong>
-                          {item.description && (
-                            <div className="od-menu-desc">
-                              {item.description}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </td>
                     <td>{getCategoryName(categories, item.category_id)}</td>
-                    <td>
-                      <span className="od-station-badge">
-                        {getStationName(stations, item.kitchen_station_id)}
-                      </span>
-                    </td>
-                    <td>
-                      {formatPreparationEstimate(
-                        item.preparation_time_minutes,
-                      ) ?? "Not set"}
-                    </td>
                     <td>{fmtMoney(item.price)}</td>
                     <td>
                       <span
@@ -6155,28 +5978,19 @@ function MenuPage({
                       </span>
                     </td>
                     <td>
-                      <div className="od-tracking-cell">
-                        <span className={`od-tracking-badge ${inventoryTrackingType(item)}`}>{inventoryTrackingLabel(inventoryTrackingType(item))}</span>
-                        {item.recipe_id && <small>{item.recipe_name ?? "Linked recipe"}</small>}
-                        {item.direct_inventory_item_id && <small>{item.direct_inventory_item_name ?? "Inventory ingredient"}</small>}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="od-row-actions">
+                      <div className="od-menu-item-actions">
                         <button
-                          className="od-btn-ghost"
+                          className="od-btn-ghost od-menu-edit-action"
                           onClick={() => openEditModal(item)}
                           disabled={isWorking}
+                          aria-label={`Edit ${item.name}`}
                         >
-                          Edit
+                          <Pencil aria-hidden="true" size={18} />
                         </button>
-                        <button
-                          className="od-btn-ghost danger"
-                          onClick={() => handleDeleteMenuItem(item)}
-                          disabled={isWorking}
-                        >
-                          Delete
-                        </button>
+                        <div className="od-menu-overflow">
+                          <button type="button" className="od-btn-ghost od-menu-overflow-trigger" aria-label={`More actions for ${item.name}`} aria-expanded={openItemActionId === item.id} onClick={() => setOpenItemActionId((current) => current === item.id ? null : item.id)} disabled={isWorking}>⋮</button>
+                          {openItemActionId === item.id && <div className="od-menu-overflow-menu" role="menu"><button type="button" role="menuitem" onClick={() => void handleAvailabilityChange(item)} disabled={isWorking}>Mark {item.available ? "unavailable" : "available"}</button><button type="button" role="menuitem" className="danger" onClick={() => void handleDeleteMenuItem(item)} disabled={isWorking}>Delete item</button></div>}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -6193,6 +6007,7 @@ function MenuPage({
       {modal && (
         <div className="od-modal-backdrop" role="presentation">
           <div
+            ref={menuModalRef}
             className="od-modal"
             role="dialog"
             aria-modal="true"
@@ -6227,14 +6042,37 @@ function MenuPage({
                 />
               </label>
               <label>
-                Description
-                <textarea
-                  value={formDescription}
-                  onChange={(event) => setFormDescription(event.target.value)}
-                  disabled={isWorking}
-                  rows={3}
-                />
+                Category
+                <select
+                  value={formCategoryId}
+                  onChange={(event) => setFormCategoryId(event.target.value)}
+                  disabled={isWorking || categories.length === 0}
+                  required={!formNewCategory.trim()}
+                >
+                  {categories.length === 0 ? <option value="">Create a category below</option> : categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
               </label>
+              {showNewCategory ? (
+                <label>
+                  New category
+                  <input value={formNewCategory} onChange={(event) => setFormNewCategory(event.target.value)} disabled={isWorking} placeholder="Category name" />
+                </label>
+              ) : (
+                <button type="button" className="od-menu-create-category" onClick={() => setShowNewCategory(true)} disabled={isWorking}>+ Create new category</button>
+              )}
+              <label>
+                Price
+                <input type="number" min="0" step="0.01" value={formPrice} onChange={(event) => setFormPrice(event.target.value)} disabled={isWorking} required />
+              </label>
+              <label>
+                Description
+                <textarea value={formDescription} onChange={(event) => setFormDescription(event.target.value)} disabled={isWorking} rows={3} />
+              </label>
+              <details className="od-menu-advanced">
+                <summary>Advanced options{modal.mode === "edit" && formTrackingType !== "no_tracking" ? ` — ${inventoryTrackingLabel(formTrackingType)} configured` : ""}</summary>
+                <p>Recipe, inventory tracking, kitchen routing, and extra item details.</p>
               <label>
                 Ingredients
                 <textarea
@@ -6257,18 +6095,6 @@ function MenuPage({
                   }
                   disabled={isWorking}
                   placeholder="Optional"
-                />
-              </label>
-              <label>
-                Price
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formPrice}
-                  onChange={(event) => setFormPrice(event.target.value)}
-                  disabled={isWorking}
-                  required
                 />
               </label>
               <label>
@@ -6357,53 +6183,26 @@ function MenuPage({
                   placeholder="Optional"
                 />
               </label>
-              <label>
-                Category
-                <select
-                  value={formCategoryId}
-                  onChange={(event) => setFormCategoryId(event.target.value)}
-                  disabled={isWorking || categories.length === 0}
-                >
-                  {categories.length === 0 ? (
-                    <option value="">No categories yet</option>
-                  ) : (
-                    categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-              <label>
-                New Category
-                <input
-                  value={formNewCategory}
-                  onChange={(event) => setFormNewCategory(event.target.value)}
-                  disabled={isWorking}
-                  placeholder="Optional"
-                />
-              </label>
               <fieldset className="od-recipe-link-fieldset od-tracking-fieldset">
-                <legend>Stock Tracking</legend>
-                <p className="od-tracking-question">How should inventory be tracked for this menu item?</p>
+                <legend>Inventory tracking</legend>
+                <p className="od-tracking-question">Choose tracking only when this item needs it.</p>
                 <div className="od-tracking-options">
-                  <button type="button" className={formTrackingType === "recipe" ? "selected" : ""} onClick={() => { setFormTrackingType("recipe"); setFormDirectInventoryItemId(""); }}><strong>Recipe</strong><small>Prepared from ingredients</small><em>Most common</em></button>
-                  <button type="button" className={formTrackingType === "ready_to_sell" ? "selected" : ""} onClick={() => { setFormTrackingType("ready_to_sell"); setFormRecipeId(""); }}><strong>Ready-to-Sell Item</strong><small>Sold exactly as purchased</small></button>
-                  <button type="button" className={formTrackingType === "no_tracking" ? "selected" : ""} onClick={() => { setFormTrackingType("no_tracking"); setFormRecipeId(""); setFormDirectInventoryItemId(""); }}><strong>No Tracking</strong><small>No inventory deduction</small></button>
+                  <button type="button" className={formTrackingType === "no_tracking" ? "selected" : ""} onClick={() => { setFormTrackingType("no_tracking"); setFormRecipeId(""); setFormDirectInventoryItemId(""); }}><strong>No Tracking</strong><small>Default for ordinary items</small></button>
+                  <button type="button" className={formTrackingType === "recipe" ? "selected" : ""} onClick={() => { setFormTrackingType("recipe"); setFormDirectInventoryItemId(""); }}><strong>Recipe</strong><small>Prepared from ingredients</small></button>
+                  <button type="button" className={formTrackingType === "ready_to_sell" ? "selected" : ""} onClick={() => { setFormTrackingType("ready_to_sell"); setFormRecipeId(""); }}><strong>Direct Inventory</strong><small>For packaged products</small></button>
                 </div>
                 {formTrackingType === "recipe" && <div className="od-tracking-detail"><p>ServeFlow will create and link a recipe automatically. You can also reuse an existing active recipe.</p><label>Search existing recipes<input value={recipeSearch} onChange={(event) => setRecipeSearch(event.target.value)} disabled={isWorking} placeholder="Optional" /></label><label>Existing Recipe<select value={formRecipeId} onChange={(event) => setFormRecipeId(event.target.value)} disabled={isWorking}><option value="">Create recipe automatically</option>{recipeOptions.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}</select></label></div>}
                 {formTrackingType === "ready_to_sell" && <div className="od-tracking-detail"><p>Link the packaged menu item to its matching inventory ingredient.</p><label>Search Inventory Ingredient<input value={directInventorySearch} onChange={(event) => setDirectInventorySearch(event.target.value)} disabled={isWorking} placeholder="Search inventory" /></label><label>Inventory Ingredient<select required value={formDirectInventoryItemId} onChange={(event) => setFormDirectInventoryItemId(event.target.value)} disabled={isWorking}><option value="">Choose inventory ingredient</option>{directInventoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}{item.sku ? ` (${item.sku})` : ""}</option>)}</select></label></div>}
                 {formTrackingType === "no_tracking" && <p className="od-tracking-confirmation">No recipe or inventory ingredient is required.</p>}
               </fieldset>
               <label>
-                Kitchen Station
+                Kitchen routing
                 <select
                   value={formStationId}
                   onChange={(event) => setFormStationId(event.target.value)}
                   disabled={isWorking}
                 >
-                  <option value="">Auto assign</option>
+                  <option value="">Automatic / default</option>
                   {activeStations.map((station) => (
                     <option key={station.id} value={station.id}>
                       {station.name}
@@ -6411,6 +6210,7 @@ function MenuPage({
                   ))}
                 </select>
               </label>
+              </details>
               <label className="od-check-row">
                 <input
                   type="checkbox"
@@ -6418,11 +6218,17 @@ function MenuPage({
                   onChange={(event) => setFormAvailable(event.target.checked)}
                   disabled={isWorking}
                 />
-                Available
+                <span><strong>Available</strong><small>Visible and orderable on the customer menu</small></span>
               </label>
-              <label>
-                Menu Photo
+              <div className="od-menu-photo-field">
+                {formImageUrl && !formImageFile && (
+                  <ResilientImage className="od-menu-preview" src={formImageUrl} alt="Current menu item" fallback={null} fallbackClassName="od-menu-preview empty" usage="card" />
+                )}
+                <label htmlFor="owner-menu-photo" className="od-menu-photo-action">
+                  {formImageUrl ? "Change photo" : "Add photo"}
                 <input
+                  id="owner-menu-photo"
+                  className="od-hidden-file-input"
                   type="file"
                   accept="image/*"
                   onChange={(event) =>
@@ -6430,10 +6236,8 @@ function MenuPage({
                   }
                   disabled={isWorking}
                 />
-              </label>
-              {formImageUrl && !formImageFile && (
-                <ResilientImage className="od-menu-preview" src={formImageUrl} alt="" fallback={null} fallbackClassName="od-menu-preview empty" usage="card" />
-              )}
+                </label>
+              </div>
 
               <div className="od-modal-actions">
                 <button

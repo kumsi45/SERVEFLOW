@@ -9,7 +9,7 @@ const tenant = "00000000-0000-4000-8000-000000000001";
 const path = `${tenant}/source.pdf`;
 const migration = readFileSync("supabase/migrations/262_owner_menu_files_private.sql", "utf8");
 const page = readFileSync("src/modules/owner/pages/OwnerDashboardPage.tsx", "utf8");
-const fileSection = page.slice(page.indexOf("async function handleUploadMenuFile"), page.indexOf("async function handleSubmitMenuItem"));
+const accessService = readFileSync("src/modules/owner/services/ownerMenuFileAccess.ts", "utf8");
 
 describe("Owner Menu Phase 1A private source files", () => {
   beforeEach(() => { vi.clearAllMocks(); storage.from.mockReturnValue({ download: storage.download }); });
@@ -47,16 +47,16 @@ describe("Owner Menu Phase 1A private source files", () => {
     storage.download.mockResolvedValue({ data: null, error: null });
     await expect(downloadOwnerMenuFile(tenant, path)).rejects.toThrow("could not be downloaded");
   });
-  it("fetches fresh authenticated content on every view without persisted signed links", async () => {
+  it("keeps authenticated download authority without restoring the removed file UI", async () => {
     storage.download.mockResolvedValue({ data: new Blob(["fixture"]), error: null });
     await downloadOwnerMenuFile(tenant, path); await downloadOwnerMenuFile(tenant, path);
     expect(storage.download).toHaveBeenCalledTimes(2);
-    expect(fileSection).toContain("file_url: path");
-    expect(fileSection).not.toContain("getPublicUrl");
-    expect(fileSection).not.toContain("createSignedUrl");
+    expect(accessService).toContain('.from("menu-files")');
+    expect(accessService).toContain(".download(path)");
+    expect(accessService).not.toContain("getPublicUrl");
+    expect(accessService).not.toContain("createSignedUrl");
     expect(page).not.toContain("href={upload.file_url}");
-    expect(fileSection).toContain("viewer.opener = null");
-    expect(fileSection).toContain("URL.revokeObjectURL(localUrl)");
-    expect(fileSection).toContain('remove([path])');
+    expect(page).not.toContain("handleUploadMenuFile");
+    expect(page).not.toContain("handleViewMenuUpload");
   });
 });

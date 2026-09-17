@@ -25,10 +25,10 @@ describe("Ready-to-Serve Product Architecture", () => {
     expect(owner).toContain("direct_inventory_item_id: directInventoryItemId || null");
   });
 
-  it("shows explicit tracking choices while preserving the legacy manager warning", () => {
-    expect(owner).toContain("Ready-to-Sell Item");
+  it("shows explicit tracking choices while preserving the manager warning", () => {
+    expect(owner).toContain("Direct Inventory");
     expect(owner).toContain("No Tracking");
-    expect(owner).toContain("od-tracking-badge");
+    expect(owner).toContain("od-menu-advanced");
     expect(manager).toContain("No Recipe Assigned");
     expect(manager).toContain("mrl-warning");
   });

@@ -1,0 +1,34 @@
+PASS Migration 264 applies inside caller transaction without an internal envelope
+PASS Owner creates one unavailable No Tracking item with explicit same-tenant station
+PASS same request and canonical payload replays the canonical item
+PASS same request with different payload fails closed
+PASS different request IDs permit legitimate same-name menu items
+PASS normalized new category creation is part of the authoritative result
+PASS forged restaurant is denied
+PASS cross-tenant category is denied
+PASS cross-tenant station is denied
+CHECK Manager denial
+PASS Manager is denied
+CHECK Cashier denial
+PASS Cashier is denied
+CHECK Kitchen denial
+PASS Kitchen is denied
+CHECK Waiter denial
+PASS Waiter is denied
+CHECK inactive Owner denial
+PASS inactive Owner is denied
+PASS anonymous is denied
+PASS direct client mutation of the operation table is denied
+PASS existing active same-tenant Recipe is retained
+PASS invalid Recipe is denied
+PASS cross-tenant Recipe is denied
+PASS operation-created Recipe is atomic and same-key replay creates no second Recipe
+PASS active same-tenant Direct Inventory is retained
+PASS cross-tenant Direct Inventory is denied
+PASS Recipe and Direct Inventory together are denied
+PASS photo creation returns the deterministic tenant/item/request path
+PASS photo finalization before upload is denied
+PASS arbitrary photo path is denied
+PASS uploaded exact photo finalizes once with a JWT-issuer URL and then replays
+PASS operation table persists one row per successful logical request
+PASS rollback removes all candidate objects and fixtures
