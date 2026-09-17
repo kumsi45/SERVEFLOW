@@ -1,4 +1,4 @@
-// Candidate-only validation. It never commits Migration 264 or its fixtures.
+// Candidate-only validation. It never commits the parked original Migration 264 candidate or its fixtures.
 const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
@@ -6,7 +6,7 @@ const { randomUUID } = require("node:crypto");
 const { Client } = require("pg");
 
 const root = path.resolve(__dirname, "../..");
-const migration = fs.readFileSync(path.join(root, "supabase/migrations/264_owner_menu_item_creation_atomic_idempotent.sql"), "utf8");
+const migration = fs.readFileSync(path.join(root, "supabase/parked-migrations/owner_menu_item_creation_atomic_idempotent.PARKED.sql"), "utf8");
 const config = fs.readFileSync(path.join(root, "supabase/connection.env"), "utf8");
 const url = config.match(/^\s*SUPABASE_DB_URL\s*=\s*(.+)\s*$/m)?.[1]?.replace(/^['"]|['"]$/g, "");
 if (!url) throw new Error("SUPABASE_DB_URL missing");
@@ -45,7 +45,7 @@ async function main() {
     await db.query("begin");
     await db.query("set local lock_timeout='3s'; set local statement_timeout='8s'");
     await db.query(migration);
-    check("Migration 264 applies inside caller transaction without an internal envelope", true);
+    check("Parked original Migration 264 candidate applies inside caller transaction without an internal envelope", true);
     for (const id of userIds) await db.query("insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at) values($1,'00000000-0000-0000-0000-000000000000','authenticated','authenticated',$2,'',now(),now(),now())", [id, `${id}@owner-menu-rollback.invalid`]);
     await db.query("insert into public.restaurants(id,name,slug,total_tables,table_count) values($1,'Owner menu rollback A',$2,1,1),($3,'Owner menu rollback B',$4,1,1)", [f.a, `owner-menu-a-${f.a}`, f.b, `owner-menu-b-${f.b}`]);
     for (const [staffId, user, restaurant, role, active] of [[f.ownerStaffA,f.ownerA,f.a,"owner",true],[f.ownerStaffB,f.ownerB,f.b,"owner",true],[randomUUID(),f.manager,f.a,"manager",true],[randomUUID(),f.cashier,f.a,"cashier",true],[randomUUID(),f.kitchen,f.a,"kitchen",true],[randomUUID(),f.waiter,f.a,"waiter",true],[randomUUID(),f.inactive,f.a,"owner",false]]) await db.query("insert into public.restaurant_staff(id,restaurant_id,user_id,role,display_name,email,active) values($1,$2,$3,$4,$5,$6,$7)", [staffId, restaurant, user, role, role, `${user}@owner-menu-rollback.invalid`, active]);

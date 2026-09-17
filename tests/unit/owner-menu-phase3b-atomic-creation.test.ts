@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/264_owner_menu_item_creation_atomic_idempotent.sql"), "utf8");
+const sql = readFileSync(resolve(process.cwd(), "supabase/parked-migrations/owner_menu_item_creation_atomic_idempotent.PARKED.sql"), "utf8");
 const service = readFileSync(resolve(process.cwd(), "src/modules/owner/services/ownerMenuItemCreation.ts"), "utf8");
 const page = readFileSync(resolve(process.cwd(), "src/modules/owner/pages/OwnerDashboardPage.tsx"), "utf8");
 

@@ -4868,6 +4868,17 @@ function KitchenStationsPage({
   );
   const activeCount = sortedStations.filter((station) => station.active).length;
 
+  function kitchenStationErrorMessage(actionError: unknown) {
+    const message = actionError instanceof Error ? actionError.message : "Kitchen station action failed.";
+    if (message.includes("KITCHEN_STATION_HAS_UNRESOLVED_WORK")) {
+      return "Station still has orders assigned to it. Complete or resolve them before disabling this station.";
+    }
+    if (message.includes("LAST_ACTIVE_KITCHEN_STATION")) {
+      return "At least one kitchen station must remain active.";
+    }
+    return message;
+  }
+
   function openCreateModal() {
     setStationError(null);
     setNotice(null);
@@ -4927,11 +4938,7 @@ function KitchenStationsPage({
       setModal(null);
       await onStationsChanged();
     } catch (actionError) {
-      setStationError(
-        actionError instanceof Error
-          ? actionError.message
-          : "Kitchen station action failed.",
-      );
+      setStationError(kitchenStationErrorMessage(actionError));
     } finally {
       setSaving(false);
     }
@@ -4972,11 +4979,7 @@ function KitchenStationsPage({
       );
       await onStationsChanged();
     } catch (actionError) {
-      setStationError(
-        actionError instanceof Error
-          ? actionError.message
-          : "Kitchen station action failed.",
-      );
+      setStationError(kitchenStationErrorMessage(actionError));
     } finally {
       setWorkingId(null);
     }

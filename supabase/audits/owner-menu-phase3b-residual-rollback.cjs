@@ -6,7 +6,7 @@ const { randomUUID } = require('node:crypto');
 const { Client } = require('pg');
 
 const root = path.resolve(__dirname, '../..');
-const migration = fs.readFileSync(path.join(root, 'supabase/migrations/264_owner_menu_item_creation_atomic_idempotent.sql'), 'utf8');
+const migration = fs.readFileSync(path.join(root, 'supabase/parked-migrations/owner_menu_item_creation_atomic_idempotent.PARKED.sql'), 'utf8');
 const config = fs.readFileSync(path.join(root, 'supabase/connection.env'), 'utf8');
 const url = config.match(/^\s*SUPABASE_DB_URL\s*=\s*(.+)\s*$/m)?.[1]?.replace(/^['"]|['"]$/g, '');
 if (!url) throw new Error('SUPABASE_DB_URL missing');
