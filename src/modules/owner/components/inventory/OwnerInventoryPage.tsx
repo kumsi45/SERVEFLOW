@@ -194,14 +194,14 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
       </header>
 
       <section className="od-inventory-summary" aria-label="Inventory summary">
-        <div>
+        <div className="od-inventory-summary-warning">
           <span>Low stock</span>
           <strong>
             {unavailable(stockState) ??
               attention.filter((row) => row.stockStatus === "low_stock").length}
           </strong>
         </div>
-        <div>
+        <div className="od-inventory-summary-critical">
           <span>Out of stock</span>
           <strong>
             {unavailable(stockState) ??
@@ -209,7 +209,7 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
                 .length}
           </strong>
         </div>
-        <div>
+        <div className="od-inventory-summary-pending">
           <span>Requests</span>
           <strong>
             {unavailable(requestsState) ?? pendingRequests.length}
@@ -218,7 +218,7 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
       </section>
 
       <section
-        className="od-inventory-section"
+        className="od-inventory-section od-inventory-attention-section"
         aria-labelledby="owner-inventory-attention"
       >
         <header>
@@ -273,7 +273,7 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
       </section>
 
       <section
-        className="od-inventory-section"
+        className="od-inventory-section od-inventory-stock-section"
         aria-labelledby="owner-inventory-stock"
       >
         <header className="od-inventory-stock-header">
@@ -330,7 +330,7 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
       </section>
 
       <section
-        className="od-inventory-section"
+        className="od-inventory-section od-inventory-requests-section"
         aria-labelledby="owner-inventory-requests"
       >
         <header>
@@ -387,7 +387,7 @@ export function OwnerInventoryPage({ restaurantId, onManageInventory }: Props) {
       </section>
 
       <section
-        className="od-inventory-section"
+        className="od-inventory-section od-inventory-activity-section"
         aria-labelledby="owner-inventory-activity"
       >
         <header>
