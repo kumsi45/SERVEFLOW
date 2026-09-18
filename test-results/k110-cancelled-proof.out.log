@@ -1,0 +1,4 @@
+PASS production identity, head 265, deployed SHA, no-disable foundation side effect, and parked Menu absence
+K1.10 stage=canonical-cancelled pid=1124030
+PASS canonical Waiter-to-Cashier cancellation is terminal, excluded from queue, and permits frozen-station disable
+K1.7 AUDIT PASS marker=k17-1789670909895-7a8ed1bcd2

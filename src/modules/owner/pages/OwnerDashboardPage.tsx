@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   AlertTriangle,
@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu as MenuIcon,
+  RefreshCw,
   Pencil,
   Settings,
   UserRound,
@@ -62,6 +63,7 @@ import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeT
 import { OwnerAiAdvisor } from "../components/ai/OwnerAiAdvisor";
 import { OwnerOrdersView } from "../components/orders/OwnerOrdersView";
 import { PrintingPaymentConfigurationCenter } from "../components/settings/PrintingPaymentConfigurationCenter";
+import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
 import {
   searchActiveDirectInventoryItems,
   searchActiveMenuRecipes,
@@ -4858,6 +4860,21 @@ function KitchenStationsPage({
   const [notice, setNotice] = useState<string | null>(null);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [workload, setWorkload] = useState<{ waiting: number; preparing: number; ready: number } | null>(null);
+  const [stationWorkload, setStationWorkload] = useState<Map<string, { waiting: number; preparing: number; ready: number }>>(new Map());
+  const [pendingRequests, setPendingRequests] = useState<number | null>(null);
+  const [workloadError, setWorkloadError] = useState<string | null>(null);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [loadingWorkload, setLoadingWorkload] = useState(true);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
+  const [showRequests, setShowRequests] = useState(false);
+  const [requestRows, setRequestRows] = useState<InventoryRequest[]>([]);
+  const [requestViewLoading, setRequestViewLoading] = useState(false);
+  const [requestViewError, setRequestViewError] = useState<string | null>(null);
+  const requestDialogRef = useRef<HTMLDivElement>(null);
+  const requestCloseRef = useRef<HTMLButtonElement>(null);
   const sortedStations = useMemo(
     () =>
       [...stations].sort(
@@ -4867,6 +4884,73 @@ function KitchenStationsPage({
     [stations],
   );
   const activeCount = sortedStations.filter((station) => station.active).length;
+
+  const refreshOperationalData = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
+    const [queueResult, requestResult] = await Promise.allSettled([
+      supabase.rpc("get_canonical_station_kitchen_orders", {
+        target_restaurant_id: restaurantId,
+        target_station_id: null,
+        include_all_stations: true,
+        log_queue_view: false,
+      }),
+      supabase
+        .from("kitchen_inventory_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", restaurantId)
+        .eq("status", "pending"),
+    ]);
+
+    if (queueResult.status === "fulfilled" && !queueResult.value.error) {
+      const totals = { waiting: 0, preparing: 0, ready: 0 };
+      const byStation = new Map<string, { waiting: number; preparing: number; ready: number }>();
+      for (const row of (queueResult.value.data ?? []) as Record<string, unknown>[]) {
+        const status = String(row.status ?? "");
+        const progress = Array.isArray(row.station_progress) ? row.station_progress[0] : null;
+        const stationId = progress && typeof progress === "object" ? String((progress as Record<string, unknown>).station_id ?? "") : "";
+        const key = status === "accepted" ? "waiting" : status === "preparing" ? "preparing" : status === "ready" ? "ready" : null;
+        if (!key || !stationId) continue;
+        totals[key] += 1;
+        const stationTotals = byStation.get(stationId) ?? { waiting: 0, preparing: 0, ready: 0 };
+        stationTotals[key] += 1;
+        byStation.set(stationId, stationTotals);
+      }
+      setWorkload(totals);
+      setStationWorkload(byStation);
+      setWorkloadError(null);
+    } else {
+      const cause = queueResult.status === "fulfilled" ? queueResult.value.error : queueResult.reason;
+      setWorkloadError(cause instanceof Error ? cause.message : "Kitchen workload unavailable.");
+    }
+    setLoadingWorkload(false);
+
+    if (requestResult.status === "fulfilled" && !requestResult.value.error) {
+      setPendingRequests(requestResult.value.count ?? 0);
+      setRequestsError(null);
+    } else {
+      const cause = requestResult.status === "fulfilled" ? requestResult.value.error : requestResult.reason;
+      setRequestsError(cause instanceof Error ? cause.message : "Material requests unavailable.");
+    }
+    setLoadingRequests(false);
+    if (manual) setRefreshing(false);
+  }, [restaurantId]);
+
+  useEffect(() => { void refreshOperationalData(); }, [refreshOperationalData]);
+  useModalFocus(showRequests, () => setShowRequests(false), requestDialogRef, requestCloseRef);
+
+  async function openRequests() {
+    setShowRequests(true);
+    setRequestViewLoading(true);
+    setRequestViewError(null);
+    try {
+      const requests = await loadInventoryRequests(restaurantId);
+      setRequestRows(requests.filter((request) => request.status === "pending"));
+    } catch (error) {
+      setRequestViewError(error instanceof Error ? error.message : "Material requests unavailable.");
+    } finally {
+      setRequestViewLoading(false);
+    }
+  }
 
   function kitchenStationErrorMessage(actionError: unknown) {
     const message = actionError instanceof Error ? actionError.message : "Kitchen station action failed.";
@@ -4937,6 +5021,7 @@ function KitchenStationsPage({
       );
       setModal(null);
       await onStationsChanged();
+      void refreshOperationalData();
     } catch (actionError) {
       setStationError(kitchenStationErrorMessage(actionError));
     } finally {
@@ -4978,6 +5063,7 @@ function KitchenStationsPage({
             : "Kitchen station disabled.",
       );
       await onStationsChanged();
+      void refreshOperationalData();
     } catch (actionError) {
       setStationError(kitchenStationErrorMessage(actionError));
     } finally {
@@ -4986,145 +5072,55 @@ function KitchenStationsPage({
   }
 
   return (
-    <div className="od-page od-operations-page od-kitchen-experience">
-      <div className="od-page-header">
-        <div>
-          <h1 className="od-page-title">Kitchen Stations</h1>
-          <p className="od-page-subtitle">
-            Create and manage kitchen station foundations for future routing.
-          </p>
-        </div>
-        <div className="od-header-actions">
-          <button
-            className="od-btn-primary"
-            type="button"
-            onClick={openCreateModal}
-          >
-            Create Station
-          </button>
-        </div>
-      </div>
-
+    <div className="od-page od-operations-page od-kitchen-experience od-kitchen-monitoring">
       {(stationError || notice) && (
         <div className={stationError ? "od-error-inline" : "od-success-inline"}>
           {stationError || notice}
         </div>
       )}
 
-      <section className="od-kpi-grid">
-        <div className="od-kpi-card">
-          <div className="od-kpi-label">Total Stations</div>
-          <div className="od-kpi-value">{sortedStations.length}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-label">Active Stations</div>
-          <div className="od-kpi-value">{activeCount}</div>
-        </div>
-        <div className="od-kpi-card">
-          <div className="od-kpi-label">Assigned Menu Items</div>
-          <div className="od-kpi-value">
-            {sortedStations.reduce(
-              (sum, station) => sum + station.assigned_menu_items,
-              0,
-            )}
-          </div>
-        </div>
-      </section>
+      {sortedStations.length === 0 ? (
+        <section className="od-kitchen-empty"><h2>Set up your kitchen</h2><p>Create stations to route menu items and kitchen work.</p><button className="od-btn-primary" type="button" onClick={openCreateModal}>Create station</button></section>
+      ) : (
+        <>
+          <section className="od-kitchen-workload" aria-labelledby="kitchen-workload-title">
+            <header className="od-kitchen-workload-head"><h2 id="kitchen-workload-title">Current workload</h2><button className="od-btn-ghost compact" type="button" onClick={() => void refreshOperationalData(true)} disabled={refreshing}><RefreshCw size={15} aria-hidden="true" className={refreshing ? "od-spin" : ""} /> {refreshing ? "Refreshing" : "Refresh"}</button></header>
+            {loadingWorkload && workload === null ? <div className="od-kitchen-skeleton" aria-label="Loading kitchen workload" /> : workloadError ? <div className="od-kitchen-unavailable"><strong>Kitchen workload unavailable</strong><button type="button" onClick={() => void refreshOperationalData(true)}>Retry</button></div> : <>
+              {[['Waiting', workload?.waiting ?? 0], ['Preparing', workload?.preparing ?? 0], ['Ready', workload?.ready ?? 0]].map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value}</strong></div>)}
+              {workload && workload.waiting + workload.preparing + workload.ready === 0 && <p>No current kitchen work</p>}
+            </>}
+          </section>
 
-      <section className="od-station-grid">
-        {sortedStations.length === 0 ? (
-          <div className="od-card">
-            <div className="od-empty">
-              <div className="od-empty-msg">No kitchen stations yet</div>
-              <div className="od-empty-sub">
-                Main Kitchen will be created automatically.
-              </div>
+          <section className="od-kitchen-section od-kitchen-requests" aria-labelledby="kitchen-requests-title">
+            <div><h2 id="kitchen-requests-title">Material requests</h2>{loadingRequests && pendingRequests === null ? <span className="od-kitchen-inline-skeleton" /> : requestsError ? <span>Unavailable</span> : <span>{pendingRequests ? `${pendingRequests} pending` : "No pending requests"}</span>}</div>
+            {requestsError ? <button type="button" className="od-btn-ghost compact" onClick={() => void refreshOperationalData(true)}>Retry</button> : pendingRequests ? <button type="button" className="od-btn-ghost compact" onClick={() => void openRequests()}>View requests</button> : null}
+          </section>
+
+          <section className="od-kitchen-section" aria-labelledby="station-workload-title">
+            <header><div><h2 id="station-workload-title">Station workload</h2><p>Current eligible kitchen batches by their routed station.</p></div></header>
+            <div className="od-kitchen-workload-list">
+              {sortedStations.map((station) => {
+                const counts = stationWorkload.get(station.id) ?? { waiting: 0, preparing: 0, ready: 0 };
+                const labels = [[counts.waiting, 'waiting'], [counts.preparing, 'preparing'], [counts.ready, 'ready']].filter(([count]) => Number(count) > 0);
+                return <div key={station.id} className="od-kitchen-station-workload"><span className="od-station-dot" style={{ background: station.display_color }} /><strong>{station.name}</strong><span>{workloadError ? 'Workload unavailable' : labels.length ? labels.map(([count, label]) => `${count} ${label}`).join(' · ') : 'No current work'}</span></div>;
+              })}
             </div>
-          </div>
-        ) : (
-          sortedStations.map((station) => {
+          </section>
+
+          <section className="od-kitchen-section od-kitchen-setup" aria-labelledby="kitchen-setup-title">
+            <header><div><h2 id="kitchen-setup-title">Kitchen setup</h2><p>{activeCount ? `${activeCount} active station${activeCount === 1 ? '' : 's'}` : 'Kitchen setup required — activate at least one station for new kitchen routing.'}</p></div><button className="od-btn-primary" type="button" onClick={openCreateModal}>+ Create station</button></header>
+            <div className="od-kitchen-setup-list">
+              {sortedStations.map((station) => {
             const busy = workingId?.endsWith(station.id) || saving;
-            const deleteDisabled = busy;
             return (
-              <article
-                key={station.id}
-                className={`od-station-card ${station.active ? "active" : "inactive"}`}
-              >
-                <div className="od-station-head">
-                  <div
-                    className="od-station-icon"
-                    style={{ background: station.display_color }}
-                  >
-                    {station.icon}
-                  </div>
-                  <div className="od-station-title">
-                    <h2>{station.name}</h2>
-                    <span
-                      className={`od-status-badge ${station.active ? "paid" : "pending"}`}
-                    >
-                      {station.active ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                </div>
-                {station.description ? (
-                  <p className="od-station-desc">{station.description}</p>
-                ) : (
-                  <p className="od-station-desc muted">No description added.</p>
-                )}
-                <div className="od-station-meta">
-                  <span>
-                    <strong>{station.priority}</strong> Priority
-                  </span>
-                  <span>
-                    <strong>{station.assigned_menu_items}</strong> Menu Items
-                  </span>
-                </div>
-                <div className="od-row-actions">
-                  <button
-                    className="od-btn-ghost compact"
-                    type="button"
-                    onClick={() => openEditModal(station)}
-                    disabled={busy}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="od-btn-ghost compact"
-                    type="button"
-                    onClick={() =>
-                      void runStationAction(
-                        station,
-                        station.active ? "disable" : "enable",
-                      )
-                    }
-                    disabled={busy}
-                  >
-                    {station.active ? "Disable" : "Enable"}
-                  </button>
-                  <button
-                    className="od-btn-ghost compact danger"
-                    type="button"
-                    onClick={() => void runStationAction(station, "delete")}
-                    disabled={deleteDisabled}
-                    title={
-                      station.assigned_menu_items > 0
-                        ? "This station is currently in use."
-                        : "Delete station"
-                    }
-                  >
-                    Delete
-                  </button>
-                </div>
-                {station.assigned_menu_items > 0 && (
-                  <div className="od-station-hint">
-                    This station is currently in use.
-                  </div>
-                )}
-              </article>
+              <article key={station.id} className="od-kitchen-setup-row"><span className="od-station-dot" style={{ background: station.display_color }} /><div><strong>{station.name}</strong><small>{station.assigned_menu_items} menu item{station.assigned_menu_items === 1 ? '' : 's'}</small></div><span className={`od-status-badge ${station.active ? 'paid' : 'pending'}`}>{station.active ? 'Active' : 'Inactive'}</span><div className="od-kitchen-actions"><button className="od-btn-ghost compact" type="button" onClick={() => openEditModal(station)} disabled={busy}>Manage</button><button className="od-kitchen-actions-trigger" type="button" aria-label={`More actions for ${station.name}`} aria-expanded={openActionsId === station.id} onClick={() => setOpenActionsId(openActionsId === station.id ? null : station.id)} disabled={busy}>⋮</button>{openActionsId === station.id && <div className="od-kitchen-actions-menu"><button type="button" onClick={() => { setOpenActionsId(null); void runStationAction(station, station.active ? 'disable' : 'enable'); }}>{station.active ? 'Disable' : 'Enable'}</button><button className="danger" type="button" onClick={() => { setOpenActionsId(null); void runStationAction(station, 'delete'); }}>Delete</button></div>}</div></article>
             );
           })
-        )}
-      </section>
+              }
+            </div>
+          </section>
+        </>
+      )}
 
       {modal && (
         <div className="od-modal-backdrop" role="presentation">
@@ -5251,6 +5247,16 @@ function KitchenStationsPage({
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {showRequests && (
+        <div className="od-kitchen-request-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowRequests(false); }}>
+          <section className="od-kitchen-request-sheet" ref={requestDialogRef} role="dialog" aria-modal="true" aria-labelledby="owner-kitchen-requests-title" tabIndex={-1}>
+            <header><div><span>Kitchen</span><h2 id="owner-kitchen-requests-title">Pending material requests</h2></div><button ref={requestCloseRef} type="button" aria-label="Close material requests" onClick={() => setShowRequests(false)}>×</button></header>
+            <div className="od-kitchen-request-body">
+              {requestViewLoading ? <div className="od-kitchen-request-loading">Loading requests…</div> : requestViewError ? <div className="od-kitchen-request-error"><strong>Material requests unavailable</strong><button type="button" onClick={() => void openRequests()}>Retry</button></div> : requestRows.length === 0 ? <p className="od-kitchen-request-empty">No pending material requests.</p> : requestRows.map((request) => <article key={request.id} className="od-kitchen-request-row"><div><strong>{request.itemName}</strong><span>{request.quantity} {request.unit} · {request.stationName ?? "No station"}</span></div><dl><div><dt>Requested by</dt><dd>{request.requesterName ?? "Not available"}</dd></div><div><dt>Requested</dt><dd>{new Date(request.requestedAt).toLocaleString()}</dd></div><div><dt>Status</dt><dd>Pending</dd></div></dl></article>)}
+            </div>
+          </section>
         </div>
       )}
     </div>
