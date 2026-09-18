@@ -35,10 +35,10 @@ describe("Owner navigation architecture", () => {
   });
 
   it("uses canonical Owner paths and keeps tables backed by the existing QR workspace", () => {
-    for (const path of ["/owner/dashboard", "/owner/orders", "/owner/tables", "/owner/menu", "/owner/kitchen", "/owner/staff", "/owner/customers", "/owner/analytics", "/owner/reports", "/owner/settings"]) expect(source).toContain(path);
+    for (const path of ["/owner/dashboard", "/owner/orders", "/owner/tables", "/owner/menu", "/owner/kitchen", "/owner/inventory", "/owner/staff", "/owner/customers", "/owner/analytics", "/owner/reports", "/owner/settings"]) expect(source).toContain(path);
     expect(source).toContain('tables: "qr"');
     expect(source).toContain('nav === "qr"');
-    expect(router).toContain('"kitchen", "staff", "customers"');
+    expect(router).toContain('"kitchen", "inventory", "staff", "customers"');
     expect(source).toContain("window.dispatchEvent(new PopStateEvent(\"popstate\"))");
   });
 

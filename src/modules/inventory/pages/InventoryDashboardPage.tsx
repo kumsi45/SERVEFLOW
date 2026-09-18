@@ -444,6 +444,9 @@ export function InventoryDashboardPage({
   const [transferForm, setTransferForm] = useState<InventoryTransferDraft>(transferDraft());
   const [openingForm, setOpeningForm] = useState<InventoryOpeningBalanceDraft>(openingBalanceDraft());
   const canManageMasterLifecycle = staffRole === "owner" || staffRole === "manager";
+  const ownerReturnPath = staffRole === "owner" && window.sessionStorage.getItem("serveflow.owner-inventory-return") === "/owner/inventory"
+    ? "/owner/inventory"
+    : null;
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -1277,6 +1280,11 @@ export function InventoryDashboardPage({
       </aside>
 
       <section className="ia-workspace">
+        {ownerReturnPath && <button className="ia-owner-return" type="button" onClick={() => {
+          window.sessionStorage.removeItem("serveflow.owner-inventory-return");
+          window.history.pushState({}, "", ownerReturnPath);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}>← Back to Owner Inventory</button>}
         {error && !(compactSetupWorkspace && adminDataFailed) && section !== "dashboard" && section !== "current-stock" && section !== "ledger" && <div className="ia-alert error" role="alert">{error}</div>}
         {message && <div className="ia-operation-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Dismiss success message" onClick={() => setMessage(null)}>×</button></div>}
         {loading && section !== "dashboard" && section !== "current-stock" && section !== "ledger" ? compactSetupWorkspace ? <div className="ia-setup-loading" role="status">Loading {section === "items" ? "materials" : "storage locations"}...</div> : <div className="ia-empty">Loading inventory administration...</div> : displayedContent}

@@ -28,8 +28,9 @@ describe("inventory dashboard navigation and access", () => {
       read("src/modules/waiter-dashboard/pages/WaiterDashboardPage.tsx"),
     ].join("\n");
 
-    expect(owner).toContain('{ id: "inventory", icon: "▦", label: "Inventory" }');
+    expect(owner).toContain('{ id: "inventory", icon: Boxes, label: "Inventory" }');
     expect(manager).toContain('{ key: "inventory", label: "Inventory"');
+    expect(owner).toContain('inventory: "/owner/inventory"');
     expect(owner).toContain('"/inventory/dashboard"');
     expect(manager).toContain('href: "/manager/inventory"');
     expect(blockedRoleNavigation).not.toContain('href: "/inventory/');
@@ -56,5 +57,16 @@ describe("inventory dashboard navigation and access", () => {
 
     expect(owner).toContain('sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId)');
     expect(manager).toContain('sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId)');
+  });
+
+  it("keeps Owner monitoring separate from the operational workspace", () => {
+    const owner = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
+    const ownerInventory = read("src/modules/owner/components/inventory/OwnerInventoryPage.tsx");
+    expect(owner).toContain("<OwnerInventoryPage");
+    expect(owner).toContain('"/inventory/dashboard"');
+    expect(ownerInventory).toContain("loadCurrentStock");
+    expect(ownerInventory).toContain("loadInventoryRequests");
+    expect(ownerInventory).toContain("loadLedger");
+    expect(ownerInventory).not.toContain("issueInventoryKitchenRequest");
   });
 });

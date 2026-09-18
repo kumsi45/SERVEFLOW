@@ -62,6 +62,7 @@ import { publishMenuThemeSelection } from "../../menu/theme-engine/themeEvents";
 import { resolveMenuTheme, type MenuTheme } from "../../menu/theme-engine/ThemeTypes";
 import { OwnerAiAdvisor } from "../components/ai/OwnerAiAdvisor";
 import { OwnerOrdersView } from "../components/orders/OwnerOrdersView";
+import { OwnerInventoryPage } from "../components/inventory/OwnerInventoryPage";
 import { PrintingPaymentConfigurationCenter } from "../components/settings/PrintingPaymentConfigurationCenter";
 import { loadInventoryRequests, type InventoryRequest } from "../../kitchen/services/inventoryRequestService";
 import {
@@ -787,13 +788,14 @@ type NavId =
   | "analytics"
   | "menu"
   | "stations"
+  | "inventory"
   | "staff"
   | "qr"
   | "customers"
   | "reports"
   | "settings";
 
-type OwnerNavTarget = NavId | "inventory" | "recipes";
+type OwnerNavTarget = NavId | "recipes";
 
 type OwnerNavItem = { id: OwnerNavTarget; icon: LucideIcon; label: string };
 
@@ -841,6 +843,7 @@ const OWNER_SECTION_NAV: Record<string, NavId> = {
   tables: "qr",
   menu: "menu",
   kitchen: "stations",
+  inventory: "inventory",
   staff: "staff",
   customers: "customers",
   analytics: "analytics",
@@ -854,6 +857,7 @@ const OWNER_NAV_PATH: Record<NavId, string> = {
   qr: "/owner/tables",
   menu: "/owner/menu",
   stations: "/owner/kitchen",
+  inventory: "/owner/inventory",
   staff: "/owner/staff",
   customers: "/owner/customers",
   analytics: "/owner/analytics",
@@ -2322,12 +2326,6 @@ export function OwnerDashboardPage({
       window.dispatchEvent(new PopStateEvent("popstate"));
       return;
     }
-    if (nextNav === "inventory") {
-      window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
-      window.history.pushState({}, "", "/inventory/dashboard");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      return;
-    }
     setNav(nextNav);
     const nextPath = OWNER_NAV_PATH[nextNav];
     if (window.location.pathname !== nextPath) {
@@ -2544,6 +2542,17 @@ export function OwnerDashboardPage({
             restaurantId={restaurantId}
             stations={kitchenStations}
             onStationsChanged={refreshKitchenStations}
+          />
+        )}
+        {nav === "inventory" && (
+          <OwnerInventoryPage
+            restaurantId={restaurantId}
+            onManageInventory={() => {
+              window.sessionStorage.setItem("serveflow.active-restaurant:inventory", restaurantId);
+              window.sessionStorage.setItem("serveflow.owner-inventory-return", "/owner/inventory");
+              window.history.pushState({}, "", "/inventory/dashboard");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
           />
         )}
         {nav === "qr" && (
@@ -4869,12 +4878,15 @@ function KitchenStationsPage({
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [openActionsId, setOpenActionsId] = useState<string | null>(null);
+  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
   const [requestRows, setRequestRows] = useState<InventoryRequest[]>([]);
   const [requestViewLoading, setRequestViewLoading] = useState(false);
   const [requestViewError, setRequestViewError] = useState<string | null>(null);
   const requestDialogRef = useRef<HTMLDivElement>(null);
   const requestCloseRef = useRef<HTMLButtonElement>(null);
+  const stationDialogRef = useRef<HTMLDivElement>(null);
+  const stationCloseRef = useRef<HTMLButtonElement>(null);
   const sortedStations = useMemo(
     () =>
       [...stations].sort(
@@ -4937,6 +4949,7 @@ function KitchenStationsPage({
 
   useEffect(() => { void refreshOperationalData(); }, [refreshOperationalData]);
   useModalFocus(showRequests, () => setShowRequests(false), requestDialogRef, requestCloseRef);
+  useModalFocus(Boolean(modal), () => setModal(null), stationDialogRef, stationCloseRef);
 
   async function openRequests() {
     setShowRequests(true);
@@ -4974,6 +4987,7 @@ function KitchenStationsPage({
       String((sortedStations[sortedStations.length - 1]?.priority ?? 0) + 10),
     );
     setFormActive(true);
+    setAdvancedSettingsOpen(false);
     setModal({ mode: "create" });
   }
 
@@ -4986,6 +5000,7 @@ function KitchenStationsPage({
     setFormIcon(station.icon);
     setFormPriority(String(station.priority));
     setFormActive(station.active);
+    setAdvancedSettingsOpen(false);
     setModal({ mode: "edit", station });
   }
 
@@ -5097,7 +5112,7 @@ function KitchenStationsPage({
           </section>
 
           <section className="od-kitchen-section" aria-labelledby="station-workload-title">
-            <header><div><h2 id="station-workload-title">Station workload</h2><p>Current eligible kitchen batches by their routed station.</p></div></header>
+            <header><div><h2 id="station-workload-title">Station activity</h2></div></header>
             <div className="od-kitchen-workload-list">
               {sortedStations.map((station) => {
                 const counts = stationWorkload.get(station.id) ?? { waiting: 0, preparing: 0, ready: 0 };
@@ -5123,23 +5138,23 @@ function KitchenStationsPage({
       )}
 
       {modal && (
-        <div className="od-modal-backdrop" role="presentation">
+        <div className="od-modal-backdrop od-kitchen-station-layer" role="presentation">
           <div
-            className="od-modal"
+            className="od-modal od-kitchen-station-modal"
+            ref={stationDialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Kitchen station details"
+            aria-labelledby="kitchen-station-modal-title"
+            tabIndex={-1}
           >
             <div className="od-modal-header">
               <div>
-                <div className="od-card-title">
-                  {modal.mode === "create" ? "Create Station" : "Edit Station"}
-                </div>
-                <div className="od-card-subtitle">
-                  Station names must be unique inside this restaurant.
+                <div id="kitchen-station-modal-title" className="od-card-title">
+                  {modal.mode === "create" ? "Create station" : "Edit station"}
                 </div>
               </div>
               <button
+                ref={stationCloseRef}
                 className="od-icon-btn"
                 type="button"
                 onClick={() => setModal(null)}
@@ -5148,9 +5163,9 @@ function KitchenStationsPage({
                 x
               </button>
             </div>
-            <form className="od-staff-form" onSubmit={submitStation}>
+            <form className="od-staff-form od-kitchen-station-form" onSubmit={submitStation}>
               <label>
-                Station Name
+                Station name
                 <input
                   value={formName}
                   onChange={(event) => setFormName(event.target.value)}
@@ -5159,66 +5174,6 @@ function KitchenStationsPage({
                   maxLength={80}
                 />
               </label>
-              <label>
-                Description
-                <textarea
-                  value={formDescription}
-                  onChange={(event) => setFormDescription(event.target.value)}
-                  disabled={saving}
-                  rows={3}
-                  maxLength={240}
-                />
-              </label>
-              <label>
-                Icon
-                <select
-                  value={formIcon}
-                  onChange={(event) => setFormIcon(event.target.value)}
-                  disabled={saving}
-                >
-                  {KITCHEN_STATION_ICONS.map((icon) => (
-                    <option key={icon.value} value={icon.value}>
-                      {icon.value} - {icon.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Priority
-                <input
-                  type="number"
-                  min="0"
-                  max="10000"
-                  step="1"
-                  value={formPriority}
-                  onChange={(event) => setFormPriority(event.target.value)}
-                  disabled={saving}
-                  required
-                />
-              </label>
-              <div className="od-color-field">
-                <span>Display Color</span>
-                <div className="od-color-options">
-                  {KITCHEN_STATION_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={formColor === color ? "selected" : ""}
-                      style={{ background: color }}
-                      onClick={() => setFormColor(color)}
-                      disabled={saving}
-                      aria-label={`Use color ${color}`}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={formColor}
-                    onChange={(event) => setFormColor(event.target.value)}
-                    disabled={saving}
-                    aria-label="Custom station color"
-                  />
-                </div>
-              </div>
               <label className="od-check-row od-menu-availability">
                 <input
                   type="checkbox"
@@ -5228,6 +5183,33 @@ function KitchenStationsPage({
                 />
                 Active
               </label>
+              <details className="od-kitchen-advanced" open={advancedSettingsOpen} onToggle={(event) => setAdvancedSettingsOpen(event.currentTarget.open)}>
+                <summary>Advanced settings</summary>
+                <div className="od-kitchen-advanced-fields">
+                  <label>
+                    Description
+                    <textarea value={formDescription} onChange={(event) => setFormDescription(event.target.value)} disabled={saving} rows={3} maxLength={240} />
+                  </label>
+                  <label>
+                    Icon
+                    <select value={formIcon} onChange={(event) => setFormIcon(event.target.value)} disabled={saving}>
+                      {KITCHEN_STATION_ICONS.map((icon) => <option key={icon.value} value={icon.value}>{icon.value} - {icon.label}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Priority
+                    <input type="number" min="0" max="10000" step="1" value={formPriority} onChange={(event) => setFormPriority(event.target.value)} disabled={saving} required />
+                    <small>Use a lower number to place this station earlier in your kitchen setup.</small>
+                  </label>
+                  <div className="od-color-field">
+                    <span>Display color</span>
+                    <div className="od-color-options">
+                      {KITCHEN_STATION_COLORS.map((color) => <button key={color} type="button" className={formColor === color ? "selected" : ""} style={{ background: color }} onClick={() => setFormColor(color)} disabled={saving} aria-label={`Use color ${color}`} />)}
+                      <input type="color" value={formColor} onChange={(event) => setFormColor(event.target.value)} disabled={saving} aria-label="Custom station color" />
+                    </div>
+                  </div>
+                </div>
+              </details>
               <div className="od-modal-actions">
                 <button
                   type="button"
@@ -5242,7 +5224,7 @@ function KitchenStationsPage({
                   className="od-btn-primary"
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Save Station"}
+                  {saving ? "Saving..." : modal.mode === "create" ? "Create station" : "Save changes"}
                 </button>
               </div>
             </form>
