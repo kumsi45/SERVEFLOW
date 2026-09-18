@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Pencil,
   Settings,
+  SlidersHorizontal,
   UserRound,
   Users,
   Utensils,
@@ -88,7 +89,9 @@ import {
   sendStaffPasswordReset,
   setStaffWaiterPin,
   updateStaff,
+  type ManagedStaffRole,
   type ManagedStaffMember,
+  type StaffCredentialReadiness,
   type StaffActivityLog,
 } from "../services/staffManagementService";
 import {
@@ -225,7 +228,7 @@ function isOperationalStaff(member: Pick<OdStaff, "role">) {
 
 function staffRoleLabel(role: string) {
   if (role === "inventory_officer") return "Inventory Officer";
-  if (role === "inventory") return "Inventory Staff";
+  if (role === "inventory") return "Legacy inventory role";
   return role.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -1161,6 +1164,7 @@ export function OwnerDashboardPage({
     null,
   );
   const [staff, setStaff] = useState<OdStaff[]>([]);
+  const [staffReadinessAvailable, setStaffReadinessAvailable] = useState(true);
   const [menuItems, setMenuItems] = useState<OdMenuItem[]>([]);
   const menuItemsRef = useRef<OdMenuItem[]>([]);
   const [categories, setCategories] = useState<OdCategory[]>([]);
@@ -1305,16 +1309,24 @@ export function OwnerDashboardPage({
     }
 
     async function loadStaff() {
-      const { data, error: staffError } = await supabase
+      const [staffResult, readinessResult] = await Promise.all([
+        supabase
         .from("restaurant_staff")
         .select(
-          "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+          "id,restaurant_id,user_id,display_name,email,username,employee_id,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
         )
         .eq("restaurant_id", restaurantId)
         .neq("role", "owner")
-        .order("created_at", { ascending: true });
-      if (staffError) throw new Error(staffError.message);
-      if (mounted) setStaff((data ?? []) as OdStaff[]);
+        .order("created_at", { ascending: true }),
+        supabase.from("staff_credential_readiness").select("staff_id,readiness").eq("restaurant_id", restaurantId),
+      ]);
+      if (staffResult.error) throw new Error(staffResult.error.message);
+      const readinessAvailable = !readinessResult.error;
+      const readinessByStaff = new Map((readinessResult.data ?? []).map((row) => [row.staff_id, row.readiness as StaffCredentialReadiness]));
+      if (mounted) {
+        setStaff((staffResult.data ?? []).map((member) => ({ ...member, credential_readiness: readinessAvailable ? readinessByStaff.get(member.id) ?? null : null })) as OdStaff[]);
+        setStaffReadinessAvailable(readinessAvailable);
+      }
       markResource("staff", "ready");
     }
 
@@ -2113,20 +2125,25 @@ export function OwnerDashboardPage({
   }
 
   async function refreshStaff() {
-    const { data, error: staffError } = await supabase
+    const [staffResult, readinessResult] = await Promise.all([
+      supabase
       .from("restaurant_staff")
       .select(
-        "id,restaurant_id,user_id,display_name,email,username,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
+        "id,restaurant_id,user_id,display_name,email,username,employee_id,phone_number,role,assigned_kitchen_station_id,active,created_at,last_login_at,staff_session_active,waiter_session_active",
       )
       .eq("restaurant_id", restaurantId)
       .neq("role", "owner")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true }),
+      supabase.from("staff_credential_readiness").select("staff_id,readiness").eq("restaurant_id", restaurantId),
+    ]);
 
-    if (staffError) {
-      throw new Error(staffError.message);
+    if (staffResult.error) {
+      throw new Error(staffResult.error.message);
     }
-
-    setStaff((data ?? []) as OdStaff[]);
+    const readinessAvailable = !readinessResult.error;
+    const readinessByStaff = new Map((readinessResult.data ?? []).map((row) => [row.staff_id, row.readiness as StaffCredentialReadiness]));
+    setStaff((staffResult.data ?? []).map((member) => ({ ...member, credential_readiness: readinessAvailable ? readinessByStaff.get(member.id) ?? null : null })) as OdStaff[]);
+    setStaffReadinessAvailable(readinessAvailable);
   }
 
   async function refreshHomeComparison() {
@@ -2521,6 +2538,7 @@ export function OwnerDashboardPage({
             restaurantName={restaurantName}
             stations={kitchenStations}
             onStaffChanged={refreshStaff}
+            readinessAvailable={staffReadinessAvailable}
           />
         )}
         {nav === "menu" && (
@@ -3818,6 +3836,7 @@ type StaffPageProps = {
   restaurantName: string;
   stations: OdKitchenStation[];
   onStaffChanged: () => Promise<void>;
+  readinessAvailable: boolean;
 };
 
 type ModuleReportRpc =
@@ -4029,7 +4048,121 @@ type StaffModalState =
   | { mode: "view" | "edit"; member: OdStaff }
   | null;
 
-function StaffPage({
+function StaffPage({ staff, restaurantId, stations, onStaffChanged, readinessAvailable }: StaffPageProps) {
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [selected, setSelected] = useState<OdStaff | null>(null);
+  const [formMode, setFormMode] = useState<"add" | "edit" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", role: "cashier", password: "", confirm: "", pin: "", stationId: "" });
+  const detailDialogRef = useRef<HTMLElement | null>(null);
+  const detailCloseRef = useRef<HTMLButtonElement | null>(null);
+  const formDialogRef = useRef<HTMLFormElement | null>(null);
+  const formCloseRef = useRef<HTMLButtonElement | null>(null);
+  const filterDialogRef = useRef<HTMLElement | null>(null);
+  const filterCloseRef = useRef<HTMLButtonElement | null>(null);
+  useModalFocus(Boolean(selected) && !formMode, () => setSelected(null), detailDialogRef, detailCloseRef);
+  useModalFocus(Boolean(formMode), () => setFormMode(null), formDialogRef, formCloseRef);
+  useModalFocus(filterSheetOpen, () => setFilterSheetOpen(false), filterDialogRef, filterCloseRef);
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+  const stationById = useMemo(() => new Map(stations.map((station) => [station.id, station.name])), [stations]);
+  const operationalStaff = staff.filter(isOperationalStaff);
+  const activeCount = operationalStaff.filter((member) => member.active).length;
+  const legacyInventoryStaff = operationalStaff.filter((member) => member.role === "inventory");
+  const activeLegacyInventoryStaff = legacyInventoryStaff.filter((member) => member.active);
+  const needsSetup = readinessAvailable ? operationalStaff.filter((member) => member.active && member.credential_readiness === "reset_required") : [];
+  const attention = [
+    ...activeLegacyInventoryStaff.map((member) => ({ member, label: "Inventory access needs update", priority: 0 })),
+    ...needsSetup.filter((member) => member.role !== "inventory").map((member) => ({ member, label: member.role === "waiter" ? "Waiter PIN setup required" : "Password reset required", priority: 1 })),
+    ...operationalStaff.filter((member) => !member.active).map((member) => ({ member, label: "Access disabled", priority: 2 })),
+  ].sort((a, b) => a.priority - b.priority || a.member.display_name.localeCompare(b.member.display_name));
+  const filtered = operationalStaff.filter((member) => {
+    const session = member.staff_session_active || member.waiter_session_active;
+    const matchesStatus = statusFilter === "all"
+      || (statusFilter === "active" && member.active)
+      || (statusFilter === "disabled" && !member.active)
+      || (statusFilter === "setup" && readinessAvailable && member.active && member.credential_readiness === "reset_required")
+      || (statusFilter === "session" && session);
+    const searchableIdentity = member.role === "waiter"
+      ? `${member.display_name} ${member.employee_id ?? ""} ${member.role}`
+      : `${member.display_name} ${member.email ?? ""} ${member.employee_id ?? ""} ${member.role === "inventory" ? "legacy inventory role inventory access needs update" : member.role}`;
+    return (roleFilter === "all" || member.role === roleFilter) && matchesStatus && searchableIdentity.toLowerCase().includes(search.trim().toLowerCase());
+  });
+  const roleCounts = ["manager", "cashier", "kitchen", "waiter", "inventory_officer"]
+    .map((role) => ({ role, count: operationalStaff.filter((member) => member.role === role).length }))
+    .filter((entry) => entry.count > 0);
+  const roleLabel = (member: OdStaff) => member.role === "inventory" ? "Legacy inventory role" : staffRoleLabel(member.role);
+  const statusLabel = (member: OdStaff) => {
+    if (member.role === "inventory") return "Inventory access needs update";
+    if (!member.active) return "Access disabled";
+    if (!readinessAvailable) return "Access setup unavailable";
+    if (member.credential_readiness === "reset_required") return member.role === "waiter" ? "PIN setup required" : "Password reset required";
+    return "Active access";
+  };
+  const mobileStatusLabel = (member: OdStaff) => statusLabel(member) === "Active access" ? "Active" : statusLabel(member);
+  const activeFilterCount = Number(roleFilter !== "all") + Number(statusFilter !== "all");
+  const openAdd = () => { setForm({ name: "", email: "", phone: "", role: "cashier", password: "", confirm: "", pin: "", stationId: "" }); setError(null); setFormMode("add"); };
+  const openEdit = (member: OdStaff) => { setSelected(member); setForm({ name: member.display_name, email: member.email ?? "", phone: member.phone_number ?? "", role: member.role, password: "", confirm: "", pin: "", stationId: member.assigned_kitchen_station_id ?? "" }); setError(null); setFormMode("edit"); };
+  const run = async (action: () => Promise<unknown>, success: string, closeDetail = Boolean(selected) && !formMode) => {
+    try {
+      setPending(true);
+      setError(null);
+      await action();
+      await onStaffChanged();
+      if (closeDetail) setSelected(null);
+      setNotice(success);
+      return true;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Staff action failed.");
+      return false;
+    } finally {
+      setPending(false);
+    }
+  };
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formMode || !form.name.trim()) { setError("Enter the staff member's name."); return; }
+    const isWaiter = form.role === "waiter";
+    if (formMode === "add") {
+      if (!isWaiter && !form.email.trim()) { setError("Email is required for this account."); return; }
+      if (isWaiter ? !/^\d{4}$/.test(form.pin) : form.password.length < 8 || form.password !== form.confirm) { setError(isWaiter ? "Enter a 4-digit Waiter PIN." : "Enter matching passwords of at least 8 characters."); return; }
+      if (!await run(() => createStaff({ restaurantId, fullName: form.name, email: form.email, password: isWaiter ? undefined : form.password, pin: isWaiter ? form.pin : undefined, phoneNumber: form.phone, role: form.role as Exclude<ManagedStaffRole, "owner">, assignedKitchenStationId: form.role === "kitchen" ? form.stationId || null : null }), "Staff account created.")) return;
+    } else if (selected) {
+      if (selected.role === "waiter" && form.pin) {
+        if (!/^\d{4}$/.test(form.pin)) { setError("Enter a 4-digit Waiter PIN."); return; }
+        if (!await run(() => setStaffWaiterPin(restaurantId, selected.id, form.pin), "Waiter PIN updated.")) return;
+      } else {
+        if (!await run(() => updateStaff({ restaurantId, staffId: selected.id, fullName: form.name, phoneNumber: form.phone, role: form.role as Exclude<ManagedStaffRole, "owner">, assignedKitchenStationId: form.role === "kitchen" ? form.stationId || null : null }), "Staff details updated.")) return;
+      }
+    }
+    setFormMode(null);
+    setSelected(null);
+  };
+  const sessionText = (member: OdStaff) => member.staff_session_active || member.waiter_session_active ? "Signed into ServeFlow" : null;
+
+  return <div className="od-page od-operations-page od-staff-experience od-staff-v1">
+    <header className="od-staff-v1-head"><h1>Staff</h1><div><button className="od-btn-ghost" onClick={() => void run(onStaffChanged, "Staff refreshed.")} disabled={pending}>Refresh</button><button className="od-btn-primary" onClick={openAdd}>+ Add staff</button></div></header>
+    {(error || notice) && <div className={`${error ? "od-error-inline" : "od-success-inline"} od-staff-feedback`}>{error || notice}</div>}
+    <div className="od-staff-mobile-strip" aria-label="Staff summary and actions"><span><strong>{operationalStaff.length}</strong><small>Staff</small></span><span><strong>{activeCount}</strong><small>Active</small></span><span><strong>{readinessAvailable ? needsSetup.length : "—"}</strong><small>Setup</small></span><button type="button" className="od-btn-primary" onClick={openAdd}>+ Add</button><button type="button" className="od-staff-refresh-icon" onClick={() => void run(onStaffChanged, "Staff refreshed.")} disabled={pending} aria-label="Refresh staff"><RefreshCw size={15} /></button></div>
+    <section className="od-staff-summary" aria-label="Staff summary"><div><strong>{operationalStaff.length}</strong><span>Staff</span></div><div><strong>{activeCount}</strong><span>Active access</span></div><div><strong>{readinessAvailable ? needsSetup.length : "Unavailable"}</strong><span>Need setup</span></div></section>
+    <section className="od-staff-attention" aria-labelledby="staff-attention-title"><header><div><h2 id="staff-attention-title">Needs attention</h2><p>Objective access and credential setup states.</p></div></header>{!readinessAvailable && attention.length === 0 ? <p className="od-staff-unavailable">Credential setup status is unavailable. <button onClick={() => void run(onStaffChanged, "Staff refreshed.")}>Retry</button></p> : attention.length === 0 ? <p className="od-staff-empty">No staff access issues need attention.</p> : <div className="od-staff-attention-list">{attention.slice(0, 4).map(({ member, label }) => <button key={`${member.id}-${label}`} className="od-staff-attention-row" onClick={() => setSelected(member)}><span><strong>{member.display_name}</strong><small>{roleLabel(member)}</small></span><span>{label}</span><b>Manage</b></button>)}</div>}</section>
+    <section className="od-staff-directory" aria-labelledby="staff-directory-title"><header><div><h2 id="staff-directory-title">Staff directory</h2></div><div className="od-staff-v1-filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff..." aria-label="Search staff" /><button type="button" className={activeFilterCount ? "od-staff-filter-trigger active" : "od-staff-filter-trigger"} onClick={() => setFilterSheetOpen(true)} aria-haspopup="dialog"><SlidersHorizontal size={15} />Filter{activeFilterCount ? ` · ${activeFilterCount}` : ""}</button><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="Filter by role"><option value="all">All roles</option>{["manager", "cashier", "kitchen", "waiter", "inventory_officer"].map((role) => <option key={role} value={role}>{staffRoleLabel(role)}</option>)}</select><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status"><option value="all">All statuses</option><option value="active">Active access</option><option value="disabled">Access disabled</option>{readinessAvailable && <option value="setup">Setup required</option>}<option value="session">Signed into ServeFlow</option></select></div></header>
+      {operationalStaff.length === 0 ? <div className="od-staff-empty"><strong>No staff added yet</strong><button className="od-btn-primary" onClick={openAdd}>Add staff</button></div> : <div className="od-staff-list">{filtered.length === 0 ? <div className="od-staff-empty">No staff match these filters <button onClick={() => { setSearch(""); setRoleFilter("all"); setStatusFilter("all"); }}>Clear filters</button></div> : filtered.map((member) => <button className="od-staff-row" key={member.id} onClick={() => setSelected(member)}><span className="od-staff-avatar-small" aria-hidden="true">{member.display_name.charAt(0).toUpperCase()}</span><span className="od-staff-row-identity"><strong>{member.display_name}</strong><small>{member.role === "waiter" ? member.employee_id || "Waiter" : member.email || member.employee_id || "Staff account"}</small></span><span className="od-role-badge">{roleLabel(member)}</span><span className={`od-staff-row-status ${statusLabel(member) === "Active access" ? "normal" : "attention"}`}><strong>{mobileStatusLabel(member)}</strong>{sessionText(member) && <small>{sessionText(member)}</small>}</span><b aria-hidden="true">›</b></button>)}</div>}</section>
+    <section className="od-staff-team" aria-labelledby="staff-team-title"><h2 id="staff-team-title">Team</h2><p>Includes active and disabled memberships.</p><div>{roleCounts.map(({ role, count }) => <span key={role}><small>{staffRoleLabel(role)}</small><b>{count}</b></span>)}{legacyInventoryStaff.length > 0 && <span className="od-staff-legacy-count"><small>Access updates needed</small><b>{legacyInventoryStaff.length}</b></span>}</div></section>
+    {filterSheetOpen && <div className="od-staff-filter-layer" role="presentation"><section ref={filterDialogRef} className="od-staff-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="staff-filter-title"><header><h2 id="staff-filter-title">Filter staff</h2><button ref={filterCloseRef} type="button" onClick={() => setFilterSheetOpen(false)} aria-label="Close filters">×</button></header><label>Role<select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="all">All roles</option>{["manager", "cashier", "kitchen", "waiter", "inventory_officer"].map((role) => <option key={role} value={role}>{staffRoleLabel(role)}</option>)}</select></label><label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="active">Active access</option><option value="disabled">Access disabled</option>{readinessAvailable && <option value="setup">Setup required</option>}<option value="session">Signed into ServeFlow</option></select></label><footer><button type="button" className="od-btn-ghost" onClick={() => { setRoleFilter("all"); setStatusFilter("all"); }}>Reset</button><button type="button" className="od-btn-primary" onClick={() => setFilterSheetOpen(false)}>Done</button></footer></section></div>}
+    {selected && <div className="od-staff-sheet-layer" role="presentation"><aside ref={detailDialogRef} className="od-staff-sheet" role="dialog" aria-modal="true" aria-labelledby="staff-detail-title"><header><div><h2 id="staff-detail-title">{selected.display_name}</h2><p>{roleLabel(selected)}</p></div><button ref={detailCloseRef} onClick={() => setSelected(null)} aria-label="Close staff details">×</button></header><dl><div><dt>Role</dt><dd>{roleLabel(selected)}</dd></div><div><dt>Access</dt><dd>{selected.role === "inventory" ? "Inventory access needs update" : selected.active ? "Active" : "Disabled"}</dd></div><div><dt>Setup</dt><dd>{readinessAvailable ? statusLabel(selected).replace("Active access", "Ready") : "Unavailable"}</dd></div>{sessionText(selected) && <div><dt>ServeFlow session</dt><dd>{sessionText(selected)}</dd></div>}{selected.role === "waiter" && <div><dt>Employee ID</dt><dd>{selected.employee_id || "Unavailable"}</dd></div>}{selected.role !== "waiter" && selected.email && <div><dt>Email</dt><dd>{selected.email}</dd></div>}{selected.role === "kitchen" && <div><dt>Kitchen station</dt><dd>{selected.assigned_kitchen_station_id ? stationById.get(selected.assigned_kitchen_station_id) || "Station unavailable" : "Unassigned"}</dd></div>}</dl><div className="od-staff-sheet-actions"><button className="od-btn-primary" onClick={() => openEdit(selected)}>Edit staff</button>{selected.role === "waiter" ? <button className="od-btn-ghost" onClick={() => { setForm({ name: selected.display_name, email: "", phone: selected.phone_number ?? "", role: selected.role, password: "", confirm: "", pin: "", stationId: "" }); setFormMode("edit"); }}>Set / reset PIN</button> : <button className="od-btn-ghost" onClick={() => void run(() => sendStaffPasswordReset(restaurantId, selected.id), "Password reset sent.")}>Send password reset</button>}{selected.active ? <button className="od-btn-ghost danger" onClick={() => { if (window.confirm(`Disable access for ${selected.display_name}?`)) void run(() => deactivateStaff(restaurantId, selected.id), "Access disabled."); }}>Disable access</button> : <button className="od-btn-ghost" onClick={() => void run(() => reactivateStaff(restaurantId, selected.id), "Access reactivated.")}>Reactivate access</button>}</div></aside></div>}
+    {formMode && <div className="od-modal-backdrop"><form ref={formDialogRef} className="od-modal od-staff-form" onSubmit={(event) => void submit(event)}><div className="od-modal-header"><h2>{formMode === "add" ? "Add staff" : "Edit staff"}</h2><button ref={formCloseRef} type="button" onClick={() => setFormMode(null)} aria-label="Close">×</button></div><label>Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value, stationId: "" })} disabled={formMode === "edit" && !selected}><option value="manager">Manager</option><option value="cashier">Cashier</option><option value="kitchen">Kitchen</option><option value="waiter">Waiter</option><option value="inventory_officer">Inventory Officer</option></select></label>{form.role !== "waiter" && <label>Email{formMode === "add" && <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />}{formMode === "edit" && <input value={form.email} disabled />}</label>}<label>Phone<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label>{form.role === "kitchen" && <label>Kitchen station<select value={form.stationId} onChange={(event) => setForm({ ...form, stationId: event.target.value })}><option value="">Select station</option>{stations.filter((station) => station.active).map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}</select></label>}{formMode === "add" && (form.role === "waiter" ? <label>4-digit Waiter PIN<input type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={(event) => setForm({ ...form, pin: event.target.value.replace(/\D/g, "").slice(0, 4) })} /></label> : <><label>Password<input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>Confirm password<input type="password" value={form.confirm} onChange={(event) => setForm({ ...form, confirm: event.target.value })} /></label></>)}{formMode === "edit" && selected?.role === "waiter" && <label>New 4-digit Waiter PIN<input type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={(event) => setForm({ ...form, pin: event.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>}{error && <p className="od-error-inline">{error}</p>}<div className="od-modal-actions"><button type="button" className="od-btn-ghost" onClick={() => setFormMode(null)}>Cancel</button><button className="od-btn-primary" disabled={pending}>{formMode === "add" ? "Create staff" : "Save changes"}</button></div></form></div>}
+  </div>;
+}
+function LegacyStaffPage({
   staff,
   restaurantId,
   restaurantName,
