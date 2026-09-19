@@ -5234,12 +5234,12 @@ function KitchenStationsPage({
           <section className="od-kitchen-workload" aria-labelledby="kitchen-workload-title">
             <header className="od-kitchen-workload-head"><h2 id="kitchen-workload-title">Current workload</h2><button className="od-btn-ghost compact" type="button" onClick={() => void refreshOperationalData(true)} disabled={refreshing}><RefreshCw size={15} aria-hidden="true" className={refreshing ? "od-spin" : ""} /> {refreshing ? "Refreshing" : "Refresh"}</button></header>
             {loadingWorkload && workload === null ? <div className="od-kitchen-skeleton" aria-label="Loading kitchen workload" /> : workloadError ? <div className="od-kitchen-unavailable"><strong>Kitchen workload unavailable</strong><button type="button" onClick={() => void refreshOperationalData(true)}>Retry</button></div> : <>
-              {[['Waiting', workload?.waiting ?? 0], ['Preparing', workload?.preparing ?? 0], ['Ready', workload?.ready ?? 0]].map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value}</strong></div>)}
+              {[['Waiting', workload?.waiting ?? 0], ['Preparing', workload?.preparing ?? 0], ['Ready', workload?.ready ?? 0]].map(([label, value]) => <div key={String(label)} className={`od-kitchen-workload-state ${String(label).toLowerCase()} ${workload && workload.waiting + workload.preparing + workload.ready === 0 ? "quiet" : ""}`}><span>{label}</span><strong>{value}</strong></div>)}
               {workload && workload.waiting + workload.preparing + workload.ready === 0 && <p>No current kitchen work</p>}
             </>}
           </section>
 
-          <section className="od-kitchen-section od-kitchen-requests" aria-labelledby="kitchen-requests-title">
+          <section className={`od-kitchen-section od-kitchen-requests ${pendingRequests && !requestsError ? "has-pending" : "no-pending"}`} aria-labelledby="kitchen-requests-title">
             <div><h2 id="kitchen-requests-title">Material requests</h2>{loadingRequests && pendingRequests === null ? <span className="od-kitchen-inline-skeleton" /> : requestsError ? <span>Unavailable</span> : <span>{pendingRequests ? `${pendingRequests} pending` : "No pending requests"}</span>}</div>
             {requestsError ? <button type="button" className="od-btn-ghost compact" onClick={() => void refreshOperationalData(true)}>Retry</button> : pendingRequests ? <button type="button" className="od-btn-ghost compact" onClick={() => void openRequests()}>View requests</button> : null}
           </section>
