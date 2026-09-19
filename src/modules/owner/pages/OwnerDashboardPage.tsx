@@ -2600,7 +2600,7 @@ export function OwnerDashboardPage({
             }}
           />
         )}
-        {nav === "customers" && <CustomersPage restaurantId={restaurantId} />}
+        {nav === "customers" && <CustomersPage />}
         {nav === "reports" && (
           <ReportsPage
             restaurantId={restaurantId}
@@ -8322,17 +8322,18 @@ function LegacyReportsPage({
   );
 }
 
-function CustomersPage({ restaurantId }: { restaurantId: string }) {
+function CustomersPage() {
   return (
-    <div className="od-page od-operations-page od-customers-experience">
-      <div className="od-page-header">
-        <div>
-          <h1 className="od-page-title">Customer Insights</h1>
-          <p className="od-page-subtitle">
-            Customer frequency and value from captured order names.
-          </p>
+    <div className="od-page od-operations-page od-customers-experience od-customers-parking">
+      <section className="od-customers-parking-panel" aria-labelledby="customer-tools-coming">
+        <div className="od-customers-parking-icon" aria-hidden="true"><UserRound /></div>
+        <div className="od-customers-parking-copy">
+          <h1 id="customer-tools-coming">Customer tools are coming soon</h1>
+          <p>We&apos;re building customer tools for a future ServeFlow release based on how businesses use ServeFlow.</p>
         </div>
-      </div>
+        <p className="od-customers-parking-previews" aria-label="Planned customer tools">Customer profiles <span aria-hidden="true">·</span> Visit history <span aria-hidden="true">·</span> Customer insights</p>
+        <p className="od-customers-parking-status">Coming soon</p>
+      </section>
     </div>
   );
 }
