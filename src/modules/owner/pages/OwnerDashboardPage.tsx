@@ -44,7 +44,10 @@ import { SmartImage } from "../../../core/presentation/SmartImage";
 import { createSmartImagePublicUrl, resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
 import { createRestaurantEventConsumer } from "../../../core/realtime/restaurantEventService";
 import { useModalFocus } from "../../../core/accessibility/useModalFocus";
-import { analyticsWindow } from "../../../core/analytics/historicalAnalytics";
+import {
+  analyticsWindow,
+  reportingPeriodWindow,
+} from "../../../core/analytics/historicalAnalytics";
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -124,6 +127,11 @@ import {
   revalidateOwnerRetainedResource,
   type OwnerRetainedScope,
 } from "../services/ownerRetainedResources";
+import {
+  loadOwnerFinanceReadModel,
+  type OwnerFinanceReadModel,
+  type OwnerFinanceTrendBucket,
+} from "../services/ownerFinanceReadModel";
 import { createOwnerRealtimeRefreshScheduler } from "../services/ownerRealtimeRefreshScheduler";
 import "../styles/ownerDashboard.css";
 
@@ -2527,6 +2535,7 @@ export function OwnerDashboardPage({
             data={dashboardData}
             restaurantId={restaurantId}
             retainedScope={retainedScope}
+            timezone={activeOwnerTimezone}
             selection={financeSelection}
             onSelectionChanged={setFinanceSelection}
           />
@@ -3132,7 +3141,7 @@ type FinancialInvoice = {
   verifiedAt: string;
 };
 
-function AnalyticsPage({
+function LegacyAnalyticsPage({
   data,
   restaurantId,
   retainedScope,
@@ -3622,6 +3631,374 @@ function FinancialChart({
       </div>
       <FinancialBars rows={rows} />
     </section>
+  );
+}
+
+function financeDateInputValue(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function AnalyticsPage({
+  data,
+  restaurantId,
+  retainedScope,
+  timezone,
+  selection,
+  onSelectionChanged,
+}: {
+  data: DashboardData;
+  restaurantId: string;
+  retainedScope: OwnerRetainedScope;
+  timezone: string;
+  selection: OwnerFinanceSelection;
+  onSelectionChanged: (selection: OwnerFinanceSelection) => void;
+}) {
+  const { period, customStart, customEnd } = selection;
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const observedPaymentsRef = useRef(data.payments);
+  const setPeriod = (nextPeriod: FinancialPeriod) => {
+    if (nextPeriod === "custom" && period !== "custom") {
+      const today = financeDateInputValue(new Date(), timezone);
+      onSelectionChanged({ period: nextPeriod, customStart: today, customEnd: today });
+    } else {
+      onSelectionChanged({ ...selection, period: nextPeriod });
+    }
+  };
+  const rangeResult = useMemo(() => {
+    try {
+      return {
+        value: reportingPeriodWindow(period, timezone, customStart, customEnd),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        value: null,
+        error: error instanceof Error ? error.message : "Choose a valid Finance period.",
+      };
+    }
+  }, [customEnd, customStart, period, timezone]);
+  const ranges = rangeResult.value;
+  const dimensions = JSON.stringify({
+    period,
+    timezone,
+    rangeStart: ranges?.rangeStart ?? customStart,
+    rangeEnd: ranges?.rangeEnd ?? customEnd,
+    comparisonStart: ranges?.comparisonRangeStart ?? null,
+    comparisonEnd: ranges?.comparisonRangeEnd ?? null,
+  });
+  const resourceKey = ownerRetainedResourceKey(
+    retainedScope,
+    "finance-period",
+    dimensions,
+  );
+  const retained = readOwnerRetainedResource<OwnerFinanceReadModel>({
+    scope: retainedScope,
+    resource: "finance-period",
+    dimensions,
+    ...OWNER_RETAINED_POLICY.financePeriod,
+  });
+  const [state, setState] = useState<{
+    key: string;
+    value: OwnerFinanceReadModel | null;
+    updatedAt: number | null;
+  }>(() => ({
+    key: resourceKey,
+    value: retained?.value ?? null,
+    updatedAt: retained?.updatedAt ?? null,
+  }));
+  const value = state.key === resourceKey ? state.value : retained?.value ?? null;
+  const updatedAt = state.key === resourceKey ? state.updatedAt : retained?.updatedAt ?? null;
+  const [loading, setLoading] = useState(value === null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const error = rangeResult.error ?? (state.key === resourceKey ? loadError : null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!ranges) {
+      setState({ key: resourceKey, value: null, updatedAt: null });
+      setLoading(false);
+      setLoadError(null);
+      return () => {
+        mounted = false;
+      };
+    }
+    const requestedRanges = ranges;
+    const paymentsChanged = observedPaymentsRef.current !== data.payments;
+    observedPaymentsRef.current = data.payments;
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
+      const cached = readOwnerRetainedResource<OwnerFinanceReadModel>({
+        scope: retainedScope,
+        resource: "finance-period",
+        dimensions,
+        ...OWNER_RETAINED_POLICY.financePeriod,
+      });
+      if (mounted) {
+        setState({
+          key: resourceKey,
+          value: cached?.value ?? null,
+          updatedAt: cached?.updatedAt ?? null,
+        });
+      }
+      try {
+        const next = await revalidateOwnerRetainedResource({
+          scope: retainedScope,
+          resource: "finance-period",
+          dimensions,
+          afterPending: paymentsChanged,
+          loader: () =>
+            loadOwnerFinanceReadModel({
+              restaurantId,
+              periodStart: requestedRanges.rangeStart,
+              periodEnd: requestedRanges.rangeEnd,
+              comparisonStart: requestedRanges.comparisonRangeStart,
+              comparisonEnd: requestedRanges.comparisonRangeEnd,
+            }),
+        });
+        if (mounted) {
+          setState({ key: resourceKey, value: next, updatedAt: Date.now() });
+        }
+      } catch (financeError) {
+        if (!mounted) return;
+        if (financeError instanceof OwnerRetainedAccessError) {
+          setState({ key: resourceKey, value: null, updatedAt: null });
+        }
+        setLoadError("Authoritative financial data is unavailable right now.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, [data.payments, dimensions, refreshVersion, resourceKey, restaurantId, retainedScope, ranges]);
+
+  const periodLabel =
+    period === "today" ? "Today" : period === "week" ? "This week" : period === "month" ? "This month" : "Custom period";
+  const periodPhrase =
+    period === "today" ? "today" : period === "week" ? "this week" : period === "month" ? "this month" : "";
+  const collectedSupportingText = value
+    ? value.collections.collectedCount === 0
+      ? `No payments collected${periodPhrase ? ` ${periodPhrase}` : ""}`
+      : `${value.collections.collectedCount} payment${value.collections.collectedCount === 1 ? "" : "s"} collected${periodPhrase ? ` ${periodPhrase}` : ""}`
+    : "";
+  const refundSupportingText = value
+    ? value.refunds.refundCount === 0
+      ? `No refunds${periodPhrase ? ` ${periodPhrase}` : ""}`
+      : `${value.refunds.refundCount} refund${value.refunds.refundCount === 1 ? "" : "s"}${periodPhrase ? ` ${periodPhrase}` : ""}`
+    : "";
+  const paymentEmptyText = `No collected payments${periodPhrase ? ` ${periodPhrase}` : ""}`;
+  const trendEmptyText = `No collections${periodPhrase ? ` ${periodPhrase}` : ""}`;
+  const trendTitle = period === "today" ? "Today collections" : period === "week" ? "This week" : period === "month" ? "This month" : "Custom range";
+  const watchItems = value
+    ? [
+        value.obligations.pendingCount > 0
+          ? { label: `${value.obligations.pendingCount} pending payment${value.obligations.pendingCount === 1 ? "" : "s"}`, amount: value.obligations.pendingAmount, tone: "pending" }
+          : null,
+        value.obligations.heldCount > 0
+          ? { label: `${value.obligations.heldCount} held payment${value.obligations.heldCount === 1 ? "" : "s"}`, amount: value.obligations.heldAmount, tone: "held" }
+          : null,
+        value.cashierControl.openShiftCount > 0
+          ? { label: `${value.cashierControl.openShiftCount} open cashier shift${value.cashierControl.openShiftCount === 1 ? "" : "s"}`, amount: null, tone: "info" }
+          : null,
+        value.cashierControl.nonzeroVarianceCount > 0
+          ? { label: `${value.cashierControl.nonzeroVarianceCount} cash difference${value.cashierControl.nonzeroVarianceCount === 1 ? "" : "s"} to review`, amount: value.cashierControl.varianceAmount, tone: "difference" }
+          : null,
+        value.cashierControl.pendingDrawerExpenseCount > 0
+          ? { label: `${value.cashierControl.pendingDrawerExpenseCount} drawer expense${value.cashierControl.pendingDrawerExpenseCount === 1 ? "" : "s"} awaiting review`, amount: value.cashierControl.pendingDrawerExpenseAmount, tone: "pending" }
+          : null,
+      ].filter((item): item is NonNullable<typeof item> => Boolean(item))
+    : [];
+
+  return (
+    <div className="od-page od-finance-center od-finance-f3">
+      <header className="od-finance-topbar">
+        <div className="od-finance-identity">
+          <h1>Finance</h1>
+          <p>Money collected and items needing review.</p>
+        </div>
+        <div className="od-finance-controls">
+          <div className="od-finance-period" aria-label="Finance period">
+            {(["today", "week", "month", "custom"] as FinancialPeriod[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={period === option ? "active" : ""}
+                aria-pressed={period === option}
+                onClick={() => setPeriod(option)}
+              >
+                {option === "today" ? "Today" : option === "week" ? "Week" : option === "month" ? "Month" : "Custom"}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="od-finance-refresh"
+            aria-label="Refresh Finance"
+            disabled={loading || !ranges}
+            onClick={() => setRefreshVersion((version) => version + 1)}
+          >
+            <RefreshCw aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      {period === "custom" ? (
+        <div className="od-finance-custom-range">
+          <label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => onSelectionChanged({ ...selection, customStart: event.target.value })} /></label>
+          <label>To<input type="date" value={customEnd} onChange={(event) => onSelectionChanged({ ...selection, customEnd: event.target.value })} /></label>
+          <small>Includes both selected calendar dates in {timezone}.</small>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="od-finance-error" role="alert">
+          <div><strong>Financial data unavailable</strong><span>{value ? `Showing last known results${updatedAt ? ` from ${fmtTimeAgo(new Date(updatedAt).toISOString())}` : ""}.` : error}</span></div>
+          <button type="button" disabled={!ranges} onClick={() => setRefreshVersion((version) => version + 1)}>Retry</button>
+        </div>
+      ) : null}
+
+      {!value && loading ? (
+        <FinanceSkeleton />
+      ) : !value ? (
+        <section className="od-finance-unavailable" role="status">
+          <strong>Finance is unavailable</strong>
+          <span>Collected money and control facts could not be loaded.</span>
+          <button type="button" disabled={!ranges} onClick={() => setRefreshVersion((version) => version + 1)}>Retry</button>
+        </section>
+      ) : (
+        <>
+          <section className="od-finance-summary" aria-labelledby="finance-collected-title">
+            <div className="od-finance-collected">
+              <span id="finance-collected-title">Collected</span>
+              <strong>{fmtMoney(value.collections.collectedAmount)}</strong>
+              <small>{collectedSupportingText}</small>
+              <div className="od-finance-comparison">
+                <span>vs previous period · {fmtMoney(value.collections.comparisonAmount)}</span>
+                {value.collections.comparisonPercent === null ? <b>No comparison</b> : <b className={value.collections.comparisonPercent < 0 ? "negative" : "positive"}>{value.collections.comparisonPercent > 0 ? "+" : ""}{value.collections.comparisonPercent.toFixed(1)}%</b>}
+              </div>
+            </div>
+            <div className="od-finance-secondary-metrics">
+              <FinanceMetric tone="pending" label="Pending" context="Current" amount={value.obligations.pendingAmount} count={`${value.obligations.pendingCount} payment${value.obligations.pendingCount === 1 ? "" : "s"}`} />
+              <FinanceMetric tone="held" label="Held" context="Current" amount={value.obligations.heldAmount} count={`${value.obligations.heldCount} payment${value.obligations.heldCount === 1 ? "" : "s"}`} />
+              <FinanceMetric tone="refunded" label="Refunded" amount={value.refunds.refundedAmount} count={`${refundSupportingText}${value.quality.refundTiming === "complete" ? "" : " · Partial history"}`} />
+            </div>
+          </section>
+
+          {value.quality.timezone === "defaulted" ? <div className="od-finance-timezone-note"><Info aria-hidden="true" />Times shown in {value.period.timezone}</div> : null}
+          <FinanceQualityNotices finance={value} />
+
+          <div className="od-finance-two-up">
+            <section className="od-finance-panel od-money-watch">
+              <FinancePanelHeader eyebrow="Money to watch" title="" />
+              {watchItems.length ? <div className="od-money-watch-list">{watchItems.map((item) => <div className={item.tone} key={item.label}><span>{item.label}</span><strong>{item.amount === null ? "Open" : fmtMoney(item.amount)}</strong></div>)}</div> : <div className="od-finance-empty-compact"><CircleCheck aria-hidden="true" />No current financial items to review</div>}
+            </section>
+
+            <section className="od-finance-panel od-payment-breakdown">
+              <FinancePanelHeader eyebrow="Payment breakdown" title="How collected money was paid" meta={periodLabel} />
+              {value.paymentMethods.length ? <div className="od-payment-method-list">{value.paymentMethods.map((method, index) => (
+                <div key={method.methodIdentity ?? `${method.classification}:${method.displayLabel}:${index}`}>
+                  <div className="od-payment-method-copy"><strong>{method.displayLabel}</strong><span>{method.classification === "legacy_unrecognized" ? <em>Legacy method</em> : null}{method.classification === "unknown_unclassified" ? <em>Unclassified</em> : null}{method.currentlyEnabled === false ? <em>Inactive now</em> : null}</span></div>
+                  <div className="od-payment-method-value"><strong>{fmtMoney(method.collectedAmount)}</strong><span>{method.sharePercent === null ? "—" : `${method.sharePercent.toFixed(1)}%`}</span></div>
+                  <i aria-hidden="true"><b style={{ width: `${Math.max(0, Math.min(100, method.sharePercent ?? 0))}%` }} /></i>
+                </div>
+              ))}</div> : <div className="od-finance-empty-compact">{paymentEmptyText}</div>}
+            </section>
+          </div>
+
+          <section className="od-finance-panel od-cashier-control">
+            <FinancePanelHeader eyebrow="Cash reconciliation" title="Cashier control" />
+            <div className="od-cashier-control-grid">
+              <FinanceControlFact label="Open shifts" value={String(value.cashierControl.openShiftCount)} detail={value.cashierControl.openShiftCount ? `Expected cash ${fmtMoney(value.cashierControl.openExpectedCash)} · Not reconciled yet` : "No open shifts"} />
+              <FinanceControlFact
+                label={value.cashierControl.closedShiftCount ? "Reconciled shifts" : "Closed shifts"}
+                value={value.cashierControl.closedShiftCount ? `${value.cashierControl.reconciledShiftCount} of ${value.cashierControl.closedShiftCount}` : `No closed shifts${periodPhrase ? ` ${periodPhrase}` : ""}`}
+                detail={value.cashierControl.closedShiftCount ? (value.cashierControl.reconciledShiftCount === value.cashierControl.closedShiftCount ? "All closed shifts reconciled" : `${value.cashierControl.closedShiftCount - value.cashierControl.reconciledShiftCount} awaiting reconciliation`) : ""}
+                textual={!value.cashierControl.closedShiftCount}
+              />
+              <FinanceControlFact label="Cash difference" value={fmtMoney(value.cashierControl.varianceAmount)} detail={value.cashierControl.nonzeroVarianceCount ? `${value.cashierControl.nonzeroVarianceCount} shift${value.cashierControl.nonzeroVarianceCount === 1 ? "" : "s"} with differences` : "No differences"} tone={value.cashierControl.nonzeroVarianceCount ? "difference" : "quiet"} />
+              <FinanceControlFact label="Pending drawer expenses" value={fmtMoney(value.cashierControl.pendingDrawerExpenseAmount)} detail={value.cashierControl.pendingDrawerExpenseCount ? `${value.cashierControl.pendingDrawerExpenseCount} awaiting review` : ""} />
+            </div>
+            {value.cashierControl.latestReconciliation ? <div className="od-latest-reconciliation"><span>Latest reconciliation</span><strong>{fmtDateTime(value.cashierControl.latestReconciliation.closedAt)}</strong><small>Counted {fmtMoney(value.cashierControl.latestReconciliation.actualCash)} · Difference {fmtMoney(value.cashierControl.latestReconciliation.variance)}</small></div> : null}
+          </section>
+
+          <section className="od-finance-panel od-collections-trend">
+            <FinancePanelHeader eyebrow="Collections trend" title={trendTitle} />
+            <FinanceTrendChart buckets={value.trend.buckets} granularity={value.trend.granularity} emptyLabel={trendEmptyText} />
+          </section>
+        </>
+      )}
+      {loading && value ? <span className="od-finance-refreshing" role="status">Refreshing financial data…</span> : null}
+    </div>
+  );
+}
+
+function FinanceMetric({ tone, label, context, amount, count }: { tone: string; label: string; context?: string; amount: number; count: string }) {
+  return <article className={tone}><span>{label}{context ? <small>{context}</small> : null}</span><strong>{fmtMoney(amount)}</strong><small>{count}</small></article>;
+}
+
+function FinancePanelHeader({ eyebrow, title, meta }: { eyebrow: string; title?: string; meta?: string }) {
+  return <header><div><span>{eyebrow}</span>{title ? <h2>{title}</h2> : null}</div>{meta ? <small>{meta}</small> : null}</header>;
+}
+
+function FinanceControlFact({ label, value, detail, textual, tone }: { label: string; value: string; detail: string; textual?: boolean; tone?: string }) {
+  return <article className={tone ?? ""}><span>{label}</span><strong className={textual ? "textual" : ""}>{value}</strong>{detail ? <small>{detail}</small> : null}</article>;
+}
+
+function FinanceSkeleton() {
+  return <div className="od-finance-skeleton" role="status" aria-label="Loading financial data"><div className="hero" /><div className="panel" /><div className="panel" /><div className="wide" /></div>;
+}
+
+function FinanceQualityNotices({ finance }: { finance: OwnerFinanceReadModel }) {
+  const notices = [
+    finance.quality.financialSnapshots === "complete" ? null : "Some historical totals use legacy records.",
+    finance.quality.refundTiming === "complete" ? null : "Refund history is partially available.",
+    finance.quality.paymentMethodAttribution === "complete" ? null : "Some collections use legacy or unclassified payment methods.",
+    finance.quality.cashReconciliation === "complete" ? null : "Some closed shifts are awaiting reconciliation.",
+  ].filter((notice): notice is string => Boolean(notice));
+  return notices.length ? <div className="od-finance-quality" aria-label="Financial data notes"><Info aria-hidden="true" /><span>{notices.join(" ")}</span></div> : null;
+}
+
+function financeTrendLabel(bucket: OwnerFinanceTrendBucket, granularity: OwnerFinanceReadModel["trend"]["granularity"]) {
+  if (granularity === "hour") return bucket.bucketLocalStart.slice(11, 16);
+  if (granularity === "month") return bucket.bucketLocalStart.slice(0, 7);
+  return bucket.bucketLocalStart.slice(5, 10);
+}
+
+function FinanceTrendChart({ buckets, granularity, emptyLabel }: { buckets: OwnerFinanceTrendBucket[]; granularity: OwnerFinanceReadModel["trend"]["granularity"]; emptyLabel: string }) {
+  const total = buckets.reduce((sum, bucket) => sum + bucket.collectedAmount, 0);
+  if (total === 0) return <div className="od-finance-empty-trend">{emptyLabel}</div>;
+  const width = 720;
+  const height = 180;
+  const inset = 14;
+  const max = Math.max(...buckets.map((bucket) => bucket.collectedAmount), 1);
+  const points = buckets.map((bucket, index) => ({
+    bucket,
+    x: buckets.length === 1 ? width / 2 : inset + (index / (buckets.length - 1)) * (width - inset * 2),
+    y: height - inset - (bucket.collectedAmount / max) * (height - inset * 2),
+  }));
+  const labelIndexes = [...new Set([0, Math.floor((buckets.length - 1) / 2), buckets.length - 1])];
+  return (
+    <div className="od-finance-trend-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Collections trend across ${buckets.length} points totalling ${fmtMoney(total)}`} preserveAspectRatio="none">
+        <defs><linearGradient id="owner-finance-trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2f9b6c" stopOpacity=".28" /><stop offset="1" stopColor="#2f9b6c" stopOpacity=".02" /></linearGradient></defs>
+        <line x1={inset} x2={width - inset} y1={height - inset} y2={height - inset} className="baseline" />
+        <polygon points={`${inset},${height - inset} ${points.map((point) => `${point.x},${point.y}`).join(" ")} ${width - inset},${height - inset}`} fill="url(#owner-finance-trend-fill)" />
+        <polyline points={points.map((point) => `${point.x},${point.y}`).join(" ")} className="line" />
+        {points.map((point, index) => <circle key={point.bucket.bucketStart} cx={point.x} cy={point.y} r={index === points.length - 1 ? 4 : 2.5} />)}
+      </svg>
+      <div className="od-finance-trend-labels" aria-hidden="true">{labelIndexes.map((index) => <span key={buckets[index].bucketStart}>{financeTrendLabel(buckets[index], granularity)}</span>)}</div>
+    </div>
   );
 }
 
