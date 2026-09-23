@@ -10,6 +10,7 @@ import {
   type OwnerReportsStaffPage,
 } from "../services/ownerReportsReadModel";
 import "../styles/ownerReports.css";
+import { OwnerMenuSalesReport } from './OwnerMenuSalesReport';
 
 type Props = { restaurantId: string };
 
@@ -69,6 +70,7 @@ export function OwnerReportsPage({ restaurantId }: Props) {
   const [customEnd, setCustomEnd] = useState(today);
   const [appliedCustom, setAppliedCustom] = useState({ start: today, end: today });
   const [model, setModel] = useState<OwnerReportsReadModel | null>(null);
+  const [menuScope, setMenuScope] = useState({ restaurantId, start: null as string | null, end: null as string | null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,7 +91,7 @@ export function OwnerReportsPage({ restaurantId }: Props) {
     try {
       const next = await loadOwnerReportsReadModel(restaurantId, query.period, query.start, query.end);
       if (current !== requestId.current) return;
-      setModel(next); setNotice(kind === "refresh" ? "Report refreshed." : null);
+      setModel(next); setMenuScope({ restaurantId, start: query.start, end: query.end }); setNotice(kind === "refresh" ? "Report refreshed." : null);
     } catch (caught) {
       if (current !== requestId.current) return;
       setError(caught instanceof Error ? caught.message : "Couldn’t load this report. Try again.");
@@ -134,13 +136,13 @@ export function OwnerReportsPage({ restaurantId }: Props) {
     {notice && <div className="od-reports-toast" role="status">{notice}</div>}
     {error && !model ? <section className="od-reports-state error"><strong>Couldn’t load this report</strong><span>{error}</span><button type="button" onClick={() => void loadMain()}>Try again</button></section> : null}
     {loading && !model ? <ReportsSkeleton /> : null}
-    {model ? <ReportsContent model={model} onOpenFeedback={() => void openDetail("feedback")} onOpenStaff={() => void openDetail("staff")} onRefresh={() => void loadMain("refresh")} /> : null}
+    {model ? <ReportsContent model={model} restaurantId={menuScope.restaurantId} customStart={menuScope.start} customEnd={menuScope.end} onOpenFeedback={() => void openDetail("feedback")} onOpenStaff={() => void openDetail("staff")} onRefresh={() => void loadMain("refresh")} /> : null}
     {loading && model ? <span className="od-reports-refreshing" role="status">Updating report…</span> : null}
     {detail && <DetailSheet kind={detail} model={model} feedback={feedback} staff={staff} loading={detailLoading} loadingMore={loadingMore} error={detailError} onClose={() => setDetail(null)} onRetry={() => void openDetail(detail)} onMore={() => void openDetail(detail, true)} />}
   </div>;
 }
 
-function ReportsContent({ model, onOpenFeedback, onOpenStaff }: { model: OwnerReportsReadModel; onOpenFeedback: () => void; onOpenStaff: () => void; onRefresh: () => void }) {
+function ReportsContent({ model, restaurantId, customStart, customEnd, onOpenFeedback, onOpenStaff }: { model: OwnerReportsReadModel; restaurantId: string; customStart: string | null; customEnd: string | null; onOpenFeedback: () => void; onOpenStaff: () => void; onRefresh: () => void }) {
   const note = qualityNote(model); const trendEmpty = model.salesAndOrders.quality.state === "no_activity"; const attention = attentionItems(model); const comparison = comparisonSentence(model);
   return <>
     <div className="od-reports-context"><span>{humanPeriod(model)}</span>{model.period.completeness === "in_progress" ? <em>In progress</em> : null}</div>
@@ -159,17 +161,8 @@ function ReportsContent({ model, onOpenFeedback, onOpenStaff }: { model: OwnerRe
       <div className="od-reports-sales-copy"><strong>{`You collected ${money(model.summary.collectedSales, model.currency)} in this period.`}</strong>{comparison ? <span>{comparison}</span> : null}</div>
       {trendEmpty ? <Empty text="No sales or orders were recorded in this period." /> : <TrendChart model={model} />}
     </section>
-    <div className="od-reports-two-up">
-      <section className="od-reports-panel"><PanelHeader eyebrow="Menu performance" title="Top selling" />
-        {model.menu.topSelling.length ? <RankedItems rows={model.menu.topSelling} currency={model.currency} /> : <Empty text="No menu activity was recorded in this period." />}
-        {model.menu.categories.length ? <div className="od-reports-category-list">{model.menu.categories.slice(0, 4).map((row) => <div key={row.categoryKey}><span>{row.name}</span><strong>{number(row.quantity)} sold</strong></div>)}</div> : null}
-      </section>
-      <section className="od-reports-panel"><PanelHeader eyebrow="Menu performance" title="Needs attention" />
-        <p className="od-reports-help">Based on menu items available now. Past menu availability is not tracked.</p>
-        {model.menu.currentMenuItemsWithLowestRecordedSales.length ? <div className="od-reports-low-list">{model.menu.currentMenuItemsWithLowestRecordedSales.slice(0, 5).map((row) => <div key={row.menuItemKey ?? row.name}><span><strong>{row.name}</strong><small>{row.category}</small></span><b>{number(row.quantity)} sold</b></div>)}</div> : <Empty text="No available menu items to compare." />}
-        {model.menu.legacyUnattributedItemCount > 0 ? <p className="od-reports-subtle-note">Some older item activity could not be included in menu sales.</p> : null}
-      </section>
-    </div>
+    <OwnerMenuSalesReport key={`${restaurantId}:${model.generatedAt}`} restaurantId={restaurantId} period={model.period.requestedPeriod} start={customStart} end={customEnd}
+      preview={model.menu.topSelling.length ? <RankedItems rows={model.menu.topSelling} currency={model.currency} /> : <Empty text="No menu activity was recorded in this period." />} />
     <section className="od-reports-panel"><PanelHeader eyebrow="Orders" title="Orders and table activity" />
       <div className="od-reports-operations-grid">
         <OperationList title="Where orders came from" rows={model.operations.orderSources.map((row) => ({ label: sourceLabel(row.source), value: `${number(row.ordersStarted)} orders` }))} empty="No orders were recorded in this period." />

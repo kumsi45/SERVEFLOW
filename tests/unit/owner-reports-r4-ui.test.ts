@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
-const page = read("src/modules/owner/pages/OwnerReportsPage.tsx");
+const page = read("src/modules/owner/pages/OwnerReportsPage.tsx") + read("src/modules/owner/pages/OwnerMenuSalesReport.tsx");
 const service = read("src/modules/owner/services/ownerReportsReadModel.ts");
 const ownerDashboard = read("src/modules/owner/pages/OwnerDashboardPage.tsx");
 
