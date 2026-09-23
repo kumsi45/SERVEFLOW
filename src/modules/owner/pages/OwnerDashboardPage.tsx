@@ -132,6 +132,7 @@ import {
   type OwnerFinanceReadModel,
   type OwnerFinanceTrendBucket,
 } from "../services/ownerFinanceReadModel";
+import { OwnerReportsPage } from "./OwnerReportsPage";
 import { createOwnerRealtimeRefreshScheduler } from "../services/ownerRealtimeRefreshScheduler";
 import "../styles/ownerDashboard.css";
 
@@ -2611,10 +2612,7 @@ export function OwnerDashboardPage({
         )}
         {nav === "customers" && <CustomersPage />}
         {nav === "reports" && (
-          <ReportsPage
-            restaurantId={restaurantId}
-            restaurantName={restaurantName}
-          />
+          <OwnerReportsPage restaurantId={restaurantId} />
         )}
         {nav === "settings" && (
           <SettingsPage
