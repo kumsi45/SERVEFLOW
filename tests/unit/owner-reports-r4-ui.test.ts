@@ -120,4 +120,15 @@ describe("Owner Reports premium reporting workspace", () => {
     expect(css).toContain(".od-reports-refresh span { display: none; }");
     expect(css).toContain("z-index: 40");
   });
+
+  it("keeps desktop report tables while using compact mobile records and omitting zero-only sales buckets", () => {
+    expect(page).toContain('const active=model.salesAndOrders.buckets.filter');
+    expect(page).toContain('row.collectedSales!==0||row.collectedInvoices!==0||row.ordersStarted!==0');
+    expect(page).toContain('className="od-reports-trend-desktop"');
+    expect(page).toContain('className="od-reports-trend-mobile"');
+    expect(css).toContain('.od-reports-trend-mobile { display: none; }');
+    expect(css).toContain('.od-reports tr { display: grid; grid-template-columns: minmax(0, 1fr) auto;');
+    expect(css).toContain('.od-menu-sales-table tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto;');
+    expect(css).toContain('padding-bottom: calc(9.5rem + env(safe-area-inset-bottom))');
+  });
 });
