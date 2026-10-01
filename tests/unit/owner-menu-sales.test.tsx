@@ -44,8 +44,15 @@ describe('Complete menu sales', () => {
   it('keeps mobile rows, request guard and errors confined to menu detail', () => {
     const css=readFileSync('src/modules/owner/styles/ownerReports.css','utf8');
     const component=readFileSync('src/modules/owner/pages/OwnerMenuSalesReport.tsx','utf8');
-    expect(css).toContain('grid-template-columns:36px minmax(0,1fr)');
+    expect(css).toMatch(/\.od-menu-sales-table td, \.od-menu-sales-table th \{ display: flex/);
+    expect(css).toContain('.od-menu-mobile-label { display: inline; }');
     expect(component).toContain('request === generation.current'); expect(component).toContain('if (busy.current) return'); expect(component).toContain('role="alert"'); expect(component).toContain('role="status"');
     expect(readFileSync('src/modules/owner/services/ownerMenuSalesReport.ts','utf8')).not.toContain('.from(');
+  });
+  it('uses the business heading without a redundant menu-performance eyebrow', () => {
+    const component=readFileSync('src/modules/owner/pages/OwnerMenuSalesReport.tsx','utf8');
+    expect(component).toContain('<h2>{menuSalesTitle(period)}</h2>');
+    expect(component).not.toContain('<span>Menu performance</span>');
+    expect(component).not.toContain("' · In progress'");
   });
 });

@@ -1,7 +1,9 @@
 export type OwnerRetainedResource =
   | "table-stats"
   | "finance-period"
-  | "menu-uploads";
+  | "menu-uploads"
+  | "reports-overview"
+  | "reports-menu";
 
 export type OwnerRetainedScope = {
   userId: string;
@@ -25,6 +27,7 @@ export const OWNER_RETAINED_POLICY = {
   tableStats: { freshForMs: 10_000, retainForMs: 120_000 },
   financePeriod: { freshForMs: 10_000, retainForMs: 120_000 },
   menuUploads: { freshForMs: 30_000, retainForMs: 300_000 },
+  reports: { freshForMs: 15_000, retainForMs: 120_000 },
 } as const;
 
 const retainedResources = new Map<string, RetainedEntry<unknown>>();
@@ -183,7 +186,9 @@ export function revalidateOwnerRetainedResource<T>({
           ? OWNER_RETAINED_POLICY.menuUploads.retainForMs
           : resource === "table-stats"
             ? OWNER_RETAINED_POLICY.tableStats.retainForMs
-            : OWNER_RETAINED_POLICY.financePeriod.retainForMs;
+            : resource === "finance-period"
+              ? OWNER_RETAINED_POLICY.financePeriod.retainForMs
+              : OWNER_RETAINED_POLICY.reports.retainForMs;
       retainedResources.set(key, {
         value,
         updatedAt: Date.now(),

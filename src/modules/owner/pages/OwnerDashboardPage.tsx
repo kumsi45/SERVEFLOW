@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   AlertTriangle,
@@ -132,9 +132,12 @@ import {
   type OwnerFinanceReadModel,
   type OwnerFinanceTrendBucket,
 } from "../services/ownerFinanceReadModel";
-import { OwnerReportsPage } from "./OwnerReportsPage";
 import { createOwnerRealtimeRefreshScheduler } from "../services/ownerRealtimeRefreshScheduler";
 import "../styles/ownerDashboard.css";
+
+const OwnerReportsPage = lazy(() =>
+  import("./OwnerReportsPage").then((module) => ({ default: module.OwnerReportsPage })),
+);
 
 let activeOwnerCurrency: CurrencyConfig | null = null;
 let activeOwnerTimezone = "Africa/Nairobi";
@@ -2612,7 +2615,9 @@ export function OwnerDashboardPage({
         )}
         {nav === "customers" && <CustomersPage />}
         {nav === "reports" && (
-          <OwnerReportsPage restaurantId={restaurantId} />
+          <Suspense fallback={<section className="od-page" aria-busy="true">Loading reports…</section>}>
+            <OwnerReportsPage ownerUserId={ownerUserId} restaurantId={restaurantId} />
+          </Suspense>
         )}
         {nav === "settings" && (
           <SettingsPage
