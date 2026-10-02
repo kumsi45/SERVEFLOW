@@ -13,7 +13,7 @@ const markup = `
   </main>`;
 
 for (const width of [430, 390, 360]) {
-  test(`Owner Settings S1 fits ${width}px`, async ({ page }) => {
+  test(`Owner Settings S2 fits ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${ownerStyles}\n${paymentStyles}\n*{box-sizing:border-box}body{margin:0}.od-page{padding:14px}</style></head><body>${markup}</body></html>`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
