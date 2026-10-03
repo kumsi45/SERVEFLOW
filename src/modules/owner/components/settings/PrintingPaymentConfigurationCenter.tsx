@@ -24,6 +24,7 @@ function providerForMethod(code: string) {
 
 export function PrintingPaymentConfigurationCenter({ restaurantId, businessName, currencySymbol }: Props) {
   const [config, setConfig] = useState<PaymentConfiguration | null>(null);
+  const [savedConfig, setSavedConfig] = useState<PaymentConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,9 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
     try {
       setLoading(true);
       setError(null);
-      setConfig(await loadPaymentConfiguration(restaurantId));
+      const loaded = await loadPaymentConfiguration(restaurantId);
+      setConfig(loaded);
+      setSavedConfig(loaded);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Payment configuration could not be loaded.");
       setConfig(null);
@@ -59,6 +62,7 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
       setError(null);
       setNotice(null);
       await savePaymentConfiguration(restaurantId, config);
+      setSavedConfig(config);
       setNotice("Payment settings saved.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Payment configuration could not be saved.");
@@ -136,6 +140,8 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
   if (!config) return null;
 
   const enabledMethods = config.methods.filter((method) => method.enabled);
+  const dirty = JSON.stringify(config) !== JSON.stringify(savedConfig);
+  function discard() { if (savedConfig) setConfig(savedConfig); setError(null); setNotice(null); }
 
   return <div className="ppcc-shell">
     <div className="ppcc-intro"><div><span>Payments</span><h2>Payment configuration</h2><p>Choose when customers pay, which methods they can use, and the charges applied to order totals.</p></div><SfButton onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save payment settings"}</SfButton></div>
@@ -168,6 +174,7 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
       <PaymentPreview businessName={businessName} currencySymbol={currencySymbol} methods={enabledMethods.map((method) => method.display_name)} />
     </section>
 
+    {dirty ? <div className="ppcc-actions" role="status"><span>Unsaved changes</span><div><SfButton variant="secondary" onClick={discard} disabled={saving}>Discard</SfButton><SfButton onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</SfButton></div></div> : null}
     <SfDialog open={Boolean(accountDraft)} title={accountDraft?.id && config.accounts.some((account) => account.id === accountDraft.id) ? "Edit payment account" : "Add payment account"} onClose={() => setAccountDraft(null)}>{accountDraft ? <div className="ppcc-account-form"><Field label="Payment Method"><select value={accountDraft.payment_method_id} onChange={(event) => { const method = config.methods.find((item) => item.id === event.target.value); setAccountDraft({ ...accountDraft, payment_method_id: event.target.value, provider_code: providerForMethod(method?.method_code ?? "") }); }}>{config.methods.filter((method) => method.method_code !== "cash").map((method) => <option key={method.id} value={method.id}>{method.display_name}</option>)}</select></Field><Field label="Business Name"><input value={accountDraft.business_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, business_name: event.target.value })} /></Field><Field label="Account Name"><input value={accountDraft.account_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, account_name: event.target.value })} /></Field><Field label="Account Number"><input value={accountDraft.account_number ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, account_number: event.target.value })} /></Field><Field label="Phone Number"><input value={accountDraft.phone_number ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, phone_number: event.target.value })} /></Field><Field label="Instructions"><textarea rows={3} value={accountDraft.instructions ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, instructions: event.target.value })} /></Field><div className="ppcc-dialog-actions"><SfButton variant="secondary" onClick={() => setAccountDraft(null)}>Cancel</SfButton><SfButton onClick={commitAccount}>Save account</SfButton></div></div> : null}</SfDialog>
   </div>;
 }
