@@ -1973,7 +1973,7 @@
 @media(prefers-color-scheme:dark){.od-root[data-theme="dark"] .od-config-section.is-dirty{border-color:#3d775a}.od-root[data-theme="dark"] .od-dirty-indicator{background:#193729;color:#d8f3e3}}
 
 /* Owner Settings S2.3: one desktop content scroller, with a naturally sized workspace. */
-@media(min-width:761px){.od-main:has(.od-config-page){min-height:0}.od-config-page{align-self:flex-start;padding-top:18px;padding-bottom:28px}.od-config-header{display:none}}
+@media(min-width:761px){body:has(.od-config-page){overflow:hidden}.od-root:has(.od-config-page){height:100dvh;min-height:0;overflow:hidden}.od-main:has(.od-config-page){height:100%;min-height:0}.od-config-page{align-self:flex-start;padding-top:18px;padding-bottom:28px}.od-config-header{display:none}}
 @media(max-width:760px){.od-config-page{gap:8px}.od-settings-grid{gap:9px}.od-settings-grid label{gap:4px}.od-root:has(.od-config-section.is-dirty)>.sf-ai-launcher{bottom:calc(86px + env(safe-area-inset-bottom))}}
 
 /* Owner navigation architecture */

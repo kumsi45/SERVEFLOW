@@ -84,7 +84,9 @@ describe("Owner Settings S2 business configuration", () => {
     expect(styles).toContain(".od-config-header{display:none}");
     expect(styles).toContain(".od-root:has(.od-config-page)>.sf-ai-launcher");
     expect(styles).toContain(".od-config-actions .od-btn-ghost");
-    expect(styles).toContain(".od-main:has(.od-config-page){min-height:0}");
+    expect(styles).toContain(".od-main:has(.od-config-page){height:100%;min-height:0}");
+    expect(styles).toContain("body:has(.od-config-page){overflow:hidden}");
+    expect(styles).toContain(".od-root:has(.od-config-page){height:100dvh;min-height:0;overflow:hidden}");
     expect(styles).toContain(".od-config-header{display:none}");
     expect(styles).toContain(".od-root:has(.od-config-section.is-dirty)>.sf-ai-launcher");
     expect(styles).toContain("prefers-reduced-motion:reduce");
