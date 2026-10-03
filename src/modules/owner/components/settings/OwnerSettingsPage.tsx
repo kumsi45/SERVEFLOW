@@ -79,7 +79,6 @@ export function OwnerSettingsPage({ restaurantId, fallbackRestaurantName, config
 
   if (!config) return <div className="od-page od-config-page"><div className="od-card"><div className="od-empty compact">Loading settings...</div></div></div>;
   return <div className="od-page od-config-page">
-    <header className="od-page-header od-config-header"><div><span className="od-config-eyebrow">Owner settings</span><h1 className="od-page-title">Business Configuration Center</h1><p className="od-page-subtitle">Manage your business profile and customer payment options.</p></div></header>
     {(error || notice) ? <div className={error ? "od-error-inline" : "od-success-inline"} role={error ? "alert" : "status"}>{error || notice}</div> : null}
     <nav className="od-settings-workspaces" aria-label="Business settings areas">
       <Workspace active={workspace === "business"} letter="B" title="Business Settings" detail="Profile, hours and regional preferences" onClick={() => setWorkspace("business")} />

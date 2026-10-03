@@ -14,6 +14,8 @@ describe("Owner Settings S2 business configuration", () => {
     expect(settings).toContain('supabase.rpc("update_restaurant_configuration"');
     expect(settings).toContain('.from("menu-photos").upload');
     expect(settings).not.toContain("<details");
+    expect(settings).not.toContain("Business Configuration Center");
+    expect(settings).not.toContain("Manage your business profile and customer payment options.");
   });
 
   it("removes the hidden legacy form and its QR background work", () => {
@@ -82,6 +84,9 @@ describe("Owner Settings S2 business configuration", () => {
     expect(styles).toContain(".od-config-header{display:none}");
     expect(styles).toContain(".od-root:has(.od-config-page)>.sf-ai-launcher");
     expect(styles).toContain(".od-config-actions .od-btn-ghost");
+    expect(styles).toContain(".od-main:has(.od-config-page){min-height:0}");
+    expect(styles).toContain(".od-config-header{display:none}");
+    expect(styles).toContain(".od-root:has(.od-config-section.is-dirty)>.sf-ai-launcher");
     expect(styles).toContain("prefers-reduced-motion:reduce");
   });
 });
