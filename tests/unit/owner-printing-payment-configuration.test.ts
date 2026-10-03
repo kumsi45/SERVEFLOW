@@ -5,9 +5,9 @@ const component = readFileSync("src/modules/owner/components/settings/PrintingPa
 const service = readFileSync("src/modules/owner/services/printingPaymentConfigurationService.ts", "utf8");
 const styles = readFileSync("src/modules/owner/components/settings/printingPaymentConfigurationCenter.css", "utf8");
 
-describe("Owner Settings S1 canonical payment configuration", () => {
+describe("Owner Settings S3.1 compact payment configuration", () => {
   it("retains only currently functional payment controls", () => {
-    for (const label of ["Customer Pays Before Kitchen", "Waiter Payment Due", "Payment Methods", "Payment Accounts", "VAT", "Service Charge", "Customer Payment Preview"]) {
+    for (const label of ["Payment Flow", "Customer pays before kitchen", "Waiter payment due", "Payment Methods", "Payment Accounts", "VAT", "Service Charge", "Customer payment preview"]) {
       expect(component).toContain(label);
     }
     expect(component).toContain("config.methods.map");
@@ -37,6 +37,27 @@ describe("Owner Settings S1 canonical payment configuration", () => {
     expect(saveBody).not.toContain("await load()");
     expect(component).toContain("Settlement details shown to customers");
     expect(component).not.toContain("Private settlement details");
+  });
+
+  it("keeps account setup method-aware without inventing a QR settlement account", () => {
+    expect(component).toContain('if (code === "telebirr") return "Telebirr phone number"');
+    expect(component).toContain('if (code === "cbe_birr") return "CBE Birr account number"');
+    expect(component).toContain('!["cash", "credit_card", "card", "qr"].includes(code)');
+    expect(component).toContain('"Recorded by staff at checkout"');
+    expect(component).toContain("supportsPaymentAccount(method.method_code)");
+    expect(component).not.toContain('Field label="Phone Number"');
+  });
+
+  it("uses progressive disclosure and only surfaces save controls when changed", () => {
+    expect(component).toContain('const [expandedAccountId');
+    expect(component).toContain('const [editingCharge');
+    expect(component).toContain('const [previewOpen');
+    expect(component).toContain('aria-expanded={expanded}');
+    expect(component).toContain('Sample only');
+    expect(component).toContain('{dirty ? <div className="ppcc-actions"');
+    expect(styles).toContain(".ppcc-flow-row");
+    expect(styles).toContain(".ppcc-account-summary");
+    expect(styles).toContain(".ppcc-preview-toggle");
   });
 
   it("keeps mobile, motion and dark-mode support", () => {
