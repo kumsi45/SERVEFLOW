@@ -105,6 +105,14 @@ export async function savePaymentConfiguration(restaurantId: string, config: Pay
   }
 }
 
+export async function savePaymentAccount(restaurantId: string, account: BusinessPaymentAccount) {
+  const { error } = await supabase.from("business_payment_accounts").upsert({
+    ...account,
+    restaurant_id: restaurantId,
+  }, { onConflict: "id" });
+  if (error) throw new Error(error.message);
+}
+
 export async function softDeletePaymentAccount(restaurantId: string, accountId: string) {
   const { error } = await supabase.from("business_payment_accounts").update({
     deleted_at: new Date().toISOString(),

@@ -25,7 +25,7 @@ describe("Owner Settings S3.1 compact payment configuration", () => {
   });
 
   it("loads three tenant-scoped payment resources and uses owner-authorized RPCs", () => {
-    expect(service.match(/supabase\.from\(/g)).toHaveLength(6);
+    expect(service.match(/supabase\.from\(/g)).toHaveLength(7);
     expect(service).toContain('supabase.rpc("set_restaurant_payment_policy"');
     expect(service).toContain('supabase.rpc("set_restaurant_financial_settings"');
     expect(service).not.toContain('.from("restaurants").update');
@@ -58,6 +58,23 @@ describe("Owner Settings S3.1 compact payment configuration", () => {
     expect(styles).toContain(".ppcc-flow-row");
     expect(styles).toContain(".ppcc-account-summary");
     expect(styles).toContain(".ppcc-preview-toggle");
+  });
+
+  it("opens Add account before method selection and safely saves only a valid tenant-bound draft", () => {
+    expect(component).toContain('import { createBrowserUuid } from "../../../../core/browser/createBrowserUuid"');
+    expect(component).toContain("id: createBrowserUuid()");
+    expect(component).not.toContain("crypto.randomUUID()");
+    expect(component).toContain('payment_method_id: ""');
+    expect(component).toContain('<option value="">Select payment method</option>');
+    expect(component).toContain('Select a payment method to enter settlement details.');
+    expect(component).toContain('if (accountDraft.restaurant_id !== restaurantId)');
+    expect(component).toContain('setAccountDraft(null);');
+    expect(component).toContain('await savePaymentAccount(restaurantId, accountDraft)');
+    expect(component).toContain('disabled={accountSaving}');
+    expect(component).toContain('Telebirr phone number');
+    expect(component).toContain('CBE Birr account number');
+    expect(service).toContain('export async function savePaymentAccount');
+    expect(service).toContain('restaurant_id: restaurantId');
   });
 
   it("keeps mobile, motion and dark-mode support", () => {

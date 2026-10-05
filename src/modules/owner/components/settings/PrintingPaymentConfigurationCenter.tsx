@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { createBrowserUuid } from "../../../../core/browser/createBrowserUuid";
 import { SfButton, SfDialog, SfErrorState, SfSkeleton } from "../design-system";
 import {
   loadPaymentConfiguration,
+  savePaymentAccount,
   savePaymentConfiguration,
   softDeletePaymentAccount,
   type BusinessPaymentAccount,
@@ -45,6 +47,8 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [accountDraft, setAccountDraft] = useState<BusinessPaymentAccount | null>(null);
+  const [accountFormError, setAccountFormError] = useState<string | null>(null);
+  const [accountSaving, setAccountSaving] = useState(false);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [editingCharge, setEditingCharge] = useState<"vat" | "service" | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -65,6 +69,8 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
   }
 
   useEffect(() => {
+    setAccountDraft(null);
+    setAccountFormError(null);
     void load();
   }, [restaurantId]);
 
@@ -102,17 +108,12 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
 
   function openNewAccount() {
     if (!config) return;
-    const method = config.methods.find((item) => item.enabled && supportsPaymentAccount(item.method_code))
-      ?? config.methods.find((item) => supportsPaymentAccount(item.method_code));
-    if (!method) {
-      setError("Enable a digital payment method before adding an account.");
-      return;
-    }
+    setAccountFormError(null);
     setAccountDraft({
-      id: crypto.randomUUID(),
+      id: createBrowserUuid(),
       restaurant_id: restaurantId,
-      payment_method_id: method.id,
-      provider_code: providerForMethod(method.method_code),
+      payment_method_id: "",
+      provider_code: "other_bank",
       business_name: businessName,
       account_name: null,
       account_number: null,
@@ -126,18 +127,44 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
     });
   }
 
-  function commitAccount() {
+  function closeAccountEditor() {
+    if (accountSaving) return;
+    setAccountDraft(null);
+    setAccountFormError(null);
+  }
+
+  async function commitAccount() {
     if (!config || !accountDraft) return;
-    if (!accountDraft.account_number?.trim() && !accountDraft.phone_number?.trim()) {
-      setError("Add an account number or phone number.");
+    if (accountDraft.restaurant_id !== restaurantId) {
+      setAccountFormError("This account draft belongs to a different business. Please reopen Add account.");
       return;
     }
-    setConfig({
-      ...config,
-      accounts: [...config.accounts.filter((account) => account.id !== accountDraft.id), accountDraft],
-    });
-    setAccountDraft(null);
-    setError(null);
+    const method = config.methods.find((item) => item.id === accountDraft.payment_method_id);
+    if (!method || !supportsPaymentAccount(method.method_code)) {
+      setAccountFormError("Select a supported payment method.");
+      return;
+    }
+    if (!accountDraft.account_number?.trim() && !accountDraft.phone_number?.trim()) {
+      setAccountFormError(`Enter ${accountIdentifierLabel(method.method_code).toLowerCase()}.`);
+      return;
+    }
+    try {
+      setAccountSaving(true);
+      setAccountFormError(null);
+      await savePaymentAccount(restaurantId, accountDraft);
+      const withSavedAccount = (current: PaymentConfiguration | null) => current ? {
+        ...current,
+        accounts: [...current.accounts.filter((account) => account.id !== accountDraft.id), accountDraft],
+      } : current;
+      setConfig(withSavedAccount);
+      setSavedConfig(withSavedAccount);
+      setAccountDraft(null);
+      setNotice("Payment account saved.");
+    } catch (cause) {
+      setAccountFormError(cause instanceof Error ? cause.message : "Payment account could not be saved.");
+    } finally {
+      setAccountSaving(false);
+    }
   }
 
   async function deleteAccount(account: BusinessPaymentAccount) {
@@ -179,7 +206,7 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
     </section>
 
     <section className="ppcc-section" id="payment-accounts">
-      <div className="ppcc-subhead"><div><h3>Payment Accounts</h3><p>Settlement details shown to customers when they choose a supported digital payment method.</p></div><SfButton variant="secondary" onClick={openNewAccount}>Add account</SfButton></div>
+      <div className="ppcc-subhead"><div><h3>Payment Accounts</h3><p>Settlement details shown to customers when they choose a supported digital payment method.</p></div><SfButton type="button" variant="secondary" onClick={openNewAccount}>Add account</SfButton></div>
       {config.accounts.length === 0 ? <EmptySetup title="No payment accounts" detail="Add mobile-money or bank details for customer payment instructions." action="Add payment account" onClick={openNewAccount} /> : <div className="ppcc-account-grid">{config.accounts.map((account) => { const method = methodById.get(account.payment_method_id); const expanded = expandedAccountId === account.id; return <article key={account.id}><div className="ppcc-account-summary"><div><span>{method?.display_name ?? account.provider_code}</span><strong>{account.business_name || account.account_name || "Business account"}</strong><small>{accountIdentifierLabel(method?.method_code)} · {accountIdentifier(account)}</small></div><button type="button" aria-expanded={expanded} onClick={() => setExpandedAccountId(expanded ? null : account.id)}>{expanded ? "Close" : "Manage"}</button></div>{expanded ? <div className="ppcc-account-details"><p>{account.instructions || "No payment instructions added."}</p><div className="ppcc-account-actions"><button type="button" onClick={() => setAccountDraft(account)}>Edit</button><button type="button" onClick={() => setConfig({ ...config, accounts: config.accounts.map((item) => item.id === account.id ? { ...item, status: item.status === "active" ? "inactive" : "active" } : item) })}>{account.status === "active" ? "Disable" : "Enable"}</button><button type="button" className="danger" onClick={() => void deleteAccount(account)}>Delete</button></div></div> : null}</article>; })}</div>}
     </section>
 
@@ -193,7 +220,7 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
     </section>
 
     {dirty ? <div className="ppcc-actions" role="status"><span>Unsaved changes</span><div><SfButton variant="secondary" onClick={discard} disabled={saving}>Discard</SfButton><SfButton onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</SfButton></div></div> : null}
-    <SfDialog open={Boolean(accountDraft)} title={accountDraft?.id && config.accounts.some((account) => account.id === accountDraft.id) ? "Edit payment account" : "Add payment account"} onClose={() => setAccountDraft(null)}>{accountDraft ? (() => { const method = methodById.get(accountDraft.payment_method_id); const code = method?.method_code; const usesPhone = code === "telebirr"; const identifier = usesPhone ? accountDraft.phone_number : accountDraft.account_number; return <div className="ppcc-account-form"><Field label="Payment Method"><select value={accountDraft.payment_method_id} onChange={(event) => { const next = config.methods.find((item) => item.id === event.target.value); setAccountDraft({ ...accountDraft, payment_method_id: event.target.value, provider_code: providerForMethod(next?.method_code ?? ""), account_number: null, phone_number: null }); }}>{config.methods.filter((method) => supportsPaymentAccount(method.method_code)).map((method) => <option key={method.id} value={method.id}>{method.display_name}</option>)}</select></Field><Field label="Business Name"><input value={accountDraft.business_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, business_name: event.target.value })} /></Field><Field label="Account holder (optional)"><input value={accountDraft.account_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, account_name: event.target.value })} /></Field><Field label={accountIdentifierLabel(code)}><input value={identifier ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, account_number: usesPhone ? null : event.target.value, phone_number: usesPhone ? event.target.value : null })} /></Field><Field label="Instructions"><textarea rows={3} value={accountDraft.instructions ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, instructions: event.target.value })} /></Field><div className="ppcc-dialog-actions"><SfButton variant="secondary" onClick={() => setAccountDraft(null)}>Cancel</SfButton><SfButton onClick={commitAccount}>Save account</SfButton></div></div>; })() : null}</SfDialog>
+    <SfDialog open={Boolean(accountDraft)} title={accountDraft?.id && config.accounts.some((account) => account.id === accountDraft.id) ? "Edit payment account" : "Add payment account"} onClose={closeAccountEditor}>{accountDraft ? (() => { const method = methodById.get(accountDraft.payment_method_id); const code = method?.method_code; const usesPhone = code === "telebirr"; const identifier = usesPhone ? accountDraft.phone_number : accountDraft.account_number; return <div className="ppcc-account-form"><Field label="Payment Method" error={accountFormError?.startsWith("Select") ? accountFormError : undefined}><select value={accountDraft.payment_method_id} disabled={accountSaving} onChange={(event) => { const next = config.methods.find((item) => item.id === event.target.value); setAccountFormError(null); setAccountDraft({ ...accountDraft, payment_method_id: event.target.value, provider_code: providerForMethod(next?.method_code ?? ""), account_number: null, phone_number: null }); }}><option value="">Select payment method</option>{config.methods.filter((method) => supportsPaymentAccount(method.method_code)).map((method) => <option key={method.id} value={method.id}>{method.display_name}</option>)}</select></Field><Field label="Business Name"><input disabled={accountSaving} value={accountDraft.business_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, business_name: event.target.value })} /></Field><Field label="Account holder (optional)"><input disabled={accountSaving} value={accountDraft.account_name ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, account_name: event.target.value })} /></Field>{code ? <Field label={accountIdentifierLabel(code)} error={accountFormError?.startsWith("Enter") ? accountFormError : undefined}><input disabled={accountSaving} value={identifier ?? ""} onChange={(event) => { setAccountFormError(null); setAccountDraft({ ...accountDraft, account_number: usesPhone ? null : event.target.value, phone_number: usesPhone ? event.target.value : null }); }} /></Field> : <p className="ppcc-account-method-hint">Select a payment method to enter settlement details.</p>}<Field label="Instructions"><textarea disabled={accountSaving} rows={3} value={accountDraft.instructions ?? ""} onChange={(event) => setAccountDraft({ ...accountDraft, instructions: event.target.value })} /></Field>{accountFormError && !accountFormError.startsWith("Select") && !accountFormError.startsWith("Enter") ? <p className="ppcc-account-form-error" role="alert">{accountFormError}</p> : null}<div className="ppcc-dialog-actions"><SfButton variant="secondary" onClick={closeAccountEditor} disabled={accountSaving}>Cancel</SfButton><SfButton onClick={() => void commitAccount()} disabled={accountSaving}>{accountSaving ? "Saving…" : "Save account"}</SfButton></div></div>; })() : null}</SfDialog>
   </div>;
 }
 
@@ -201,8 +228,8 @@ function SectionHeader({ number, title, detail }: { number: string; title: strin
   return <header className="ppcc-section-head"><span>{number}</span><div><h2>{title}</h2><p>{detail}</p></div></header>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="ppcc-field"><span>{label}</span>{children}</label>;
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return <label className={`ppcc-field${error ? " invalid" : ""}`}><span>{label}</span>{children}{error ? <small role="alert">{error}</small> : null}</label>;
 }
 
 function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
