@@ -95,7 +95,7 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
   it("uses a compact combined order and charges panel without duplicate metadata", () => {
     expect(page).toContain("function checkoutOrderSource");
     expect(page).not.toContain("function checkoutTransactionMetadata");
-    expect(drawerMarkup).toContain("checkoutOrderSource(order)");
+    expect(drawerMarkup).toContain("<CheckoutCreatorAttribution order={order} />");
     expect(drawerMarkup).not.toContain("cd-checkout-meta");
     expect(drawerMarkup).not.toContain("Service Location");
     expect(drawerMarkup).not.toContain("Order Information");
@@ -125,7 +125,8 @@ describe("Phase 13.6C complete cashier checkout slide-over drawer", () => {
     expect(drawerMarkup).toContain("availablePaymentMethods");
     expect(drawerMarkup).toContain("onClick: displayPaymentMethod && !requiresCustomerReference ? onApprove : undefined");
     expect(drawerMarkup).toContain("Boolean(paymentMethodIssue)");
-    expect(drawerMarkup).toContain('orderSourceLabel !== "Waiter" ? <em>Required</em> : null');
+    expect(drawerMarkup).toContain('!isStaffCreatedOrder(order) && !displayReference');
+    expect(drawerMarkup).toContain('requiresCustomerReference ? <em>Required</em> : null');
     expect(drawerMarkup).toContain("Screenshot <em>Optional</em>");
   });
 

@@ -28,7 +28,7 @@ describe("cashier waiter payment and automatic service-location release", () => 
   it("shows Not Selected and requires an enabled tenant payment method", () => {
     expect(cashier).toContain('{showPaymentSelector ? "Not Selected" : "Not recorded"}');
     expect(cashier).toContain("onClick: displayPaymentMethod && !requiresCustomerReference ? onApprove : undefined");
-    expect(cashier).toContain('isDigital && orderSourceLabel !== "Waiter" && !displayReference');
+    expect(cashier).toContain('isDigital && !isStaffCreatedOrder(order) && !displayReference');
     expect(cashier).toContain("No checkout payment methods are enabled for this business.");
     expect(cashier).toContain('throw new Error("Select the payment method before verifying.")');
     expect(cashier).toContain('supabase.rpc("get_cashier_checkout_payment_methods"');

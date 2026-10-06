@@ -169,6 +169,70 @@ function sourceLabel(source?: string | null) {
   return "Unknown";
 }
 
+export type CreatorAttribution = {
+  label: string;
+  name: string | null;
+};
+
+type CheckoutOrder = CashierOrder & {
+  checkoutCreatorAttribution?: CreatorAttribution;
+};
+
+export function resolveOrderCreatorAttribution(
+  order: Pick<
+    CashierOrder,
+    | "invoiceCreatorName"
+    | "invoiceSource"
+    | "orderSource"
+    | "waiterName"
+    | "customerName"
+  >,
+): CreatorAttribution {
+  const source = (order.invoiceSource || order.orderSource || "").toLowerCase();
+  const staffName = order.invoiceCreatorName || order.waiterName || null;
+
+  if (source === "cashier") return { label: "Cashier", name: staffName };
+  if (source === "waiter") return { label: "Waiter", name: staffName };
+  if (source === "public_qr" || source === "self_order") {
+    return { label: "Customer QR", name: order.customerName || null };
+  }
+  if (source === "room_service") {
+    return { label: "Room Service", name: staffName || order.customerName || null };
+  }
+  if (source === "delivery") {
+    return { label: "Delivery", name: order.customerName || null };
+  }
+  if (staffName) return { label: "Staff", name: staffName };
+  return { label: "Customer", name: order.customerName || null };
+}
+
+export function resolveSessionCreatorAttribution(
+  orders: Array<
+    Pick<
+      CashierOrder,
+      | "invoiceCreatorName"
+      | "invoiceSource"
+      | "orderSource"
+      | "waiterName"
+      | "customerName"
+    >
+  >,
+): CreatorAttribution {
+  if (orders.length === 0) return { label: "Customer", name: null };
+  const attributions = orders.map(resolveOrderCreatorAttribution);
+  const distinct = new Set(
+    attributions.map(({ label, name }) => `${label}\u0000${name ?? ""}`),
+  );
+  if (distinct.size === 1) return attributions[0];
+
+  const staffOnly = attributions.every(({ label }) =>
+    ["Cashier", "Waiter", "Staff"].includes(label),
+  );
+  return staffOnly
+    ? { label: "Staff", name: "Multiple" }
+    : { label: "Multiple origins", name: null };
+}
+
 function creatorLabel(
   order: Pick<
     CashierOrder,
@@ -339,6 +403,8 @@ type FinalDiningBillModel = {
     tableNumber: string | null;
     customerName: string | null;
     waiterName: string | null;
+    creatorLabel: string;
+    creatorName: string | null;
     cashierName: string | null;
     printedAt: string;
     printCount: number;
@@ -468,7 +534,10 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function normalizeFinalBillPayload(value: unknown): FinalDiningBillModel {
+function normalizeFinalBillPayload(
+  value: unknown,
+  creatorAttribution: CreatorAttribution,
+): FinalDiningBillModel {
   const root = asRecord(value);
   const bill = asRecord(root.bill);
   const restaurant = asRecord(root.restaurant);
@@ -485,6 +554,8 @@ function normalizeFinalBillPayload(value: unknown): FinalDiningBillModel {
       tableNumber: bill.table_number ? String(bill.table_number) : null,
       customerName: bill.customer_name ? String(bill.customer_name) : null,
       waiterName: bill.waiter_name ? String(bill.waiter_name) : null,
+      creatorLabel: creatorAttribution.label,
+      creatorName: creatorAttribution.name,
       cashierName: bill.cashier_name ? String(bill.cashier_name) : null,
       printedAt: String(bill.printed_at ?? new Date().toISOString()),
       printCount: Number(bill.print_count ?? 1),
@@ -557,6 +628,7 @@ export function buildFinalBillReviewModel(
   format: FinalBillFormat,
   documentType: "receipt" | "bill" = "receipt",
 ): FinalDiningBillModel {
+  const creatorAttribution = resolveSessionCreatorAttribution(session.batches);
   const grouped = new Map<string, FinalBillLineItem>();
   for (const batch of session.batches)
     for (const item of batch.items) {
@@ -600,6 +672,8 @@ export function buildFinalBillReviewModel(
       tableNumber: session.tableNumber,
       customerName: session.customerName,
       waiterName: session.waiterName,
+      creatorLabel: creatorAttribution.label,
+      creatorName: creatorAttribution.name,
       cashierName,
       printedAt: new Date().toISOString(),
       printCount: 0,
@@ -648,7 +722,7 @@ function chunkBillItems(items: FinalBillLineItem[], format: FinalBillFormat) {
   return pages.length > 0 ? pages : [[]];
 }
 
-function buildFinalBillPrintHtml(model: FinalDiningBillModel) {
+export function buildFinalBillPrintHtml(model: FinalDiningBillModel) {
   const isBillPreview = model.bill.status === "bill-preview";
   const pages = chunkBillItems(model.items, model.bill.format);
   const isA4 = model.bill.format === "a4";
@@ -762,8 +836,8 @@ function buildFinalBillPrintHtml(model: FinalDiningBillModel) {
         <section class="bill-meta">
           <div><span>Table</span><strong>${escapeHtml(model.bill.tableNumber ?? "-")}</strong></div>
           <div><span>Customer</span><strong>${escapeHtml(model.bill.customerName ?? "Guest")}</strong></div>
-          <div><span>Waiter</span><strong>${escapeHtml(model.bill.waiterName ?? "-")}</strong></div>
-          <div><span>Cashier</span><strong>${escapeHtml(model.bill.cashierName ?? "-")}</strong></div>
+          <div><span>${escapeHtml(model.bill.creatorLabel)}</span><strong>${escapeHtml(model.bill.creatorName ?? "-")}</strong></div>
+          <div><span>Printed by</span><strong>${escapeHtml(model.bill.cashierName ?? "-")}</strong></div>
           <div><span>Date</span><strong>${escapeHtml(date)}</strong></div>
           <div><span>Time</span><strong>${escapeHtml(time)}</strong></div>
           <div><span>Page</span><strong>${pageIndex + 1}/${pages.length}</strong></div>
@@ -996,7 +1070,7 @@ function buildDiningSessionSummaries(sessionOrders: CashierOrder[]) {
   return [...sessions.values()].sort(compareDiningSessionsNewestFirst);
 }
 
-function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
+export function paymentDueOrder(session: DiningSessionSummary): CheckoutOrder {
   const dueBatches = session.batches.filter(isUnpaidPayment);
   const first = dueBatches[0] ?? session.batches[0];
   if (!first) throw new Error("Dining session has no order batches.");
@@ -1007,6 +1081,7 @@ function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
     dueMethods.length === dueBatches.length && new Set(dueMethods).size === 1
       ? dueMethods[0]
       : null;
+  const checkoutCreatorAttribution = resolveSessionCreatorAttribution(dueBatches);
   return {
     ...first,
     id: session.diningSessionId,
@@ -1021,6 +1096,7 @@ function paymentDueOrder(session: DiningSessionSummary): CashierOrder {
     diningSessionStatus: session.diningSessionStatus,
     totalPrice: dueBatches.reduce((sum, batch) => sum + batch.totalPrice, 0),
     paymentMethod: authoritativeMethod,
+    checkoutCreatorAttribution,
     items: dueBatches.flatMap((batch) => batch.items),
     referenceNumber: null,
     transactionId: null,
@@ -1090,24 +1166,26 @@ const CHECKOUT_STATUS_LABEL: Record<CheckoutWorkspaceStatus, string> = {
   completed: "Completed",
 };
 
-function checkoutOrderSource(order: CashierOrder) {
+function checkoutOrderSource(order: CheckoutOrder) {
+  return order.checkoutCreatorAttribution ?? resolveOrderCreatorAttribution(order);
+}
+
+function isStaffCreatedOrder(order: CashierOrder) {
   const source = (order.invoiceSource || order.orderSource || "").toLowerCase();
-  if (source === "waiter" || order.waiterName) {
-    return { label: "Waiter", name: order.waiterName || order.invoiceCreatorName || null };
-  }
-  if (source === "cashier") {
-    return { label: "Cashier", name: order.invoiceCreatorName || null };
-  }
-  if (source === "public_qr" || source === "self_order") {
-    return { label: "Self Order", name: order.customerName || null };
-  }
-  if (source === "room_service") {
-    return { label: "Room Service", name: order.invoiceCreatorName || order.customerName || null };
-  }
-  if (source === "delivery") {
-    return { label: "Delivery", name: order.customerName || null };
-  }
-  return { label: "Customer", name: order.customerName || null };
+  return source === "cashier" || source === "waiter";
+}
+
+export function CheckoutCreatorAttribution({ order }: { order: CheckoutOrder }) {
+  const { label, name } = checkoutOrderSource(order);
+  return (
+    <div
+      className="cd-checkout-assignee"
+      aria-label={name ? `${label}: ${name}` : label}
+    >
+      <span>{label}</span>
+      {name ? <><i aria-hidden="true">•</i><strong>{name}</strong></> : null}
+    </div>
+  );
 }
 
 function compactElapsedLabel(iso: string, now: Date) {
@@ -1125,7 +1203,7 @@ function compactElapsedLabel(iso: string, now: Date) {
   return `${days} d${remainingHours ? ` ${remainingHours} hr` : ""}`;
 }
 
-function CheckoutSlideOverDrawer({
+export function CheckoutSlideOverDrawer({
   order,
   checkoutStatus,
   serviceLocationName,
@@ -1145,7 +1223,7 @@ function CheckoutSlideOverDrawer({
   onCollectionPaymentMethodChange,
   formatMoney,
 }: {
-  order: CashierOrder;
+  order: CheckoutOrder;
   checkoutStatus: CheckoutWorkspaceStatus;
   serviceLocationName: string;
   onClose: () => void;
@@ -1196,15 +1274,13 @@ function CheckoutSlideOverDrawer({
         ]
       : availablePaymentMethods;
   const isDigital = displayPaymentMethod !== "" && displayPaymentMethod !== "Cash";
-  const { label: orderSourceLabel, name: orderSourceName } =
-    checkoutOrderSource(order);
   const statusLabel = isPaymentDue && !displayPaymentMethod
     ? "Awaiting Payment Method"
     : CHECKOUT_STATUS_LABEL[checkoutStatus];
   const displayReference =
     paymentReference.trim() || order.referenceNumber?.trim() || "";
   const requiresCustomerReference =
-    isDigital && orderSourceLabel !== "Waiter" && !displayReference;
+    isDigital && !isStaffCreatedOrder(order) && !displayReference;
   const displayTransaction =
     paymentTransactionId.trim() || order.transactionId?.trim() || "";
   const screenshotFileName = order.screenshotUrl
@@ -1270,7 +1346,7 @@ function CheckoutSlideOverDrawer({
     <div className="cd-payment-evidence-card" aria-label="Customer payment evidence">
       <div className="cd-payment-evidence-heading">Payment Evidence</div>
       <div>
-        <span>Reference Number {orderSourceLabel !== "Waiter" ? <em>Required</em> : null}</span>
+        <span>Reference Number {requiresCustomerReference ? <em>Required</em> : null}</span>
         <strong className={requiresCustomerReference ? "missing" : undefined}>
           {displayReference || (requiresCustomerReference ? "Required" : "Not provided")}
         </strong>
@@ -1332,10 +1408,7 @@ function CheckoutSlideOverDrawer({
           <div className="cd-checkout-heading">
             <span className="cd-checkout-label">Checkout</span>
             <h2 className="cd-drawer-title" id="cashier-checkout-drawer-title">{serviceLocationName}</h2>
-            <div className="cd-checkout-assignee" aria-label={orderSourceName ? `${orderSourceLabel}: ${orderSourceName}` : orderSourceLabel}>
-              <span>{orderSourceLabel}</span>
-              {orderSourceName ? <><i aria-hidden="true">•</i><strong>{orderSourceName}</strong></> : null}
-            </div>
+            <CheckoutCreatorAttribution order={order} />
           </div>
           <div className="cd-checkout-header-actions">
             {statusLabel !== "Paid" ? (
@@ -1522,7 +1595,7 @@ export function CashierDashboardPage({
         ? "completed"
         : "pending",
   );
-  const [drawerOrder, setDrawerOrder] = useState<CashierOrder | null>(null);
+  const [drawerOrder, setDrawerOrder] = useState<CheckoutOrder | null>(null);
   const [collectionPaymentMethod, setCollectionPaymentMethod] = useState("");
   const [posEntryOpen, setPosEntryOpen] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -1629,7 +1702,7 @@ export function CashierDashboardPage({
     }, delayMs);
   }
 
-  function openCheckoutDrawer(order: CashierOrder | null) {
+  function openCheckoutDrawer(order: CheckoutOrder | null) {
     if (!order) {
       closeCheckoutDrawer();
       return;
@@ -2477,7 +2550,8 @@ export function CashierDashboardPage({
         },
       );
       if (rpcError) throw new Error(rpcError.message);
-      const billModel = normalizeFinalBillPayload(data);
+      const creatorAttribution = resolveSessionCreatorAttribution(session.batches);
+      const billModel = normalizeFinalBillPayload(data, creatorAttribution);
       printFinalBill(billModel);
       const { error: receiptStateError } = await supabase.rpc(
         "mark_cashier_session_receipts_printed",
