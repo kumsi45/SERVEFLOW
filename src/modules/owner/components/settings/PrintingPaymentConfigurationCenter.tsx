@@ -8,7 +8,6 @@ import {
   softDeletePaymentAccount,
   type BusinessPaymentAccount,
   type PaymentConfiguration,
-  type PaymentPolicyCode,
 } from "../../services/printingPaymentConfigurationService";
 import "./printingPaymentConfigurationCenter.css";
 
@@ -192,12 +191,12 @@ export function PrintingPaymentConfigurationCenter({ restaurantId, businessName,
   function discard() { if (savedConfig) setConfig(savedConfig); setError(null); setNotice(null); }
 
   return <div className="ppcc-shell">
-    <div className="ppcc-intro"><div><span>Payments</span><h2>Payment configuration</h2><p>Choose when customers pay, which methods they can use, and the charges applied to order totals.</p></div><SfButton onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save payment settings"}</SfButton></div>
+    <div className="ppcc-intro"><div><span>Payments</span><h2>Payment configuration</h2><p>Choose which methods customers can use and the charges applied to order totals.</p></div><SfButton onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save payment settings"}</SfButton></div>
     {(error || notice) ? <div className={error ? "ppcc-message error" : "ppcc-message success"} role={error ? "alert" : "status"}>{error || notice}</div> : null}
 
     <section className="ppcc-section" id="customer-payments">
-      <SectionHeader number="01" title="Payment Flow" detail="Choose when an order becomes eligible for kitchen preparation." />
-      <div className="ppcc-flow-row"><Field label="Order flow"><select value={config.paymentPolicy} onChange={(event) => setConfig({ ...config, paymentPolicy: event.target.value as PaymentPolicyCode })}><option value="pay_before_kitchen">Customer pays before kitchen</option><option value="kitchen_before_payment">Waiter payment due</option></select></Field><p>{config.paymentPolicy === "pay_before_kitchen" ? "Payment is required before preparation starts." : "A waiter places the order and payment remains due."}</p></div>
+      <SectionHeader number="01" title="Payment Flow" detail="Kitchen eligibility follows the order source." />
+      <div className="ppcc-flow-row"><p>Cashier and Waiter orders reach Kitchen when submitted. Customer QR items reach Kitchen after payment is confirmed.</p></div>
     </section>
 
     <section className="ppcc-section">

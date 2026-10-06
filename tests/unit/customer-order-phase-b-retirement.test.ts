@@ -41,7 +41,6 @@ describe("Phase B obsolete generic customer order retirement", () => {
     expect(orderingService).not.toContain("submitCustomerOrder");
     expect(orderingService).not.toContain('supabase.rpc("create_customer_order"');
     expect(waiterService).toContain('waiterSupabase.rpc("submit_waiter_order_batch"');
-    expect(cashierPage).toContain('"create_cashier_order"');
-    expect(cashierPage).toContain('"append_items_to_order"');
+    expect(cashierPage).toContain('"submit_cashier_order_batch"');
   });
 });

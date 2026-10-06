@@ -7,9 +7,10 @@ const styles = readFileSync("src/modules/owner/components/settings/printingPayme
 
 describe("Owner Settings S3.1 compact payment configuration", () => {
   it("retains only currently functional payment controls", () => {
-    for (const label of ["Payment Flow", "Customer pays before kitchen", "Waiter payment due", "Payment Methods", "Payment Accounts", "VAT", "Service Charge", "Customer payment preview"]) {
+    for (const label of ["Payment Flow", "Cashier and Waiter orders reach Kitchen when submitted", "Customer QR items reach Kitchen after payment is confirmed", "Payment Methods", "Payment Accounts", "VAT", "Service Charge", "Customer payment preview"]) {
       expect(component).toContain(label);
     }
+    expect(component).not.toContain('config.paymentPolicy');
     expect(component).toContain("config.methods.map");
     expect(component).toContain("Make default");
     expect(component).toContain("softDeletePaymentAccount");
@@ -26,7 +27,7 @@ describe("Owner Settings S3.1 compact payment configuration", () => {
 
   it("loads three tenant-scoped payment resources and uses owner-authorized RPCs", () => {
     expect(service.match(/supabase\.from\(/g)).toHaveLength(7);
-    expect(service).toContain('supabase.rpc("set_restaurant_payment_policy"');
+    expect(service).not.toContain('supabase.rpc("set_restaurant_payment_policy"');
     expect(service).toContain('supabase.rpc("set_restaurant_financial_settings"');
     expect(service).not.toContain('.from("restaurants").update');
     expect(service).toContain('.eq("restaurant_id", restaurantId)');

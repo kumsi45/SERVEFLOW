@@ -1,7 +1,5 @@
 import { supabase } from "../../../core/database";
 
-export type PaymentPolicyCode = "pay_before_kitchen" | "kitchen_before_payment";
-
 export type BusinessPaymentMethod = {
   id: string;
   restaurant_id: string;
@@ -31,7 +29,6 @@ export type BusinessPaymentAccount = {
 };
 
 export type PaymentConfiguration = {
-  paymentPolicy: PaymentPolicyCode;
   vatEnabled: boolean;
   vatPercentage: number;
   serviceChargeEnabled: boolean;
@@ -43,7 +40,7 @@ export type PaymentConfiguration = {
 export async function loadPaymentConfiguration(restaurantId: string): Promise<PaymentConfiguration> {
   const [restaurant, methods, accounts] = await Promise.all([
     supabase.from("restaurants")
-      .select("payment_policy,vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage")
+      .select("vat_enabled,vat_percentage,service_charge_enabled,service_charge_percentage")
       .eq("id", restaurantId)
       .single(),
     supabase.from("business_payment_methods")
@@ -61,7 +58,6 @@ export async function loadPaymentConfiguration(restaurantId: string): Promise<Pa
   if (!restaurant.data) throw new Error("Business payment configuration is unavailable.");
 
   return {
-    paymentPolicy: restaurant.data.payment_policy as PaymentPolicyCode,
     vatEnabled: Boolean(restaurant.data.vat_enabled),
     vatPercentage: Number(restaurant.data.vat_percentage ?? 0),
     serviceChargeEnabled: Boolean(restaurant.data.service_charge_enabled),
@@ -72,12 +68,6 @@ export async function loadPaymentConfiguration(restaurantId: string): Promise<Pa
 }
 
 export async function savePaymentConfiguration(restaurantId: string, config: PaymentConfiguration) {
-  const { error: policyError } = await supabase.rpc("set_restaurant_payment_policy", {
-    target_restaurant_id: restaurantId,
-    requested_policy: config.paymentPolicy,
-  });
-  if (policyError) throw new Error(policyError.message);
-
   const { error: financialError } = await supabase.rpc("set_restaurant_financial_settings", {
     target_restaurant_id: restaurantId,
     requested_vat_enabled: config.vatEnabled,

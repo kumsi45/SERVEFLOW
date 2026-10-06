@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "../../../core/database";
+import { createBrowserUuid } from "../../../core/browser/createBrowserUuid";
 import { formatCurrency } from "../../../core/format/currency";
 import { SmartImage } from "../../../core/presentation/SmartImage";
 import { resolveSmartImage } from "../../../core/presentation/smartImageDelivery";
@@ -290,28 +291,6 @@ type CashierCartItem = {
   price: number;
   quantity: number;
   notes: string;
-};
-
-type SubmittedCashierOrder = {
-  order_id: string;
-  status: CashierOrder["status"];
-  dining_session_status?: string | null;
-  total_price: number | string;
-  table_number: string | null;
-  payment_method: string | null;
-  payment_verified_at?: string | null;
-  created_at: string;
-};
-
-type CashierOrderPayload = {
-  order_id: string;
-  status: CashierOrder["status"];
-  dining_session_status?: string | null;
-  total_price: number | string;
-  table_number: string | null;
-  payment_method: string | null;
-  payment_verified_at?: string | null;
-  created_at: string;
 };
 
 type ContinuationChoice = {
@@ -905,32 +884,6 @@ function normalizeInvoiceRow(row: OrderRow): CashierOrder {
     ? rawItems.map((item) => normalizeItem(item as ItemRow))
     : [];
   return normalizeOrder(row, items);
-}
-
-function normalizeSubmittedOrder(row: SubmittedCashierOrder): CashierOrder {
-  return {
-    id: row.order_id,
-    displayNumber: null,
-    invoiceSource: "cashier",
-    invoiceCreatorName: "Cashier",
-    invoiceKitchenStatus: "waiting_payment",
-    invoiceStatus: "pending",
-    diningSessionId: row.order_id,
-    diningSessionDisplayNumber: null,
-    diningSessionStatus: row.dining_session_status ?? "open",
-    status: row.status,
-    customerName: null,
-    customerPhone: null,
-    tableNumber: row.table_number,
-    orderSource: null,
-    waiterName: null,
-    orderNote: null,
-    paymentMethod: row.payment_method,
-    totalPrice: Number(row.total_price),
-    createdAt: row.created_at,
-    paymentVerifiedAt: row.payment_verified_at ?? null,
-    items: [],
-  };
 }
 
 function isContinuableOrder(order: CashierOrder) {
@@ -1551,6 +1504,8 @@ export function CashierDashboardPage({
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
   const [cartItems, setCartItems] = useState<CashierCartItem[]>([]);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const submittingOrderRef = useRef(false);
+  const pendingOrderRequestRef = useRef<{ fingerprint: string; id: string } | null>(null);
   const [continuationChoice, setContinuationChoice] =
     useState<ContinuationChoice>(null);
   const [activity, setActivity] = useState<ShiftActivity[]>([]);
@@ -2292,6 +2247,8 @@ export function CashierDashboardPage({
   }
 
   async function submitPosOrder(mode: "append" | "create") {
+    if (submittingOrderRef.current) return;
+    submittingOrderRef.current = true;
     try {
       setSubmittingOrder(true);
       setError(null);
@@ -2301,46 +2258,42 @@ export function CashierDashboardPage({
         quantity: item.quantity,
         notes: item.notes.trim() || null,
       }));
-
-      if (mode === "append") {
-        const activeOrder = orders.find(
-          (order) =>
-            order.tableNumber === selectedTable && isContinuableOrder(order),
-        );
-        if (!activeOrder)
-          throw new Error("No active order found for this table.");
-        const { data, error: rpcError } = await supabase.rpc(
-          "append_items_to_order",
-          {
-            target_order_id: activeOrder.id,
-            requested_items: payload,
-          },
-        );
-        if (rpcError) throw new Error(rpcError.message);
-        const updated = normalizeSubmittedOrder(data as CashierOrderPayload);
-        submittedOrderId = updated.id;
-        setOrders((previous) =>
-          previous.map((order) =>
-            order.id === activeOrder.id
-              ? { ...order, ...updated, items: order.items }
-              : order,
-          ),
-        );
-      } else {
-        const { data, error: rpcError } = await supabase.rpc(
-          "create_cashier_order",
-          {
-            target_restaurant_id: restaurantId,
-            table_number: selectedTable,
-            selected_payment_method: selectedPaymentMethod,
-            requested_items: payload,
-          },
-        );
-        if (rpcError) throw new Error(rpcError.message);
-        const created = normalizeSubmittedOrder(data as SubmittedCashierOrder);
-        submittedOrderId = created.id;
-        setOrders((previous) => [created, ...previous]);
+      const activeOrder = mode === "append"
+        ? orders.find((order) => order.tableNumber === selectedTable && isContinuableOrder(order))
+        : null;
+      if (mode === "append" && !activeOrder)
+        throw new Error("The active order changed. Refresh the table and try again.");
+      const fingerprint = JSON.stringify({
+        restaurantId, selectedTable, selectedPaymentMethod, mode,
+        orderId: activeOrder?.id ?? null, payload,
+      });
+      if (pendingOrderRequestRef.current?.fingerprint !== fingerprint) {
+        pendingOrderRequestRef.current = { fingerprint, id: createBrowserUuid() };
       }
+      const { data, error: rpcError } = await supabase.rpc(
+        "submit_cashier_order_batch",
+        {
+          target_restaurant_id: restaurantId,
+          table_number: selectedTable,
+          selected_payment_method: selectedPaymentMethod,
+          requested_items: payload,
+          requested_action: mode,
+          target_order_id: activeOrder?.id ?? null,
+          client_request_id: pendingOrderRequestRef.current.id,
+        },
+      );
+      if (rpcError) {
+        console.error("Cashier order RPC failed", rpcError);
+        if (rpcError.message.includes("orders_one_open_dining_session_per_table")
+          || rpcError.message.includes("This table already has an active order")) {
+          throw new Error("This table already has an active order. Add items to the existing order.");
+        }
+        if (rpcError.code === "23505") throw new Error("An order conflict occurred. Refresh the table and try again.");
+        throw new Error(rpcError.message);
+      }
+      submittedOrderId = (data as { order_id?: string } | null)?.order_id ?? "";
+      if (!submittedOrderId) throw new Error("The server did not return the created order ID. Retry this submission.");
+      pendingOrderRequestRef.current = null;
 
       pushToast({
         type: "success",
@@ -2352,8 +2305,19 @@ export function CashierDashboardPage({
       setSelectedTable("");
       setSelectedPaymentMethod(PAYMENT_METHODS[0]);
       setContinuationChoice(null);
-      await loadDashboard();
+      await loadDashboard().catch((refreshError: unknown) => {
+        console.error("Cashier order refresh failed", refreshError);
+        pushToast({
+          type: "warning",
+          title: "Order saved, refresh needed",
+          description: "The order was submitted. Refresh the dashboard to see its latest state.",
+        });
+      });
     } catch (submitError) {
+      if (submitError instanceof Error && submitError.message.includes("already has an active order")) {
+        void loadDashboard().catch((refreshError: unknown) =>
+          console.error("Cashier table refresh failed", refreshError));
+      }
       pushToast({
         type: "error",
         title: "Order submission failed",
@@ -2363,12 +2327,14 @@ export function CashierDashboardPage({
             : "Review the order and try again.",
       });
     } finally {
+      submittingOrderRef.current = false;
       setSubmittingOrder(false);
     }
   }
 
   function handleSubmitPosOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittingOrderRef.current) return;
     if (!selectedTable) {
       pushToast({
         type: "warning",
@@ -3624,8 +3590,8 @@ export function CashierDashboardPage({
                     {selectedTableActiveOrder && (
                       <div className="cd-pos-active-note">
                         Active order {fmtOrderLabel(selectedTableActiveOrder)}{" "}
-                        found for {compactTableCode(selectedTable)}. Submitting will ask
-                        whether to add to it or create a new order.
+                        found for {compactTableCode(selectedTable)}. New items will be
+                        added to this dining session.
                       </div>
                     )}
 
@@ -3882,20 +3848,13 @@ export function CashierDashboardPage({
               </div>
               <button onClick={() => setContinuationChoice(null)}>x</button>
             </div>
-            <div className="cd-modal-actions split">
+            <div className="cd-modal-actions">
               <button
                 className="cd-approve-btn"
                 onClick={() => void submitPosOrder("append")}
                 disabled={submittingOrder}
               >
                 {submittingOrder ? "Adding..." : "Add To Existing Order"}
-              </button>
-              <button
-                className="cd-view-btn"
-                onClick={() => void submitPosOrder("create")}
-                disabled={submittingOrder}
-              >
-                Create New Order
               </button>
             </div>
           </div>

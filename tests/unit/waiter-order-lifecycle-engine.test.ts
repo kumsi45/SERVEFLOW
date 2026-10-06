@@ -57,8 +57,8 @@ describe("official waiter order lifecycle engine", () => {
     expect(lifecycle).toContain(
       'export type paymentpolicy = "pay_before_kitchen" | "kitchen_before_payment"',
     );
-    expect(owner).toContain('value="pay_before_kitchen"');
-    expect(owner).toContain('value="kitchen_before_payment"');
+    expect(owner).not.toContain('value="pay_before_kitchen"');
+    expect(owner).not.toContain('value="kitchen_before_payment"');
     expect(owner).not.toContain('value="mixed"');
     expect(owner).not.toContain("mixedwaiterpaymenttiming");
     expect(migration).toContain(
