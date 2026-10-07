@@ -76,9 +76,14 @@ async function run() {
 
     await client.query('begin');
     await client.query("set local statement_timeout='90s'");
-    await client.query(fs.readFileSync(path.join(__dirname, '..', 'migrations',
-      '272_durable_print_job_queue.sql'), 'utf8'));
-    console.log('PASS migration 272 applies in rollback transaction');
+    if (process.env.P2_DEPLOYED === '1') {
+      assert.deepEqual(status.map((row) => row.version), ['271', '272']);
+      console.log('PASS deployed migration 272 present; using live schema');
+    } else {
+      await client.query(fs.readFileSync(path.join(__dirname, '..', 'migrations',
+        '272_durable_print_job_queue.sql'), 'utf8'));
+      console.log('PASS migration 272 applies in rollback transaction');
+    }
     const after = (await client.query(`select p.oid::regprocedure::text signature,
       has_function_privilege('anon',p.oid,'EXECUTE') anon,
       has_function_privilege('authenticated',p.oid,'EXECUTE') authenticated,
@@ -277,6 +282,25 @@ async function run() {
       where i.restaurant_id <> $1 and oi.kitchen_station_id is not null limit 1`,
       [tenant.restaurant_id])).rows[0];
     if (tenantB) {
+      const tenantBJobId = (await client.query(`insert into public.print_jobs
+        (restaurant_id,job_type,printer_purpose,automatic_key,order_id,invoice_id,
+         kitchen_station_id,kitchen_batch_key,payload)
+        values ($1,'kitchen_ticket','kitchen',$2,$3,$4,$5,$6,'{}'::jsonb)
+        returning id`, [tenantB.restaurant_id, `kitchen:p2-security:${id()}`,
+        tenantB.order_id, tenantB.invoice_id, tenantB.station_id,
+        `p2-security-${id()}`])).rows[0].id;
+      await rejected('agent cannot acknowledge real tenant B fixture job',
+        'authenticated', agentUserId,
+        `select public.acknowledge_print_job($1,$2,'dispatched')`,
+        [tenantBJobId, id()], /not found for this agent tenant/i);
+      await rejected('agent cannot fail real tenant B fixture job',
+        'authenticated', agentUserId,
+        `select public.acknowledge_print_job($1,$2,'terminal_failure','PAPER_JAM')`,
+        [tenantBJobId, id()], /not found for this agent tenant/i);
+      assert.equal((await asActor('authenticated', agentUserId,
+        `select * from public.get_claimed_print_job_connection($1)`,
+        [tenantBJobId])).rowCount, 0);
+      console.log('PASS agent cannot fetch tenant B printer connection');
       await rejected('cross tenant printer FK rejected', 'service_role', null,
         `insert into public.print_jobs
         (restaurant_id,job_type,printer_purpose,automatic_key,order_id,invoice_id,
