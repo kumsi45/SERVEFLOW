@@ -1,4 +1,4 @@
-// P3.1 candidate is applied and exercised in one rollback-only transaction.
+// P3.1 candidate or deployed schema is exercised in one rollback-only transaction.
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -51,14 +51,23 @@ async function run() {
   try {
     const history = (await client.query(`select version,name from supabase_migrations.schema_migrations
       where version >= '271' order by version`)).rows;
-    assert.deepEqual(history.map((row) => row.version), ['271','272']);
-    console.log('PASS remote history ends at 272');
+    const versions=history.map((row) => row.version);
+    assert.ok(JSON.stringify(versions)===JSON.stringify(['271','272']) ||
+      JSON.stringify(versions)===JSON.stringify(['271','272','273']),
+      `Unexpected migration history: ${versions.join(',')}`);
+    const deployed=versions.includes('273');
+    console.log(deployed ? 'PASS remote history ends at deployed 273' :
+      'PASS remote history ends at 272');
     await client.query('begin');
     await client.query("set local statement_timeout='20s'");
     await client.query("set local lock_timeout='5s'");
-    await client.query(fs.readFileSync(path.join(__dirname, '..', 'migrations',
-      '273_print_bridge_lifecycle.sql'), 'utf8'));
-    console.log('PASS migration 273 applies in rollback transaction');
+    if (deployed) {
+      console.log('PASS migration 273 installed; testing live schema without reapplication');
+    } else {
+      await client.query(fs.readFileSync(path.join(__dirname, '..', 'migrations',
+        '273_print_bridge_lifecycle.sql'), 'utf8'));
+      console.log('PASS migration 273 applies in rollback transaction');
+    }
     const tenantA = (await client.query(`select i.restaurant_id,i.id invoice_id,i.order_id,
       oi.kitchen_station_id station_id,
       (select user_id from public.restaurant_staff s where s.restaurant_id=i.restaurant_id

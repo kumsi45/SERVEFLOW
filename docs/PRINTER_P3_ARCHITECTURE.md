@@ -1,6 +1,6 @@
 # Printer P3: Windows local bridge architecture
 
-Status: architecture proposal and safe local foundation. Migration 273 is required and is **not deployed**. No physical transport, pairing endpoint, installer, or Owner Printing UI exists yet. Migrations 271 and 272 remain unchanged.
+Status: architecture proposal and safe local foundation. Migration 273 is deployed; the executable SQL in `supabase/migrations/273_print_bridge_lifecycle.sql` is authoritative where later proposal details differ. See `docs/PRINTER_P3_2_TRUSTED_PAIRING_BACKEND_HANDOFF.md` for the deployed RPC contract. No physical transport, pairing endpoint, installer, or Owner Printing UI exists yet. Migrations 271 and 272 remain unchanged.
 
 ## Source audit and reuse
 
