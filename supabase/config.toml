@@ -1,0 +1,5 @@
+[functions.print-bridge-pair]
+verify_jwt = false
+
+[functions.print-bridge-reconcile]
+verify_jwt = false
