@@ -16,6 +16,7 @@ export function printBridgeEnvironment() {
     emailDomain: required("PRINT_BRIDGE_EMAIL_DOMAIN"),
     redisUrl: required("UPSTASH_REDIS_REST_URL"),
     redisToken: required("UPSTASH_REDIS_REST_TOKEN"),
+    rateKey: required("PRINT_BRIDGE_RATE_KEY"),
     ownerOrigin: required("PRINT_BRIDGE_OWNER_ORIGIN"),
   };
 }
@@ -51,13 +52,30 @@ export function createPrintBridgePorts(
       if (error || !data.user) throw new PairingError("UNAUTHORIZED", 401, "Owner authentication required.");
       return data.user.id;
     },
-    async begin(codeDigest, proofDigest, name, ttl) {
-      return result((await service.rpc("begin_print_bridge_pairing", {
+    async begin(codeDigest, proofDigest, name, ttl, setupDigest, ownerId, restaurantId, expiresAt) {
+      const { data, error } = await service.rpc("begin_print_bridge_pairing_with_setup", {
         requested_code_digest: `\\x${codeDigest}`,
         requested_proof_digest: `\\x${proofDigest}`,
         requested_bridge_name: name,
         requested_ttl_seconds: ttl,
-      })) as { data: string | null; error: { message: string } | null });
+        requested_setup_digest: `\\x${setupDigest}`,
+        verified_owner_user_id: ownerId,
+        target_restaurant_id: restaurantId,
+        setup_expires_at: expiresAt,
+      }) as { data: string | null; error: { code?: string } | null };
+      if (error?.code === "23505" || error?.code === "P0001") {
+        throw new PairingError("INVALID_SETUP", 403, "Owner setup authorization is unavailable.");
+      }
+      if (error || !data) throw new Error("Print bridge database operation failed.");
+      return data;
+    },
+    async proofMatches(pairingId, proofDigests) {
+      const { data, error } = await service.from("print_bridge_pairings")
+        .select("proof_digest,status,expires_at").eq("id", pairingId).maybeSingle();
+      if (error) throw new Error("Pairing proof check failed.");
+      if (!data || data.status !== "approved" || Date.parse(data.expires_at) <= Date.now()) return false;
+      const stored = String(data.proof_digest).replace(/^\\x/, "").toLowerCase();
+      return proofDigests.some((candidate) => candidate === stored);
     },
     async approve(pairingId, codeDigest, restaurantId, ownerId) {
       result((await service.rpc("approve_print_bridge_pairing", {

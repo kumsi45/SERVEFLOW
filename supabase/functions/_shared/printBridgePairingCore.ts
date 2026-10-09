@@ -18,9 +18,11 @@ export type SessionMaterial = {
 };
 export type PairingPorts = {
   limit(scope: string, identity: string, maximum: number, windowSeconds: number): Promise<void>;
-  begin(codeDigest: string, proofDigest: string, name: string, ttl: number): Promise<string>;
+  begin(codeDigest: string, proofDigest: string, name: string, ttl: number,
+    setupDigest: string, ownerId: string, restaurantId: string, expiresAt: string): Promise<string>;
   approve(pairingId: string, codeDigest: string, restaurantId: string, ownerId: string): Promise<void>;
   beginRedemption(pairingId: string, proofDigest: string): Promise<{ restaurant_id: string; bridge_name: string }>;
+  proofMatches(pairingId: string, proofDigests: string[]): Promise<boolean>;
   complete(pairingId: string, authUserId: string): Promise<string>;
   snapshot(pairingId: string): Promise<PairingSnapshot | null>;
   fail(pairingId: string, code: string): Promise<void>;
@@ -156,7 +158,7 @@ async function setupClaims(keys: DigestKeyring, raw: unknown) {
   if (!equalHex(expected, signature) || Number(expiry) <= Date.now()) {
     throw new PairingError("INVALID_SETUP", 403, "Owner setup authorization is unavailable.");
   }
-  return { version, ownerId, restaurantId, nonce };
+  return { version, ownerId, restaurantId, nonce, expiry: Number(expiry) };
 }
 
 export async function initiatePairing(
@@ -185,14 +187,19 @@ export async function startPairing(
   fromBase64url(input.proof);
   const setup = await setupClaims(keys, input.setupToken);
   await ports.requireOwner(setup.ownerId, setup.restaurantId);
+  // Redis is a fast abuse guard. PostgreSQL atomically claims the token and
+  // creates the pairing, so Redis eviction cannot restore a used token.
   await limited(ports, "setup-token", `${setup.version}:${setup.nonce}`, 1, 600);
-  await limited(ports, "start-global", "all", 300, 3600);
+  await limited(ports, "start-emergency", "all", 10000, 3600);
   const fingerprint = await digest(keys.keys[keys.current], keys.current, "rate", input.proof);
   await limited(ports, "start-proof", fingerprint, 3, 600);
   const code = decimalCode();
   const codeDigest = (await digests(keys, "code", code))[0];
   const proofDigest = (await digests(keys, "proof", input.proof))[0];
-  const pairingId = await ports.begin(codeDigest, proofDigest, name, 300);
+  const setupDigest = await digest(keys.keys[setup.version], setup.version, "rate",
+    `setup:${setup.version}:${setup.nonce}`);
+  const pairingId = await ports.begin(codeDigest, proofDigest, name, 300,
+    setupDigest, setup.ownerId, setup.restaurantId, new Date(setup.expiry).toISOString());
   return { pairingId, code, expiresInSeconds: 300 };
 }
 
@@ -231,10 +238,15 @@ export async function redeemPairing(
   if (!/^[a-z0-9.-]{4,160}$/.test(emailDomain) || !emailDomain.includes(".")) {
     throw new Error("Invalid bridge identity email domain.");
   }
-  await limited(ports, "redeem-global", "all", 600, 3600);
   await limited(ports, "redeem-pair", pairingId, 5, 600);
+  const proofDigests = await digests(keys, "proof", input.proof);
+  if (!(await ports.proofMatches(pairingId, proofDigests))) {
+    throw new PairingError("PAIRING_UNAVAILABLE", 409, "Pairing is unavailable.");
+  }
+  // Only a verified, approved proof may spend the shared emergency capacity.
+  await limited(ports, "redeem-emergency", "all", 10000, 3600);
   let authorized: { restaurant_id: string; bridge_name: string } | null = null;
-  for (const proofDigest of await digests(keys, "proof", input.proof)) {
+  for (const proofDigest of proofDigests) {
     try {
       authorized = await ports.beginRedemption(pairingId, proofDigest);
       break;

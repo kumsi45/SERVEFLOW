@@ -5,6 +5,7 @@ const SCRIPT = "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXP
 export function upstashRateLimiter(
   url: string, token: string, keys: DigestKeyring,
   request: typeof fetch = fetch,
+  stableRateKey?: Uint8Array,
 ) {
   let endpoint: URL;
   try { endpoint = new URL(url); }
@@ -12,6 +13,9 @@ export function upstashRateLimiter(
   if (endpoint.protocol !== "https:" || !token || endpoint.username || endpoint.password ||
     endpoint.search || endpoint.hash) {
     throw new Error("Invalid print bridge rate limiter configuration.");
+  }
+  if (stableRateKey && stableRateKey.length !== 32) {
+    throw new Error("Invalid print bridge rate key configuration.");
   }
   return async (scope: string, identity: string, maximum: number, windowSeconds: number) => {
     if (!/^[a-z-]{1,40}$/.test(scope) || maximum < 1 || windowSeconds < 1) {
@@ -27,7 +31,9 @@ export function upstashRateLimiter(
       }
       rateVersion = version;
     }
-    const fingerprint = await digest(keys.keys[rateVersion], rateVersion,
+    const fingerprint = await digest(scope === "setup-token" ? keys.keys[rateVersion] :
+      stableRateKey ?? keys.keys[rateVersion], scope === "setup-token" ? rateVersion :
+      stableRateKey ? "v0" : rateVersion,
       "rate", `${scope}:${identity}`);
     const redisKey = `serveflow:p32:${scope}:${fingerprint}`;
     let count: unknown;
@@ -52,4 +58,23 @@ export function upstashRateLimiter(
       throw new PairingError("RATE_LIMITED", 429, "Too many pairing attempts. Try later.");
     }
   };
+}
+
+export function trustedSource(hostname: string | undefined): string {
+  // This is the transport peer from Deno.serve, never a caller-supplied header.
+  if (!hostname || hostname.length > 45 || !/^[0-9a-fA-F:.]+$/.test(hostname)) {
+    throw new PairingError("RATE_LIMIT_UNAVAILABLE", 503,
+      "Pairing service is temporarily unavailable.");
+  }
+  return hostname.toLowerCase();
+}
+
+export function parseStableRateKey(encoded: string): Uint8Array {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(encoded)) throw new Error("Invalid print bridge rate key configuration.");
+  try {
+    const bytes = Uint8Array.from(atob(encoded.replace(/-/g, "+").replace(/_/g, "/") + "="),
+      (char) => char.charCodeAt(0));
+    if (bytes.length === 32) return bytes;
+  } catch { /* invalid secret */ }
+  throw new Error("Invalid print bridge rate key configuration.");
 }

@@ -2,7 +2,7 @@
 import { approvePairing, cancelPairing, initiatePairing, parseDigestKeyring,
   revokeAgent } from "../_shared/printBridgePairingCore.ts";
 import { errorResponse, pairingResponse, smallJson } from "../_shared/printBridgeHttp.ts";
-import { upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
+import { parseStableRateKey, upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
 import { createPrintBridgePorts, printBridgeEnvironment } from "../_shared/printBridgeSupabase.ts";
 
 Deno.serve(async (request) => {
@@ -17,7 +17,8 @@ Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return pairingResponse(204, {}, origin);
     if (request.method !== "POST") return pairingResponse(405, { error: "METHOD_NOT_ALLOWED" }, origin);
     const keys = parseDigestKeyring(config.keyring);
-    const rate = upstashRateLimiter(config.redisUrl, config.redisToken, keys);
+    const rate = upstashRateLimiter(config.redisUrl, config.redisToken, keys,
+      fetch, parseStableRateKey(config.rateKey));
     const ports = createPrintBridgePorts(config, rate, request.headers.get("Authorization") ?? undefined);
     const ownerId = await ports.authenticateOwner();
     const body = await smallJson(request);

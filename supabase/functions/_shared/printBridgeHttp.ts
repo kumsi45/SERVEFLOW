@@ -1,6 +1,10 @@
 import { PairingError } from "./printBridgePairingCore.ts";
 
 export async function smallJson(request: Request): Promise<Record<string, unknown>> {
+  const declared = request.headers.get("Content-Length");
+  if (declared && (!/^[0-9]+$/.test(declared) || Number(declared) > 2048)) {
+    throw new PairingError("INVALID_REQUEST", 400, "Invalid pairing request.");
+  }
   const reader = request.body?.getReader();
   if (!reader) throw new PairingError("INVALID_REQUEST", 400, "Invalid pairing request.");
   let size = 0;
@@ -10,7 +14,10 @@ export async function smallJson(request: Request): Promise<Record<string, unknow
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 2048) throw new PairingError("INVALID_REQUEST", 400, "Invalid pairing request.");
+      if (size > 2048) {
+        await reader.cancel();
+        throw new PairingError("INVALID_REQUEST", 400, "Invalid pairing request.");
+      }
       parts.push(value);
     }
   } finally { reader.releaseLock(); }

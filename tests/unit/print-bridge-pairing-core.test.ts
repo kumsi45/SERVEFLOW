@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { approvePairing, cancelPairing, generateBridgeProof, initiatePairing, parseDigestKeyring,
-  reconcileOrphanIdentities, redeemPairing, revokeAgent, startPairing, type PairingPorts, type PairingSnapshot,
+  PairingError, reconcileOrphanIdentities, redeemPairing, revokeAgent, startPairing, type PairingPorts, type PairingSnapshot,
   type SessionMaterial } from "../../supabase/functions/_shared/printBridgePairingCore";
 import { upstashRateLimiter } from "../../supabase/functions/_shared/printBridgeRateLimit";
 
@@ -17,6 +17,7 @@ class MockPorts implements PairingPorts {
   agents = new Map<string, { auth_user_id: string; tenant: string; revoked: boolean }>();
   identities = new Map<string, string>();
   rate = new Map<string, number>();
+  durableClaims = new Set<string>();
   created = 0;
   deleted = 0;
   banned = 0;
@@ -31,12 +32,23 @@ class MockPorts implements PairingPorts {
     this.rate.set(key, next);
     if (next > maximum) throw new Error("rate limited");
   }
-  async begin(code: string, proof: string) {
+  async begin(code: string, proof: string, _name: string, _ttl: number,
+    setupDigest: string, ownerId: string, restaurantId: string, expiresAt: string) {
+    if (this.durableClaims.has(setupDigest) || ownerId !== owner || restaurantId !== tenantA ||
+      Date.parse(expiresAt) <= Date.now()) {
+      throw new PairingError("INVALID_SETUP", 403, "Owner setup authorization is unavailable.");
+    }
+    this.durableClaims.add(setupDigest);
     const pairingId = crypto.randomUUID();
     this.pairings.set(pairingId, { status: "pending", code, proof,
       restaurant: null, owner: null, agent_id: null, agent_auth_user_id: null,
       expires_at: new Date(Date.now() + 300_000).toISOString() });
     return pairingId;
+  }
+  async proofMatches(pairingId: string, proofDigests: string[]) {
+    const pair = this.pairings.get(pairingId);
+    return Boolean(pair && pair.status === "approved" &&
+      Date.parse(pair.expires_at!) > Date.now() && proofDigests.includes(pair.proof));
   }
   async approve(pairingId: string, code: string, restaurantId: string, ownerId: string) {
     const pair = this.pairings.get(pairingId);
@@ -370,6 +382,34 @@ describe("trusted print bridge pairing", () => {
     expect(buckets[0]).toBe(buckets[1]);
   });
 
+  it("keeps the durable claim after Redis eviction and serializes concurrent starts", async () => {
+    const ports = new MockPorts();
+    const { setupToken } = await initiatePairing(ports, keys, owner, tenantA);
+    const attempts = await Promise.allSettled([0, 1].map(() => startPairing(ports, keys,
+      { bridgeName: "Bridge", proof: generateBridgeProof(), setupToken })));
+    expect(attempts.filter((item) => item.status === "fulfilled")).toHaveLength(1);
+    ports.rate.clear(); // Redis flush cannot clear PostgreSQL's claim.
+    await expect(startPairing(ports, keys,
+      { bridgeName: "Bridge", proof: generateBridgeProof(), setupToken }))
+      .rejects.toMatchObject({ code: "INVALID_SETUP" });
+    expect(ports.pairings.size).toBe(1);
+  });
+
+  it("invalid redemption cannot spend another pairing's emergency or pair quota", async () => {
+    const { ports, proof, challenge } = await approved();
+    for (let index = 0; index < 20; index++) {
+      await expect(redeemPairing(ports, keys,
+        { pairingId: crypto.randomUUID(), proof: generateBridgeProof() },
+        "agents.example.com")).rejects.toMatchObject({ code: "PAIRING_UNAVAILABLE" });
+    }
+    expect(ports.rate.get("redeem-emergency:all")).toBeUndefined();
+    expect(ports.rate.get(`redeem-pair:${challenge.pairingId}`)).toBeUndefined();
+    const result = await redeemPairing(ports, keys,
+      { pairingId: challenge.pairingId, proof }, "agents.example.com");
+    expect(result.agentId).toBeTruthy();
+    expect(ports.rate.get("redeem-emergency:all")).toBe(1);
+  });
+
   it("uses an atomic external rate limiter and fails closed when unavailable", async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ result: 2 }), { status: 200 }));
     const limit = upstashRateLimiter("https://redis.example.test", "private-token", keys, fetcher);
@@ -379,6 +419,22 @@ describe("trusted print bridge pairing", () => {
     const broken = upstashRateLimiter("https://redis.example.test", "private-token", keys,
       async () => { throw new Error("network failed"); });
     await expect(broken("start-global", "all", 1, 600)).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("keeps source and emergency buckets stable across digest-key rotation", async () => {
+    const buckets: string[] = [];
+    const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      buckets.push(String((JSON.parse(String(init?.body)) as unknown[])[3]));
+      return new Response(JSON.stringify({ result: 1 }), { status: 200 });
+    }) as typeof fetch;
+    const stable = crypto.getRandomValues(new Uint8Array(32));
+    const rotated = parseDigestKeyring(JSON.stringify({ current: "v2",
+      keys: { v1: generateBridgeProof(), v2: generateBridgeProof() } }));
+    await upstashRateLimiter("https://redis.example.test", "private-token", keys,
+      fetcher, stable)("bridge-source", "192.0.2.7", 120, 600);
+    await upstashRateLimiter("https://redis.example.test", "private-token", rotated,
+      fetcher, stable)("bridge-source", "192.0.2.7", 120, 600);
+    expect(buckets[0]).toBe(buckets[1]);
   });
 
   it("never places proof, code or credentials in public errors or logs", async () => {

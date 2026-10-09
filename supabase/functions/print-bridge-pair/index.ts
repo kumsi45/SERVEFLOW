@@ -2,15 +2,17 @@
 // proof possession and durable rate limits are enforced inside this handler.
 import { parseDigestKeyring, redeemPairing, startPairing } from "../_shared/printBridgePairingCore.ts";
 import { errorResponse, pairingResponse, smallJson } from "../_shared/printBridgeHttp.ts";
-import { upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
+import { parseStableRateKey, trustedSource, upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
 import { createPrintBridgePorts, printBridgeEnvironment } from "../_shared/printBridgeSupabase.ts";
 
-Deno.serve(async (request) => {
-  if (request.method !== "POST") return pairingResponse(405, { error: "METHOD_NOT_ALLOWED" });
+Deno.serve(async (request, info) => {
   try {
     const config = printBridgeEnvironment();
     const keys = parseDigestKeyring(config.keyring);
-    const rate = upstashRateLimiter(config.redisUrl, config.redisToken, keys);
+    const rate = upstashRateLimiter(config.redisUrl, config.redisToken, keys,
+      fetch, parseStableRateKey(config.rateKey));
+    await rate("bridge-source", trustedSource(info.remoteAddr.hostname), 120, 600);
+    if (request.method !== "POST") return pairingResponse(405, { error: "METHOD_NOT_ALLOWED" });
     const ports = createPrintBridgePorts(config, rate);
     const body = await smallJson(request);
     if (body.action === "start") {
