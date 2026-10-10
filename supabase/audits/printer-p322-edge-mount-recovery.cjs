@@ -16,12 +16,16 @@ const present=spawnSync('docker',['inspect',target],{encoding:'utf8'});
 if(present.status===0)throw new Error('Disposable replacement Edge container already exists');
 const env=[...old.Config.Env];
 const secret=()=>crypto.randomBytes(32).toString('base64url');
+const upstashPath=path.join(process.env.LOCALAPPDATA,'Temp','serveflow-p323-upstash.json');
+const upstash=fs.existsSync(upstashPath) ? JSON.parse(fs.readFileSync(upstashPath,'utf8')) : null;
+if (upstash && (!/^https:\/\/[a-z0-9-]+\.upstash\.io$/i.test(upstash.url) ||
+  typeof upstash.token !== 'string' || !upstash.token)) throw new Error('Invalid private Upstash test configuration');
 env.push(`PRINT_BRIDGE_DIGEST_KEYS=${JSON.stringify({current:'v1',keys:{v1:secret()}})}`,
   `PRINT_BRIDGE_RATE_KEY=${secret()}`,
   'PRINT_BRIDGE_EMAIL_DOMAIN=bridge.p322.example.test',
   'PRINT_BRIDGE_OWNER_ORIGIN=http://localhost:5173',
-  'UPSTASH_REDIS_REST_URL=https://unavailable.p322.example.test',
-  `UPSTASH_REDIS_REST_TOKEN=${secret()}`,
+  `UPSTASH_REDIS_REST_URL=${upstash?.url ?? 'https://unavailable.p322.example.test'}`,
+  `UPSTASH_REDIS_REST_TOKEN=${upstash?.token ?? secret()}`,
   `PRINT_BRIDGE_MAINTENANCE_KEY=${secret()}${secret()}`);
 const temp=path.join(process.env.LOCALAPPDATA,'Temp','serveflow-p322-edge-local.env');
 fs.writeFileSync(temp,env.join('\n')+'\n',{mode:0o600});
@@ -33,4 +37,4 @@ const args=['run','-d','--name',target,'--network','supabase_network_workspace',
   '-v','supabase_edge_runtime_workspace:/root/.cache/deno','-w','/workspace',
   '--entrypoint','sh',old.Config.Image,'-c',old.Config.Entrypoint[2]];
 const container=docker(args);
-console.log(`Started isolated Edge replacement ${container.slice(0,12)} with source mount; secrets remain in private temp env file.`);
+console.log(`Started isolated Edge replacement ${container.slice(0,12)} with source mount and ${upstash ? 'isolated Upstash REST' : 'unavailable Redis'} configuration; secrets remain in private Temp files.`);
