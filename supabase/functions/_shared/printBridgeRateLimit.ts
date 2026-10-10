@@ -60,15 +60,6 @@ export function upstashRateLimiter(
   };
 }
 
-export function trustedSource(hostname: string | undefined): string {
-  // This is the transport peer from Deno.serve, never a caller-supplied header.
-  if (!hostname || hostname.length > 45 || !/^[0-9a-fA-F:.]+$/.test(hostname)) {
-    throw new PairingError("RATE_LIMIT_UNAVAILABLE", 503,
-      "Pairing service is temporarily unavailable.");
-  }
-  return hostname.toLowerCase();
-}
-
 export function parseStableRateKey(encoded: string): Uint8Array {
   if (!/^[A-Za-z0-9_-]{43}$/.test(encoded)) throw new Error("Invalid print bridge rate key configuration.");
   try {

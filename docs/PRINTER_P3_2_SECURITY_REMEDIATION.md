@@ -8,15 +8,16 @@ Edge functions; deploying the functions first makes setup start fail closed.
 
 | Issue | Root cause | Candidate remediation |
 | --- | --- | --- |
-| Shared redemption budget | Every syntactically valid random pairing ID spent the same 600/hour Redis bucket before proof validation. | A trusted transport-peer budget runs first, followed by a per-pair budget. Only an approved, unexpired pairing with a matching proof can spend the 10,000/hour emergency budget. Invalid IDs do not consume unrelated pair or emergency budgets. |
+| Shared redemption budget | Every syntactically valid random pairing ID spent the same 600/hour Redis bucket before proof validation. | A per-pair budget runs first. Only an approved, unexpired pairing with a matching proof can spend the 10,000/hour emergency budget. Invalid IDs do not consume unrelated pair or emergency budgets. The previous transport-peer budget was removed because gateway proxy collisions could exhaust it. |
 | Shared start budget | A signed setup token spent a 300/hour global budget; digest-key rotation changed the bucket. | Each signed token has its own Redis budget, PostgreSQL makes the one-use decision, and a high-capacity emergency budget uses a separate stable rate key. |
 | Ephemeral token replay guard | Redis eviction or restart removed the only consumed-token record. | Migration 274 stores a unique HMAC setup digest and creates the pairing and event in one SQL transaction. A collision rolls back the pairing and event. The former service-role start RPC is revoked. Redis remains a fail-closed abuse dependency, not the one-use authority. |
 
 The backend returns the same unavailable response for absent, expired, cancelled,
 and wrong-proof pairing identities. The bridge body is bounded to 2,048 bytes and
 the HTTP helper returns no-store errors. A known consumed or invalid setup claim
-returns 403; other database failures return 503. The source identity comes from
-`Deno.serve` connection metadata; caller-supplied IP headers are ignored.
+returns 403; other database failures return 503. Caller-supplied forwarding
+headers are ignored. A verified upstream per-client source rule is required
+before deployment; the Edge function does not charge a shared proxy bucket.
 
 ## Critical integration prerequisites
 
@@ -24,10 +25,11 @@ returns 403; other database failures return 503. The source identity comes from
    Migrations 271–274, two disposable restaurants and Owners, and disposable bridge
    identities. Use a separate Upstash Redis REST database with no eviction of live
    keys. Do not load `.env.local` or production restaurant data.
-2. Confirm the hosted gateway's `remoteAddr.hostname` is a trustworthy client
-   source for the deployed function. If it is a shared proxy address, configure and
-   verify a per-client rate rule at a trusted upstream gateway. A shared peer bucket
-   can itself deny service to unrelated restaurants; this is a deployment blocker.
+2. Configure and verify a per-client rate rule at a trusted upstream gateway.
+   `Deno.serve` connection metadata identifies the connection peer, which may be a
+   shared proxy behind Supabase's gateway. Do not use arbitrary forwarding headers
+   in the function. Verify spoofed headers and shared-proxy traffic at the gateway;
+   absent that rule, per-source abuse protection is a deployment blocker.
 3. Exercise actual HTTP `OPTIONS`, missing/invalid/expired JWT, Owner membership,
    cross-tenant approval/cancellation/revocation, public start/redeem, and
    reconciliation with and without the maintenance secret. Confirm that Owner
@@ -41,8 +43,10 @@ returns 403; other database failures return 503. The source identity comes from
 5. Run a real Upstash `EVAL` and confirm atomic counters, no-eviction policy, TLS,
    failures returning 503, source isolation, and emergency-budget saturation alarms.
 
-The local Supabase CLI currently fails `supabase status` and `supabase start` with
-`EUNKNOWN: unknown error, uv_spawn`; isolated Supabase and Redis credentials are
+The Windows Supabase CLI fails `supabase status` and `supabase start` with
+`EUNKNOWN: unknown error, uv_spawn`. A Linux-container CLI reached Docker, but
+the repository's fresh migration chain failed at 015; an isolated compatibility
+copy later failed at 028. See the P3.2.1 report. Isolated Redis credentials are
 not present. Unit tests and Deno checks are not integration certification.
 
 ## Operational deployment checklist
@@ -79,7 +83,7 @@ Redis behavior, Migration 274, setup channel, and operational alerts are verifie
 
 - Focused bridge tests: 28 passed, including simulated Redis flush, concurrent
   starts, invalid redemption isolation, stable rate-key rotation, body limit,
-  trusted source extraction, and uniform internal errors. These use in-memory
+  shared-proxy/header-spoof isolation, and uniform internal errors. These use in-memory
   ports and do not prove the SQL or hosted gateway behavior.
 - Deno checked the Owner, public bridge, and reconciliation entrypoints.
 - `npm run build` passed, including `tsc -b` and the production Vite build.
@@ -91,20 +95,22 @@ Redis behavior, Migration 274, setup channel, and operational alerts are verifie
 - Full Playwright suite: 647 passed, 4 failed, 27 skipped. Failures occurred in
   Manager RecipeEditor (desktop and mobile), Manager Appearance (mobile), and
   Manager mobile navigation. No printer backend integration test ran in that suite.
-- Migration 274 has not been executed against PostgreSQL. Gateway JWT policy,
-  real Auth/SQL lifecycle, Redis `EVAL`, scheduling, and alerting remain untested.
+- The exact Migration 274 SQL passed 12 checks on a synthetic PostgreSQL fixture
+  in P3.2.1. Hosted-schema application, gateway JWT policy, real Auth/SQL
+  lifecycle, Redis `EVAL`, scheduling, and alerting remain untested.
 
 ## Changed file inventory
 
 | File | Change |
 | --- | --- |
 | `supabase/functions/_shared/printBridgePairingCore.ts` | Durable setup claim parameters, proof admission, isolated and emergency budgets. |
-| `supabase/functions/_shared/printBridgeRateLimit.ts` | Stable rate key and transport-source validation. |
+| `supabase/functions/_shared/printBridgeRateLimit.ts` | Stable rate key; shared transport-peer quota removed. |
+| `supabase/functions/_shared/printBridgePublicHandler.ts` | Testable public HTTP action boundary that ignores forwarding headers. |
 | `supabase/functions/_shared/printBridgeSupabase.ts` | New atomic RPC adapter, proof lookup, required rate-key secret. |
 | `supabase/functions/_shared/printBridgeHttp.ts` | Early declared-size rejection and bounded stream cancellation. |
-| `supabase/functions/print-bridge-pair/index.ts` | Per-source admission before public action handling. |
+| `supabase/functions/print-bridge-pair/index.ts` | Public handler delegation without a shared proxy-address quota. |
 | `supabase/functions/print-bridge-owner/index.ts` | Stable rate key for Owner budgets. |
 | `supabase/migrations/274_print_bridge_durable_setup_claim.sql` | Candidate durable claim table, atomic service-only RPC, and legacy start RPC revocation; **not deployed**. |
 | `tests/unit/print-bridge-pairing-core.test.ts` | Replay, race, invalid-redemption isolation, rotation tests. |
-| `tests/unit/print-bridge-http.test.ts` | Size, source, error response tests. |
+| `tests/unit/print-bridge-http.test.ts` | Size and error response tests. |
 | `docs/PRINTER_P3_2_SECURITY_REMEDIATION.md` | This review, prerequisites, operations, and evidence. |

@@ -3,6 +3,7 @@ import { approvePairing, cancelPairing, generateBridgeProof, initiatePairing, pa
   PairingError, reconcileOrphanIdentities, redeemPairing, revokeAgent, startPairing, type PairingPorts, type PairingSnapshot,
   type SessionMaterial } from "../../supabase/functions/_shared/printBridgePairingCore";
 import { upstashRateLimiter } from "../../supabase/functions/_shared/printBridgeRateLimit";
+import { handlePublicBridgeRequest } from "../../supabase/functions/_shared/printBridgePublicHandler";
 
 const owner = crypto.randomUUID();
 const tenantA = crypto.randomUUID();
@@ -408,6 +409,26 @@ describe("trusted print bridge pairing", () => {
       { pairingId: challenge.pairingId, proof }, "agents.example.com");
     expect(result.agentId).toBeTruthy();
     expect(ports.rate.get("redeem-emergency:all")).toBe(1);
+  });
+
+  it("keeps pair quotas independent when clients share a proxy or spoof forwarding headers", async () => {
+    const ports = new MockPorts();
+    const a = await approved(ports);
+    const b = await approved(ports);
+    const request = (pairingId: string, proof: string, forwarded: string) =>
+      new Request("https://bridge.example.test", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Forwarded-For": forwarded },
+        body: JSON.stringify({ action: "redeem", pairingId, proof }) });
+    for (let index = 0; index < 5; index++) {
+      await expect(handlePublicBridgeRequest(request(a.challenge.pairingId,
+        generateBridgeProof(), `198.51.100.${index}`), ports, keys, "agents.example.com"))
+        .rejects.toMatchObject({ code: "PAIRING_UNAVAILABLE" });
+    }
+    const response = await handlePublicBridgeRequest(request(b.challenge.pairingId,
+      b.proof, "198.51.100.1"), ports, keys, "agents.example.com");
+    expect(response.status).toBe(200);
+    expect(ports.rate.get(`redeem-pair:${b.challenge.pairingId}`)).toBe(1);
+    expect([...ports.rate.keys()].some((key) => key.startsWith("bridge-source:"))).toBe(false);
   });
 
   it("uses an atomic external rate limiter and fails closed when unavailable", async () => {

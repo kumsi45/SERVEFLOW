@@ -1,28 +1,18 @@
 // Public native bridge endpoint. Deployment must keep verify_jwt=false;
 // proof possession and durable rate limits are enforced inside this handler.
-import { parseDigestKeyring, redeemPairing, startPairing } from "../_shared/printBridgePairingCore.ts";
-import { errorResponse, pairingResponse, smallJson } from "../_shared/printBridgeHttp.ts";
-import { parseStableRateKey, trustedSource, upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
+import { parseDigestKeyring } from "../_shared/printBridgePairingCore.ts";
+import { errorResponse } from "../_shared/printBridgeHttp.ts";
+import { handlePublicBridgeRequest } from "../_shared/printBridgePublicHandler.ts";
+import { parseStableRateKey, upstashRateLimiter } from "../_shared/printBridgeRateLimit.ts";
 import { createPrintBridgePorts, printBridgeEnvironment } from "../_shared/printBridgeSupabase.ts";
 
-Deno.serve(async (request, info) => {
+Deno.serve(async (request) => {
   try {
     const config = printBridgeEnvironment();
     const keys = parseDigestKeyring(config.keyring);
     const rate = upstashRateLimiter(config.redisUrl, config.redisToken, keys,
       fetch, parseStableRateKey(config.rateKey));
-    await rate("bridge-source", trustedSource(info.remoteAddr.hostname), 120, 600);
-    if (request.method !== "POST") return pairingResponse(405, { error: "METHOD_NOT_ALLOWED" });
     const ports = createPrintBridgePorts(config, rate);
-    const body = await smallJson(request);
-    if (body.action === "start") {
-      const result = await startPairing(ports, keys, body);
-      return pairingResponse(200, result);
-    }
-    if (body.action === "redeem") {
-      const result = await redeemPairing(ports, keys, body, config.emailDomain);
-      return pairingResponse(200, result);
-    }
-    return pairingResponse(400, { error: "INVALID_REQUEST" });
+    return await handlePublicBridgeRequest(request, ports, keys, config.emailDomain);
   } catch (error) { return errorResponse(error); }
 });

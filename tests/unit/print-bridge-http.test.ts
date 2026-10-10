@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { errorResponse, pairingResponse, smallJson } from "../../supabase/functions/_shared/printBridgeHttp";
 import { PairingError } from "../../supabase/functions/_shared/printBridgePairingCore";
-import { trustedSource } from "../../supabase/functions/_shared/printBridgeRateLimit";
 
 describe("print bridge HTTP boundary", () => {
   it("returns a bodyless Owner preflight response with exact-origin CORS", async () => {
@@ -18,12 +17,6 @@ describe("print bridge HTTP boundary", () => {
       method: "POST", body: JSON.stringify({ value: "x".repeat(2048) }),
     });
     await expect(smallJson(request)).rejects.toMatchObject({ code: "INVALID_REQUEST" });
-  });
-
-  it("uses only a transport peer identity and fails closed without one", () => {
-    expect(trustedSource("192.0.2.7")).toBe("192.0.2.7");
-    expect(() => trustedSource(undefined)).toThrow();
-    expect(() => trustedSource("forged-source")).toThrow();
   });
 
   it("returns uniform no-store errors without leaking internal failures", async () => {
