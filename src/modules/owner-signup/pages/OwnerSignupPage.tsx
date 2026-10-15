@@ -34,8 +34,8 @@ export function OwnerSignupPage() {
   }
 
   return <AuthShell message="Your business, ready to flow." detail="Create a secure owner account, then personalize your menu and operations in the guided ServeFlow setup."><AuthCard>
-    {step === 3 ? <SuccessCard title="Your workspace is ready" action={<a className="auth-button" href="/staff-login">Sign in & launch setup</a>}>
-      <strong>{restaurantName}</strong> is ready. Sign in to continue to your guided setup wizard.
+    {step === 3 ? <SuccessCard title="Account created" action={<a className="auth-button" href="/staff-login">Sign in to continue setup</a>}>
+      Your account for <strong>{restaurantName}</strong> was created. Sign in to continue setup.
     </SuccessCard> : <>
       <div className="auth-stepper" aria-label={`Step ${step} of 3`}><span className="active" /><span className={step >= 2 ? "active" : ""} /><span /></div>
       <AuthHeader eyebrow={`Step ${step} of 3`} title={step === 1 ? "Tell us about your business" : "Create your secure login"} description={step === 1 ? "Just the essentials. Business details like type and phone are completed in the setup wizard." : <>You’re creating the owner account for <strong>{restaurantName}</strong>.</>} />
@@ -51,7 +51,7 @@ export function OwnerSignupPage() {
         {password && <PasswordStrength password={password} />}
         <AuthInput label="Confirm password" icon="•" type={showPassword ? "text" : "password"} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Repeat your password" minLength={8} maxLength={128} required disabled={isSubmitting} autoComplete="new-password" />
         <div className="auth-row"><button type="button" className="auth-link" style={{border:0,background:"none",padding:0,cursor:"pointer"}} onClick={() => { setStep(1); setError(null); }}>Back</button><span>Your account is secured by Supabase</span></div>
-        <AuthButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating workspace…" : "Create my workspace"}</AuthButton>
+        <AuthButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating account…" : "Create account"}</AuthButton>
       </form>}
       {step === 2 && <><AuthDivider>Or sign up with</AuthDivider><SocialLoginButton /></>}
       <AuthFooter><p>Already have an account? <a className="auth-link" href="/staff-login">Sign in</a></p></AuthFooter>

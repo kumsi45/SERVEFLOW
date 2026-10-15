@@ -49,6 +49,12 @@ describe("final V1 staff authentication contract", () => {
     expect(ownerSignup).not.toMatch(/pinPassword|\bpin\b/);
   });
 
+  it("does not present account creation as operational workspace readiness", () => {
+    expect(ownerSignupPage).toContain('title="Account created"');
+    expect(ownerSignupPage).not.toContain("Your workspace is ready");
+    expect(ownerSignupPage).not.toContain("Create my workspace");
+  });
+
   it("enforces role-specific credentials on the trusted staff endpoint", () => {
     expect(manageStaff).toContain('? normalizePinPassword(payload.pin)');
     expect(manageStaff).toContain(': normalizeStaffPassword(payload.password)');
