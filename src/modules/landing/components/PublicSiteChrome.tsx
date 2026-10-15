@@ -21,6 +21,7 @@ export function PublicSiteHeader() {
       <a href="/" className="lp-brand" aria-label="ServeFlow home" onClick={() => close()}><img src="/serveflowlogo.png" alt="" width="36" height="36"/><span>ServeFlow</span></a>
       <div className="lp-desktop-nav">{navigation.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</div>
       <div className="lp-desktop-actions"><a className="lp-text-link" href="/staff-login">Sign in</a><a className="lp-button lp-button-small" href="/sign-up">Get started</a></div>
+      <a className="lp-mobile-signin" href="/staff-login">Sign in</a>
       <button ref={toggle} type="button" className="lp-menu-toggle" aria-label={open ? "Close navigation menu" : "Open navigation menu"} aria-expanded={open} aria-controls="public-mobile-navigation" onClick={() => setOpen((value) => !value)} onKeyDown={(event) => { if (open && event.key === "Escape") { event.preventDefault(); close(true); } }}>{open ? <X aria-hidden="true"/> : <Menu aria-hidden="true"/>}</button>
     </nav>
     {open && <div id="public-mobile-navigation" className="lp-mobile-menu" onKeyDown={(event) => { if (event.key === "Escape") close(true); }}><div className="lp-container">

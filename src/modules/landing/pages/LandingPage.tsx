@@ -43,6 +43,7 @@ export function LandingPage() {
         <a href="/" className="lp-brand" aria-label="ServeFlow home" onClick={() => closeMenu()}><img src="/serveflowlogo.png" alt="" width="36" height="36"/><span>ServeFlow</span></a>
         <div className="lp-desktop-nav">{navigation.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</div>
         <div className="lp-desktop-actions"><a className="lp-text-link" href="/staff-login">Sign in</a><a className="lp-button lp-button-small" href="/sign-up">Get started</a></div>
+        <a className="lp-mobile-signin" href="/staff-login">Sign in</a>
         <button ref={menuToggle} type="button" className="lp-menu-toggle" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="public-mobile-navigation" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X aria-hidden="true"/> : <Menu aria-hidden="true"/>}</button>
       </nav>
       {menuOpen && <div id="public-mobile-navigation" className="lp-mobile-menu" onKeyDown={(event) => { if (event.key === "Escape") closeMenu(true); }}><div className="lp-container">

@@ -35,6 +35,7 @@ test("Phase B public pages route to approved contact destinations", async ({ pag
   await expect(page).toHaveTitle("About KumsiTech | ServeFlow");
   await expect(page.getByRole("heading", { name: "Built by KumsiTech. Designed for Hospitality." })).toBeVisible();
   await expect(page.getByText("ServeFlow is a hospitality management platform built by KumsiTech", { exact: false })).toBeVisible();
+  await expect(page.locator(".lp-header").getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/staff-login");
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open navigation menu" }).click();
     await expect(page.locator("#public-mobile-navigation").getByRole("link", { name: "Get started" })).toHaveAttribute("href", "/sign-up");
