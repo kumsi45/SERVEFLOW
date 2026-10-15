@@ -7,6 +7,7 @@ export class PairingError extends Error {
 
 export type PairingSnapshot = {
   status: string;
+  restaurant_id?: string | null;
   agent_auth_user_id: string | null;
   agent_id: string | null;
   expires_at?: string;
@@ -32,11 +33,13 @@ export type PairingPorts = {
   cancel(pairingId: string, restaurantId: string): Promise<void>;
   createIdentity(email: string, password: string, pairingId: string, restaurantId: string): Promise<string>;
   signIn(email: string, password: string): Promise<SessionMaterial>;
-  deleteIdentity(authUserId: string): Promise<void>;
+  deleteIdentity(authUserId: string): Promise<boolean>;
   isDedicatedIdentity(authUserId: string): Promise<boolean>;
   banIdentity(authUserId: string, replacementPassword: string): Promise<void>;
-  listBridgeIdentities(): Promise<Array<{ id: string; pairingId: string; email: string }>>;
-  hasAgentForAuth(authUserId: string): Promise<boolean>;
+  listBridgeIdentities(): Promise<Array<{ id: string; pairingId: string | null;
+    restaurantId: string | null; email: string | null; bannedUntil?: string | null }>>;
+  agentBindingForAuth(authUserId: string): Promise<{
+    revoked: boolean; restaurantId: string } | null>;
   expire(pairingId: string): Promise<void>;
 };
 
@@ -332,23 +335,57 @@ export async function reconcileOrphanIdentities(
   ports: PairingPorts, emailDomain: string, now = Date.now(),
 ) {
   let removed = 0;
+  let alreadyAbsent = 0;
   let retained = 0;
+  let banned = 0;
+  let failed = 0;
+  let invalid = 0;
+  let needsReview = 0;
   const identities = await ports.listBridgeIdentities();
   for (const identity of identities) {
-    const pairingId = requireUuid(identity.pairingId);
-    if (identity.email !== `bridge-${pairingId}@${emailDomain}` ||
-      await ports.hasAgentForAuth(identity.id)) { retained++; continue; }
-    const state = await ports.snapshot(pairingId);
-    if (!state) { retained++; continue; } // Investigate missing state manually.
-    if (state.status === "completed") { retained++; continue; }
-    const expired = state.expires_at && Date.parse(state.expires_at) + 300_000 < now;
-    if (state.status !== "failed" && state.status !== "cancelled" &&
-      state.status !== "expired" && !expired) { retained++; continue; }
-    await ports.deleteIdentity(identity.id);
-    removed++;
-    if (expired && ["pending", "approved", "redeeming"].includes(state.status)) {
-      try { await ports.expire(pairingId); } catch { /* concurrent terminal transition */ }
+    try {
+      // Never mutate an identity whose deterministic pairing correlation is broken.
+      if (!identity.pairingId || !UUID.test(identity.pairingId) ||
+        !identity.restaurantId || !UUID.test(identity.restaurantId) ||
+        identity.email !== `bridge-${identity.pairingId}@${emailDomain}`) {
+        invalid++; continue;
+      }
+      const binding = await ports.agentBindingForAuth(identity.id);
+      if (binding) {
+        if (binding.restaurantId !== identity.restaurantId) {
+          invalid++; continue;
+        }
+        if (binding.revoked && (!identity.bannedUntil ||
+          !Number.isFinite(Date.parse(identity.bannedUntil)) ||
+          Date.parse(identity.bannedUntil) <= now)) {
+          await ports.banIdentity(identity.id, base64url(randomBytes(48)));
+          banned++;
+        }
+        retained++; continue;
+      }
+      const state = await ports.snapshot(identity.pairingId);
+      if (!state || state.status === "completed") {
+        retained++;
+        needsReview++; // Missing state or completed without a bound agent.
+        continue;
+      }
+      if (state.restaurant_id !== identity.restaurantId) {
+        needsReview++; continue; // Never infer a tenant from Auth metadata alone.
+      }
+      const expired = state.expires_at && Date.parse(state.expires_at) + 300_000 < now;
+      if (state.status !== "failed" && state.status !== "cancelled" &&
+        state.status !== "expired" && !expired) { retained++; continue; }
+      if (expired && ["pending", "approved", "redeeming"].includes(state.status)) {
+        // The locked SQL transition excludes a concurrent completion before Auth deletion.
+        await ports.expire(identity.pairingId);
+      }
+      if (await ports.deleteIdentity(identity.id)) removed++;
+      else alreadyAbsent++;
+    } catch {
+      // One bad identity must not starve later identities. Scheduler sees a 503.
+      failed++;
     }
   }
-  return { examined: identities.length, removed, retained };
+  return { examined: identities.length, removed, alreadyAbsent, retained,
+    banned, failed, invalid, needsReview };
 }

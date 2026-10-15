@@ -98,7 +98,8 @@ export function createPrintBridgePorts(
     },
     async snapshot(pairingId) {
       const { data, error } = await service.from("print_bridge_pairings")
-        .select("status,agent_auth_user_id,agent_id,expires_at").eq("id", pairingId).maybeSingle();
+        .select("status,restaurant_id,agent_auth_user_id,agent_id,expires_at")
+        .eq("id", pairingId).maybeSingle();
       if (error) throw new Error("Pairing state could not be confirmed.");
       return data;
     },
@@ -153,7 +154,9 @@ export function createPrintBridgePorts(
     },
     async deleteIdentity(authUserId) {
       const { error } = await service.auth.admin.deleteUser(authUserId);
+      if (error?.status === 404) return false; // A concurrent/retried cleanup already won.
       if (error) throw new Error("Orphan Auth identity cleanup failed.");
+      return true;
     },
     async isDedicatedIdentity(authUserId) {
       const { data, error } = await service.auth.admin.getUserById(authUserId);
@@ -167,26 +170,32 @@ export function createPrintBridgePorts(
       if (error) throw new Error("Dedicated Auth identity ban failed.");
     },
     async listBridgeIdentities() {
-      const found: Array<{ id: string; pairingId: string; email: string }> = [];
+      const found: Array<{ id: string; pairingId: string | null;
+        restaurantId: string | null; email: string | null;
+        bannedUntil?: string | null }> = [];
       for (let page = 1; page <= 100; page++) {
         const { data, error } = await service.auth.admin.listUsers({ page, perPage: 1000 });
         if (error || !data) throw new Error("Dedicated identity audit failed.");
         for (const user of data.users) {
-          if (user.app_metadata?.serveflow_kind === "print_bridge" &&
-            typeof user.app_metadata.pairing_id === "string" && user.email) {
-            found.push({ id: user.id, pairingId: user.app_metadata.pairing_id,
-              email: user.email });
+          if (user.app_metadata?.serveflow_kind === "print_bridge") {
+            found.push({ id: user.id,
+              pairingId: typeof user.app_metadata.pairing_id === "string" ?
+                user.app_metadata.pairing_id : null,
+              restaurantId: typeof user.app_metadata.restaurant_id === "string" ?
+                user.app_metadata.restaurant_id : null,
+              email: user.email ?? null, bannedUntil: user.banned_until ?? null });
           }
         }
         if (data.users.length < 1000) return found;
       }
       throw new Error("Dedicated identity audit page limit exceeded.");
     },
-    async hasAgentForAuth(authUserId) {
+    async agentBindingForAuth(authUserId) {
       const { data, error } = await service.from("print_agents")
-        .select("id").eq("auth_user_id", authUserId).maybeSingle();
+        .select("id,restaurant_id,revoked_at").eq("auth_user_id", authUserId).maybeSingle();
       if (error) throw new Error("Dedicated identity binding audit failed.");
-      return Boolean(data);
+      return data ? { revoked: data.revoked_at !== null,
+        restaurantId: data.restaurant_id } : null;
     },
     async expire(pairingId) {
       const { error } = await service.rpc("expire_print_bridge_pairing", {

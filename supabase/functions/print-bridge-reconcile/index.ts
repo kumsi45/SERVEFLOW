@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     const config = printBridgeEnvironment();
     parseDigestKeyring(config.keyring); // fail closed on missing or invalid key configuration
     const ports = createPrintBridgePorts(config, async () => {});
-    return pairingResponse(200,
-      await reconcileOrphanIdentities(ports, config.emailDomain));
+    const result = await reconcileOrphanIdentities(ports, config.emailDomain);
+    return pairingResponse(result.failed || result.invalid || result.needsReview ? 503 : 200, result);
   } catch (error) { return errorResponse(error); }
 });

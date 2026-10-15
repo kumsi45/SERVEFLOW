@@ -6,6 +6,7 @@ import { upstashRateLimiter } from "../../supabase/functions/_shared/printBridge
 import { handlePublicBridgeRequest } from "../../supabase/functions/_shared/printBridgePublicHandler";
 
 const owner = crypto.randomUUID();
+const ownerB = crypto.randomUUID();
 const tenantA = crypto.randomUUID();
 const tenantB = crypto.randomUUID();
 const keys = parseDigestKeyring(JSON.stringify({ current: "v1",
@@ -14,9 +15,12 @@ const keys = parseDigestKeyring(JSON.stringify({ current: "v1",
 class MockPorts implements PairingPorts {
   pairings = new Map<string, PairingSnapshot & {
     code: string; proof: string; restaurant: string | null; owner: string | null;
+    claimRestaurant: string; claimOwner: string; claimExpiresAt: string;
   }>();
   agents = new Map<string, { auth_user_id: string; tenant: string; revoked: boolean }>();
   identities = new Map<string, string>();
+  identityTenant = new Map<string, string | null>();
+  bannedUntil = new Map<string, string>();
   rate = new Map<string, number>();
   durableClaims = new Set<string>();
   created = 0;
@@ -43,6 +47,7 @@ class MockPorts implements PairingPorts {
     const pairingId = crypto.randomUUID();
     this.pairings.set(pairingId, { status: "pending", code, proof,
       restaurant: null, owner: null, agent_id: null, agent_auth_user_id: null,
+      claimRestaurant: restaurantId, claimOwner: ownerId, claimExpiresAt: expiresAt,
       expires_at: new Date(Date.now() + 300_000).toISOString() });
     return pairingId;
   }
@@ -53,7 +58,11 @@ class MockPorts implements PairingPorts {
   }
   async approve(pairingId: string, code: string, restaurantId: string, ownerId: string) {
     const pair = this.pairings.get(pairingId);
-    if (!pair || pair.status !== "pending" || pair.code !== code || ownerId !== owner) throw new Error("unavailable");
+    if (!pair || pair.status !== "pending" || pair.code !== code ||
+      pair.claimRestaurant !== restaurantId || pair.claimOwner !== ownerId ||
+      Date.parse(pair.claimExpiresAt) <= Date.now()) {
+      throw new PairingError("PAIRING_UNAVAILABLE", 409, "Pairing is unavailable.");
+    }
     pair.status = "approved"; pair.restaurant = restaurantId; pair.owner = ownerId;
   }
   async beginRedemption(pairingId: string, proof: string) {
@@ -72,14 +81,18 @@ class MockPorts implements PairingPorts {
     this.agents.set(agentId, { auth_user_id: authUserId, tenant: pair.restaurant!, revoked: false });
     return agentId;
   }
-  async snapshot(pairingId: string) { return this.pairings.get(pairingId) ?? null; }
+  async snapshot(pairingId: string) {
+    const pair = this.pairings.get(pairingId);
+    return pair ? { ...pair, restaurant_id: pair.restaurant } : null;
+  }
   async fail(pairingId: string) {
     const pair = this.pairings.get(pairingId)!;
     if (pair.status !== "redeeming") throw new Error("unavailable");
     pair.status = "failed";
   }
   async requireOwner(ownerId: string, restaurantId: string) {
-    if (ownerId !== owner || restaurantId !== tenantA) throw new Error("owner required");
+    if (!((ownerId === owner && restaurantId === tenantA) ||
+      (ownerId === ownerB && restaurantId === tenantB))) throw new Error("owner required");
   }
   async agent(restaurantId: string, agentId: string) {
     const agent = this.agents.get(agentId);
@@ -96,11 +109,15 @@ class MockPorts implements PairingPorts {
       !["approved", "redeeming"].includes(pair.status)) throw new Error("unavailable");
     pair.status = "cancelled";
   }
-  async createIdentity(email: string) {
+  async createIdentity(email: string, _password?: string, _pairingId?: string,
+    restaurantId?: string) {
     if (this.createFails) throw new Error("Auth Admin failed");
     if (this.identities.has(email)) throw new Error("duplicate Auth user");
     const id = crypto.randomUUID();
     this.identities.set(email, id); this.created++;
+    const pairId = email.slice("bridge-".length, "bridge-".length + 36);
+    const pair = this.pairings.get(pairId);
+    this.identityTenant.set(id, restaurantId ?? pair?.restaurant ?? pair?.claimRestaurant ?? null);
     return id;
   }
   async signIn(): Promise<SessionMaterial> {
@@ -110,17 +127,27 @@ class MockPorts implements PairingPorts {
   async deleteIdentity(id: string) {
     if (this.deleteFails) throw new Error("cleanup failed");
     for (const [email, user] of this.identities) {
-      if (user === id) { this.identities.delete(email); this.deleted++; return; }
+      if (user === id) {
+        this.identities.delete(email); this.identityTenant.delete(id);
+        this.deleted++; return true;
+      }
     }
+    return false;
   }
   async isDedicatedIdentity(id: string) { return [...this.identities.values()].includes(id); }
-  async banIdentity() { if (this.banFails) throw new Error("ban failed"); this.banned++; }
+  async banIdentity(id: string) {
+    if (this.banFails) throw new Error("ban failed");
+    this.banned++; this.bannedUntil.set(id, new Date(Date.now() + 3600_000).toISOString());
+  }
   async listBridgeIdentities() {
     return [...this.identities].map(([email, id]) => ({ id, email,
-      pairingId: email.slice("bridge-".length, "bridge-".length + 36) }));
+      pairingId: email.slice("bridge-".length, "bridge-".length + 36),
+      restaurantId: this.identityTenant.get(id) ?? null,
+      bannedUntil: this.bannedUntil.get(id) ?? null }));
   }
-  async hasAgentForAuth(authUserId: string) {
-    return [...this.agents.values()].some((agent) => agent.auth_user_id === authUserId);
+  async agentBindingForAuth(authUserId: string) {
+    const agent = [...this.agents.values()].find((candidate) => candidate.auth_user_id === authUserId);
+    return agent ? { revoked: agent.revoked, restaurantId: agent.tenant } : null;
   }
   async expire(pairingId: string) { this.pairings.get(pairingId)!.status = "expired"; }
 }
@@ -183,6 +210,18 @@ describe("trusted print bridge pairing", () => {
       restaurantId: tenantA, code: challenge.code, setupToken }, crypto.randomUUID())).rejects.toThrow();
     await expect(approvePairing(ports, keys, { pairingId: challenge.pairingId,
       restaurantId: tenantB, code: challenge.code, setupToken }, owner)).rejects.toThrow();
+    expect(ports.pairings.get(challenge.pairingId)?.status).toBe("pending");
+  });
+
+  it("binds approval to the restaurant and Owner that claimed the setup token", async () => {
+    const ports = new MockPorts();
+    const { setupToken: tokenA } = await initiatePairing(ports, keys, owner, tenantA);
+    const { setupToken: tokenB } = await initiatePairing(ports, keys, ownerB, tenantB);
+    const challenge = await startPairing(ports, keys,
+      { bridgeName: "Bridge", proof: generateBridgeProof(), setupToken: tokenA });
+    await expect(approvePairing(ports, keys, { pairingId: challenge.pairingId,
+      restaurantId: tenantB, code: challenge.code, setupToken: tokenB }, ownerB))
+      .rejects.toMatchObject({ code: "PAIRING_UNAVAILABLE" });
     expect(ports.pairings.get(challenge.pairingId)?.status).toBe("pending");
   });
 
@@ -345,6 +384,114 @@ describe("trusted print bridge pairing", () => {
     expect(result.removed).toBe(0);
     expect(ports.identities.size).toBe(1);
     expect(ports.pairings.get(challenge.pairingId)?.status).toBe("completed");
+  });
+
+  it("retries interrupted Auth cleanup without starving another orphan", async () => {
+    const ports = new MockPorts();
+    const first = await approved(ports);
+    const second = await approved(ports);
+    for (const item of [first, second]) {
+      ports.pairings.get(item.challenge.pairingId)!.status = "failed";
+      await ports.createIdentity(`bridge-${item.challenge.pairingId}@agents.example.com`);
+    }
+    const original = ports.deleteIdentity.bind(ports);
+    let interrupted = true;
+    ports.deleteIdentity = async (id) => {
+      if (interrupted) { interrupted = false; throw new Error("Auth unavailable"); }
+      return original(id);
+    };
+    const partial = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(partial).toMatchObject({ examined: 2, removed: 1, failed: 1 });
+    expect(ports.identities.size).toBe(1);
+    const recovered = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(recovered).toMatchObject({ examined: 1, removed: 1, failed: 0 });
+    expect(await reconcileOrphanIdentities(ports, "agents.example.com"))
+      .toMatchObject({ examined: 0, removed: 0, failed: 0 });
+  });
+
+  it("retries a database failure and keeps a stale or mismatched identity", async () => {
+    const ports = new MockPorts();
+    const eligible = await approved(ports);
+    ports.pairings.get(eligible.challenge.pairingId)!.status = "failed";
+    await ports.createIdentity(`bridge-${eligible.challenge.pairingId}@agents.example.com`);
+    const pending = await approved(ports);
+    await ports.createIdentity(`bridge-${pending.challenge.pairingId}@agents.example.com`);
+    await ports.createIdentity(`bridge-${crypto.randomUUID()}@other.example.com`);
+    const snapshot = ports.snapshot.bind(ports);
+    let databaseFails = true;
+    ports.snapshot = async (pairingId) => {
+      if (databaseFails && pairingId === eligible.challenge.pairingId) {
+        throw new Error("database unavailable");
+      }
+      return snapshot(pairingId);
+    };
+    const partial = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(partial).toMatchObject({ examined: 3, removed: 0, retained: 1,
+      failed: 1, invalid: 1 });
+    databaseFails = false;
+    const recovered = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(recovered).toMatchObject({ removed: 1, retained: 1, invalid: 1 });
+    expect(ports.identities.size).toBe(2);
+  });
+
+  it("retains and flags missing pairing state for operator review", async () => {
+    const ports = new MockPorts();
+    const id = await ports.createIdentity(`bridge-${crypto.randomUUID()}@agents.example.com`);
+    ports.identityTenant.set(id, tenantA);
+    const result = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(result).toMatchObject({ examined: 1, removed: 0, retained: 1,
+      needsReview: 1, failed: 0 });
+    expect(ports.identities.size).toBe(1);
+  });
+
+  it("retains an orphan whose Auth tenant disagrees with its pairing", async () => {
+    const ports = new MockPorts();
+    const { challenge } = await approved(ports);
+    ports.pairings.get(challenge.pairingId)!.status = "failed";
+    const id = await ports.createIdentity(`bridge-${challenge.pairingId}@agents.example.com`);
+    ports.identityTenant.set(id, tenantB);
+    const result = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(result).toMatchObject({ removed: 0, needsReview: 1, failed: 0 });
+    expect(ports.identities.size).toBe(1);
+  });
+
+  it("makes concurrent reconciliation deletion idempotent", async () => {
+    const ports = new MockPorts();
+    const { challenge } = await approved(ports);
+    ports.pairings.get(challenge.pairingId)!.status = "failed";
+    await ports.createIdentity(`bridge-${challenge.pairingId}@agents.example.com`);
+    const original = ports.deleteIdentity.bind(ports);
+    ports.deleteIdentity = async (id) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return original(id);
+    };
+    const results = await Promise.all([
+      reconcileOrphanIdentities(ports, "agents.example.com"),
+      reconcileOrphanIdentities(ports, "agents.example.com"),
+    ]);
+    expect(results.reduce((sum, item) => sum + item.removed, 0)).toBe(1);
+    expect(results.reduce((sum, item) => sum + item.alreadyAbsent, 0)).toBe(1);
+    expect(results.every((item) => item.failed === 0)).toBe(true);
+    expect(ports.identities.size).toBe(0);
+  });
+
+  it("retries a revoked agent Auth ban and retains its bound identity", async () => {
+    const { ports, proof, challenge } = await approved();
+    const agent = await redeemPairing(ports, keys, { pairingId: challenge.pairingId,
+      proof }, "agents.example.com");
+    ports.banFails = true;
+    await expect(revokeAgent(ports, owner,
+      { restaurantId: tenantA, agentId: agent.agentId })).rejects.toMatchObject({
+        code: "AUTH_REVOCATION_PENDING",
+      });
+    const partial = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(partial).toMatchObject({ retained: 0, failed: 1, removed: 0 });
+    ports.banFails = false;
+    const recovered = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(recovered).toMatchObject({ retained: 1, banned: 1, failed: 0 });
+    const repeated = await reconcileOrphanIdentities(ports, "agents.example.com");
+    expect(repeated).toMatchObject({ retained: 1, banned: 0, failed: 0 });
+    expect(ports.identities.size).toBe(1);
   });
 
   it("accepts a retained key only during explicit key rotation", async () => {
