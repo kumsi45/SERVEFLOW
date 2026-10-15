@@ -8,6 +8,7 @@ import { WaiterLoginPage } from "../../modules/waiter-auth/pages/WaiterLoginPage
 import { WaiterOrderPage } from "../../modules/waiter-order/pages/WaiterOrderPage";
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
+import { AboutPage, ContactPage, PricingPage } from "../../modules/landing/pages/PublicPages";
 import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleNamespace } from "./RoleNamespaceRoute";
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
@@ -24,6 +25,9 @@ function resolveRoute(pathname: string) {
   if (pathname === "/" || pathname === "") {
     return { name: "home" as const };
   }
+  if (/^\/about\/?$/.test(pathname)) return { name: "about" as const };
+  if (/^\/pricing\/?$/.test(pathname)) return { name: "pricing" as const };
+  if (/^\/contact\/?$/.test(pathname)) return { name: "contact" as const };
 
   const signupMatch = pathname.match(/^\/sign-up\/?$/);
   if (signupMatch) {
@@ -129,6 +133,9 @@ export function AppRouter() {
   if (route.name === "home") {
     return <LandingPage />;
   }
+  if (route.name === "about") return <AboutPage />;
+  if (route.name === "pricing") return <PricingPage />;
+  if (route.name === "contact") return <ContactPage />;
 
   if (route.name === "sign-up") {
     return <OwnerSignupPage />;
