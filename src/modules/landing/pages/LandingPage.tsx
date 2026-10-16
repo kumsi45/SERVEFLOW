@@ -4,6 +4,7 @@ import "../styles/landing.css";
 import { PublicSiteFooter } from "../components/PublicSiteChrome";
 import { usePublicMetadata } from "../hooks/usePublicMetadata";
 import { usePublicHashScroll } from "../hooks/usePublicHashScroll";
+import { PublicThemeToggle } from "../components/PublicThemeToggle";
 
 const navigation = [
   { label: "Platform", href: "#platform" }, { label: "Industries", href: "#industries" },
@@ -43,6 +44,7 @@ export function LandingPage() {
         <div className="lp-desktop-nav">{navigation.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</div>
         <div className="lp-desktop-actions"><a className="lp-text-link" href="/staff-login">Sign in</a><a className="lp-button lp-button-small" href="/sign-up">Get started</a></div>
         <a className="lp-mobile-signin" href="/staff-login">Sign in</a>
+        <PublicThemeToggle />
         <button ref={menuToggle} type="button" className="lp-menu-toggle" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="public-mobile-navigation" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X aria-hidden="true"/> : <Menu aria-hidden="true"/>}</button>
       </nav>
       {menuOpen && <div id="public-mobile-navigation" className="lp-mobile-menu" onKeyDown={(event) => { if (event.key === "Escape") closeMenu(true); }}><div className="lp-container">
@@ -65,7 +67,6 @@ export function LandingPage() {
       <section className="lp-section lp-benefits" id="about" aria-labelledby="about-title"><div className="lp-container lp-about-grid"><div><p className="lp-eyebrow">About ServeFlow</p><h2 id="about-title">Give every team a clearer way to run service.</h2><p>ServeFlow is a multi-tenant platform for hospitality businesses that need their operational work to stay connected across roles.</p></div><ul className="lp-benefit-list">
         {["Keep service, orders, teams, and stock connected.", "Give each role a focused workspace for its daily work.", "Create a clearer handoff from guest order to kitchen and service."].map((benefit) => <li key={benefit}><UsersRound aria-hidden="true" size={20}/>{benefit}</li>)}
       </ul></div></section>
-      <section className="lp-section lp-contact" id="contact" aria-labelledby="contact-title"><div className="lp-container lp-contact-card"><div><p className="lp-eyebrow">Start with ServeFlow</p><h2 id="contact-title">Set up your hospitality workspace.</h2><p>Create an owner account to begin your guided ServeFlow setup, or sign in if your team already has access.</p></div><div className="lp-actions"><a className="lp-button" href="/sign-up">Create an account <ArrowRight aria-hidden="true" size={18}/></a><a className="lp-button lp-button-secondary" href="/staff-login">Sign in</a></div></div></section>
     </main>
     <PublicSiteFooter />
   </div>;

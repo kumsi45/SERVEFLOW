@@ -38,7 +38,7 @@
   overflow-wrap: anywhere;
 }
 .lp-footer-group ul { margin: 0; padding: 0; list-style: none; }
-.lp-footer-group a, .lp-footer-signin {
+.lp-footer-group a {
   display: inline-flex;
   min-height: 44px;
   max-width: 100%;
@@ -50,22 +50,16 @@
   text-decoration: none;
   overflow-wrap: anywhere;
 }
-.lp-footer-group a:hover, .lp-footer-signin:hover {
+.lp-footer-group a:hover {
   color: var(--lp-accent-dark);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .lp-footer-utility {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 28px;
   margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid #cfddd4;
 }
-.lp-footer-utility .lp-brand { min-height: 44px; }
-.lp-footer-signin { gap: 8px; margin-left: auto; font-weight: 750; }
 .lp-legal-page { max-width: 820px; padding-block: 64px 80px; }
 .lp-legal-header h1 {
   margin: 0;
@@ -117,16 +111,72 @@
 .lp-legal-sections ul { padding-left: 24px; }
 .lp-legal-sections li { margin-bottom: 10px; padding-left: 4px; }
 .lp-legal-contact { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--lp-line); }
+.lp-theme-toggle {
+  display: inline-flex;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--lp-line);
+  border-radius: 10px;
+  background: var(--lp-surface);
+  color: var(--lp-ink);
+  cursor: pointer;
+}
+.lp-theme-toggle:hover { background: var(--lp-canvas); border-color: var(--lp-muted); }
+html[data-public-theme="dark"] .lp-root {
+  --lp-ink: #edf5ef;
+  --lp-muted: #b4c8bf;
+  --lp-surface: #192f27;
+  --lp-canvas: #101f1b;
+  --lp-line: #3b5549;
+  --lp-accent: #79d9b3;
+  --lp-accent-dark: #a0ebcd;
+}
+html[data-public-theme="dark"] .lp-header { background: rgba(16,31,27,.97); }
+html[data-public-theme="dark"] .lp-mobile-menu,
+html[data-public-theme="dark"] .lp-menu-toggle,
+html[data-public-theme="dark"] .lp-platform,
+html[data-public-theme="dark"] .lp-contact,
+html[data-public-theme="dark"] .lp-page-section,
+html[data-public-theme="dark"] .lp-contact-secondary,
+html[data-public-theme="dark"] .lp-capability-card { background: var(--lp-surface); }
+html[data-public-theme="dark"] .lp-hero { background: linear-gradient(118deg,#192f27,#101f1b,#1c392d); }
+html[data-public-theme="dark"] .lp-contact-card { background: linear-gradient(130deg,#213e31,#192f27); }
+html[data-public-theme="dark"] .lp-industries,
+html[data-public-theme="dark"] .lp-page-hero,
+html[data-public-theme="dark"] .lp-root .lp-footer,
+html[data-public-theme="dark"] .lp-contact-primary,
+html[data-public-theme="dark"] .lp-callout,
+html[data-public-theme="dark"] .lp-pricing-note { background: #162a22; }
+html[data-public-theme="dark"] .lp-industry-card,
+html[data-public-theme="dark"] .lp-footer-utility { border-color: var(--lp-line); }
+html[data-public-theme="dark"] .lp-mobile-menu a:not(.lp-button):hover,
+html[data-public-theme="dark"] .lp-button-secondary:hover { background: #294b3b; }
+html[data-public-theme="dark"] .lp-button { background: #08795a; border-color: #79d9b3; }
+html[data-public-theme="dark"] .lp-button:hover { background: #055b43; border-color: #a0ebcd; }
+html[data-public-theme="dark"] .lp-button-secondary { background: transparent; color: var(--lp-ink)!important; }
+html[data-public-theme="dark"] .lp-button-secondary:hover { background: #294b3b; }
+html[data-public-theme="dark"] .lp-benefits { background: #0b1813; }
+html[data-public-theme="dark"] .lp-legal-notice { background: #352d1b; border-color: #9e824c; }
+html[data-public-theme="dark"] .lp-legal-notice strong { color: #f6d68c; }
+html[data-public-theme="dark"] .lp-legal-notice p { color: #e1cfa6; }
+html[data-public-theme="dark"] .lp-skip-link { background: #edf5ef; color: #101f1b; }
+@media (max-width: 900px) {
+  .lp-nav { gap: 8px; }
+  .lp-nav > .lp-brand { margin-right: auto; }
+}
 @media (max-width: 900px) {
   .lp-footer-main { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .lp-footer-intro { max-width: none; }
 }
 @media (max-width: 560px) {
-  .lp-root .lp-footer { padding-top: 40px; }
-  .lp-footer-groups { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .lp-root .lp-footer { padding-top: 32px; }
+  .lp-footer-groups { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .lp-footer-group h2 { margin-bottom: 6px; }
-  .lp-footer-utility { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; margin-top: 28px; }
-  .lp-footer-utility p { grid-column: 1 / -1; grid-row: 2; }
+  .lp-footer-utility { margin-top: 20px; padding-top: 16px; }
   .lp-legal-page { padding-block: 40px 56px; }
   .lp-legal-notice { padding: 16px 18px; }
 }

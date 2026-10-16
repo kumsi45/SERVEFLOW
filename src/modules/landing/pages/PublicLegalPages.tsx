@@ -64,7 +64,7 @@ const documents = {
     sections: [
       { id: "browser-storage", title: "Browser storage used by the application", content: <>
         <p>Session storage supports tab identifiers and authentication sessions. Some session storage is initialized when you open the application, including its public information pages.</p>
-        <p>Depending on the features you use, local storage also retains menu-language preferences, cart and order context, customer order tracking and other operational preferences. Staff workflows may store terminal preferences or temporary work in progress.</p>
+        <p>The public website stores your selected light or dark theme in local storage so it can be remembered on later visits. Without a saved choice, it follows your device's color-scheme preference. Depending on the features you use, local storage also retains menu-language preferences, cart and order context, customer order tracking and other operational preferences. Staff workflows may store terminal preferences or temporary work in progress.</p>
       </> },
       { id: "cookies-and-services", title: "Cookies and external services", content: <>
         <p>Browser-storage uses described here do not establish whether cookies are set by a particular hosting setup or supporting service. They also do not establish whether a page makes third-party requests.</p>

@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply only to public marketing routes, before the application paints.
+      if (/^\/(?:about|pricing|contact|privacy|terms|cookies|acceptable-use)?\/?$/.test(location.pathname)) {
+        var publicThemeChoice;
+        try { publicThemeChoice = localStorage.getItem("serveflow.public-theme"); } catch (_) {}
+        document.documentElement.dataset.publicTheme = publicThemeChoice === "light" || publicThemeChoice === "dark"
+          ? publicThemeChoice : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      }
+    </script>
+    <style>
+      html[data-public-theme="light"] { background: #f6f8f5; color-scheme: light; }
+      html[data-public-theme="dark"] { background: #101f1b; color-scheme: dark; }
+    </style>
     <meta name="description" content="ServeFlow connects service, orders, staff, inventory, and business performance for hospitality operations." />
     <meta property="og:title" content="ServeFlow | Hospitality operations platform" />
     <meta property="og:description" content="Connected tools for hospitality service, orders, staff, inventory, and business performance." />

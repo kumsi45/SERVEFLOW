@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { WHATSAPP_SUPPORT_URL } from "../publicContact";
+import { PublicThemeToggle } from "./PublicThemeToggle";
 
 const navigation = [
   { label: "Platform", href: "/#platform" },
@@ -23,6 +24,7 @@ export function PublicSiteHeader() {
       <div className="lp-desktop-nav">{navigation.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</div>
       <div className="lp-desktop-actions"><a className="lp-text-link" href="/staff-login">Sign in</a><a className="lp-button lp-button-small" href="/sign-up">Get started</a></div>
       <a className="lp-mobile-signin" href="/staff-login">Sign in</a>
+      <PublicThemeToggle />
       <button ref={toggle} type="button" className="lp-menu-toggle" aria-label={open ? "Close navigation menu" : "Open navigation menu"} aria-expanded={open} aria-controls="public-mobile-navigation" onClick={() => setOpen((value) => !value)} onKeyDown={(event) => { if (open && event.key === "Escape") { event.preventDefault(); close(true); } }}>{open ? <X aria-hidden="true"/> : <Menu aria-hidden="true"/>}</button>
     </nav>
     {open && <div id="public-mobile-navigation" className="lp-mobile-menu" onKeyDown={(event) => { if (event.key === "Escape") close(true); }}><div className="lp-container">
@@ -65,9 +67,7 @@ export function PublicSiteFooter() {
         </div>
       </div>
       <div className="lp-footer-utility">
-        <a href="/" className="lp-brand" aria-label="ServeFlow home"><img src="/serveflowlogo.png" alt="" width="32" height="32" /><span>ServeFlow</span></a>
         <p>© {new Date().getFullYear()} ServeFlow</p>
-        <a href="/staff-login" className="lp-footer-signin">Sign in <ArrowRight size={16} aria-hidden="true" /></a>
       </div>
     </div>
   </footer>;

@@ -14,7 +14,6 @@ const links = [
   ["Contact support", "https://wa.me/251990069892?text=Hello%20KumsiTech%2C%20I%20have%20a%20question%20about%20ServeFlow."],
   ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"],
   ["Cookie Policy", "/cookies"], ["Acceptable Use", "/acceptable-use"],
-  ["ServeFlow home", "/"], ["Sign in", "/staff-login"],
 ] as const;
 const footer = (page: import("@playwright/test").Page) => page.getByRole("contentinfo", { name: "ServeFlow site footer" });
 
@@ -70,17 +69,13 @@ for (const [path, title] of legalPages) {
 }
 
 test("footer internal links resolve to routes and anchors", async ({ page }) => {
-  // This test intentionally performs 24 full-page navigations (two per link).
+  // This test intentionally performs two full-page navigations per internal link.
   test.setTimeout(90_000);
   for (const [label, href] of links.filter(([, href]) => href.startsWith("/"))) {
     await page.goto("/privacy");
     await footer(page).getByRole("link", { name: label, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
-    if (href === "/staff-login") {
-      await expect(page.getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
-    } else {
-      await expect(page.getByRole("main")).toBeVisible();
-    }
+    await expect(page.getByRole("main")).toBeVisible();
     await expect(page.getByText("Menu link not found.", { exact: true })).toHaveCount(0);
     const hash = href.split("#")[1];
     if (hash) await expect(page.locator(`#${hash}`)).toBeInViewport();
