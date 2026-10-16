@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowRight, BarChart3, ChefHat, ClipboardList, Menu, Package, QrCode, Store, UsersRound, X } from "lucide-react";
 import "../styles/landing.css";
+import { PublicSiteFooter } from "../components/PublicSiteChrome";
+import { usePublicMetadata } from "../hooks/usePublicMetadata";
+import { usePublicHashScroll } from "../hooks/usePublicHashScroll";
 
 const navigation = [
   { label: "Platform", href: "#platform" }, { label: "Industries", href: "#industries" },
@@ -23,14 +26,10 @@ const capabilities = [
 ] as const;
 
 export function LandingPage() {
+  usePublicHashScroll();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuToggle = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    document.title = "ServeFlow | Hospitality operations platform";
-    const description = "ServeFlow connects service, orders, staff, inventory, and business performance for hospitality operations.";
-    const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(document.createElement("meta"));
-    meta.setAttribute("name", "description"); meta.setAttribute("content", description);
-  }, []);
+  usePublicMetadata("ServeFlow | Hospitality operations platform", "ServeFlow connects service, orders, staff, inventory, and business performance for hospitality operations.");
   const closeMenu = (restoreFocus = false) => {
     setMenuOpen(false);
     if (restoreFocus) window.requestAnimationFrame(() => menuToggle.current?.focus());
@@ -68,6 +67,6 @@ export function LandingPage() {
       </ul></div></section>
       <section className="lp-section lp-contact" id="contact" aria-labelledby="contact-title"><div className="lp-container lp-contact-card"><div><p className="lp-eyebrow">Start with ServeFlow</p><h2 id="contact-title">Set up your hospitality workspace.</h2><p>Create an owner account to begin your guided ServeFlow setup, or sign in if your team already has access.</p></div><div className="lp-actions"><a className="lp-button" href="/sign-up">Create an account <ArrowRight aria-hidden="true" size={18}/></a><a className="lp-button lp-button-secondary" href="/staff-login">Sign in</a></div></div></section>
     </main>
-    <footer className="lp-footer"><div className="lp-container lp-footer-content"><a href="/" className="lp-brand" aria-label="ServeFlow home"><img src="/serveflowlogo.png" alt="" width="32" height="32"/><span>ServeFlow</span></a><p>One platform for connected hospitality operations.</p><div className="lp-footer-links"><a href="#platform">Platform</a><a href="#industries">Industries</a><a href="/about">About</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a><a href="/staff-login">Sign in</a></div></div></footer>
+    <PublicSiteFooter />
   </div>;
 }

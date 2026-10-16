@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
+import { WHATSAPP_SUPPORT_URL } from "../publicContact";
 
 const navigation = [
   { label: "Platform", href: "/#platform" },
@@ -32,9 +33,42 @@ export function PublicSiteHeader() {
 }
 
 export function PublicSiteFooter() {
-  return <footer className="lp-footer"><div className="lp-container lp-footer-content">
-    <a href="/" className="lp-brand" aria-label="ServeFlow home"><img src="/serveflowlogo.png" alt="" width="32" height="32"/><span>ServeFlow</span></a>
-    <p>One platform for connected hospitality operations.</p>
-    <div className="lp-footer-links"><a href="/#platform">Platform</a><a href="/#industries">Industries</a><a href="/about">About</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a><a href="/staff-login">Sign in</a></div>
-  </div></footer>;
+  const groups = [
+    { title: "Product", links: [
+      ["Features", "/#platform"], ["Industries", "/#industries"],
+      ["Pricing", "/pricing"], ["Request a trial", "/contact"],
+    ] },
+    { title: "Company & Support", links: [
+      ["About ServeFlow", "/about"], ["Contact", "/contact"],
+      ["Contact support", WHATSAPP_SUPPORT_URL],
+    ] },
+    { title: "Legal", links: [
+      ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"],
+      ["Cookie Policy", "/cookies"], ["Acceptable Use", "/acceptable-use"],
+    ] },
+  ];
+
+  return <footer className="lp-footer" aria-label="ServeFlow site footer">
+    <div className="lp-container">
+      <div className="lp-footer-main">
+        <div className="lp-footer-intro">
+          <p className="lp-footer-tagline">Better operations.<br />Better hospitality.</p>
+          <p>Connected tools for hospitality teams.</p>
+        </div>
+        <div className="lp-footer-groups">
+          {groups.map(({ title, links }) => <nav key={title} className="lp-footer-group" aria-label={`Footer ${title}`}>
+            <h2>{title}</h2>
+            <ul>{links.map(([label, href]) => <li key={label}>
+              <a href={href} {...(href.startsWith("https:") ? { target: "_blank", rel: "noreferrer" } : {})}>{label}</a>
+            </li>)}</ul>
+          </nav>)}
+        </div>
+      </div>
+      <div className="lp-footer-utility">
+        <a href="/" className="lp-brand" aria-label="ServeFlow home"><img src="/serveflowlogo.png" alt="" width="32" height="32" /><span>ServeFlow</span></a>
+        <p>© {new Date().getFullYear()} ServeFlow</p>
+        <a href="/staff-login" className="lp-footer-signin">Sign in <ArrowRight size={16} aria-hidden="true" /></a>
+      </div>
+    </div>
+  </footer>;
 }

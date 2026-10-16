@@ -32,9 +32,9 @@ test("mobile navigation remains usable at 320px", async ({ page }) => {
 
 test("Phase B public pages route to approved contact destinations", async ({ page }, testInfo) => {
   await page.goto("/about");
-  await expect(page).toHaveTitle("About KumsiTech | ServeFlow");
+  await expect(page).toHaveTitle("About ServeFlow");
   await expect(page.getByRole("heading", { name: "Built by KumsiTech. Designed for Hospitality." })).toBeVisible();
-  await expect(page.getByText("ServeFlow is a hospitality management platform built by KumsiTech", { exact: false })).toBeVisible();
+  await expect(page.getByText("ServeFlow is a hospitality management platform created by Abdulhayi Alo Abdulahi", { exact: false })).toBeVisible();
   await expect(page.locator(".lp-header").getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/staff-login");
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open navigation menu" }).click();
@@ -63,9 +63,9 @@ test("Phase B public pages route to approved contact destinations", async ({ pag
 
   await navigate("Contact");
   await expect(page).toHaveURL(/\/contact$/);
-  await expect(page).toHaveTitle("Contact KumsiTech | ServeFlow");
+  await expect(page).toHaveTitle("Contact ServeFlow");
   await expect(page.getByRole("heading", { name: "Let’s Talk About Your Hospitality Business" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Request a trial" })).toHaveAttribute(
+  await expect(page.getByRole("main").getByRole("link", { name: "Request a trial" })).toHaveAttribute(
     "href",
     "https://wa.me/251990069892?text=Hello%20KumsiTech%2C%20I%20would%20like%20to%20request%20a%20ServeFlow%20trial%20for%20my%20hospitality%20business.",
   );

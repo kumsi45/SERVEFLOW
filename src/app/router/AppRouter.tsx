@@ -9,6 +9,7 @@ import { WaiterOrderPage } from "../../modules/waiter-order/pages/WaiterOrderPag
 import { LandingPage } from "../../modules/landing/pages/LandingPage";
 import { OwnerSignupPage } from "../../modules/owner-signup/pages/OwnerSignupPage";
 import { AboutPage, ContactPage, PricingPage } from "../../modules/landing/pages/PublicPages";
+import { PublicLegalPage, type PublicLegalPageId } from "../../modules/landing/pages/PublicLegalPages";
 import { LegacyRoleRedirect, LegacyStaffRedirect, RoleNamespaceRoute, type RoleNamespace } from "./RoleNamespaceRoute";
 
 const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
@@ -28,6 +29,8 @@ function resolveRoute(pathname: string) {
   if (/^\/about\/?$/.test(pathname)) return { name: "about" as const };
   if (/^\/pricing\/?$/.test(pathname)) return { name: "pricing" as const };
   if (/^\/contact\/?$/.test(pathname)) return { name: "contact" as const };
+  const legalMatch = pathname.match(/^\/(privacy|terms|cookies|acceptable-use)\/?$/);
+  if (legalMatch) return { name: "legal" as const, documentId: legalMatch[1] as PublicLegalPageId };
 
   const signupMatch = pathname.match(/^\/sign-up\/?$/);
   if (signupMatch) {
@@ -136,6 +139,7 @@ export function AppRouter() {
   if (route.name === "about") return <AboutPage />;
   if (route.name === "pricing") return <PricingPage />;
   if (route.name === "contact") return <ContactPage />;
+  if (route.name === "legal") return <PublicLegalPage documentId={route.documentId} />;
 
   if (route.name === "sign-up") {
     return <OwnerSignupPage />;
