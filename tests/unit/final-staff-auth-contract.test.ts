@@ -39,18 +39,19 @@ describe("final V1 staff authentication contract", () => {
     expect(validateStaffPasswordConfirmation("StrongPass1", "StrongPass2")).toBe("Passwords do not match.");
     expect(ownerPage).toContain("validateStaffPasswordConfirmation(formPin, formConfirmPassword)");
     expect(managerPage).toContain("validateManagerStaffCreation");
-    expect(ownerSignupPage).toContain("validateStaffPasswordConfirmation(password, confirmPassword)");
+    expect(ownerSignupPage).not.toContain('type="password"');
   });
 
-  it("requires Owner confirmation and sends only the password to trusted signup", () => {
-    expect(ownerSignupPage).toContain('label="Confirm password"');
-    expect(ownerSignupPage).toContain("body: { ownerName: trimmedOwnerName, email: trimmedEmail, password,");
-    expect(ownerSignup).toContain("serviceClient.auth.admin.createUser");
+  it("closes unreviewed owner signup without collecting credentials", () => {
+    expect(ownerSignupPage).not.toContain("<form");
+    expect(ownerSignupPage).not.toContain("functions.invoke");
+    expect(ownerSignup).not.toContain("auth.admin.createUser");
+    expect(ownerSignup).toContain('request.method === "POST" ? 403 : 405');
     expect(ownerSignup).not.toMatch(/pinPassword|\bpin\b/);
   });
 
   it("does not present account creation as operational workspace readiness", () => {
-    expect(ownerSignupPage).toContain('title="Account created"');
+    expect(ownerSignupPage).toContain('title="New business applications are not open yet"');
     expect(ownerSignupPage).not.toContain("Your workspace is ready");
     expect(ownerSignupPage).not.toContain("Create my workspace");
   });

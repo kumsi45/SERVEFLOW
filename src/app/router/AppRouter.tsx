@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { isAdminSection, type AdminSection } from "../../modules/super-admin/platformAdminService";
 import { QRMenuPage } from "../../modules/qr-menu/pages/QRMenuPage";
 import { OrderingPage } from "../../modules/ordering/pages/OrderingPage";
 import { StaffLoginPage } from "../../modules/staff-auth/pages/StaffLoginPage";
@@ -22,7 +23,15 @@ const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
   admin: ["dashboard", "restaurants", "subscriptions", "users"],
 };
 
+const PlatformAdminPage = lazy(() => import("../../modules/super-admin/PlatformAdminPage").then(module => ({ default: module.PlatformAdminPage })));
+
 function resolveRoute(pathname: string) {
+  if (/^\/admin(?:\/.*)?\/?$/.test(pathname)) return { name: "retired-platform-admin" as const };
+  const platformMatch = pathname.match(/^\/platform-admin(?:\/([^/]+))?\/?$/);
+  if (platformMatch) {
+    const section = platformMatch[1] ?? "login";
+    if (section === "login" || isAdminSection(section)) return { name: "platform-admin" as const, section: section as AdminSection | "login" };
+  }
   if (pathname === "/" || pathname === "") {
     return { name: "home" as const };
   }
@@ -132,6 +141,9 @@ export function AppRouter() {
   const [locationKey,setLocationKey]=useState(()=>window.location.pathname+window.location.search);
   useEffect(()=>{const update=()=>setLocationKey(window.location.pathname+window.location.search);window.addEventListener("popstate",update);return()=>window.removeEventListener("popstate",update)},[]);
   const route = resolveRoute(locationKey.split("?")[0]);
+
+  if (route.name === "retired-platform-admin") return <main className="route-message"><p>This legacy administration route is retired.</p></main>;
+  if (route.name === "platform-admin") return <Suspense fallback={<main className="route-message">Loading private administration…</main>}><PlatformAdminPage key={route.section} section={route.section} /></Suspense>;
 
   if (route.name === "home") {
     return <LandingPage />;
