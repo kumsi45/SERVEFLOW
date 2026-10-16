@@ -10,6 +10,7 @@ describe("platform presentation boundaries", () => {
     expect(safeAdminError({ message: "secret credential and personal record" })).not.toContain("secret");
     expect(safeAdminError({ code: "42501", message: "raw" })).toContain("MFA");
     expect(safeAdminError({ code: "40001" })).toContain("Refresh");
+    expect(safeAdminError({ code: "PT409", message: "private backend detail" })).toContain("Refresh");
   });
 });
 

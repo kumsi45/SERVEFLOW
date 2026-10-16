@@ -21,7 +21,7 @@ export function metric(value: unknown) { return typeof value === "number" && Num
 export function safeAdminError(error: unknown) {
   const code = error && typeof error === "object" ? (error as { code?: string }).code : undefined;
   if (code === "42501") return "Access denied. Verify your administrator authorization, recovery review and MFA. Sensitive actions require MFA from the last five minutes.";
-  if (code === "40001" || code === "23505") return "This record changed or the request conflicts with an earlier decision. Refresh and review it again.";
+  if (code === "PT409" || code === "40001" || code === "23505") return "This record changed or the request conflicts with an earlier decision. Refresh and review it again.";
   if (code === "22023" || code === "23514") return "The request contains invalid values. Check the fields and try again.";
   if (code === "P0002") return "The requested record is no longer available.";
   return "Platform service unavailable. The required migration or service may not be configured. No successful change is confirmed.";
