@@ -9,7 +9,8 @@ SA1 evidence: completed conversation report; no saved SA1 report found in `docs`
 - [x] Honest health, diagnostic, integration and backup views; unsupported actions disabled.
 - [x] Close local signup/global-setting bypasses without changing existing account login.
 - [x] Safe automated checks, diff review and implementation report (`SUPER_ADMIN_SA2_REPORT.md`).
-- [ ] Real PostgreSQL/RLS/concurrency/MFA integration verification — BLOCKED, not passed by UI/source tests.
+- [x] Focused disposable PostgreSQL, RLS, Auth/MFA, audit rollback and concurrency verification — 106/106 checks passed against migrations 276 → 277 → 278; see section 9 of `SUPER_ADMIN_SA2_REPORT.md`.
+- [ ] Hosted/nonproduction verification against a reviewed full schema and platform configuration — UNVERIFIED. No production certification or deployment approval follows from the disposable run.
 
-Database integration is blocked: the running `workspace` Supabase services and `p322` Edge runtime belong to the previously identified persistent printer/workspace environment. No separate verified disposable baseline is available. Do not apply SQL or create fixtures there.
+The earlier local database blocker was resolved with a separate disposable baseline, which was removed after testing. The running `workspace` Supabase services and `p322` Edge runtime remain persistent printer/workspace resources; do not apply SQL or create SA2 fixtures there. Full operational migration replay, hosted Auth/gateway/Edge behavior and real recovery operations remain unverified.
 No deployment, hosted migration, live administrator provisioning, printer work or destructive cleanup is authorized.
