@@ -173,10 +173,15 @@ html[data-public-theme="dark"] .lp-skip-link { background: #edf5ef; color: #101f
   .lp-footer-intro { max-width: none; }
 }
 @media (max-width: 560px) {
-  .lp-root .lp-footer { padding-top: 32px; }
-  .lp-footer-groups { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-  .lp-footer-group h2 { margin-bottom: 6px; }
-  .lp-footer-utility { margin-top: 20px; padding-top: 16px; }
+  .lp-root .lp-footer { padding-block: 24px 20px; }
+  .lp-footer-main { gap: 24px; }
+  .lp-footer .lp-footer-tagline { margin-bottom: 10px; font-size: 24px; }
+  .lp-footer-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }
+  .lp-footer-group h2 { min-height: 40px; margin-bottom: 2px; font-size: 13px; }
+  .lp-footer-group:last-child { grid-column: 1 / -1; }
+  .lp-footer-group:last-child h2 { min-height: 0; }
+  .lp-footer-group:last-child ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+  .lp-footer-utility { margin-top: 16px; padding-top: 12px; }
   .lp-legal-page { padding-block: 40px 56px; }
   .lp-legal-notice { padding: 16px 18px; }
 }

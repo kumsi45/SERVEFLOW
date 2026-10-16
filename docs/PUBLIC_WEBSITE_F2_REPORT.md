@@ -129,6 +129,10 @@ A test denying *all* Storage API calls exposed an existing bootstrap limitation:
 
 ### Footer spacing adjustment
 
+Latest mobile compaction: Product and Company & Support now share two columns at widths up to 560px. Legal spans the next row, with its four links in two columns. Reduced outer padding, tagline spacing and separator spacing while retaining every destination and minimum 44px link heights. At 320px, measured footer height fell from 850px to 554px (296px / approximately 35% reduction). Tablet/desktop column layouts are unchanged.
+
+Verification for this CSS adjustment: a local Playwright-driven browser sweep passed 144 combinations (eight public routes, light/dark, widths 320/375/390/430/560/561/768/1024/1440). Assertions checked document overflow, all 11 footer links, minimum 44px link heights, horizontal bounds, absence of overlapping links, visible header-control bounds, aligned mobile group headings and compact footer height. Footer screenshots were reviewed at 320px light and 430px dark. Evidence includes JSON measurements and screenshots in the system temporary directory, `ServeFlow-footer-responsive-tG8yhv`. The existing footer keyboard/skip-link tests passed 2/2 using `npx playwright test tests/e2e/public-footer-legal.spec.ts --grep 'footer keyboard' --workers=2 --reporter=line --output=test-results/f2-footer-compact`. `git diff --check` passed. This was a CSS-only product change; no build rerun or physical-device certification was performed.
+
 Subsequent founder-requested homepage simplification: removed the repeated bottom “Start with ServeFlow / Set up your hospitality workspace” account-creation card from `LandingPage.tsx`. The existing hero Get started action and header sign-in access remain available. No replacement promotional block was added.
 
 Homepage simplification checks: `npx playwright test tests/e2e/public-workflows.spec.ts --grep 'landing page production|mobile navigation remains' --workers=2 --reporter=line --output=test-results/f2-home-trim` passed 4/4 (desktop/mobile homepage smoke and 320px navigation); `git diff --check` passed. No build rerun for this single-section removal.
