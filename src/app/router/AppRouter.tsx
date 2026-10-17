@@ -24,9 +24,19 @@ const ROLE_SECTIONS: Record<RoleNamespace, readonly string[]> = {
 };
 
 const PlatformAdminPage = lazy(() => import("../../modules/super-admin/PlatformAdminPage").then(module => ({ default: module.PlatformAdminPage })));
+const PlatformAdminPreviewPage = import.meta.env.DEV
+  ? lazy(() => import("../../modules/super-admin/PlatformAdminPreviewPage").then(module => ({ default: module.PlatformAdminPreviewPage })))
+  : null;
 
 function resolveRoute(pathname: string) {
   if (/^\/admin(?:\/.*)?\/?$/.test(pathname)) return { name: "retired-platform-admin" as const };
+  if (import.meta.env.DEV) {
+    const previewMatch = pathname.match(/^\/platform-admin\/preview(?:\/([^/]+))?\/?$/);
+    if (previewMatch) {
+      const section = previewMatch[1] ?? "overview";
+      if (isAdminSection(section)) return { name: "platform-admin-preview" as const, section };
+    }
+  }
   const platformMatch = pathname.match(/^\/platform-admin(?:\/([^/]+))?\/?$/);
   if (platformMatch) {
     const section = platformMatch[1] ?? "login";
@@ -143,6 +153,7 @@ export function AppRouter() {
   const route = resolveRoute(locationKey.split("?")[0]);
 
   if (route.name === "retired-platform-admin") return <main className="route-message"><p>This legacy administration route is retired.</p></main>;
+  if (route.name === "platform-admin-preview" && PlatformAdminPreviewPage) return <Suspense fallback={<main className="route-message">Loading synthetic preview…</main>}><PlatformAdminPreviewPage key={route.section} section={route.section} /></Suspense>;
   if (route.name === "platform-admin") return <Suspense fallback={<main className="route-message">Loading private administration…</main>}><PlatformAdminPage key={route.section} section={route.section} /></Suspense>;
 
   if (route.name === "home") {

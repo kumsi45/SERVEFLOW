@@ -6,7 +6,12 @@ import { getPlatformAdminClient } from "./platformAdminClient";
 import { adminContext, adminMutation, adminSections, metric, readAdmin, recordAdminDiagnostic, safeAdminError, type AdminContext, type AdminCursor, type AdminResult, type AdminRow, type AdminSection } from "./platformAdminService";
 import "./platformAdmin.css";
 
-type Props = { section: AdminSection | "login" };
+export type PlatformAdminPreviewConfig = {
+  context: AdminContext;
+  read: (section: AdminSection | "invitations", search: string, status: string, cursor: AdminCursor | null, from: string, through: string) => AdminResult;
+  pathFor: (section: AdminSection) => string;
+};
+type Props = { section: AdminSection | "login"; preview?: PlatformAdminPreviewConfig };
 type Action = { kind: "classification" | "approved" | "rejected" | "payment-rejected" | "record-payment"; row?: AdminRow; requestId: string };
 const display = (value: unknown): string => value === null || value === undefined ? "Unavailable" : typeof value === "boolean" ? value ? "Yes" : "No" : typeof value === "string" || typeof value === "number" ? String(value) : "—";
 const date = (value: unknown) => typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : "Unavailable";
@@ -33,9 +38,10 @@ const notes: Partial<Record<AdminSection, string>> = {
   administrators: "Named identities are provisioned privately. No administrator creation, promotion, revocation or recovery endpoint is exposed here. Recovery review is an operator attestation, not a completed recovery drill.",
 };
 
-export function PlatformAdminPage({ section }: Props) {
-  const [context, setContext] = useState<AdminContext | null>(null);
-  const [authState, setAuthState] = useState<"loading" | "login" | "mfa" | "ready" | "recovery">("loading");
+export function PlatformAdminPage({ section, preview }: Props) {
+  if (preview && !import.meta.env.DEV) throw new Error("Platform administration preview is unavailable in production.");
+  const [context, setContext] = useState<AdminContext | null>(preview?.context ?? null);
+  const [authState, setAuthState] = useState<"loading" | "login" | "mfa" | "ready" | "recovery">(preview ? "ready" : "loading");
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [code, setCode] = useState("");
   const [authError, setAuthError] = useState(""); const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState(false); const drawer = useRef<HTMLDivElement>(null); const closeButton = useRef<HTMLButtonElement>(null);
@@ -47,6 +53,7 @@ export function PlatformAdminPage({ section }: Props) {
   const [action, setAction] = useState<Action | null>(null); const dialog = useRef<HTMLDivElement>(null);
   const [reason, setReason] = useState(""); const [classification, setClassification] = useState("demo"); const [confirmed, setConfirmed] = useState(false);
   const [payment, setPayment] = useState({ restaurantId: "", amount: "", currency: "ETB", channel: "", paidAt: "", reference: "" });
+  const [previewState, setPreviewState] = useState<"populated" | "loading" | "empty" | "error">("populated");
   useModalFocus(menu, () => setMenu(false), drawer, closeButton);
   useModalFocus(Boolean(action), () => { if (!busy) setAction(null); }, dialog);
 
@@ -56,6 +63,7 @@ export function PlatformAdminPage({ section }: Props) {
     if (result.recoveryVerified && !result.mfaRequired && section === "login") window.location.replace("/platform-admin/overview");
   }
   useEffect(() => {
+    if (preview) { setContext(preview.context); setAuthState("ready"); return; }
     let active = true;
     const client = getPlatformAdminClient();
     void client.auth.getSession().then(async ({ data: session }) => {
@@ -67,11 +75,19 @@ export function PlatformAdminPage({ section }: Props) {
       if (event === "SIGNED_OUT") { sequence.current++; setData(null); setContext(null); setAction(null); setAuthState("login"); }
     });
     return () => { active = false; sequence.current++; listener.data.subscription.unsubscribe(); };
-  }, []);
+  }, [preview]);
 
   const effectiveSection = section === "users" && invitationView ? "invitations" : section;
   useEffect(() => {
     if (authState !== "ready" || effectiveSection === "login") return;
+    if (preview) {
+      setData(null); setError(""); setLoading(previewState === "loading");
+      if (previewState === "loading") return;
+      if (previewState === "error") { setError("Synthetic preview error — use this state to review unavailable-service messaging."); return; }
+      const result = preview.read(effectiveSection, submittedSearch, status, cursor, fromDate, throughDate);
+      setData(previewState === "empty" ? { ...result, items: [], nextCursor: null } : result);
+      return;
+    }
     const request = ++sequence.current; setData(null); setError(""); setLoading(true);
     void readAdmin(effectiveSection, submittedSearch, status, cursor, fromDate, throughDate).then(result => {
       if (sequence.current === request) setData(result);
@@ -82,7 +98,7 @@ export function PlatformAdminPage({ section }: Props) {
       }
     }).finally(() => { if (sequence.current === request) setLoading(false); });
     return () => { sequence.current++; };
-  }, [authState, effectiveSection, submittedSearch, status, cursor, refresh, fromDate, throughDate]);
+  }, [authState, effectiveSection, submittedSearch, status, cursor, refresh, fromDate, throughDate, preview, previewState]);
 
   async function authenticate(event: FormEvent) {
     event.preventDefault(); setBusy(true); setAuthError("");
@@ -119,6 +135,7 @@ export function PlatformAdminPage({ section }: Props) {
   }
   async function commitAction(event: FormEvent) {
     event.preventDefault(); if (!action || !confirmed || reason.trim().length < 3) return;
+    if (preview) { setNotice("Preview only — the synthetic decision was not saved and no platform service was contacted."); setAction(null); return; }
     setBusy(true); setError("");
     try {
       if (action.kind === "classification") await adminMutation("platform_admin_classify", { target_restaurant_id: action.row!.id, classification, expected_version: action.row!.version, reason }, action.requestId);
@@ -155,16 +172,17 @@ export function PlatformAdminPage({ section }: Props) {
   const actionAllowed = section === "businesses" ? context?.canManage : section === "applications" ? context?.canManage : section === "payments" ? context?.canSensitive : false;
   return <div className="pa-root pa-shell">
     <a className="pa-skip" href="#pa-content">Skip to content</a>
-    <header className="pa-header"><a href="/platform-admin/overview" className="pa-brand"><ShieldCheck size={22} aria-hidden="true" />ServeFlow <span>Platform</span></a>
-      <div><button type="button" onClick={() => { setCode(""); setAuthState("mfa"); setData(null); }}>Verify MFA</button><button type="button" aria-label="Sign out of platform administration" disabled={busy} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true" /><span>Sign out</span></button><button type="button" className="pa-menu" aria-label="Open platform navigation" onClick={() => setMenu(true)}><Menu aria-hidden="true" /></button></div>
+    <header className="pa-header"><a href={preview ? preview.pathFor("overview") : "/platform-admin/overview"} className="pa-brand"><ShieldCheck size={22} aria-hidden="true" />ServeFlow <span>Platform</span></a>
+      <div>{preview ? <a className="pa-header-link" href="/platform-admin/login">Exit preview</a> : <><button type="button" onClick={() => { setCode(""); setAuthState("mfa"); setData(null); }}>Verify MFA</button><button type="button" aria-label="Sign out of platform administration" disabled={busy} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true" /><span>Sign out</span></button></>}<button type="button" className="pa-menu" aria-label="Open platform navigation" onClick={() => setMenu(true)}><Menu aria-hidden="true" /></button></div>
     </header>
     {menu && <div className="pa-scrim" onClick={() => setMenu(false)} />}
     <div className={`pa-sidebar${menu ? " pa-open" : ""}`} ref={drawer} {...(menu ? { role: "dialog", "aria-modal": true, "aria-label": "Platform navigation" } : {})}>
       <button type="button" className="pa-menu pa-close" ref={closeButton} aria-label="Close platform navigation" onClick={() => setMenu(false)}><X aria-hidden="true" /></button>
-      <nav aria-label="Platform administration">{["Platform Management", "Technical Operations", "Security & Administration"].map(group => <div key={group}><h2>{group}</h2>{adminSections.filter(([, , category]) => category === group).map(([key, label]) => <a key={key} href={`/platform-admin/${key}`} aria-current={section === key ? "page" : undefined}>{label}</a>)}</div>)}</nav>
+      <nav aria-label="Platform administration">{["Platform Management", "Technical Operations", "Security & Administration"].map(group => <div key={group}><h2>{group}</h2>{adminSections.filter(([, , category]) => category === group).map(([key, label]) => <a key={key} href={preview ? preview.pathFor(key) : `/platform-admin/${key}`} aria-current={section === key ? "page" : undefined}>{label}</a>)}</div>)}</nav>
       <p className="pa-small">{context?.displayName}<br />Inspect{context?.canManage ? " · Manage" : ""}{context?.canSensitive ? " · Sensitive" : ""}</p>
     </div>
     <main id="pa-content" tabIndex={-1} className="pa-content">
+      {preview && <><div className="pa-preview-banner" role="status"><strong>PREVIEW — SYNTHETIC DATA</strong><span>Local visual review only. No administrator access is granted and no platform service is contacted.</span></div><section className="pa-preview-tools" aria-label="Preview display controls"><label>Display state<select value={previewState} onChange={event => setPreviewState(event.target.value as typeof previewState)}><option value="populated">Populated</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option></select></label><p>Review controls are safe local no-ops. Submitted forms never call administrative RPCs.</p></section></>}
       <div className="pa-title"><div><p className="pa-eyebrow">ServeFlow administration</p><h1>{title}</h1></div><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading}>Refresh</button></div>
       {authError && <p role="alert" className="pa-error">{authError}</p>}
       {notes[section as AdminSection] && <p className="pa-notice">{notes[section as AdminSection]}</p>}
@@ -202,7 +220,7 @@ export function PlatformAdminPage({ section }: Props) {
         <label className="pa-check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required />I reviewed the target and understand this decision will be audited.</label>
         {action.kind === "approved" && <p>Approval does not send an invitation, provision an account or activate a trial.</p>}
         {error && <p role="alert" className="pa-error">{error}</p>}
-        <div className="pa-row-actions"><button type="button" disabled={busy} onClick={() => setAction(null)}>Cancel</button><button className="pa-primary" disabled={busy || !confirmed || reason.trim().length < 3}>{busy ? "Recording…" : "Confirm decision"}</button></div>
+        <div className="pa-row-actions"><button type="button" disabled={busy} onClick={() => setAction(null)}>Cancel</button><button className="pa-primary" disabled={busy || !confirmed || reason.trim().length < 3}>{preview ? "Preview decision — no changes" : busy ? "Recording…" : "Confirm decision"}</button></div>
       </form>
     </div></div>}
   </div>;
