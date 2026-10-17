@@ -27,7 +27,15 @@ grant execute on function public.approve_order_payment(uuid) to authenticated;
 grant execute on function public.start_order_preparation(uuid) to authenticated;
 grant execute on function public.mark_order_ready(uuid) to authenticated;
 
-revoke all on function public.rls_auto_enable() from public;
+-- This helper is optional. Restrict its exact zero-argument signature when it
+-- exists, while allowing fresh projects that never installed it to continue.
+do $migration_015_optional_helper$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke all on function public.rls_auto_enable() from public;
+  end if;
+end;
+$migration_015_optional_helper$;
 
 revoke all on function public.get_public_qr_menu(text) from public;
 revoke all on function public.create_public_qr_order(text, text, text, text, jsonb) from public;

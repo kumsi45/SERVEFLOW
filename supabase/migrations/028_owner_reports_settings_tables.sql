@@ -11,6 +11,11 @@ alter table public.restaurants
   add column if not exists subscription_plan text not null default 'starter',
   add column if not exists billing_status text not null default 'trial';
 
+-- Public menu functions below read this column. Introduce the same nullable,
+-- no-default contract that migrations 054 and 055 later reaffirm.
+alter table public.menu_items
+  add column if not exists description text;
+
 update public.restaurants
 set total_tables = coalesce(table_count, total_tables, 20)
 where total_tables is null
