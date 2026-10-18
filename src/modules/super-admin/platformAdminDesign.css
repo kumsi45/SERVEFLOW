@@ -1,0 +1,151 @@
+/* Scoped design tokens. Existing --pa-* names are aliases during migration. */
+.pa-root {
+  --pa-bg: #f6f8f7;
+  --pa-surface: #ffffff;
+  --pa-soft: #eaf0ec;
+  --pa-line: #829489;
+  --pa-ink: #1c3029;
+  --pa-muted: #577064;
+  --pa-brand: #14573d;
+  --pa-positive: #176343;
+  --pa-positive-bg: #e8f5ed;
+  --pa-warning: #785014;
+  --pa-warning-bg: #fbf1da;
+  --pa-negative: #9d342e;
+  --pa-negative-bg: #fff0ed;
+  --pa-radius-sm: 8px;
+  --pa-radius-lg: 12px;
+  --pa-space-1: 4px;
+  --pa-space-2: 8px;
+  --pa-space-3: 12px;
+  --pa-space-4: 16px;
+  --pa-space-5: 20px;
+  --pa-space-6: 24px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+[data-public-theme=dark] .pa-root {
+  --pa-bg: #101a16;
+  --pa-surface: #1a2921;
+  --pa-soft: #26392e;
+  --pa-line: #718879;
+  --pa-ink: #e2ebe5;
+  --pa-muted: #a7c0ae;
+  --pa-brand: #9de1b9;
+  --pa-positive: #a6e5be;
+  --pa-positive-bg: #214432;
+  --pa-warning: #f5d295;
+  --pa-warning-bg: #443620;
+  --pa-negative: #ffb7ad;
+  --pa-negative-bg: #472c29;
+}
+
+.pa-root :is(h1,h2,h3,p,th,td,a,button,label,small,summary) { overflow-wrap: normal; }
+.pa-root h1 { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -.01em; }
+.pa-root h2 { font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: 0; }
+.pa-root h3 { font-size: 14px; line-height: 20px; font-weight: 600; }
+.pa-root :is(button,label,strong,th,dt) { font-weight: 500; }
+.pa-root :is(.pa-small,.pa-description,small) { font-size: 13px; line-height: 18px; }
+.pa-root .pa-eyebrow { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.pa-root .pa-nav-label { font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+.pa-root :is(button,input,select,textarea) { border-radius: var(--pa-radius-sm); }
+.pa-root :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible { outline: 3px solid var(--pa-brand); outline-offset: 2px; }
+.pa-root button { font-size: 13px; line-height: 18px; }
+.pa-root :is(input,select,textarea) { font-size: 14px; line-height: 20px; }
+.pa-root :is(.pa-panel,.pa-metrics section,.pa-table-wrap,.pa-filters,.pa-login,.pa-dialog) { border-radius: var(--pa-radius-lg); }
+.pa-root :is(.pa-panel,.pa-metrics section,.pa-table-wrap) { box-shadow: none; }
+.pa-root .pa-badge { font-size: 12px; line-height: 16px; font-weight: 500; border-radius: var(--pa-radius-sm); }
+.pa-root .pa-badge-neutral { background: var(--pa-soft); color: var(--pa-muted); }
+.pa-root .pa-metrics p { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.pa-root th { font-size: 12px; line-height: 16px; font-weight: 500; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.pa-root td { font-size: 13px; line-height: 18px; overflow-wrap: break-word; }
+.pa-root .pa-source { font-size: 12px; }
+.pa-root .pa-preview-strip { font-size: 12px; }
+.pa-root .pa-preview-tools summary { font-size: 12px; min-height: 36px; }
+.pa-root .pa-preview-tools > div { font-size: 13px; }
+.pa-root .pa-metric-footer { font-size: 12px; }
+.pa-root .pa-attention-row :is(strong,small),.pa-root .pa-health-link :is(span,small),.pa-root .pa-activity :is(strong,p,small) { font-size: 13px; line-height: 18px; }
+.pa-root .pa-attention-row small { margin-top: 4px; }
+.pa-root .pa-policy { font-size: 13px; }
+.pa-root .pa-policy summary { min-height: 40px; }
+.pa-root .pa-subscription-summary :is(p,span) { font-size: 13px; }
+.pa-root .pa-sidebar :is(a,.pa-nav-group,.pa-subnav a) { font-size: 13px; }
+.pa-root .pa-sidebar :is(.pa-workspace-context strong,.pa-workspace-context small,.pa-sidebar-footer,.pa-sidebar-footer small,.pa-collapse) { font-size: 12px; }
+.pa-root .pa-section-tabs a { font-size: 13px; }
+.pa-root td button { font-size: 13px; }
+.pa-root .pa-dialog { box-shadow: 0 20px 70px #0003; }
+
+.pa-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.pa-root .pa-ui-button { font-weight: 500; }
+.pa-root .pa-ui-primary { background: var(--pa-brand); color: var(--pa-surface); border-color: var(--pa-brand); }
+.pa-root .pa-ui-destructive { color: var(--pa-negative); border-color: var(--pa-negative); }
+.pa-root .pa-ui-ghost { border-color: transparent; background: transparent; }
+.pa-root .pa-ui-icon { width: 40px; min-width: 40px; padding: 8px; }
+.pa-filter-chip { border-radius: var(--pa-radius-sm)!important; }
+.pa-filter-chip[aria-pressed=true] { background: var(--pa-soft); color: var(--pa-brand); border-color: var(--pa-brand); }
+.pa-filter-chip span { margin-left: 4px; font-variant-numeric: tabular-nums; }
+.pa-search { position: relative; display: flex!important; align-items: center; }
+.pa-search svg { position: absolute; left: 12px; color: var(--pa-muted); pointer-events: none; }
+.pa-search input { padding-left: 40px; }
+.pa-data-table { max-width: 100%; overflow-x: auto; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-radius-lg); }
+.pa-data-table th { position: sticky; top: 0; z-index: 1; }
+.pa-data-table tr[tabindex] { cursor: pointer; }
+.pa-data-table tr[tabindex]:focus-visible { outline: 3px solid var(--pa-brand); outline-offset: -3px; }
+.pa-ui-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 16px 0; font-variant-numeric: tabular-nums; }
+.pa-ui-pagination .pa-field { display: flex; align-items: center; gap: 8px; margin-inline: 8px; }
+.pa-ui-pagination select { min-width: 76px; width: auto; }
+.pa-ui-drawer { position: absolute; inset: 0 0 0 auto; width: min(480px,100vw); overflow-y: auto; padding: 24px; background: var(--pa-surface); color: var(--pa-ink); box-shadow: -16px 0 40px #0003; }
+.pa-ui-drawer > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pa-ui-tooltip { position: relative; cursor: help; }
+.pa-ui-tooltip [role=tooltip] { display: none; position: absolute; left: 0; top: calc(100% + 8px); z-index: 80; width: max-content; max-width: 240px; padding: 8px 12px; border-radius: var(--pa-radius-sm); background: var(--pa-ink); color: var(--pa-surface); font-size: 12px; line-height: 16px; box-shadow: 0 8px 24px #0003; }
+.pa-ui-tooltip:is(:hover,:focus-visible) [role=tooltip] { display: block; }
+.pa-breadcrumb ol { display: flex; align-items: center; gap: 8px; padding: 0; margin: 0 0 16px; list-style: none; }
+.pa-breadcrumb li { display: flex; align-items: center; gap: 8px; color: var(--pa-muted); font-size: 13px; }
+.pa-ui-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--pa-line); }
+.pa-ui-tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; }
+.pa-ui-tabs button[aria-selected=true] { border-color: var(--pa-brand); color: var(--pa-brand); }
+.pa-ui-page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 0 0 24px; }
+.pa-ui-page-header > div:last-child { display: flex; align-items: center; gap: 8px; }
+.pa-ui-page-header p { margin: 4px 0 0; color: var(--pa-muted); font-size: 13px; line-height: 18px; }
+.pa-ui-page-header time { color: var(--pa-muted); font-size: 13px; white-space: nowrap; }
+.pa-ui-stat { padding: 16px 20px; background: var(--pa-surface); border-radius: var(--pa-radius-lg); }
+.pa-ui-stat strong { display: block; font-size: 34px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pa-ui-stat span { color: var(--pa-muted); font-size: 13px; }
+.pa-ui-attention,.pa-ui-feed,.pa-ui-health { padding: 20px 24px; background: var(--pa-surface); border-radius: var(--pa-radius-lg); }
+.pa-ui-attention h2,.pa-ui-feed h2,.pa-ui-health h2 { margin: 0 0 12px; }
+.pa-ui-attention ul,.pa-ui-feed ol,.pa-ui-health ul { padding: 0; margin: 0; list-style: none; }
+.pa-ui-attention li + li,.pa-ui-feed li + li,.pa-ui-health li + li { border-top: 1px solid var(--pa-line); }
+.pa-ui-attention a { display: flex; align-items: center; gap: 12px; min-height: 56px; text-decoration: none; color: var(--pa-ink); }
+.pa-ui-attention a > span:nth-child(2) { flex: 1; }
+.pa-ui-feed li,.pa-ui-health li { display: grid; gap: 4px; padding: 12px 0; }
+.pa-ui-feed small,.pa-ui-health small { color: var(--pa-muted); }
+.pa-ui-health li { grid-template-columns: 1fr auto; }
+.pa-ui-health small { grid-column: 1 / -1; }
+.pa-ui-state { padding: 32px 24px; text-align: center; background: var(--pa-surface); border-radius: var(--pa-radius-lg); }
+.pa-ui-skeleton span { display: block; height: 44px; margin: 12px 0; border-radius: var(--pa-radius-sm); background: var(--pa-soft); animation: pa-pulse 1.5s ease-in-out infinite alternate; }
+.pa-ui-toast { position: fixed; right: 20px; bottom: 20px; z-index: 90; display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-radius-lg); box-shadow: 0 12px 36px #0003; }
+.pa-ui-toast-positive { border-color: var(--pa-positive); }
+.pa-ui-toast-negative { border-color: var(--pa-negative); }
+.pa-demo-banner { padding: 8px 16px; color: var(--pa-muted); background: var(--pa-soft); font-size: 12px; line-height: 16px; }
+.pa-bottom-tabs { display: none; }
+
+@media (max-width: 600px) {
+  .pa-root h1 { font-size: 28px; line-height: 32px; }
+  .pa-root :is(.pa-preview-strip,.pa-preview-tools summary,.pa-metrics h2,.pa-metric-footer,.pa-section-tabs a,.pa-root td::before) { font-size: 12px; }
+  .pa-root .pa-metrics p { font-size: 32px; line-height: 36px; }
+  .pa-root .pa-metrics .pa-value-unavailable { font-size: 16px; }
+  .pa-root td { font-size: 13px; }
+  .pa-root td::before { font-size: 12px; }
+  .pa-data-table { border: 0; background: transparent; }
+  .pa-data-table table,.pa-data-table tbody,.pa-data-table tr { display: block; min-width: 0; }
+  .pa-data-table tbody { display: grid; gap: 12px; }
+  .pa-data-table tr { padding: 12px; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-radius-lg); }
+  .pa-data-table thead,.pa-data-table .pa-mobile-hide { display: none; }
+  .pa-data-table td { display: flex; justify-content: space-between; gap: 12px; }
+  .pa-ui-page-header { align-items: flex-start; }
+  .pa-ui-page-header time { display: none; }
+  .pa-ui-pagination { flex-wrap: wrap; }
+  .pa-ui-drawer { width: 100vw; }
+  .pa-ui-toast { left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); }
+}

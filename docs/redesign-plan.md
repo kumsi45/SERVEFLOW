@@ -65,3 +65,22 @@ Each interactive component must cover keyboard, loading, disabled, empty, and er
 ## Copy ledger
 
 Populate as strings are changed. Initial candidates: `LOCAL PREVIEW · SYNTHETIC DATA` to `Demo data`; `Source: Synthetic preview fixture` removed from page bodies; `Preview controls` moved to a developer-only switch; page eyebrows and repeated subtitle paragraphs removed; `Decision` and `Verified` column terms changed to `Status` where they describe status. Policy paragraphs move to `backend-contract.md`, with only short action-relevant hints kept in the UI.
+
+## Stage 2 design-system evidence
+
+`PlatformAdminUI.tsx` contains the new control, table, dialog, feed, state, and navigation primitives; `platformAdminDesign.css` defines their shared visual rules in both themes. The old `--pa-*` names remain as aliases while existing page markup migrates. `StatusBadge` maps pending to amber, success/active to green, rejected/failed to red, and unknown/unavailable/demo/unclassified to neutral. Badge text carries the state independently of color.
+
+Component states: Button supports five variants plus busy/disabled; inputs expose labels and error association; DataTable supports keyboard row activation and card mode; Pagination hides when a known result fits; Drawer and ConfirmDialog use the shared focus trap; Tooltip opens on hover/focus; states distinguish empty, loading, error/retry, toast, and demo. AccountMenu and BottomTabBar are containers for supported actions and navigation, not sources of new product capabilities. Page integration follows in Stages 3-8.
+
+Measured specified-color contrast, calculated with WCAG sRGB relative luminance (before values are in the audit):
+
+| Pair | Before | After |
+| --- | ---: | ---: |
+| Light border / surface | 1.29:1 | 3.21:1 |
+| Dark border / surface | 1.54:1 | 3.98:1 |
+| Light muted text / surface | 5.48:1 | 5.38:1 |
+| Dark muted text / surface | 6.97:1 | 7.80:1 |
+| Light brand / surface | 8.54:1 | 8.54:1 |
+| Dark brand / surface | 9.86:1 | 10.05:1 |
+
+The light border also reaches 3.01:1 against the page background; the dark border reaches 4.66:1. These are token-pair calculations, not a full element-by-element accessibility certification.

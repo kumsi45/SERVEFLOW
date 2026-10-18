@@ -8,6 +8,7 @@ import { privateAdminDataSource, type AdminDataSource, type AdminMutationRequest
 import { PublicThemeToggle } from "../landing/components/PublicThemeToggle";
 import { WorkspaceNavigation, WorkspaceTabs, PlatformOverview, StatusBadge, contractTiming, pageTitles, descriptions } from "./PlatformAdminWorkspace";
 import "./platformAdmin.css";
+import "./platformAdminDesign.css";
 
 export type PlatformAdminPreviewConfig = {
   dataSource: AdminDataSource & { setMode?: (mode: "populated" | "loading" | "empty" | "error" | "partial" | "large") => void };

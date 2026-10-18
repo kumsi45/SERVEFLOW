@@ -56,9 +56,13 @@ export function WorkspaceTabs({ section, pathFor }: { section: AdminSection; pat
   return <nav className="pa-section-tabs" aria-label="Workspace sections">{tabs.map(key => <a key={key} href={pathFor(key)} aria-current={section === key ? "page" : undefined}>{pageTitles[key]}</a>)}</nav>;
 }
 
+export function statusTone(value: unknown): "positive" | "negative" | "attention" | "neutral" {
+  const text = value == null ? "Unavailable" : typeof value === "boolean" ? value ? "Yes" : "No" : String(value).replace(/_/g, " ");
+  return /^(approved|succeeded|live|healthy|active|yes)$/i.test(text) ? "positive" : /^(rejected|failed|no)$/i.test(text) ? "negative" : /^(pending|needs review)$/i.test(text) ? "attention" : "neutral";
+}
 export function StatusBadge({ value }: { value: unknown }) {
   const text = value == null ? "Unavailable" : typeof value === "boolean" ? value ? "Yes" : "No" : String(value).replace(/_/g, " ");
-  const tone = /^(approved|succeeded|live|healthy|yes)$/i.test(text) ? "positive" : /^(rejected|failed|no)$/i.test(text) ? "negative" : /pending|unclassified|unknown|unavailable|not|disabled/i.test(text) ? "attention" : "neutral";
+  const tone = statusTone(value);
   return <span className={`pa-badge pa-badge-${tone}`}>{text}</span>;
 }
 
