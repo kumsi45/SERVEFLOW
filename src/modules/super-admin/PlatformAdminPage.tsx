@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, LogOut, Menu, ShieldCheck, X, PanelLeftClose, PanelLeftOpen, RefreshCw, SlidersHorizontal, Search } from "lucide-react";
+import { ArrowLeft, LogOut, ShieldCheck, X, PanelLeftClose, PanelLeftOpen, RefreshCw, SlidersHorizontal, Search, LayoutDashboard, FileCheck2, Building2, CreditCard, Ellipsis, UserRound } from "lucide-react";
 import { useModalFocus } from "../../core/accessibility/useModalFocus";
 import { createBrowserUuid } from "../../core/browser/createBrowserUuid";
 import { getPlatformAdminClient } from "./platformAdminClient";
 import { adminContext, recordAdminDiagnostic, safeAdminError, type AdminContext, type AdminCursor, type AdminResult, type AdminRow, type AdminSection } from "./platformAdminService";
 import { privateAdminDataSource, type AdminDataSource, type AdminMutationRequest } from "./platformAdminData";
 import { PublicThemeToggle } from "../landing/components/PublicThemeToggle";
-import { WorkspaceNavigation, WorkspaceTabs, PlatformOverview, StatusBadge, contractTiming, pageTitles, descriptions } from "./PlatformAdminWorkspace";
+import { WorkspaceNavigation, WorkspaceTabs, PlatformOverview, StatusBadge, contractTiming, pageTitles } from "./PlatformAdminWorkspace";
+import { BottomTabBar, DemoBanner } from "./PlatformAdminUI";
 import "./platformAdmin.css";
 import "./platformAdminDesign.css";
 
@@ -57,13 +58,23 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const [reason, setReason] = useState(""); const [classification, setClassification] = useState("demo"); const [confirmed, setConfirmed] = useState(false);
   const [payment, setPayment] = useState({ restaurantId: "", amount: "", currency: "ETB", channel: "", paidAt: "", reference: "" });
   const [previewState, setPreviewState] = useState<"populated" | "loading" | "empty" | "error" | "partial" | "large">("populated");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("serveflow.platform-sidebar-collapsed") === "true"; } catch { return false; } });
+  const [queueCounts, setQueueCounts] = useState<{ applications: number | null; payments: number | null }>({ applications: null, payments: null });
   const [details, setDetails] = useState<AdminRow | null>(null);
   const detailDialog = useRef<HTMLDivElement>(null);
   useModalFocus(Boolean(details), () => setDetails(null), detailDialog);
   useEffect(() => { if (!menu && !action && !details) return; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [menu, action, details]);
   useModalFocus(menu, () => setMenu(false), drawer, closeButton);
   useModalFocus(Boolean(action), () => { if (!busy) setAction(null); }, dialog);
+  useEffect(() => { try { localStorage.setItem("serveflow.platform-sidebar-collapsed", String(collapsed)); } catch { /* Storage can be unavailable. */ } }, [collapsed]);
+  useEffect(() => {
+    if (authState !== "ready") return;
+    let active = true;
+    void (preview?.dataSource ?? privateAdminDataSource).read({ resource: "overview", search: "", status: "", cursor: null, from: "", through: "" }).then(result => {
+      if (active) setQueueCounts({ applications: typeof result.pendingApplications === "number" ? result.pendingApplications : null, payments: typeof result.pendingPayments === "number" ? result.pendingPayments : null });
+    }).catch(() => { if (active) setQueueCounts({ applications: null, payments: null }); });
+    return () => { active = false; };
+  }, [authState, preview, refresh]);
 
   async function establishContext() {
     const result = await adminContext(); setContext(result);
@@ -179,20 +190,20 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const actionAllowed = preview ? ["businesses", "applications", "payments"].includes(section) : section === "businesses" ? context?.canManage : section === "applications" ? context?.canManage : section === "payments" ? context?.canSensitive : false;
   return <div className={`pa-root pa-shell${collapsed ? " pa-collapsed" : ""}`}>
     <a className="pa-skip" href="#pa-content">Skip to content</a>
-    <header className="pa-header"><a href={preview ? preview.pathFor("overview") : "/platform-admin/overview"} className="pa-brand"><ShieldCheck size={22} aria-hidden="true" />ServeFlow <span>Platform</span></a>
-      <div><PublicThemeToggle />{preview ? <a className="pa-header-link" href="/platform-admin/login">Exit preview</a> : <><button type="button" onClick={() => { setCode(""); setAuthState("mfa"); setData(null); }}>Verify MFA</button><button type="button" aria-label="Sign out of platform administration" disabled={busy} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true" /><span>Sign out</span></button></>}<button type="button" className="pa-menu" aria-label="Open platform navigation" onClick={() => setMenu(true)}><Menu aria-hidden="true" /></button></div>
+    <header className="pa-header"><a href={preview ? preview.pathFor("overview") : "/platform-admin/overview"} className="pa-brand"><ShieldCheck size={21} aria-hidden="true" /><span className="pa-brand-name">ServeFlow Platform</span></a>
+      <details className="pa-account-menu"><summary aria-label="Account and appearance"><UserRound size={19} aria-hidden="true" /><span>{preview ? "Demo" : context?.displayName ?? "Account"}</span></summary><div><PublicThemeToggle />{!preview && <><button type="button" onClick={() => { setCode(""); setAuthState("mfa"); setData(null); }}>Verify MFA</button><button type="button" disabled={busy} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true" />Sign out</button></>}</div></details>
     </header>
     {menu && <div className="pa-scrim" onClick={() => setMenu(false)} />}
     <div className={`pa-sidebar${menu ? " pa-open" : ""}`} ref={drawer} {...(menu ? { role: "dialog", "aria-modal": true, "aria-label": "Platform navigation" } : {})}>
       <button type="button" className="pa-menu pa-close" ref={closeButton} aria-label="Close platform navigation" onClick={() => setMenu(false)}><X aria-hidden="true" /></button>
-      <div className="pa-workspace-context"><span className="pa-avatar"><ShieldCheck size={19} aria-hidden="true" /></span><div><strong>Platform workspace</strong><small>ServeFlow administration</small></div></div>
-      <WorkspaceNavigation section={activeSection} pathFor={pathFor} onNavigate={() => setMenu(false)} />
-      <div className="pa-sidebar-footer"><span className="pa-avatar">{preview ? "P" : context?.displayName?.slice(0, 1)}</span><div><strong>{preview ? "Visual preview" : context?.displayName}</strong><small>{preview ? "No administrative access" : "Private platform access"}</small></div></div>
+      <p className="pa-sidebar-name">Platform</p>
+      <WorkspaceNavigation section={activeSection} pathFor={pathFor} onNavigate={() => setMenu(false)} counts={queueCounts} />
+      <div className="pa-more-account"><p className="pa-nav-label">Account</p><PublicThemeToggle />{!preview && <><button type="button" onClick={() => { setMenu(false); setCode(""); setAuthState("mfa"); setData(null); }}>Verify MFA</button><button type="button" disabled={busy} onClick={() => void signOut()}>Sign out</button></>}</div>
       <button className="pa-collapse" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(value => !value)}>{collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}<span>Collapse sidebar</span></button>
     </div>
     <main id="pa-content" tabIndex={-1} className="pa-content">
-      {preview && <div className="pa-preview-strip"><strong>LOCAL PREVIEW · SYNTHETIC DATA</strong><details className="pa-preview-tools"><summary><SlidersHorizontal size={14} aria-hidden="true" />Preview controls</summary><div><p>Local visual review only. No administrator access is granted. Changes stay in memory.</p><label>Display state<select value={previewState} onChange={event => setPreviewState(event.target.value as typeof previewState)}><option value="populated">Populated</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option><option value="partial">Partial</option><option value="large">525 rows</option></select></label></div></details></div>}
-      <div className="pa-title"><div><p className="pa-eyebrow">{["contracts", "payments"].includes(section) ? "Subscriptions & Payments" : ["overview", "applications", "businesses", "users", "notifications"].includes(section) ? "Workspace" : "System & Security"}</p><h1>{title}</h1><p className="pa-description">{descriptions[activeSection]}</p></div><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading}><RefreshCw size={16} aria-hidden="true" /><span>Refresh</span></button></div>
+      {preview && <div className="pa-demo-row"><DemoBanner /><details className="pa-preview-tools"><summary><SlidersHorizontal size={14} aria-hidden="true" />Demo modes</summary><div><label>Display state<select value={previewState} onChange={event => setPreviewState(event.target.value as typeof previewState)}><option value="populated">Populated</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option><option value="partial">Partial</option><option value="large">525 rows</option></select></label></div></details></div>}
+      <div className="pa-title"><div><h1>{title}</h1></div><button type="button" aria-label="Refresh" title="Refresh" onClick={() => setRefresh(value => value + 1)} disabled={loading}><RefreshCw size={18} aria-hidden="true" /></button></div>
       <WorkspaceTabs section={activeSection} pathFor={pathFor} />
       {authError && <p role="alert" className="pa-error">{authError}</p>}
       {notes[section as AdminSection] && <details className="pa-policy"><summary>Available actions & policy</summary><p>{notes[section as AdminSection]}</p></details>}
@@ -219,6 +230,13 @@ export function PlatformAdminPage({ section, preview }: Props) {
       {!loading && data && section === "security" && <section className="pa-panel"><h2>Enforced administrator boundary</h2><p>{display(data.mfa)}</p><p>Administrator authorization is checked in the database for every platform operation. Verified recovery must be recorded through the trusted provisioning procedure. User metadata and tenant roles do not grant access.</p><h2>Unavailable capabilities</h2><p>New application intake, invitation delivery/acceptance, provisioning, trial activation, contract activation/renewal, suspension/restoration, notification sending and recovery mutations are disabled. No dashboard switch enables them.</p></section>}
       {data && <p className="pa-small pa-source">Source: {data.source} · Checked {date(data.asOf)}</p>}
     </main>
+    <BottomTabBar items={[
+      { label: "Overview", href: pathFor("overview"), active: activeSection === "overview", icon: <LayoutDashboard size={20} aria-hidden="true" /> },
+      { label: "Applications", href: pathFor("applications"), active: activeSection === "applications", badge: queueCounts.applications ?? undefined, icon: <FileCheck2 size={20} aria-hidden="true" /> },
+      { label: "Businesses", href: pathFor("businesses"), active: activeSection === "businesses", icon: <Building2 size={20} aria-hidden="true" /> },
+      { label: "Payments", href: pathFor("payments"), active: activeSection === "payments", badge: queueCounts.payments ?? undefined, icon: <CreditCard size={20} aria-hidden="true" /> },
+      { label: "More", active: menu, icon: <Ellipsis size={20} aria-hidden="true" />, onClick: () => setMenu(true) },
+    ]} />
     {details && <div className="pa-dialog-backdrop"><section className="pa-dialog pa-detail-panel" ref={detailDialog} role="dialog" aria-modal="true" aria-labelledby="pa-detail-title"><button type="button" className="pa-detail-close" aria-label="Close record details" onClick={() => setDetails(null)}><X size={18} /></button><p className="pa-eyebrow">{title} · Record details</p><h2 id="pa-detail-title">{display(details.name ?? details.business_name ?? details.display_name ?? "Record details")}</h2>{preview && <p className="pa-small">Synthetic record for visual review only.</p>}<dl>{(detailColumns ?? []).filter(([key]) => !["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "term_timing" ? contractTiming(details.starts_at, details.ends_at, data?.asOf ?? "") : key === "owners" ? Array.isArray(details.owners) ? details.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") || "Unresolved" : "Unresolved" : key.endsWith("_at") ? date(details[key]) : display(details[key])}</dd></div>)}</dl><details className="pa-policy"><summary>Technical references</summary><dl>{["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].filter(key => details[key] != null).map(key => <div key={key}><dt>{key.replace(/_/g, " ")}</dt><dd>{display(details[key])}</dd></div>)}</dl></details></section></div>}
     {action && <div className="pa-dialog-backdrop"><div className="pa-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="pa-action-title">
       <h2 id="pa-action-title">Confirm {action.kind.replace(/-/g, " ")}</h2><p>{display(action.row?.name ?? action.row?.business_name ?? "Subscription payment review")}</p>

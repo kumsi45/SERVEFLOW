@@ -173,12 +173,12 @@ for (const width of [320, 390, 768, 1440]) {
       await expect(page.getByText("SYNTHETIC UI CONTRACT FIXTURE", { exact: false })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), section).toBe(true);
     }
-    if (width <= 1000) {
-      await page.getByRole("button", { name: "Open platform navigation" }).click();
+    if (width <= 768) {
+      await page.getByRole("button", { name: "More" }).click();
       const menu = page.getByRole("dialog", { name: "Platform navigation" });
       await expect(menu).toBeVisible();
       await page.keyboard.press("Escape"); await expect(menu).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Open platform navigation" })).toBeFocused();
+      await expect(page.getByRole("button", { name: "More" })).toBeFocused();
     }
     await page.screenshot({ path: testInfo.outputPath(`sa2-synthetic-${width}.png`) });
   });

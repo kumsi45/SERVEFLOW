@@ -84,3 +84,7 @@ Measured specified-color contrast, calculated with WCAG sRGB relative luminance 
 | Dark brand / surface | 9.86:1 | 10.05:1 |
 
 The light border also reaches 3.01:1 against the page background; the dark border reaches 4.66:1. These are token-pair calculations, not a full element-by-element accessibility certification.
+
+## Stage 3 shell decisions
+
+The header is 60px on desktop and 54px at 768px and below. The desktop sidebar is 240px, with a persisted 64px icon rail. All 14 destinations are visible without an internal sidebar scroll at a 900px viewport; the main content caps at 1280px. The mobile primary navigation has Overview, Applications, Businesses, Payments, and More. More opens the remaining destinations and the supported appearance and account actions in a focus-trapped sheet. Pending badges come only from the overview read model and disappear when counts are zero or unavailable. Preview mode has one neutral `Demo data` strip; its developer mode selector appears only on the development route.

@@ -41,8 +41,8 @@ describe("platform administrator visual preview boundary", () => {
   });
 
   it("labels synthetic data and keeps preview navigation in its own route namespace", () => {
-    expect(page).toContain("LOCAL PREVIEW · SYNTHETIC DATA");
+    expect(page).toContain("<DemoBanner />");
     expect(preview).toContain("/platform-admin/preview/${section}");
-    expect(page).toContain("Changes stay in memory.");
+    expect(page).toContain("Changes stay in this preview session.");
   });
 });

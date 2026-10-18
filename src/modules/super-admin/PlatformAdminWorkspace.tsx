@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Activity, ArrowUpRight, Bell, Building2, ChevronDown, CreditCard, FileCheck2, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { Activity, ArrowUpRight, Bell, Building2, CreditCard, FileCheck2, LayoutDashboard, ShieldCheck, Users, ScrollText, HeartPulse, Cable, DatabaseBackup, ListFilter, Shield, UserCog, FileClock } from "lucide-react";
 import { metric, type AdminResult, type AdminSection } from "./platformAdminService";
 
 type LinkFor = (section: AdminSection) => string;
@@ -35,18 +34,20 @@ export const descriptions: Record<AdminSection, string> = {
 };
 const operations: AdminSection[] = ["system-health", "diagnostics", "integrations", "backups", "audit-logs", "administrators", "security"];
 
-export function WorkspaceNavigation({ section, pathFor, onNavigate }: { section: AdminSection; pathFor: LinkFor; onNavigate: () => void }) {
-  const [operationsOpen, setOperationsOpen] = useState(operations.includes(section));
+export function WorkspaceNavigation({ section, pathFor, onNavigate, counts }: { section: AdminSection; pathFor: LinkFor; onNavigate: () => void; counts?: { applications: number | null; payments: number | null } }) {
   const main = [
     ["overview", "Overview", LayoutDashboard], ["applications", "Applications", FileCheck2], ["businesses", "Businesses", Building2],
-    ["contracts", "Subscriptions & Payments", CreditCard], ["users", "Users & Access", Users], ["notifications", "Notifications", Bell],
+    ["contracts", "Contracts", FileClock], ["payments", "Payments", CreditCard], ["users", "Users & access", Users], ["notifications", "Notifications", Bell],
+  ] as const;
+  const system = [
+    ["system-health", "System health", HeartPulse], ["diagnostics", "Diagnostics", ListFilter], ["integrations", "Integrations", Cable],
+    ["backups", "Backups", DatabaseBackup], ["audit-logs", "Audit logs", ScrollText], ["administrators", "Administrators", UserCog], ["security", "Security", Shield],
   ] as const;
   return <nav aria-label="Platform administration">
     <p className="pa-nav-label">Workspace</p>
-    {main.map(([key, label, Icon]) => <a key={key} title={label} href={pathFor(key)} onClick={onNavigate} aria-current={section === key || key === "contracts" && section === "payments" ? "page" : undefined}><Icon size={19} aria-hidden="true" /><span>{label}</span></a>)}
-    <p className="pa-nav-label">Platform operations</p>
-    <button className="pa-nav-group" title="System & Security" aria-expanded={operationsOpen} aria-controls="pa-operations" onClick={() => setOperationsOpen(value => !value)}><ShieldCheck size={19} aria-hidden="true" /><span>System & Security</span><ChevronDown size={15} aria-hidden="true" /></button>
-    {operationsOpen && <div id="pa-operations" className="pa-subnav">{operations.map(key => <a key={key} title={pageTitles[key]} href={pathFor(key)} onClick={onNavigate} aria-current={section === key ? "page" : undefined}><span>{pageTitles[key]}</span></a>)}</div>}
+    {main.map(([key, label, Icon]) => <a key={key} title={label} href={pathFor(key)} onClick={onNavigate} aria-current={section === key ? "page" : undefined}><Icon size={20} aria-hidden="true" /><span>{label}</span>{(key === "applications" || key === "payments") && typeof counts?.[key] === "number" && counts[key] > 0 && <span className="pa-nav-count" aria-label={`${counts[key]} pending`}>{counts[key] > 99 ? "99+" : counts[key]}</span>}</a>)}
+    <p className="pa-nav-label">System</p>
+    {system.map(([key, label, Icon]) => <a key={key} title={label} href={pathFor(key)} onClick={onNavigate} aria-current={section === key ? "page" : undefined}><Icon size={20} aria-hidden="true" /><span>{label}</span></a>)}
   </nav>;
 }
 

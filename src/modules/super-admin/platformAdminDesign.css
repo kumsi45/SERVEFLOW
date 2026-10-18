@@ -130,6 +130,71 @@
 .pa-demo-banner { padding: 8px 16px; color: var(--pa-muted); background: var(--pa-soft); font-size: 12px; line-height: 16px; }
 .pa-bottom-tabs { display: none; }
 
+/* Workspace shell */
+.pa-header { height: 60px; padding: 0 24px; }
+.pa-brand { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.pa-brand .pa-brand-name { display: inline; padding: 0; border: 0; color: var(--pa-ink); font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: none; }
+.pa-account-menu { position: relative; }
+.pa-account-menu > summary { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: var(--pa-radius-sm); cursor: pointer; list-style: none; color: var(--pa-ink); font-size: 13px; }
+.pa-account-menu > summary::-webkit-details-marker { display: none; }
+.pa-account-menu > summary:hover { background: var(--pa-soft); }
+.pa-account-menu > div { position: absolute; right: 0; top: calc(100% + 8px); z-index: 80; display: grid; gap: 8px; min-width: 180px; padding: 12px; border: 1px solid var(--pa-line); border-radius: var(--pa-radius-lg); background: var(--pa-surface); box-shadow: 0 12px 32px #0003; }
+.pa-account-menu > div > button { justify-content: flex-start; width: 100%; }
+.pa-sidebar { top: 60px; width: 240px; padding: 12px 12px 16px; overflow-y: visible; }
+.pa-sidebar-name { margin: 4px 8px 12px!important; font-size: 13px; font-weight: 600; color: var(--pa-muted); }
+.pa-sidebar nav { display: grid; gap: 0; }
+.pa-sidebar .pa-nav-label { margin: 12px 10px 6px; line-height: 16px; }
+.pa-sidebar nav a { position: relative; min-height: 40px; margin: 0; padding: 8px 10px; gap: 8px; border-radius: var(--pa-radius-sm); font-weight: 400; white-space: nowrap; }
+.pa-sidebar nav a[aria-current=page] { box-shadow: inset 2px 0 var(--pa-brand); font-weight: 500; }
+.pa-sidebar nav a:hover:not([aria-current=page]) { background: var(--pa-soft); color: var(--pa-ink); }
+.pa-nav-count { margin-left: auto; padding: 2px 6px; border-radius: var(--pa-radius-sm); color: var(--pa-warning); background: var(--pa-warning-bg); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.pa-root .pa-collapse { min-height: 40px; margin-top: auto; padding: 8px 10px; font-size: 12px; }
+.pa-more-account { display: none; }
+.pa-content { width: min(1280px, calc(100vw - 240px)); max-width: 1280px; margin-left: calc(240px + max(0px, (100vw - 240px - 1280px) / 2)); padding: 24px; }
+.pa-title { margin: 8px 0 20px; }
+.pa-title > button { width: 40px; min-width: 40px; min-height: 40px; padding: 8px; }
+.pa-collapsed .pa-sidebar { width: 64px; }
+.pa-collapsed .pa-sidebar-name,.pa-collapsed .pa-nav-count { display: none; }
+.pa-collapsed .pa-sidebar nav a { justify-content: center; padding-inline: 8px; }
+.pa-collapsed .pa-content { width: min(1280px, calc(100vw - 64px)); margin-left: calc(64px + max(0px, (100vw - 64px - 1280px) / 2)); }
+.pa-demo-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0; margin-bottom: 16px; background: var(--pa-soft); border-radius: var(--pa-radius-sm); }
+.pa-demo-row .pa-demo-banner { flex: 1; }
+.pa-demo-row .pa-preview-tools { padding-right: 12px; }
+.pa-demo-row .pa-preview-tools summary { min-height: 32px; }
+.pa-root .pa-demo-row .pa-preview-tools > div { top: 36px; }
+
+@media (min-width: 769px) and (max-width: 1000px) {
+  .pa-sidebar,.pa-collapsed .pa-sidebar { display: flex; top: 60px; width: 240px; padding-top: 12px; }
+  .pa-collapsed .pa-sidebar { width: 64px; }
+  .pa-content { width: calc(100vw - 240px); margin-left: 240px; }
+  .pa-collapsed .pa-content { width: calc(100vw - 64px); margin-left: 64px; }
+  .pa-root .pa-menu { display: none; }
+}
+
+@media (max-width: 768px) {
+  .pa-header { height: 54px; padding: 0 16px; }
+  .pa-brand,.pa-brand .pa-brand-name { font-size: 16px; }
+  .pa-account-menu > summary { width: 44px; min-height: 44px; justify-content: center; padding: 8px; }
+  .pa-account-menu > summary span { display: none; }
+  .pa-account-menu > div { display: none; }
+  .pa-sidebar,.pa-collapsed .pa-sidebar { top: 0; bottom: 0; width: min(360px,100vw); padding: 12px 16px calc(88px + env(safe-area-inset-bottom)); overflow-y: auto; }
+  .pa-sidebar.pa-open { display: flex; }
+  .pa-sidebar-name { display: block!important; }
+  .pa-sidebar nav a,.pa-collapsed .pa-sidebar nav a { justify-content: flex-start; min-height: 44px; font-size: 13px; }
+  .pa-collapsed .pa-sidebar nav a span { display: inline; }
+  .pa-sidebar .pa-nav-label,.pa-collapsed .pa-sidebar .pa-nav-label { display: block; }
+  .pa-more-account { display: grid; gap: 8px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--pa-line); }
+  .pa-more-account > button { justify-content: flex-start; }
+  .pa-content,.pa-collapsed .pa-content { width: 100%; max-width: none; margin: 0; padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
+  .pa-title { margin: 8px 0 16px; }
+  .pa-bottom-tabs { position: fixed; inset: auto 0 0; z-index: 50; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: var(--pa-surface); border-top: 1px solid var(--pa-line); }
+  .pa-bottom-tabs :is(a,button) { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 4px 2px; border: 0; border-radius: var(--pa-radius-sm); background: transparent; color: var(--pa-muted); text-decoration: none; font-size: 12px; line-height: 16px; font-weight: 500; }
+  .pa-bottom-tabs :is(a[aria-current=page],button[aria-expanded=true]) { color: var(--pa-brand); background: var(--pa-soft); }
+  .pa-bottom-tabs .pa-badge { position: absolute; top: 0; right: 2px; padding: 1px 4px; font-size: 12px; line-height: 14px; }
+  .pa-demo-row { margin-bottom: 12px; }
+  .pa-root .pa-demo-row .pa-preview-tools summary { font-size: 12px; }
+}
+
 @media (max-width: 600px) {
   .pa-root h1 { font-size: 28px; line-height: 32px; }
   .pa-root :is(.pa-preview-strip,.pa-preview-tools summary,.pa-metrics h2,.pa-metric-footer,.pa-section-tabs a,.pa-root td::before) { font-size: 12px; }

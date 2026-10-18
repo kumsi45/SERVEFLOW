@@ -21,7 +21,7 @@ test("production build does not expose the synthetic preview route", async ({ pa
   await isolatePreview(page, baseURL);
   await page.goto("/platform-admin/preview");
   await expect(page.getByText("Menu link not found.")).toBeVisible();
-  await expect(page.getByText("LOCAL PREVIEW · SYNTHETIC DATA")).toHaveCount(0);
+  await expect(page.getByText("Demo data", { exact: true })).toHaveCount(0);
 });
 
 for (const width of widths) {
@@ -30,7 +30,7 @@ for (const width of widths) {
     const external = await isolatePreview(page, baseURL);
     await page.setViewportSize({ width, height: width <= 375 ? 760 : 900 });
     await page.goto("/platform-admin/preview");
-    await expect(page.getByText("LOCAL PREVIEW · SYNTHETIC DATA")).toBeVisible();
+    await expect(page.getByText("Demo data", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Platform overview" })).toBeVisible();
     expect(await page.evaluate(() => ({ document: document.documentElement.scrollWidth <= document.documentElement.clientWidth, body: document.body.scrollWidth <= document.body.clientWidth }))).toEqual({ document: true, body: true });
     expect(external).toEqual([]);
@@ -44,7 +44,7 @@ test("all fourteen synthetic sections render without platform requests", async (
   const external = await isolatePreview(page, baseURL);
   for (const section of sections) {
     await page.goto(`/platform-admin/preview/${section}`);
-    await expect(page.getByText("LOCAL PREVIEW · SYNTHETIC DATA")).toBeVisible();
+    await expect(page.getByText("Demo data", { exact: true })).toBeVisible();
     await expect(page.locator('nav[aria-label="Platform administration"] a[aria-current="page"]')).toHaveCount(1);
     await expect(page.locator("#pa-content h1")).toBeVisible();
   }
@@ -62,7 +62,7 @@ test("preview states, filters and mutation dialogs remain local", async ({ page,
   await page.getByRole("button", { name: "Confirm decision" }).click();
   await expect(page.getByText(/Demo decision saved for this preview session/i)).toBeVisible();
 
-  await page.getByText("Preview controls", { exact: true }).click();
+  await page.getByText("Demo modes", { exact: true }).click();
   await page.getByLabel("Display state").selectOption("loading");
   await expect(page.getByRole("status", { name: "" }).filter({ hasText: "Loading authorized platform information" })).toBeVisible();
   await page.getByLabel("Display state").selectOption("error");
@@ -81,13 +81,29 @@ test("mobile drawer and keyboard focus controls remain accessible", async ({ pag
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#pa-content")).toBeFocused();
-  await page.getByRole("button", { name: "Open platform navigation" }).click();
+  await page.getByRole("button", { name: "More" }).click();
   await expect(page.getByRole("dialog", { name: "Platform navigation" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close platform navigation" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Platform navigation" })).toHaveCount(0);
   await page.getByRole("button", { name: "Invitations" }).click();
   await expect(page.getByRole("region", { name: "Users & Access records" })).toBeVisible();
+});
+
+test("mobile tabs show supported destinations and More returns focus", async ({ page, baseURL }) => {
+  test.skip(productionGuard, "Development preview only.");
+  await isolatePreview(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/platform-admin/preview/overview");
+  const tabs = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(tabs.getByRole("link")).toHaveCount(4);
+  await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
+  await tabs.getByRole("button", { name: "More" }).click();
+  await expect(page.getByRole("dialog", { name: "Platform navigation" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tabs.getByRole("button", { name: "More" })).toBeFocused();
+  await tabs.getByRole("link", { name: /Payments/ }).click();
+  await expect(page.getByRole("heading", { name: "Payments & Renewals" })).toBeVisible();
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -133,7 +149,7 @@ test("directory search, filters, pagination, details and navigation are usable",
   await page.getByLabel("Status",{exact:true}).selectOption("demo");
   await expect(page.getByText("No records match this query.",{exact:false})).toBeVisible();
   await page.setViewportSize({width:320,height:760});
-  await page.getByRole("button",{name:"Open platform navigation"}).click();
+  await page.getByRole("button",{name:"More"}).click();
   expect(await page.evaluate(()=>document.body.style.overflow)).toBe("hidden");
   await page.getByRole("dialog",{name:"Platform navigation"}).getByRole("link",{name:"Applications",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Applications",exact:true})).toBeVisible();
@@ -178,10 +194,10 @@ test("sidebar, shared theme, status contrast and preview session isolation", asy
   }
   expect(await page.evaluate(()=>Object.keys(sessionStorage).filter(key=>key.includes("platform-admin")))).toEqual([]);
   await page.setViewportSize({width:320,height:760});
-  await page.getByRole("button",{name:"Open platform navigation"}).click();
+  await page.getByRole("button",{name:"More"}).click();
   await page.screenshot({path:testInfo.outputPath("mobile-navigation.png")});
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button",{name:"Open platform navigation"})).toBeFocused();
+  await expect(page.getByRole("button",{name:"More"})).toBeFocused();
   await page.getByRole("button",{name:"Approve",exact:true}).first().click();
   await page.screenshot({path:testInfo.outputPath("mobile-review-dialog.png")});
   await expect(page.getByRole("dialog")).toContainText("Changes stay in this preview session");
