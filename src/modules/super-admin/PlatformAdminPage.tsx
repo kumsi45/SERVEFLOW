@@ -3,13 +3,14 @@ import { ArrowLeft, LogOut, Menu, ShieldCheck, X, PanelLeftClose, PanelLeftOpen,
 import { useModalFocus } from "../../core/accessibility/useModalFocus";
 import { createBrowserUuid } from "../../core/browser/createBrowserUuid";
 import { getPlatformAdminClient } from "./platformAdminClient";
-import { adminContext, adminMutation, readAdmin, recordAdminDiagnostic, safeAdminError, type AdminContext, type AdminCursor, type AdminResult, type AdminRow, type AdminSection } from "./platformAdminService";
+import { adminContext, recordAdminDiagnostic, safeAdminError, type AdminContext, type AdminCursor, type AdminResult, type AdminRow, type AdminSection } from "./platformAdminService";
+import { privateAdminDataSource, type AdminDataSource, type AdminMutationRequest } from "./platformAdminData";
 import { PublicThemeToggle } from "../landing/components/PublicThemeToggle";
 import { WorkspaceNavigation, WorkspaceTabs, PlatformOverview, StatusBadge, contractTiming, pageTitles, descriptions } from "./PlatformAdminWorkspace";
 import "./platformAdmin.css";
 
 export type PlatformAdminPreviewConfig = {
-  read: (section: AdminSection | "invitations", search: string, status: string, cursor: AdminCursor | null, from: string, through: string) => AdminResult;
+  dataSource: AdminDataSource & { setMode?: (mode: "populated" | "loading" | "empty" | "error" | "partial" | "large") => void };
   pathFor: (section: AdminSection) => string;
 };
 type Props = { section: AdminSection | "login"; preview?: PlatformAdminPreviewConfig };
@@ -54,7 +55,7 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const [action, setAction] = useState<Action | null>(null); const dialog = useRef<HTMLDivElement>(null);
   const [reason, setReason] = useState(""); const [classification, setClassification] = useState("demo"); const [confirmed, setConfirmed] = useState(false);
   const [payment, setPayment] = useState({ restaurantId: "", amount: "", currency: "ETB", channel: "", paidAt: "", reference: "" });
-  const [previewState, setPreviewState] = useState<"populated" | "loading" | "empty" | "error">("populated");
+  const [previewState, setPreviewState] = useState<"populated" | "loading" | "empty" | "error" | "partial" | "large">("populated");
   const [collapsed, setCollapsed] = useState(false);
   const [details, setDetails] = useState<AdminRow | null>(null);
   const detailDialog = useRef<HTMLDivElement>(null);
@@ -86,21 +87,15 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const effectiveSection = section === "users" && invitationView ? "invitations" : section;
   useEffect(() => {
     if (authState !== "ready" || effectiveSection === "login") return;
-    if (preview) {
-      setData(null); setError(""); setLoading(previewState === "loading");
-      if (previewState === "loading") return;
-      if (previewState === "error") { setError("Synthetic preview error — use this state to review unavailable-service messaging."); return; }
-      const result = preview.read(effectiveSection, submittedSearch, status, cursor, fromDate, throughDate);
-      setData(previewState === "empty" ? { asOf: result.asOf, source: result.source, items: [], nextCursor: null } : result);
-      return;
-    }
+    if (preview) preview.dataSource.setMode?.(previewState);
+    if (previewState === "loading" && preview) { setData(null); setError(""); setLoading(true); return; }
     const request = ++sequence.current; setData(null); setError(""); setLoading(true);
-    void readAdmin(effectiveSection, submittedSearch, status, cursor, fromDate, throughDate).then(result => {
+    void (preview?.dataSource ?? privateAdminDataSource).read({ resource: effectiveSection, search: submittedSearch, status, cursor, from: fromDate, through: throughDate }).then(result => {
       if (sequence.current === request) setData(result);
     }).catch(cause => {
       if (sequence.current === request) {
-        setError(safeAdminError(cause));
-        void recordAdminDiagnostic("ADMIN_READ_FAILED").catch(() => false);
+        setError(preview && cause instanceof Error ? cause.message : safeAdminError(cause));
+        if (!preview) void recordAdminDiagnostic("ADMIN_READ_FAILED").catch(() => false);
       }
     }).finally(() => { if (sequence.current === request) setLoading(false); });
     return () => { sequence.current++; };
@@ -140,18 +135,18 @@ export function PlatformAdminPage({ section, preview }: Props) {
     setClassification(typeof row?.classification === "string" ? row.classification : "demo");
   }
   async function commitAction(event: FormEvent) {
-    event.preventDefault(); if (!action || !confirmed || reason.trim().length < 3) return;
-    if (preview) { setNotice("Preview only — the synthetic decision was not saved and no platform service was contacted."); setAction(null); return; }
+    event.preventDefault(); if (!action || !confirmed || reason.trim().length < (action.kind === "rejected" || action.kind === "payment-rejected" ? 10 : 3)) return;
     setBusy(true); setError("");
     try {
-      if (action.kind === "classification") await adminMutation("platform_admin_classify", { target_restaurant_id: action.row!.id, classification, expected_version: action.row!.version, reason }, action.requestId);
-      else if (action.kind === "approved" || action.kind === "rejected") await adminMutation("platform_admin_decide_application", { application_id: action.row!.id, decision: action.kind, reason }, action.requestId);
-      else if (action.kind === "payment-rejected") await adminMutation("platform_admin_reject_payment", { payment_id: action.row!.id, reason }, action.requestId);
-      else await adminMutation("platform_admin_record_payment", { target_restaurant_id: payment.restaurantId.trim(), amount: Number(payment.amount), currency: payment.currency.trim().toUpperCase(), channel: payment.channel.trim(), paid_at: new Date(payment.paidAt).toISOString(), reference: payment.reference.trim(), reason }, action.requestId);
-      setNotice(action.kind === "approved" ? "Application approved. Invitation delivery is not configured; no email or account was created." : "Change recorded with its server audit event.");
+      const request: AdminMutationRequest = action.kind === "classification" ? { name: "platform_admin_classify", values: { target_restaurant_id: action.row!.id, classification, expected_version: action.row!.version, reason }, requestId: action.requestId }
+        : action.kind === "approved" || action.kind === "rejected" ? { name: "platform_admin_decide_application", values: { application_id: action.row!.id, decision: action.kind, reason }, requestId: action.requestId }
+        : action.kind === "payment-rejected" ? { name: "platform_admin_reject_payment", values: { payment_id: action.row!.id, reason }, requestId: action.requestId }
+        : { name: "platform_admin_record_payment", values: { target_restaurant_id: payment.restaurantId.trim(), amount: Number(payment.amount), currency: payment.currency.trim().toUpperCase(), channel: payment.channel.trim(), paid_at: new Date(payment.paidAt).toISOString(), reference: payment.reference.trim(), reason }, requestId: action.requestId };
+      await (preview?.dataSource ?? privateAdminDataSource).mutate(request);
+      setNotice(preview ? "Demo decision saved for this preview session." : action.kind === "approved" ? "Application approved. Invitation delivery is not configured; no email or account was created." : "Change recorded with its server audit event.");
       setAction(null); setRefresh(value => value + 1);
     } catch (cause) {
-      setError(safeAdminError(cause)); void recordAdminDiagnostic("ADMIN_ACTION_FAILED").catch(() => false);
+      setError(safeAdminError(cause)); if (!preview) void recordAdminDiagnostic("ADMIN_ACTION_FAILED").catch(() => false);
     } finally { setBusy(false); }
   }
 
@@ -195,7 +190,7 @@ export function PlatformAdminPage({ section, preview }: Props) {
       <button className="pa-collapse" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(value => !value)}>{collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}<span>Collapse sidebar</span></button>
     </div>
     <main id="pa-content" tabIndex={-1} className="pa-content">
-      {preview && <div className="pa-preview-strip"><strong>LOCAL PREVIEW · SYNTHETIC DATA</strong><details className="pa-preview-tools"><summary><SlidersHorizontal size={14} aria-hidden="true" />Preview controls</summary><div><p>Local visual review only. No administrator access is granted. Submitted forms never call administrative RPCs.</p><label>Display state<select value={previewState} onChange={event => setPreviewState(event.target.value as typeof previewState)}><option value="populated">Populated</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option></select></label></div></details></div>}
+      {preview && <div className="pa-preview-strip"><strong>LOCAL PREVIEW · SYNTHETIC DATA</strong><details className="pa-preview-tools"><summary><SlidersHorizontal size={14} aria-hidden="true" />Preview controls</summary><div><p>Local visual review only. No administrator access is granted. Changes stay in memory.</p><label>Display state<select value={previewState} onChange={event => setPreviewState(event.target.value as typeof previewState)}><option value="populated">Populated</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option><option value="partial">Partial</option><option value="large">525 rows</option></select></label></div></details></div>}
       <div className="pa-title"><div><p className="pa-eyebrow">{["contracts", "payments"].includes(section) ? "Subscriptions & Payments" : ["overview", "applications", "businesses", "users", "notifications"].includes(section) ? "Workspace" : "System & Security"}</p><h1>{title}</h1><p className="pa-description">{descriptions[activeSection]}</p></div><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading}><RefreshCw size={16} aria-hidden="true" /><span>Refresh</span></button></div>
       <WorkspaceTabs section={activeSection} pathFor={pathFor} />
       {authError && <p role="alert" className="pa-error">{authError}</p>}
@@ -226,14 +221,14 @@ export function PlatformAdminPage({ section, preview }: Props) {
     {details && <div className="pa-dialog-backdrop"><section className="pa-dialog pa-detail-panel" ref={detailDialog} role="dialog" aria-modal="true" aria-labelledby="pa-detail-title"><button type="button" className="pa-detail-close" aria-label="Close record details" onClick={() => setDetails(null)}><X size={18} /></button><p className="pa-eyebrow">{title} · Record details</p><h2 id="pa-detail-title">{display(details.name ?? details.business_name ?? details.display_name ?? "Record details")}</h2>{preview && <p className="pa-small">Synthetic record for visual review only.</p>}<dl>{(detailColumns ?? []).filter(([key]) => !["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "term_timing" ? contractTiming(details.starts_at, details.ends_at, data?.asOf ?? "") : key === "owners" ? Array.isArray(details.owners) ? details.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") || "Unresolved" : "Unresolved" : key.endsWith("_at") ? date(details[key]) : display(details[key])}</dd></div>)}</dl><details className="pa-policy"><summary>Technical references</summary><dl>{["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].filter(key => details[key] != null).map(key => <div key={key}><dt>{key.replace(/_/g, " ")}</dt><dd>{display(details[key])}</dd></div>)}</dl></details></section></div>}
     {action && <div className="pa-dialog-backdrop"><div className="pa-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="pa-action-title">
       <h2 id="pa-action-title">Confirm {action.kind.replace(/-/g, " ")}</h2><p>{display(action.row?.name ?? action.row?.business_name ?? "Subscription payment review")}</p>
-      <form onSubmit={event => void commitAction(event)}>{preview && <p className="pa-preview-dialog-note">Synthetic preview only. This form will not save a decision or contact a platform service.</p>}
+      <form onSubmit={event => void commitAction(event)}>{preview && <p className="pa-preview-dialog-note">Demo data. Changes stay in this preview session.</p>}
         {action.kind === "classification" && <label>Reviewed classification<select value={classification} onChange={event => setClassification(event.target.value)}>{["demo", "live", "unclassified"].map(value => <option key={value}>{value}</option>)}</select></label>}
         {action.kind === "record-payment" && <>{([["restaurantId", "Business UUID", "text"], ["amount", "Amount", "number"], ["currency", "Currency code", "text"], ["channel", "Payment channel", "text"], ["paidAt", "Payment date and time", "datetime-local"], ["reference", "Transaction reference", "text"]] as const).map(([key, label, type]) => <label key={key}>{label}<input type={type} value={payment[key]} onChange={event => setPayment(previous => ({ ...previous, [key]: event.target.value }))} {...(key === "amount" ? { min: "0.01", step: "0.01" } : {})} required maxLength={key === "currency" ? 3 : 120} /></label>)}</>}
-        <label>Decision reason<textarea value={reason} onChange={event => setReason(event.target.value)} minLength={3} maxLength={500} required /></label><p className="pa-small">Do not enter passwords, tokens, payment credentials or unnecessary personal information.</p>
-        <label className="pa-check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required />{preview ? "I reviewed the synthetic target. No decision will be saved." : "I reviewed the target and understand this decision will be audited."}</label>
+        <label>Decision reason<textarea value={reason} onChange={event => setReason(event.target.value)} minLength={action.kind === "rejected" || action.kind === "payment-rejected" ? 10 : 3} maxLength={500} required /></label><p className="pa-small">Do not enter passwords, tokens, payment credentials or unnecessary personal information.</p>
+        <label className="pa-check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required />{preview ? "I reviewed this demo record." : "I reviewed the target and understand this decision will be audited."}</label>
         {action.kind === "approved" && <p>Approval does not send an invitation, provision an account or activate a trial.</p>}
         {error && <p role="alert" className="pa-error">{error}</p>}
-        <div className="pa-row-actions"><button type="button" disabled={busy} onClick={() => setAction(null)}>Cancel</button><button className="pa-primary" disabled={busy || !confirmed || reason.trim().length < 3}>{preview ? "Preview decision — no changes" : busy ? "Recording…" : "Confirm decision"}</button></div>
+        <div className="pa-row-actions"><button type="button" disabled={busy} onClick={() => setAction(null)}>Cancel</button><button className="pa-primary" disabled={busy || !confirmed || reason.trim().length < (action.kind === "rejected" || action.kind === "payment-rejected" ? 10 : 3)}>{busy ? "Recording…" : "Confirm decision"}</button></div>
       </form>
     </div></div>}
   </div>;

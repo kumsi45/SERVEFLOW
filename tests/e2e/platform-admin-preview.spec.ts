@@ -51,22 +51,22 @@ test("all fourteen synthetic sections render without platform requests", async (
   expect(external).toEqual([]);
 });
 
-test("preview states, filters and mutation dialogs remain synthetic no-ops", async ({ page, baseURL }) => {
+test("preview states, filters and mutation dialogs remain local", async ({ page, baseURL }) => {
   test.skip(productionGuard, "Development preview only.");
   const external = await isolatePreview(page, baseURL);
   await page.goto("/platform-admin/preview/businesses");
   await page.getByRole("button", { name: "Review classification" }).first().click();
   await expect(page.getByRole("dialog", { name: /confirm classification/i })).toBeVisible();
   await page.getByLabel("Decision reason").fill("Synthetic visual review");
-  await page.getByLabel(/I reviewed the synthetic target/).check();
-  await page.getByRole("button", { name: "Preview decision — no changes" }).click();
-  await expect(page.getByText(/synthetic decision was not saved/i)).toBeVisible();
+  await page.getByLabel(/I reviewed this demo record/).check();
+  await page.getByRole("button", { name: "Confirm decision" }).click();
+  await expect(page.getByText(/Demo decision saved for this preview session/i)).toBeVisible();
 
   await page.getByText("Preview controls", { exact: true }).click();
   await page.getByLabel("Display state").selectOption("loading");
   await expect(page.getByRole("status", { name: "" }).filter({ hasText: "Loading authorized platform information" })).toBeVisible();
   await page.getByLabel("Display state").selectOption("error");
-  await expect(page.getByRole("alert")).toContainText("Synthetic preview error");
+  await expect(page.getByRole("alert")).toContainText("Demo data could not be loaded");
   await page.getByLabel("Display state").selectOption("empty");
   await expect(page.getByText("No records match this query.")).toBeVisible();
   expect(external).toEqual([]);
@@ -184,7 +184,7 @@ test("sidebar, shared theme, status contrast and preview session isolation", asy
   await expect(page.getByRole("button",{name:"Open platform navigation"})).toBeFocused();
   await page.getByRole("button",{name:"Approve",exact:true}).first().click();
   await page.screenshot({path:testInfo.outputPath("mobile-review-dialog.png")});
-  await expect(page.getByRole("dialog")).toContainText("Synthetic preview only");
+  await expect(page.getByRole("dialog")).toContainText("Changes stay in this preview session");
   await page.keyboard.press("Escape");
   expect(external).toEqual([]);
 });
