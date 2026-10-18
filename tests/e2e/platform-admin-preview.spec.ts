@@ -106,6 +106,24 @@ test("mobile tabs show supported destinations and More returns focus", async ({ 
   await expect(page.getByRole("heading", { name: "Payments & Renewals" })).toBeVisible();
 });
 
+test("overview prioritizes work without inventing health or missing counts", async ({ page, baseURL }) => {
+  test.skip(productionGuard, "Development preview only.");
+  await isolatePreview(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/platform-admin/preview/overview");
+  await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  const order = await page.locator(".pa-overview > *").evaluateAll(elements => elements.map(element => element.className));
+  expect(order[0]).toContain("pa-ui-attention");
+  expect(order[1]).toContain("pa-overview-stats");
+  await expect(page.locator(".pa-overview-stats")).toContainText("Total businesses");
+  await expect(page.locator(".pa-overview-stats")).not.toContainText("Applications to decide");
+  await expect(page.locator(".pa-ui-health .pa-badge-positive")).toHaveCount(0);
+  await page.getByText("Demo modes", { exact: true }).click();
+  await page.getByLabel("Display state").selectOption("partial");
+  await expect(page.locator(".pa-overview-stats")).toContainText("Unavailable");
+  await expect(page.locator(".pa-ui-attention")).toContainText("Unknown");
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`redesigned workspace visual matrix in ${theme} theme`, async ({ page, baseURL }, testInfo) => {
     test.skip(productionGuard, "Development preview only.");

@@ -40,5 +40,6 @@ The client maps SQLSTATE `42501` to denied authorization, `PT409`, `40001`, and 
 2. Private application reads must expose actor display name and decision timestamp for `Approved by <name> on <date>`; verify whether the present JSON projection includes them before rendering.
 3. Business lifecycle (`Active`, `Trial`, `Suspended`) is not established in the current read contract. Do not derive it from classification or contracts.
 4. Private overview activity and live platform-health probes need authorized read models. Unknown remains the only safe health state until then.
+   The current overview RPC supplies queue and stat values together, so individual attention/stat blocks cannot independently retry a failing field. The frontend separately reads the existing system-health resource and retries that panel on its own.
 5. Payment confirmation, role changes, member removal, mark-all-read notification actions, suspension/restoration, and account recovery are unsupported. Their UI must be absent or clearly disabled.
 6. A ten-character reject reason must be enforced server-side before that minimum can be promised as a platform invariant.

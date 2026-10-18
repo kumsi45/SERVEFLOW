@@ -1,7 +1,6 @@
 import { useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
 import { useModalFocus } from "../../core/accessibility/useModalFocus";
-export { StatusBadge } from "./PlatformAdminWorkspace";
 
 type ButtonKind = "primary" | "secondary" | "destructive" | "ghost" | "icon";
 export function Button({ kind = "secondary", loading = false, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { kind?: ButtonKind; loading?: boolean }) {
@@ -76,11 +75,19 @@ export function AttentionList({ items, empty = "All caught up" }: { items: Array
 }
 
 export function ActivityFeed({ items }: { items: Array<{ action: string; subject: string; actor: string; at: string }> | null }) {
-  return <section className="pa-ui-feed"><h2>Recent activity</h2>{items === null ? <p>Activity unavailable. Open Audit Logs for available records.</p> : items.length === 0 ? <p>No recent activity.</p> : <ol>{items.map((item, index) => <li key={`${item.at}-${index}`}><strong>{item.action}</strong><span>{item.subject}</span><small>{item.actor} · <time dateTime={item.at}>{new Date(item.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time></small></li>)}</ol>}</section>;
+  const relative = (at: string) => {
+    const elapsed = Date.now() - Date.parse(at);
+    if (!Number.isFinite(elapsed)) return "Time unknown";
+    const minutes = Math.round(elapsed / 60000);
+    const unit: Intl.RelativeTimeFormatUnit = Math.abs(minutes) < 60 ? "minute" : Math.abs(minutes) < 1440 ? "hour" : "day";
+    const value = unit === "minute" ? minutes : unit === "hour" ? Math.round(minutes / 60) : Math.round(minutes / 1440);
+    return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(-value, unit);
+  };
+  return <section className="pa-ui-feed"><h2>Recent activity</h2>{items === null ? <p>Activity unavailable. Open Audit Logs for available records.</p> : items.length === 0 ? <p>No recent activity.</p> : <ol>{items.map((item, index) => <li key={`${item.at}-${index}`}><strong>{item.action}</strong><span>{item.subject}</span><small>{item.actor} · <time dateTime={item.at} title={new Date(item.at).toLocaleString()}>{relative(item.at)}</time></small></li>)}</ol>}</section>;
 }
 
 export function HealthList({ items }: { items: Array<{ label: string; status: string | null; checkedAt?: string | null }> }) {
-  return <section className="pa-ui-health"><h2>Platform health</h2><ul>{items.map(item => <li key={item.label}><span>{item.label}</span><Badge tone={item.status === "healthy" ? "positive" : item.status === "failed" ? "negative" : "neutral"}>{item.status ?? "Unknown"}</Badge><small>{item.checkedAt ? new Date(item.checkedAt).toLocaleString() : "Not checked"}</small></li>)}</ul></section>;
+  return <section className="pa-ui-health"><h2>Platform health</h2><ul>{items.map(item => <li key={item.label} data-status={item.status ?? "unknown"}><span>{item.label}</span><Badge tone={item.status === "healthy" ? "positive" : item.status === "failed" ? "negative" : "neutral"}>{item.status ?? "Unknown"}</Badge><small>{item.checkedAt ? new Date(item.checkedAt).toLocaleString() : "Not checked"}</small></li>)}</ul></section>;
 }
 
 export function EmptyState({ title, action }: { title: string; action?: ReactNode }) { return <div className="pa-ui-state"><h2>{title}</h2>{action}</div>; }
