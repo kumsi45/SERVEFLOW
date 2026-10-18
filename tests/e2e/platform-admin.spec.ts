@@ -85,7 +85,7 @@ test("MFA verification is required before the protected shell", async ({ page, b
   await expect(page.getByRole("heading", { name: "Verify your authenticator" })).toBeVisible();
   await page.getByLabel("Authenticator code").fill("123456");
   await page.getByRole("button", { name: "Verify MFA", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Platform overview", exact: true })).toBeVisible();
 });
 
 test("classification requires confirmation and sends no actor or authority fields", async ({ page, baseURL }) => {
@@ -141,7 +141,7 @@ test("payment review cannot approve contracts and audit dates reach the bounded 
 
 test("missing entitlement and backup evidence remain unavailable", async ({ page, baseURL }) => {
   await isolate(page, baseURL); await page.goto("/platform-admin/overview");
-  await expect(page.locator(".pa-metrics section").filter({ has: page.getByRole("heading", { name: "Active annual contracts" }) })).toContainText("Unavailable");
+  await expect(page.locator(".pa-subscription-summary").locator("div").filter({ has: page.getByText("Active annual contracts", { exact: true }) })).toContainText("Unavailable");
   await page.goto("/platform-admin/backups");
   await expect(page.getByText("Unknown — no verified backup evidence available")).toHaveCount(4);
   await expect(page.getByRole("button", { name: /^restore$/i })).toHaveCount(0);
