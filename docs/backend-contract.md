@@ -20,6 +20,10 @@ Status: frontend working contract, 2026-10-18. This document describes checked-i
 | System health, integrations, backups, security | Limited static or unknown evidence | No active probe, restore, or recovery mutation. Unknown must stay unknown. |
 | Diagnostics, audit logs, administrators | Redacted diagnostic and audit records; private administrator records | Diagnostic recording exists. No administrator creation, promotion, revocation, or recovery endpoint. |
 
+## Stage 6 business directory behavior
+
+The business directory exposes the current name, owner, created time, and reviewed classification. It displays lifecycle as `Unknown` because the current read projection has no lifecycle field. Its detail drawer is addressable with `?business=<UUID>`. `Suspend` and `Restore` remain disabled, with a reason visible to keyboard and pointer users, until server-enforced mutations exist.
+
 ## Errors and permissions
 
 The client maps SQLSTATE `42501` to denied authorization, `PT409`, `40001`, and `23505` to conflicts, `22023` and `23514` to validation errors, and `P0002` to missing records. Other failures remain unconfirmed service errors. Mutations carry a UUID `request_id` for retry handling. The private route requires a privately provisioned platform administrator with verified recovery and TOTP; management and sensitive operations have separate capability checks, and sensitive operations require recent MFA. UI disabling is only a convenience; server authorization remains authoritative.

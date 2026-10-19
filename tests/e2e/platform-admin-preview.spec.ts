@@ -152,6 +152,26 @@ test("application review validates reasons, updates the queue, and keeps filters
   expect(external).toEqual([]);
 });
 
+test("business controls preserve unknown lifecycle and only classify unclassified rows", async ({ page, baseURL }) => {
+  test.skip(productionGuard, "Development preview only.");
+  const external = await isolatePreview(page, baseURL);
+  await page.goto("/platform-admin/preview/businesses");
+  await expect(page.getByText("Entitlement", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".pa-data-table")).toContainText("Unknown");
+  await expect(page.getByRole("button", { name: "Suspend" }).first()).toBeDisabled();
+  await page.getByRole("button", { name: "Unclassified", exact: true }).click();
+  await expect(page).toHaveURL(/status=unclassified/);
+  await expect(page.getByRole("button", { name: "Review classification" })).toHaveCount(2);
+  await page.getByRole("button", { name: "Review classification" }).first().click();
+  await page.getByLabel("Reviewed classification").selectOption("live");
+  await page.getByLabel("Decision reason").fill("Reviewed supporting documentation");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Confirm decision" }).click();
+  await expect(page.getByText("Demo decision saved for this preview session.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review classification" })).toHaveCount(1);
+  expect(external).toEqual([]);
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`redesigned workspace visual matrix in ${theme} theme`, async ({ page, baseURL }, testInfo) => {
     test.skip(productionGuard, "Development preview only.");

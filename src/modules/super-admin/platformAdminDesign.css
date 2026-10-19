@@ -152,6 +152,10 @@
 .pa-application-status { display: grid; justify-items: start; gap: 8px; }
 .pa-application-status small { font-size: 12px; line-height: 16px; }
 .pa-root .pa-reject { color: var(--pa-negative); border-color: var(--pa-negative); }
+.pa-business-actions { display: flex; gap: 6px; }
+.pa-business-actions button { min-height: 32px; padding: 6px 8px; font-size: 12px; }
+.pa-classification-hint { margin: 8px 0 16px; color: var(--pa-muted); font-size: 13px; }
+.pa-businesses .pa-data-table th:nth-child(2) { min-width: 108px; }
 @media (max-width: 768px) {
   .pa-applications .pa-data-table table,.pa-applications .pa-data-table tbody,.pa-applications .pa-data-table tr { display: block; min-width: 0; }
   .pa-applications .pa-data-table thead { display: none; }
@@ -164,6 +168,15 @@
   .pa-application-actions button { flex: 1; }
   .pa-application-filters .pa-search { flex-basis: 100%; min-width: 0; }
   .pa-applications .pa-data-table { border: 0; background: transparent; }
+  .pa-businesses .pa-data-table table,.pa-businesses .pa-data-table tbody,.pa-businesses .pa-data-table tr { display: block; min-width: 0; }
+  .pa-businesses .pa-data-table thead { display: none; }
+  .pa-businesses .pa-data-table tbody { display: grid; gap: 12px; }
+  .pa-businesses .pa-data-table tr { padding: 16px; background: var(--pa-surface); border-radius: var(--pa-radius-lg); }
+  .pa-businesses .pa-data-table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 8px 0; }
+  .pa-businesses .pa-data-table td::before { content: attr(data-label); color: var(--pa-muted); font-size: 12px; }
+  .pa-businesses .pa-data-table td:first-child::before,.pa-businesses .pa-data-table td:last-child::before { display: none; }
+  .pa-businesses .pa-data-table { border: 0; background: transparent; }
+  .pa-business-actions { flex-wrap: wrap; }
 }
 
 /* Workspace shell */
