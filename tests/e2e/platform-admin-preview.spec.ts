@@ -209,7 +209,7 @@ test("directory search, filters, pagination, details and navigation are usable",
   await page.getByRole("button",{name:"Search",exact:true}).click();
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await page.getByRole("button",{name:/View details for/}).click();
-  await expect(page.getByRole("dialog")).toContainText("Synthetic Acacia Lodge");
+  await expect(page.getByRole("dialog")).toContainText("Acacia Lodge");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button",{name:/View details for/})).toBeFocused();
   await page.getByLabel("Status",{exact:true}).selectOption("demo");

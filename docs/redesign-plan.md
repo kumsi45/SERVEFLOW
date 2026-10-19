@@ -106,3 +106,7 @@ Businesses removes the entitlement column because the source only reports enforc
 ## Stage 7 remaining operational views
 
 Payments now starts with Needs review and provides status chips, live search, evidence drawers, and the supported explicit reject action. It says only that payments are never auto-confirmed; the current contract has no confirmation mutation, so no confirm control is simulated. Users and invitations retain the existing in-page split. Notifications, contracts, diagnostics, and access records retain their source-backed list views while the system tabs report only available evidence or Unknown.
+
+## Stage 8 copy and accessibility polish
+
+Removed the repeated action-policy disclosures, the page-body data-source footer, visible `Synthetic` fixture prefixes, `Preview Owner`, and `Unavailable in preview`. Reworded integration and backup evidence lines to avoid em dashes. The short classification and payment hints remain because they directly affect a current review decision. Preview-state controls stay confined to the development-only preview route for test coverage.

@@ -20,7 +20,7 @@ export type PlatformAdminPreviewConfig = {
 };
 type Props = { section: AdminSection | "login"; preview?: PlatformAdminPreviewConfig };
 type Action = { kind: "classification" | "approved" | "rejected" | "payment-rejected" | "record-payment"; row?: AdminRow; requestId: string };
-const display = (value: unknown): string => value === null || value === undefined ? "Unavailable" : typeof value === "boolean" ? value ? "Yes" : "No" : typeof value === "string" || typeof value === "number" ? String(value) : "—";
+const display = (value: unknown): string => value === null || value === undefined ? "Unavailable" : typeof value === "boolean" ? value ? "Yes" : "No" : typeof value === "string" || typeof value === "number" ? String(value) : "Unavailable";
 const date = (value: unknown) => typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : "Unavailable";
 const columns: Record<string, Array<[string, string]>> = {
   businesses: [["name", "Business"], ["classification", "Classification"], ["owners", "Owner"], ["created_at", "Created"]],
@@ -34,17 +34,6 @@ const columns: Record<string, Array<[string, string]>> = {
   administrators: [["display_name", "Administrator"], ["id", "Auth identity"], ["active", "Active"], ["can_manage", "Manage"], ["can_sensitive", "Sensitive"], ["recovery_verified", "Recovery reviewed"]],
   diagnostics: [["created_at", "Time"], ["code", "Redacted category"], ["source", "Source"], ["environment", "Environment"], ["request_id", "Correlation"]],
 };
-const notes: Partial<Record<AdminSection, string>> = {
-  applications: "Application intake is disabled pending approved applicant retention. Approval records a delivery-disabled invitation intent; it does not create an account, send email or activate a trial.",
-  businesses: "Classification is a reviewed label, not a paid entitlement. Existing businesses remain unclassified until reviewed. Suspension and restoration are unavailable until server enforcement is complete.",
-  users: "Tenant membership and platform administrator authorization are separate. Invitations cannot be sent, accepted or provisioned until the reviewed provider and provisioning workflow are enabled.",
-  contracts: "Trials require a separate readiness authority. Annual terms are exactly 365 × 24 hours. Activation, renewals and expiry enforcement cutover are unavailable; existing dates and access are unchanged.",
-  payments: "ServeFlow subscription reviews are separate from restaurant customer invoices. A recorded payment is unverified evidence. Approval and contract activation are disabled pending enforcement and renewal policy. No evidence upload is enabled.",
-  notifications: "30-day and 15-day reminder identities have a durable outbox foundation. Scheduling and delivery are disabled until channel, recipients and send policy are approved.",
-  diagnostics: "Only newly collected, redacted administrator-interface failures appear here. Historical Edge logs and tenant errors are not ingested. No automatic repair is enabled.",
-  administrators: "Named identities are provisioned privately. No administrator creation, promotion, revocation or recovery endpoint is exposed here. Recovery review is an operator attestation, not a completed recovery drill.",
-};
-
 export function PlatformAdminPage({ section, preview }: Props) {
   if (preview && !import.meta.env.DEV) throw new Error("Platform administration preview is unavailable in production.");
   const [context, setContext] = useState<AdminContext | null>(null);
@@ -222,7 +211,6 @@ export function PlatformAdminPage({ section, preview }: Props) {
       <div className="pa-title"><div><h1>{title}</h1></div><button type="button" aria-label="Refresh" title="Refresh" onClick={() => setRefresh(value => value + 1)} disabled={loading}><RefreshCw size={18} aria-hidden="true" /></button></div>
       <WorkspaceTabs section={activeSection} pathFor={pathFor} />
       {authError && <p role="alert" className="pa-error">{authError}</p>}
-      {notes[section as AdminSection] && <details className="pa-policy"><summary>Available actions & policy</summary><p>{notes[section as AdminSection]}</p></details>}
       {error && <div role="alert" className="pa-error">{error}<button type="button" onClick={() => { if (preview) setPreviewState("populated"); else setRefresh(value => value + 1); }}>Try again</button></div>}
       {notice && <p role="status" className="pa-success">{notice}</p>}
       {section === "users" && <div className="pa-tabs"><button aria-pressed={!invitationView} onClick={() => { setInvitationView(false); setCursor(null); }}>Business members</button><button aria-pressed={invitationView} onClick={() => { setInvitationView(true); setCursor(null); }}>Invitations</button></div>}
@@ -244,10 +232,9 @@ export function PlatformAdminPage({ section, preview }: Props) {
         <div className="pa-pagination"><button disabled={!cursor} onClick={() => setCursor(null)}><ArrowLeft size={16} aria-hidden="true" />First page</button><button disabled={!data.nextCursor} onClick={() => setCursor(data.nextCursor ?? null)}>Next page</button></div>
       </>}
       {!loading && data && section === "system-health" && <section className="pa-panel"><h2>Observed service checks</h2><dl>{["database", "frontend", "auth", "storage", "realtime", "edgeFunctions"].map(key => <div key={key}><dt>{{ database: "Database", frontend: "Web application", auth: "Sign-in service", storage: "File storage", realtime: "Live updates", edgeFunctions: "Background services" }[key]}</dt><dd><StatusBadge value={key === "database" ? (data.database as Record<string, unknown>)?.status : data[key]} /></dd></div>)}</dl><p>{display((data.database as Record<string, unknown>)?.meaning)}</p><p>Unknown means no supported live probe was performed. This view does not check or resume printing.</p></section>}
-      {!loading && data && section === "integrations" && <section className="pa-panel"><h2>Integration evidence</h2><dl>{["Supabase Auth", "Storage", "Realtime", "OpenAI menu imports"].map(name => <div key={name}><dt>{name}</dt><dd>Not verified — no integration health probe configured</dd></div>)}<div><dt>Invitation and reminder delivery</dt><dd>Not configured</dd></div><div><dt>Printer integration</dt><dd>Paused — excluded from checks and recovery</dd></div></dl></section>}
-      {!loading && data && section === "backups" && <section className="pa-panel"><h2>Recovery readiness</h2><dl>{["Backup configured", "Last successful backup", "Restoration tested", "Verified restorable"].map(label => <div key={label}><dt>{label}</dt><dd>Unknown — no verified backup evidence available</dd></div>)}</dl><p>Restoration requires a separately approved runbook, verified target, pre-restoration safeguard, out-of-band authorization and post-restore validation. No restore or shell action is exposed.</p></section>}
+      {!loading && data && section === "integrations" && <section className="pa-panel"><h2>Integration evidence</h2><dl>{["Supabase Auth", "Storage", "Realtime", "OpenAI menu imports"].map(name => <div key={name}><dt>{name}</dt><dd>Not verified ; no integration health probe configured</dd></div>)}<div><dt>Invitation and reminder delivery</dt><dd>Not configured</dd></div><div><dt>Printer integration</dt><dd>Paused ; excluded from checks and recovery</dd></div></dl></section>}
+      {!loading && data && section === "backups" && <section className="pa-panel"><h2>Recovery readiness</h2><dl>{["Backup configured", "Last successful backup", "Restoration tested", "Verified restorable"].map(label => <div key={label}><dt>{label}</dt><dd>Unknown ; no verified backup evidence available</dd></div>)}</dl><p>Restoration requires a separately approved runbook, verified target, pre-restoration safeguard, out-of-band authorization and post-restore validation. No restore or shell action is exposed.</p></section>}
       {!loading && data && section === "security" && <section className="pa-panel"><h2>Enforced administrator boundary</h2><p>{display(data.mfa)}</p><p>Administrator authorization is checked in the database for every platform operation. Verified recovery must be recorded through the trusted provisioning procedure. User metadata and tenant roles do not grant access.</p><h2>Unavailable capabilities</h2><p>New application intake, invitation delivery/acceptance, provisioning, trial activation, contract activation/renewal, suspension/restoration, notification sending and recovery mutations are disabled. No dashboard switch enables them.</p></section>}
-      {data && <p className="pa-small pa-source">Source: {data.source} · Checked {date(data.asOf)}</p>}
     </main>
     <BottomTabBar items={[
       { label: "Overview", href: pathFor("overview"), active: activeSection === "overview", icon: <LayoutDashboard size={20} aria-hidden="true" /> },
