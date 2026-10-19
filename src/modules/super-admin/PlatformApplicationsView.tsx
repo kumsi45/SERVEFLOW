@@ -36,7 +36,7 @@ export function PlatformApplicationsView({ rows, result, search, onSearch, statu
   return <section className="pa-applications" aria-label="Applications">
     <div className="pa-application-filters"><div className="pa-filter-chips" aria-label="Application status">{(["pending", "approved", "rejected", ""] as const).map(value => <FilterChip key={value || "all"} active={status === value} count={value === "pending" ? pendingCount : null} onClick={() => onStatus(value)}>{value ? value[0].toUpperCase() + value.slice(1) : "All"}</FilterChip>)}</div><SearchInput id="pa-application-search" label="Search applications" placeholder="Search businesses or email" value={search} onChange={event => onSearch(event.target.value)} maxLength={100} /></div>
     <p className="pa-sort-note">Submitted: newest first</p>
-    {loading ? <Skeleton /> : rows.length === 0 ? <div className="pa-ui-state"><h2>No applications found</h2><p>Try another status or search.</p></div> : <DataTable label="Application records" columns={columns} rows={rows} onOpen={onOpen} />}
+    {loading ? <Skeleton /> : rows.length === 0 ? <div className="pa-ui-state"><p>No applications match these filters.</p></div> : <DataTable label="Application records" columns={columns} rows={rows} onOpen={onOpen} />}
     {(cursor || result.nextCursor) && <Pagination previousLabel="First page" start={pageIndex + 1} end={pageIndex + rows.length} total={null} size={rows.length} previous={cursor ? onFirst : undefined} next={result.nextCursor ? onNext : undefined} />}
   </section>;
 }

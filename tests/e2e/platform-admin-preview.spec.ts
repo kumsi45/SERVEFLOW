@@ -56,7 +56,7 @@ test("preview states, filters and mutation dialogs remain local", async ({ page,
   const external = await isolatePreview(page, baseURL);
   await page.goto("/platform-admin/preview/businesses");
   await page.getByRole("button", { name: "Review classification" }).first().click();
-  await expect(page.getByRole("dialog", { name: /confirm classification/i })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: /review classification/i })).toBeVisible();
   await page.getByLabel("Decision reason").fill("Synthetic visual review");
   await page.getByLabel(/I reviewed this demo record/).check();
   await page.getByRole("button", { name: "Confirm decision" }).click();
@@ -68,7 +68,7 @@ test("preview states, filters and mutation dialogs remain local", async ({ page,
   await page.getByLabel("Display state").selectOption("error");
   await expect(page.getByRole("alert")).toContainText("Demo data could not be loaded");
   await page.getByLabel("Display state").selectOption("empty");
-  await expect(page.getByText("No records match this query.")).toBeVisible();
+  await expect(page.getByText("No records match these filters.")).toBeVisible();
   expect(external).toEqual([]);
 });
 
@@ -172,6 +172,18 @@ test("business controls preserve unknown lifecycle and only classify unclassifie
   expect(external).toEqual([]);
 });
 
+test("review pages use one visible title and concise empty states", async ({ page, baseURL }) => {
+  test.skip(productionGuard, "Development preview only.");
+  await isolatePreview(page, baseURL);
+  for (const [section, title, searchLabel] of [["applications", "Applications", "Search applications"], ["businesses", "Businesses", "Search businesses"], ["payments", "Payments & Renewals", "Search payments"]] as const) {
+    await page.goto(`/platform-admin/preview/${section}`);
+    await expect(page.locator("#pa-content h1")).toHaveText(title);
+    await expect(page.locator("#pa-content h1")).toHaveCount(1);
+    await page.getByRole("searchbox", { name: searchLabel }).fill("no matching record");
+    await expect(page.locator(".pa-ui-state p")).toContainText("match these filters");
+  }
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`redesigned workspace visual matrix in ${theme} theme`, async ({ page, baseURL }, testInfo) => {
     test.skip(productionGuard, "Development preview only.");
@@ -213,7 +225,7 @@ test("directory search, filters, pagination, details and navigation are usable",
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button",{name:/View details for/})).toBeFocused();
   await page.getByLabel("Status",{exact:true}).selectOption("demo");
-  await expect(page.getByText("No records match this query.",{exact:false})).toBeVisible();
+  await expect(page.getByText("No records match these filters.",{exact:false})).toBeVisible();
   await page.setViewportSize({width:320,height:760});
   await page.getByRole("button",{name:"More"}).click();
   expect(await page.evaluate(()=>document.body.style.overflow)).toBe("hidden");
@@ -266,7 +278,7 @@ test("sidebar, shared theme, status contrast and preview session isolation", asy
   await expect(page.getByRole("button",{name:"More"})).toBeFocused();
   await page.getByRole("button",{name:"Approve",exact:true}).first().click();
   await page.screenshot({path:testInfo.outputPath("mobile-review-dialog.png")});
-  await expect(page.getByRole("dialog")).toContainText("Changes stay in this preview session");
+  await expect(page.getByText("Demo data", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   expect(external).toEqual([]);
 });

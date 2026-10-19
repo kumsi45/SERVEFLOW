@@ -23,7 +23,7 @@ export function PlatformBusinessesView({ rows, result, search, onSearch, status,
   return <section className="pa-businesses" aria-label="Businesses">
     <div className="pa-application-filters"><div className="pa-filter-chips" aria-label="Business classification">{(["", "live", "demo", "unclassified"] as const).map(value => <FilterChip key={value || "all"} active={status === value} onClick={() => onStatus(value)}>{value ? value[0].toUpperCase() + value.slice(1) : "All"}</FilterChip>)}</div><SearchInput id="pa-business-search" label="Search businesses" placeholder="Search businesses" value={search} onChange={event => onSearch(event.target.value)} maxLength={100} /></div>
     <p className="pa-classification-hint"><Tooltip text="A reviewed label, not a paid entitlement.">Classification</Tooltip> is reviewed separately from billing and access enforcement.</p>
-    {rows.length === 0 ? <div className="pa-ui-state"><h2>No businesses found</h2><p>Try another classification or search.</p></div> : <DataTable label="Business records" columns={columns} rows={rows} onOpen={onOpen} />}
+    {rows.length === 0 ? <div className="pa-ui-state"><p>No businesses match these filters.</p></div> : <DataTable label="Business records" columns={columns} rows={rows} onOpen={onOpen} />}
     {(cursor || result.nextCursor) && <Pagination previousLabel="First page" start={pageIndex + 1} end={pageIndex + rows.length} total={null} size={rows.length} previous={cursor ? onFirst : undefined} next={result.nextCursor ? onNext : undefined} />}
   </section>;
 }

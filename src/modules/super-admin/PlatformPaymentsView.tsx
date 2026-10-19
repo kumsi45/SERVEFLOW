@@ -23,7 +23,7 @@ export function PlatformPaymentsView({ rows, result, search, onSearch, status, o
   return <section className="pa-payments-view" aria-label="Payment reviews">
     <div className="pa-application-filters"><div className="pa-filter-chips" aria-label="Payment status">{(["pending", "approved", "rejected", ""] as const).map(value => <FilterChip key={value || "all"} active={status === value} onClick={() => onStatus(value)}>{label(value)}</FilterChip>)}</div><SearchInput id="pa-payment-search" label="Search payments" placeholder="Search payments" value={search} onChange={event => onSearch(event.target.value)} maxLength={100} /></div>
     <p className="pa-classification-hint">Payments are never auto-confirmed.</p>
-    {rows.length === 0 ? <div className="pa-ui-state"><h2>No payments found</h2><p>Try another status or search.</p></div> : <DataTable label="Payment evidence" columns={columns} rows={rows} onOpen={onOpen} />}
+    {rows.length === 0 ? <div className="pa-ui-state"><p>No payments match these filters.</p></div> : <DataTable label="Payment evidence" columns={columns} rows={rows} onOpen={onOpen} />}
     {(cursor || result.nextCursor) && <Pagination previousLabel="First page" start={pageIndex + 1} end={pageIndex + rows.length} total={null} size={rows.length} previous={cursor ? onFirst : undefined} next={result.nextCursor ? onNext : undefined} />}
   </section>;
 }
