@@ -4,6 +4,14 @@ import { createPreviewAdminDataSource } from "../../src/modules/super-admin/Plat
 const query = (resource: "applications" | "businesses") => ({ resource, search: "", status: "", cursor: null, from: "", through: "" });
 
 describe("platform admin demo data boundary", () => {
+  it("leaves a pending application unchanged when a mutation fails", async () => {
+    const source = createPreviewAdminDataSource({ latencyMs: 0 });
+    const first = (await source.read(query("applications"))).items![0];
+    source.setMode("error");
+    await expect(source.mutate({ name: "platform_admin_decide_application", values: { application_id: first.id, decision: "approved", reason: "Reviewed documents" }, requestId: "failed-request" })).rejects.toMatchObject({ code: "DEMO_ERROR" });
+    source.setMode("populated");
+    expect((await source.read(query("applications"))).items!.find(row => row.id === first.id)?.status).toBe("pending");
+  });
   it("exposes empty, error, partial, and large datasets without changing private data", async () => {
     const source = createPreviewAdminDataSource({ latencyMs: 0 });
     source.setMode("empty");

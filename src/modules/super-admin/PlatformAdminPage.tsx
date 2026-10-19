@@ -7,7 +7,8 @@ import { adminContext, recordAdminDiagnostic, safeAdminError, type AdminContext,
 import { privateAdminDataSource, type AdminDataSource, type AdminMutationRequest } from "./platformAdminData";
 import { PublicThemeToggle } from "../landing/components/PublicThemeToggle";
 import { WorkspaceNavigation, WorkspaceTabs, PlatformOverview, StatusBadge, contractTiming, pageTitles } from "./PlatformAdminWorkspace";
-import { BottomTabBar, DemoBanner } from "./PlatformAdminUI";
+import { BottomTabBar, DemoBanner, Drawer } from "./PlatformAdminUI";
+import { PlatformApplicationsView } from "./PlatformApplicationsView";
 import "./platformAdmin.css";
 import "./platformAdminDesign.css";
 
@@ -21,7 +22,7 @@ const display = (value: unknown): string => value === null || value === undefine
 const date = (value: unknown) => typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : "Unavailable";
 const columns: Record<string, Array<[string, string]>> = {
   businesses: [["name", "Business"], ["slug", "Slug"], ["classification", "Classification"], ["owners", "Owner association"], ["entitlement", "Entitlement"], ["created_at", "Created"]],
-  applications: [["business_name", "Business"], ["business_type", "Type"], ["contact_name", "Contact"], ["contact_email", "Email"], ["status", "Decision"], ["decision_reason", "Reason"], ["created_at", "Submitted"]],
+  applications: [["business_name", "Business"], ["business_type", "Type"], ["contact_name", "Contact"], ["contact_email", "Email"], ["status", "Status"], ["decision_reason", "Reason"], ["decided_at", "Decided"], ["created_at", "Submitted"]],
   users: [["display_name", "Member"], ["business_name", "Business"], ["role", "Tenant role"], ["active", "Active"], ["created_at", "Created"]],
   invitations: [["business_name", "Business"], ["application_id", "Application"], ["delivery_status", "Delivery"], ["created_at", "Created"]],
   contracts: [["business_name", "Business"], ["kind", "Term"], ["starts_at", "Start"], ["ends_at", "End"], ["term_timing", "Term timing"]],
@@ -50,8 +51,9 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const [authError, setAuthError] = useState(""); const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState(false); const drawer = useRef<HTMLDivElement>(null); const closeButton = useRef<HTMLButtonElement>(null);
   const [data, setData] = useState<AdminResult | null>(null); const [error, setError] = useState(""); const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(false); const [search, setSearch] = useState(""); const [submittedSearch, setSubmittedSearch] = useState("");
-  const [status, setStatus] = useState(() => { const value = new URLSearchParams(window.location.search).get("status") ?? ""; return ["pending", "approved", "rejected", "live", "demo", "unclassified"].includes(value) ? value : ""; }); const [cursor, setCursor] = useState<AdminCursor | null>(null); const [refresh, setRefresh] = useState(0);
+  const [loading, setLoading] = useState(false); const [search, setSearch] = useState(() => section === "applications" ? new URLSearchParams(window.location.search).get("search") ?? "" : ""); const [submittedSearch, setSubmittedSearch] = useState(() => section === "applications" ? new URLSearchParams(window.location.search).get("search") ?? "" : "");
+  const [status, setStatus] = useState(() => { const value = new URLSearchParams(window.location.search).get("status"); return value !== null && ["", "pending", "approved", "rejected", "live", "demo", "unclassified"].includes(value) ? value : section === "applications" ? "pending" : ""; }); const [cursor, setCursor] = useState<AdminCursor | null>(null); const [refresh, setRefresh] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
   const [fromDate, setFromDate] = useState(""); const [throughDate, setThroughDate] = useState("");
   const [invitationView, setInvitationView] = useState(false); const sequence = useRef(0);
   const [action, setAction] = useState<Action | null>(null); const dialog = useRef<HTMLDivElement>(null);
@@ -61,8 +63,9 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("serveflow.platform-sidebar-collapsed") === "true"; } catch { return false; } });
   const [queueCounts, setQueueCounts] = useState<{ applications: number | null; payments: number | null }>({ applications: null, payments: null });
   const [details, setDetails] = useState<AdminRow | null>(null);
-  const detailDialog = useRef<HTMLDivElement>(null);
-  useModalFocus(Boolean(details), () => setDetails(null), detailDialog);
+  useEffect(() => { if (section !== "applications") return; const timer = window.setTimeout(() => { setCursor(null); setPageIndex(0); setSubmittedSearch(search.trim()); }, 250); return () => window.clearTimeout(timer); }, [search, section]);
+  useEffect(() => { if (section !== "applications") return; const url = new URL(window.location.href); url.searchParams.set("status", status); if (submittedSearch) url.searchParams.set("search", submittedSearch); else url.searchParams.delete("search"); window.history.replaceState(null, "", url); }, [section, status, submittedSearch]);
+  useEffect(() => { if (section !== "applications" || !data?.items || details) return; const id = new URLSearchParams(window.location.search).get("application"); const row = data.items.find(item => item.id === id); if (row) setDetails(row); }, [section, data, details]);
   useEffect(() => { if (!menu && !action && !details) return; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [menu, action, details]);
   useModalFocus(menu, () => setMenu(false), drawer, closeButton);
   useModalFocus(Boolean(action), () => { if (!busy) setAction(null); }, dialog);
@@ -143,12 +146,22 @@ export function PlatformAdminPage({ section, preview }: Props) {
     finally { setBusy(false); }
   }
   function openAction(kind: Action["kind"], row?: AdminRow) {
+    closeDetails();
     setAction({ kind, row, requestId: createBrowserUuid() }); setReason(""); setConfirmed(false); setNotice("");
     setClassification(typeof row?.classification === "string" ? row.classification : "demo");
   }
+  function openDetails(row: AdminRow) {
+    setDetails(row);
+    if (section === "applications") { const url = new URL(window.location.href); url.searchParams.set("application", row.id); window.history.replaceState(null, "", url); }
+  }
+  function closeDetails() {
+    const url = new URL(window.location.href); url.searchParams.delete("application"); window.history.replaceState(null, "", url); setDetails(null);
+  }
   async function commitAction(event: FormEvent) {
     event.preventDefault(); if (!action || !confirmed || reason.trim().length < (action.kind === "rejected" || action.kind === "payment-rejected" ? 10 : 3)) return;
+    const previousData = data;
     setBusy(true); setError("");
+    if (data && (action.kind === "approved" || action.kind === "rejected")) setData({ ...data, items: data.items?.map(row => row.id === action.row?.id ? { ...row, status: action.kind } : row) });
     try {
       const request: AdminMutationRequest = action.kind === "classification" ? { name: "platform_admin_classify", values: { target_restaurant_id: action.row!.id, classification, expected_version: action.row!.version, reason }, requestId: action.requestId }
         : action.kind === "approved" || action.kind === "rejected" ? { name: "platform_admin_decide_application", values: { application_id: action.row!.id, decision: action.kind, reason }, requestId: action.requestId }
@@ -158,6 +171,7 @@ export function PlatformAdminPage({ section, preview }: Props) {
       setNotice(preview ? "Demo decision saved for this preview session." : action.kind === "approved" ? "Application approved. Invitation delivery is not configured; no email or account was created." : "Change recorded with its server audit event.");
       setAction(null); setRefresh(value => value + 1);
     } catch (cause) {
+      setData(previousData);
       setError(safeAdminError(cause)); if (!preview) void recordAdminDiagnostic("ADMIN_ACTION_FAILED").catch(() => false);
     } finally { setBusy(false); }
   }
@@ -185,7 +199,7 @@ export function PlatformAdminPage({ section, preview }: Props) {
   const pathFor = (key: AdminSection) => preview ? preview.pathFor(key) : `/platform-admin/${key}`;
   const detailColumns = columns[effectiveSection];
   const secondaryFields = ["slug", "contact_email", "contact_name", "decision_reason", "reference", "reason", "actor_id", "target_id", "request_id", "application_id", "id", "environment"];
-  const list = detailColumns?.filter(([key]) => !secondaryFields.includes(key));
+  const list = section === "applications" ? undefined : detailColumns?.filter(([key]) => !secondaryFields.includes(key));
   const rows = data?.items ?? [];
   const actionAllowed = preview ? ["businesses", "applications", "payments"].includes(section) : section === "businesses" ? context?.canManage : section === "applications" ? context?.canManage : section === "payments" ? context?.canSensitive : false;
   return <div className={`pa-root pa-shell${collapsed ? " pa-collapsed" : ""}`}>
@@ -218,10 +232,11 @@ export function PlatformAdminPage({ section, preview }: Props) {
       </form>}
       {section === "contracts" && <p className="pa-small">Term timing is calculated from recorded dates. It does not confirm payment, renewal, or operational access.</p>}
       {section === "payments" && <button type="button" disabled={!preview && !context?.canManage} onClick={() => openAction("record-payment")}>Record submitted payment</button>}
-      {loading && <div role="status" className="pa-loading"><p>Loading authorized platform information…</p><div className="pa-skeleton" /><div className="pa-skeleton" /><div className="pa-skeleton" /></div>}
+      {loading && section !== "applications" && <div role="status" className="pa-loading"><p>Loading authorized platform information…</p><div className="pa-skeleton" /><div className="pa-skeleton" /><div className="pa-skeleton" /></div>}
       {!loading && data && section === "overview" && <PlatformOverview data={data} pathFor={pathFor} synthetic={Boolean(preview)} dataSource={preview?.dataSource ?? privateAdminDataSource} />}
+      {section === "applications" && <PlatformApplicationsView rows={rows} result={data ?? { asOf: "", source: "" }} search={search} onSearch={setSearch} status={status} onStatus={value => { setStatus(value); setCursor(null); setPageIndex(0); }} pendingCount={queueCounts.applications} cursor={cursor} pageIndex={pageIndex} onFirst={() => { setCursor(null); setPageIndex(0); }} onNext={() => { setPageIndex(value => value + rows.length); setCursor(data?.nextCursor ?? null); }} onOpen={openDetails} onApprove={row => openAction("approved", row)} onReject={row => openAction("rejected", row)} canDecide={Boolean(actionAllowed)} busy={busy} loading={loading} />}
       {!loading && data && list && <>
-        {rows.length === 0 ? <p className="pa-empty">No records match this query. Unsupported collection and delivery workflows remain disabled.</p> : <div className="pa-table-wrap" tabIndex={0} role="region" aria-label={`${title} records`}><table><thead><tr>{list.map(([key, label]) => <th key={key} scope="col">{label}</th>)}<th scope="col">Details</th>{actionAllowed && <th scope="col">Action</th>}</tr></thead><tbody>{rows.map(row => <tr key={row.id}>{list.map(([key, label]) => <td key={key} data-label={label}>{key === "term_timing" ? <StatusBadge value={contractTiming(row.starts_at, row.ends_at, data.asOf)} /> : key === "owners" ? Array.isArray(row.owners) && row.owners.length ? row.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") : "Unresolved" : key.endsWith("_at") ? date(row[key]) : ["status", "classification", "active", "outcome", "delivery_status", "recovery_verified", "can_manage", "can_sensitive"].includes(key) ? <StatusBadge value={row[key]} /> : display(row[key])}</td>)}<td data-label="Details"><button onClick={() => setDetails(row)} aria-label={`View details for ${display(row.name ?? row.business_name ?? row.display_name ?? row.action ?? row.code ?? row.id)}`}>View details</button></td>{actionAllowed && <td data-label="Action"><div className="pa-row-actions">{section === "businesses" ? <button onClick={() => openAction("classification", row)}>Review classification</button> : row.status === "pending" && section === "applications" ? <><button onClick={() => openAction("approved", row)}>Approve</button><button onClick={() => openAction("rejected", row)}>Reject</button></> : row.status === "pending" && section === "payments" ? <button onClick={() => openAction("payment-rejected", row)}>Reject payment</button> : <span className="pa-small">Reviewed</span>}</div></td>}</tr>)}</tbody></table></div>}
+        {rows.length === 0 ? <p className="pa-empty">No records match this query. Unsupported collection and delivery workflows remain disabled.</p> : <div className="pa-table-wrap" tabIndex={0} role="region" aria-label={`${title} records`}><table><thead><tr>{list.map(([key, label]) => <th key={key} scope="col">{label}</th>)}<th scope="col">Details</th>{actionAllowed && <th scope="col">Action</th>}</tr></thead><tbody>{rows.map(row => <tr key={row.id}>{list.map(([key, label]) => <td key={key} data-label={label}>{key === "term_timing" ? <StatusBadge value={contractTiming(row.starts_at, row.ends_at, data.asOf)} /> : key === "owners" ? Array.isArray(row.owners) && row.owners.length ? row.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") : "Unresolved" : key.endsWith("_at") ? date(row[key]) : ["status", "classification", "active", "outcome", "delivery_status", "recovery_verified", "can_manage", "can_sensitive"].includes(key) ? <StatusBadge value={row[key]} /> : display(row[key])}</td>)}<td data-label="Details"><button onClick={() => openDetails(row)} aria-label={`View details for ${display(row.name ?? row.business_name ?? row.display_name ?? row.action ?? row.code ?? row.id)}`}>View details</button></td>{actionAllowed && <td data-label="Action"><div className="pa-row-actions">{section === "businesses" ? <button onClick={() => openAction("classification", row)}>Review classification</button> : row.status === "pending" && section === "applications" ? <><button onClick={() => openAction("approved", row)}>Approve</button><button onClick={() => openAction("rejected", row)}>Reject</button></> : row.status === "pending" && section === "payments" ? <button onClick={() => openAction("payment-rejected", row)}>Reject payment</button> : <span className="pa-small">Reviewed</span>}</div></td>}</tr>)}</tbody></table></div>}
         <div className="pa-pagination"><button disabled={!cursor} onClick={() => setCursor(null)}><ArrowLeft size={16} aria-hidden="true" />First page</button><button disabled={!data.nextCursor} onClick={() => setCursor(data.nextCursor ?? null)}>Next page</button></div>
       </>}
       {!loading && data && section === "system-health" && <section className="pa-panel"><h2>Observed service checks</h2><dl>{["database", "frontend", "auth", "storage", "realtime", "edgeFunctions"].map(key => <div key={key}><dt>{{ database: "Database", frontend: "Web application", auth: "Sign-in service", storage: "File storage", realtime: "Live updates", edgeFunctions: "Background services" }[key]}</dt><dd><StatusBadge value={key === "database" ? (data.database as Record<string, unknown>)?.status : data[key]} /></dd></div>)}</dl><p>{display((data.database as Record<string, unknown>)?.meaning)}</p><p>Unknown means no supported live probe was performed. This view does not check or resume printing.</p></section>}
@@ -237,7 +252,7 @@ export function PlatformAdminPage({ section, preview }: Props) {
       { label: "Payments", href: pathFor("payments"), active: activeSection === "payments", badge: queueCounts.payments ?? undefined, icon: <CreditCard size={20} aria-hidden="true" /> },
       { label: "More", active: menu, icon: <Ellipsis size={20} aria-hidden="true" />, onClick: () => setMenu(true) },
     ]} />
-    {details && <div className="pa-dialog-backdrop"><section className="pa-dialog pa-detail-panel" ref={detailDialog} role="dialog" aria-modal="true" aria-labelledby="pa-detail-title"><button type="button" className="pa-detail-close" aria-label="Close record details" onClick={() => setDetails(null)}><X size={18} /></button><p className="pa-eyebrow">{title} · Record details</p><h2 id="pa-detail-title">{display(details.name ?? details.business_name ?? details.display_name ?? "Record details")}</h2>{preview && <p className="pa-small">Synthetic record for visual review only.</p>}<dl>{(detailColumns ?? []).filter(([key]) => !["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "term_timing" ? contractTiming(details.starts_at, details.ends_at, data?.asOf ?? "") : key === "owners" ? Array.isArray(details.owners) ? details.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") || "Unresolved" : "Unresolved" : key.endsWith("_at") ? date(details[key]) : display(details[key])}</dd></div>)}</dl><details className="pa-policy"><summary>Technical references</summary><dl>{["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].filter(key => details[key] != null).map(key => <div key={key}><dt>{key.replace(/_/g, " ")}</dt><dd>{display(details[key])}</dd></div>)}</dl></details></section></div>}
+    {details && <Drawer title={display(details.name ?? details.business_name ?? details.display_name ?? "Record details")} onClose={closeDetails}><div className="pa-detail-panel"><dl>{(detailColumns ?? []).filter(([key]) => !["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "term_timing" ? contractTiming(details.starts_at, details.ends_at, data?.asOf ?? "") : key === "owners" ? Array.isArray(details.owners) ? details.owners.map(owner => display((owner as Record<string, unknown>).name)).join(", ") || "Unresolved" : "Unresolved" : key.endsWith("_at") ? date(details[key]) : display(details[key])}</dd></div>)}</dl><details className="pa-policy"><summary>Technical references</summary><dl>{["id", "actor_id", "target_id", "request_id", "application_id", "contract_id"].filter(key => details[key] != null).map(key => <div key={key}><dt>{key.replace(/_/g, " ")}</dt><dd>{display(details[key])}</dd></div>)}</dl></details>{section === "applications" && details.status === "pending" && actionAllowed && <div className="pa-application-actions"><button className="pa-primary" onClick={() => openAction("approved", details)}>Approve</button><button className="pa-reject" onClick={() => openAction("rejected", details)}>Reject</button></div>}</div></Drawer>}
     {action && <div className="pa-dialog-backdrop"><div className="pa-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="pa-action-title">
       <h2 id="pa-action-title">Confirm {action.kind.replace(/-/g, " ")}</h2><p>{display(action.row?.name ?? action.row?.business_name ?? "Subscription payment review")}</p>
       <form onSubmit={event => void commitAction(event)}>{preview && <p className="pa-preview-dialog-note">Demo data. Changes stay in this preview session.</p>}

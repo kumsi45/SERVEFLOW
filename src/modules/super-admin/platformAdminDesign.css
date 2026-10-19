@@ -143,6 +143,28 @@
 .pa-ui-toast-negative { border-color: var(--pa-negative); }
 .pa-demo-banner { padding: 8px 16px; color: var(--pa-muted); background: var(--pa-soft); font-size: 12px; line-height: 16px; }
 .pa-bottom-tabs { display: none; }
+.pa-application-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: 16px 0 8px; }
+.pa-filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pa-application-filters .pa-search { flex: 1; min-width: 220px; }
+.pa-sort-note { color: var(--pa-muted); font-size: 12px; }
+.pa-application-actions { display: flex; gap: 8px; }
+.pa-root .pa-application-link { border: 0; background: transparent; padding: 4px 0; text-align: left; white-space: normal; font-size: 14px; font-weight: 500; }
+.pa-application-status { display: grid; justify-items: start; gap: 8px; }
+.pa-application-status small { font-size: 12px; line-height: 16px; }
+.pa-root .pa-reject { color: var(--pa-negative); border-color: var(--pa-negative); }
+@media (max-width: 768px) {
+  .pa-applications .pa-data-table table,.pa-applications .pa-data-table tbody,.pa-applications .pa-data-table tr { display: block; min-width: 0; }
+  .pa-applications .pa-data-table thead { display: none; }
+  .pa-applications .pa-data-table tbody { display: grid; gap: 12px; }
+  .pa-applications .pa-data-table tr { background: var(--pa-surface); padding: 16px; border-radius: var(--pa-radius-lg); }
+  .pa-applications .pa-data-table td { display: flex; max-width: none; justify-content: space-between; gap: 12px; border: 0; padding: 8px 0; }
+  .pa-applications .pa-data-table td::before { content: attr(data-label); color: var(--pa-muted); font-size: 12px; }
+  .pa-applications .pa-data-table td:first-child::before,.pa-applications .pa-data-table td:last-child::before { display: none; }
+  .pa-application-actions { width: 100%; }
+  .pa-application-actions button { flex: 1; }
+  .pa-application-filters .pa-search { flex-basis: 100%; min-width: 0; }
+  .pa-applications .pa-data-table { border: 0; background: transparent; }
+}
 
 /* Workspace shell */
 .pa-header { height: 60px; padding: 0 24px; }

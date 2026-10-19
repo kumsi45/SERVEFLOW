@@ -124,6 +124,34 @@ test("overview prioritizes work without inventing health or missing counts", asy
   await expect(page.locator(".pa-ui-attention")).toContainText("Unknown");
 });
 
+test("application review validates reasons, updates the queue, and keeps filters in the URL", async ({ page, baseURL }) => {
+  test.skip(productionGuard, "Development preview only.");
+  const external = await isolatePreview(page, baseURL);
+  await page.goto("/platform-admin/preview/applications");
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await page.locator("tbody tr").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("tbody tr").nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(new URL(page.url()).searchParams.has("application")).toBe(true);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Reject", exact: true }).first().click();
+  await page.getByLabel("Decision reason").fill("short");
+  await page.getByRole("checkbox").check();
+  await expect(page.getByRole("button", { name: "Confirm decision" })).toBeDisabled();
+  await page.getByLabel("Decision reason").fill("Registration is incomplete");
+  await page.getByRole("button", { name: "Confirm decision" }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(2);
+  await page.getByRole("button", { name: "Rejected", exact: true }).click();
+  await expect(page).toHaveURL(/status=rejected/);
+  await expect(page.locator("tbody")).toContainText("Demo administrator");
+  await page.getByRole("searchbox", { name: "Search applications" }).fill("Riverside");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.getByRole("searchbox")).toBeFocused();
+  expect(external).toEqual([]);
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`redesigned workspace visual matrix in ${theme} theme`, async ({ page, baseURL }, testInfo) => {
     test.skip(productionGuard, "Development preview only.");

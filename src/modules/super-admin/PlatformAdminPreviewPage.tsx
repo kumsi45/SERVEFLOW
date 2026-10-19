@@ -33,7 +33,7 @@ for (const section of Object.keys(rows) as Array<keyof typeof rows>) {
     created_at: `2026-01-${String(15 - index).padStart(2, "0")}T09:30:00.000Z`,
     ...(template.business_name ? { business_name: name } : {}),
     ...(template.name ? { name, slug: `synthetic-business-${index + 1}`, classification: ["demo", "live", "unclassified"][index % 3] } : {}),
-    ...(section === "applications" ? { status: ["pending", "approved", "rejected"][index % 3], decision_reason: index % 3 ? "Synthetic review decision" : null } : {}),
+    ...(section === "applications" ? { status: ["pending", "approved", "rejected"][index % 3], decision_reason: index % 3 ? "Synthetic review decision" : null, decided_by_name: index % 3 ? "Demo administrator" : null, decided_at: index % 3 ? asOf : null } : {}),
     ...(section === "payments" ? { status: index % 2 ? "rejected" : "pending", reference: `SYNTHETIC-REFERENCE-${index + 1}`, amount: String(1250 + index * 250) } : {}),
     ...(section === "contracts" ? { kind: index < 2 ? "trial" : "annual", starts_at: index < 2 ? "2026-01-13T00:00:00Z" : index === 6 ? "2025-01-01T00:00:00Z" : "2026-01-01T00:00:00Z", ends_at: index < 2 ? "2026-01-20T00:00:00Z" : index === 6 ? "2026-01-01T00:00:00Z" : "2027-01-01T00:00:00Z" } : {}),
     ...(section === "users" ? { display_name: `Synthetic Team Member ${index + 1}`, role: ["owner", "manager", "cashier"][index % 3], active: index !== 2 } : {}),
@@ -44,7 +44,7 @@ for (const section of Object.keys(rows) as Array<keyof typeof rows>) {
 
 function readRows(store: typeof rows, section: AdminSection | "invitations", search: string, status: string, cursor: AdminCursor | null, from = "", through = ""): AdminResult {
   const common = { asOf, source };
-  if (section === "overview") return { ...common, totalBusinesses: 7, pendingApplications: 3, rejectedApplications: 2, pendingPayments: 4, operationalBusinesses: 4, activeTrials: 2, activeContracts: 4, expiringContracts: 2, expiredContracts: 1,
+  if (section === "overview") return { ...common, totalBusinesses: 7, pendingApplications: (store.applications ?? []).filter(item => item.status === "pending").length, rejectedApplications: 2, pendingPayments: (store.payments ?? []).filter(item => item.status === "pending").length, operationalBusinesses: 4, activeTrials: 2, activeContracts: 4, expiringContracts: 2, expiredContracts: 1,
     previewActivity: [
       { actor: "Synthetic reviewer", action: "Application reviewed", target: "Synthetic Acacia Lodge", at: "2026-01-14T10:00:00Z" },
       { actor: "Synthetic reviewer", action: "Payment evidence rejected", target: "Synthetic Market Bistro", at: "2026-01-14T09:00:00Z" },
@@ -104,7 +104,7 @@ export function createPreviewAdminDataSource(options: { latencyMs?: number; mode
       if (name === "platform_admin_decide_application" || name === "platform_admin_reject_payment") {
         if (target.status !== "pending") throw Object.assign(new Error("This record was already decided."), { code: "PT409" });
         const reason = String(values.reason ?? "").trim();
-        if (reason.length < 10) throw Object.assign(new Error("Enter a reason of at least 10 characters."), { code: "22023" });
+        if (reason.length < (values.decision === "approved" ? 3 : 10)) throw Object.assign(new Error("Enter a reason of at least 10 characters."), { code: "22023" });
         target.status = name === "platform_admin_reject_payment" ? "rejected" : values.decision;
         target.decision_reason = reason;
       } else {
