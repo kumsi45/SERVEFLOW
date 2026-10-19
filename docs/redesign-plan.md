@@ -110,3 +110,7 @@ Payments now starts with Needs review and provides status chips, live search, ev
 ## Stage 8 copy and accessibility polish
 
 Removed the repeated action-policy disclosures, the page-body data-source footer, visible `Synthetic` fixture prefixes, `Preview Owner`, and `Unavailable in preview`. Reworded integration and backup evidence lines to avoid em dashes. The short classification and payment hints remain because they directly affect a current review decision. Preview-state controls stay confined to the development-only preview route for test coverage.
+
+## Stage 9 backend contract
+
+`backend-contract.md` now distinguishes the protected RPC implementation from a proposed future HTTP contract. It specifies list, detail, decision, classification, and rejection paths; cursor semantics; audit fields; permissions; and normalized client-safe error responses. No server code, migration, or deployment was added.

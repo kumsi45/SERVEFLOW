@@ -20,6 +20,31 @@ Status: frontend working contract, 2026-10-18. This document describes checked-i
 | System health, integrations, backups, security | Limited static or unknown evidence | No active probe, restore, or recovery mutation. Unknown must stay unknown. |
 | Diagnostics, audit logs, administrators | Redacted diagnostic and audit records; private administrator records | Diagnostic recording exists. No administrator creation, promotion, revocation, or recovery endpoint. |
 
+## Target HTTP contract for a future backend
+
+The existing browser implementation uses protected RPCs. The following versioned HTTP shape is the frontend contract for a future server; it is not an implemented endpoint set.
+
+| Resource | Method and path | Query and response semantics |
+| --- | --- | --- |
+| Overview | `GET /v1/platform/overview` | Returns nullable queue and informational counts with an `asOf` timestamp. Absence is not zero. |
+| Applications | `GET /v1/platform/applications` | `status`, `q`, `cursor`, `limit` (default/maximum 25), and `sort=submitted_at:desc`; response `{ items, nextCursor, total? }`. `GET /v1/platform/applications/:id` supports drawer deep links. |
+| Application decision | `POST /v1/platform/applications/:id/decision` | Body `{ decision: "approved" | "rejected", reason, requestId }`; response includes `actor`, `decidedAt`, and the changed record. Reject reasons require 10 trimmed characters; approvals require a nonempty reviewed reason under the current private contract. |
+| Businesses | `GET /v1/platform/businesses` and `GET /v1/platform/businesses/:id` | `classification`, `q`, `cursor`, `limit`, and stable newest-first sorting. Response carries lifecycle only when it is independently verified. |
+| Classification | `POST /v1/platform/businesses/:id/classification` | Body `{ classification, expectedVersion, reason, requestId }`; stale versions return a conflict. Suspension and restoration need separate endpoints and enforcement. |
+| Payments | `GET /v1/platform/payments` and `GET /v1/platform/payments/:id` | `status`, `q`, `cursor`, `limit`, and stable submitted-time sorting. Evidence is distinct from a confirmed payment. |
+| Payment review | `POST /v1/platform/payments/:id/rejection` | Body `{ reason, requestId }`; rejects only pending evidence. Confirmation needs a separately authorized endpoint before the UI can offer it. |
+| Read-only operations | `GET /v1/platform/{users,invitations,contracts,notifications,system-health,diagnostics,integrations,backups,audit-logs,administrators,security}` | Cursor reads return `{ items, nextCursor, asOf }`; health and backup values may be `unknown`. |
+
+Every mutation response must include immutable audit fields: target ID, action, outcome, actor ID and display name where permitted, server timestamp, request ID, and record version where optimistic concurrency applies. Cursor order must be stable and opaque; an expired or malformed cursor returns a validation error rather than silently restarting a list.
+
+## Error response shape
+
+```json
+{ "error": { "code": "CONFLICT", "message": "This record was already decided.", "requestId": "uuid" } }
+```
+
+`UNAUTHENTICATED` means no valid session; `FORBIDDEN` means a valid session without the capability; `VALIDATION` identifies a field-level reason problem; `NOT_FOUND` hides unavailable targets; `CONFLICT` covers stale versions, duplicate decisions, and idempotency disagreement; `RATE_LIMITED` carries retry information; `INTERNAL` exposes no private diagnostics. The server maps these shapes from its database errors without exposing SQLSTATE or raw exception text to the browser.
+
 ## Stage 6 business directory behavior
 
 The business directory exposes the current name, owner, created time, and reviewed classification. It displays lifecycle as `Unknown` because the current read projection has no lifecycle field. Its detail drawer is addressable with `?business=<UUID>`. `Suspend` and `Restore` remain disabled, with a reason visible to keyboard and pointer users, until server-enforced mutations exist.
