@@ -38,6 +38,10 @@ The client maps SQLSTATE `42501` to denied authorization, `PT409`, `40001`, and 
 - Nullable or absent counts, service status, and health timestamps cannot be inferred from a paged result or displayed as zero/healthy.
 - Restaurant tenant membership never grants platform administrator rights.
 
+## Stage 7 payment review behavior
+
+`pending` payment evidence is labeled `Needs review`; a future confirmed payment state would be labeled `Confirmed`, but this UI has no confirmation mutation. The payment evidence drawer exposes the record returned by the existing list read. Rejecting a pending record requires a reason of at least ten characters in the interface and carries a request ID; a server migration must make that ten-character rule authoritative.
+
 ## Gaps and open questions
 
 1. A list API with total count, page size 25, stable sorting, status counts, and filter metadata is needed for the requested numbered pagination and chips. The current RPC uses cursor pagination and returns no total.

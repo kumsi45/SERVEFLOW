@@ -102,3 +102,7 @@ The checked-in private application read returns `decided_at` but omits reviewer 
 ## Stage 6 businesses
 
 Businesses removes the entitlement column because the source only reports enforcement as unavailable. Classification has a short inline explanation and focusable tooltip: it is a reviewed label, not a paid entitlement. Business lifecycle is shown as `Unknown` because the existing read model has no verified Active, Trial, or Suspended field. The interface therefore does not derive lifecycle from a classification or contract. Suspend and Restore remain disabled with an explanation. Only Unclassified rows offer the supported Review classification action. Search and classification filters are live and URL-synced; the page uses cursor ranges because the source has no total count or page-size contract.
+
+## Stage 7 remaining operational views
+
+Payments now starts with Needs review and provides status chips, live search, evidence drawers, and the supported explicit reject action. It says only that payments are never auto-confirmed; the current contract has no confirmation mutation, so no confirm control is simulated. Users and invitations retain the existing in-page split. Notifications, contracts, diagnostics, and access records retain their source-backed list views while the system tabs report only available evidence or Unknown.
