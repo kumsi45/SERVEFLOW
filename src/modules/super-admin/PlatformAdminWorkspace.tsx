@@ -57,7 +57,7 @@ export function WorkspaceNavigation({ section, pathFor, onNavigate, counts }: { 
 export function WorkspaceTabs({ section, pathFor }: { section: AdminSection; pathFor: LinkFor }) {
   const tabs: AdminSection[] = ["contracts", "payments"].includes(section) ? ["contracts", "payments"] : section === "users" ? ["users", "administrators"] : operations.includes(section) ? operations : [];
   if (!tabs.length) return null;
-  return <nav className="pa-section-tabs" aria-label="Workspace sections">{tabs.map(key => <a key={key} href={pathFor(key)} aria-current={section === key ? "page" : undefined}>{pageTitles[key]}</a>)}</nav>;
+  return <nav className="pa-section-tabs" aria-label="Workspace sections">{tabs.map(key => <a key={key} href={pathFor(key)} aria-current={section === key ? "page" : undefined}>{({ contracts: "Contracts", payments: "Payments", users: "Users", administrators: "Administrators" } as Partial<Record<AdminSection, string>>)[key] ?? pageTitles[key]}</a>)}</nav>;
 }
 
 export function statusTone(value: unknown): "positive" | "negative" | "attention" | "neutral" {

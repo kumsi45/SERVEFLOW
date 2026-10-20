@@ -42,11 +42,17 @@ test("all fourteen synthetic sections render without platform requests", async (
   test.setTimeout(90_000);
   test.skip(productionGuard, "Development preview only.");
   const external = await isolatePreview(page, baseURL);
-  for (const section of sections) {
-    await page.goto(`/platform-admin/preview/${section}`);
-    await expect(page.getByText("Demo data", { exact: true })).toBeVisible();
-    await expect(page.locator('nav[aria-label="Platform administration"] a[aria-current="page"]')).toHaveCount(1);
-    await expect(page.locator("#pa-content h1")).toBeVisible();
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const section of sections) {
+      await page.goto(`/platform-admin/preview/${section}`);
+      await expect(page.locator(".pa-header .pa-demo-banner")).toHaveText("Demo data");
+      await expect(page.locator('nav[aria-label="Platform administration"] a[aria-current="page"]')).toHaveCount(1);
+      await expect(page.locator("#pa-content h1")).toHaveCount(1);
+      const headings = await page.locator("#pa-content h1, #pa-content h2").allTextContents();
+      expect(headings.slice(1)).not.toContain(headings[0]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${section} at ${width}px`).toBe(true);
+    }
   }
   expect(external).toEqual([]);
 });
@@ -68,7 +74,7 @@ test("preview states, filters and mutation dialogs remain local", async ({ page,
   await page.getByLabel("Display state").selectOption("error");
   await expect(page.getByRole("alert")).toContainText("Demo data could not be loaded");
   await page.getByLabel("Display state").selectOption("empty");
-  await expect(page.getByText("No records match these filters.")).toBeVisible();
+  await expect(page.getByText("No businesses match these filters.")).toBeVisible();
   expect(external).toEqual([]);
 });
 
@@ -184,6 +190,42 @@ test("review pages use one visible title and concise empty states", async ({ pag
   }
 });
 
+test("review toolbar and compact preview shell keep hierarchy at desktop and phone widths", async ({ page, baseURL }) => {
+  const external = await isolatePreview(page, baseURL);
+  for (const width of [1440, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const section of ["applications", "businesses", "payments"] as const) {
+      await page.goto(`/platform-admin/preview/${section}`);
+      await expect(page.locator("#pa-content h1")).toHaveCount(1);
+      await expect(page.locator(".pa-header .pa-demo-banner")).toHaveText("Demo data");
+      await expect(page.locator(".pa-demo-row")).toHaveCount(0);
+      await expect(page.locator(".pa-application-filters").getByRole("button", { name: "Refresh" })).toBeVisible();
+      await expect(page.locator("#pa-content > .pa-title").getByRole("button", { name: "Refresh" })).toHaveCount(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${section} at ${width}px`).toBe(true);
+      const toolbar = await page.locator(".pa-application-filters").evaluate(element => {
+        const search = element.querySelector(".pa-search")!.getBoundingClientRect();
+        const refresh = element.querySelector(".pa-toolbar-refresh")!.getBoundingClientRect();
+        return { searchY: search.y, refreshY: refresh.y, searchHeight: search.height, refreshHeight: refresh.height };
+      });
+      expect(Math.abs(toolbar.searchY - toolbar.refreshY)).toBeLessThan(2);
+      expect(Math.abs(toolbar.searchHeight - toolbar.refreshHeight)).toBeLessThanOrEqual(2);
+      if (width <= 375) {
+        const actionHeight = await page.locator(".pa-data-table tbody td:last-child button").first().evaluate(button => button.getBoundingClientRect().height);
+        expect(actionHeight).toBeGreaterThanOrEqual(44);
+      }
+      if (width === 320) {
+        const labels = await page.locator(".pa-bottom-tabs > a > span:not(.pa-badge), .pa-bottom-tabs > button > span:not(.pa-badge)").evaluateAll(elements => elements.map(element => ({ left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right })));
+        for (let index = 1; index < labels.length; index++) expect(labels[index - 1].right).toBeLessThanOrEqual(labels[index].left);
+      }
+      if (section === "applications") {
+        await expect(page.getByText("Submitted: newest first")).toHaveCount(0);
+        await expect(page.locator('th[aria-sort="descending"]')).toHaveText(/Submitted/);
+      }
+    }
+  }
+  expect(external).toEqual([]);
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`redesigned workspace visual matrix in ${theme} theme`, async ({ page, baseURL }, testInfo) => {
     test.skip(productionGuard, "Development preview only.");
@@ -214,22 +256,21 @@ test("directory search, filters, pagination, details and navigation are usable",
   test.skip(productionGuard, "Development preview only.");
   const external=await isolatePreview(page,baseURL);
   await page.goto("/platform-admin/preview/businesses");
-  await page.getByRole("button",{name:"Next page"}).click();
+  await page.getByRole("button",{name:"Next",exact:true}).click();
   await expect(page.getByRole("button",{name:"First page"})).toBeEnabled();
   await page.getByRole("button",{name:"First page"}).click();
-  await page.getByLabel("Search",{exact:true}).fill("Acacia");
-  await page.getByRole("button",{name:"Search",exact:true}).click();
+  await page.getByRole("searchbox",{name:"Search businesses"}).fill("Acacia");
   await expect(page.locator("tbody tr")).toHaveCount(1);
-  await page.getByRole("button",{name:/View details for/}).click();
+  await page.getByRole("button",{name:"Acacia Lodge"}).click();
   await expect(page.getByRole("dialog")).toContainText("Acacia Lodge");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button",{name:/View details for/})).toBeFocused();
-  await page.getByLabel("Status",{exact:true}).selectOption("demo");
-  await expect(page.getByText("No records match these filters.",{exact:false})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Acacia Lodge"})).toBeFocused();
+  await page.getByRole("button",{name:"Demo",exact:true}).click();
+  await expect(page.getByText("No businesses match these filters.")).toBeVisible();
   await page.setViewportSize({width:320,height:760});
   await page.getByRole("button",{name:"More"}).click();
   expect(await page.evaluate(()=>document.body.style.overflow)).toBe("hidden");
-  await page.getByRole("dialog",{name:"Platform navigation"}).getByRole("link",{name:"Applications",exact:true}).click();
+  await page.getByRole("dialog",{name:"Platform navigation"}).getByRole("link",{name:/^Applications/}).click();
   await expect(page.getByRole("heading",{name:"Applications",exact:true})).toBeVisible();
   await expect(page.getByRole("dialog",{name:"Platform navigation"})).toHaveCount(0);
   expect(external).toEqual([]);
@@ -246,8 +287,8 @@ test("reviewed applications and payments have no repeat decision action", async 
   await expect(page.getByRole("button",{name:"Reject payment"})).toHaveCount(0);
   await expect(page.locator("tbody tr")).not.toHaveCount(0);
   await page.setViewportSize({width:320,height:760});
-  const reviewLabel = await page.locator('tbody tr:first-child td[data-label="Review"]').evaluate(cell => getComputedStyle(cell,"::before").content);
-  expect(reviewLabel).toBe('"Review"');
+  const actionLabel = await page.locator('tbody tr:first-child td[data-label="Actions"]').evaluate(cell => getComputedStyle(cell,"::before").display);
+  expect(actionLabel).toBe("none");
   expect(external).toEqual([]);
 });
 
@@ -260,6 +301,7 @@ test("sidebar, shared theme, status contrast and preview session isolation", asy
   await expect(page.locator(".pa-shell")).toHaveClass(/pa-collapsed/);
   await page.getByRole("button",{name:"Expand sidebar"}).click();
   await expect(page.locator(".pa-shell")).not.toHaveClass(/pa-collapsed/);
+  await page.locator(".pa-account-menu summary").click();
   for (const theme of ["dark", "light"]) {
     const toggle = page.getByRole("button",{name:`Switch to ${theme} mode`});
     if (await toggle.count()) { await toggle.focus(); await page.keyboard.press("Enter"); }
