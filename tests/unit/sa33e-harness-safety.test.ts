@@ -1,15 +1,17 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const safety = require("../../supabase/audits/sa33c-fresh-install-verify.cjs") as {
   buildManifest: (input: Fixture) => Manifest;
+  evaluatePrestartGate: (input: Omit<Fixture, "repository">) => Record<string, any>;
   exactCleanupCommands: (manifest: Manifest, current: { container: Container; network: Network }) => string[][];
   validateManifest: (manifest: unknown) => Manifest;
   validateStartedTarget: (input: { manifest: Manifest; container: Container; network: Network; image: Image }) => unknown;
   validateStoppedTarget: (input: Omit<Fixture, "repository">) => unknown;
   verifyStartGate: (input: { manifest: Manifest; container: Container; network: Network; image: Image }) => { containerId: string };
+  runPrestartGate: (input: Omit<Fixture, "repository">, callbacks?: Record<string, unknown>) => Record<string, any>;
 };
 
 type Container = Record<string, any>;
@@ -40,6 +42,7 @@ function fixture(): Fixture {
     plan: {
       runId,
       createdAt: "2026-10-17T06:00:00.000Z",
+      imageRef: "public.ecr.aws/supabase/postgres:17.6.1.141",
       imageId: ids.image,
       containerId: ids.container,
       networkId: ids.network,
@@ -257,5 +260,70 @@ describe("SA3.3E manifest, start gate, and cleanup", () => {
     expect(source).toContain("docker(['stop', '--time', '1', manifest.resources.container.id])");
     expect(source).not.toMatch(/docker\(\['start',\s*(?:plan\.names|manifest\.resources\.container\.name)/);
     expect(source).not.toMatch(/docker\(\['stop',[\s\S]{0,80}(?:plan\.names|manifest\.resources\.container\.name)/);
+  });
+});
+
+describe("B1A.4 pure pre-start safety gate", () => {
+  function prestartInput() {
+    const { repository: _repository, ...input } = fixture();
+    return input;
+  }
+
+  it("completes a valid synthetic preflight without authorizing startup or writes", () => {
+    const result = safety.evaluatePrestartGate(prestartInput());
+    expect(result).toMatchObject({ ok: true, decision: "PRESTART_VALIDATED_NO_STARTUP", startupAuthorized: false, writeAuthorized: false });
+    expect(result.passed).toHaveLength(6);
+    expect(result.runtimeStorageVerified).toBe(false);
+  });
+
+  it.each([
+    ["a workspace container name", (input: any) => { input.plan.names.container = "supabase_db_workspace"; }],
+    ["a protected SA3.3F name", (input: any) => { input.plan.names.network = "serveflow-sa33e-b88095f8-4d0-net"; }],
+    ["a persistent container ID", (input: any) => { input.persistent.containerIds.push(input.plan.containerId); }],
+  ])("rejects %s without adopting an existing target", (_label, mutate) => {
+    const input = prestartInput();
+    mutate(input);
+    expect(safety.evaluatePrestartGate(input)).toMatchObject({ ok: false, failed: "target_identity", startupAuthorized: false });
+  });
+
+  it.each([
+    ["a missing explicit image reference", (input: any) => { delete input.plan.imageRef; }, "configuration"],
+    ["an image identity change", (input: any) => { input.image.Id = `sha256:${"9".repeat(64)}`; }, "image_identity"],
+    ["an external network", (input: any) => { input.network.Internal = false; }, "network_isolation"],
+    ["host port publication", (input: any) => { input.container.HostConfig.PortBindings = { "5432/tcp": [{ HostPort: "5432" }] }; }, "storage_and_restrictions"],
+    ["a bind mount", (input: any) => { input.container.HostConfig.Binds = ["C:/host:/host"]; }, "storage_and_restrictions"],
+    ["missing tmpfs evidence", (input: any) => { delete input.container.HostConfig.Tmpfs["/tmp"]; }, "storage_and_restrictions"],
+    ["a Docker socket mount", (input: any) => { input.container.Mounts = [{ Type: "bind", Source: "/var/run/docker.sock", Destination: "/sock" }]; }, "storage_and_restrictions"],
+  ])("fails closed for %s", (_label, mutate, failed) => {
+    const input = prestartInput();
+    mutate(input);
+    expect(safety.evaluatePrestartGate(input)).toMatchObject({ ok: false, failed, startupAuthorized: false, writeAuthorized: false });
+  });
+
+  it("stops at the first failed stage and does not treat a partial result as success", () => {
+    const input = prestartInput();
+    delete input.plan.imageRef;
+    input.network.Internal = false;
+    const result = safety.evaluatePrestartGate(input);
+    expect(result).toMatchObject({ ok: false, failed: "configuration", passed: [] });
+  });
+
+  it("never calls startup, write, or cleanup callbacks on either pass or rejection", () => {
+    const callbacks = { startup: vi.fn(), write: vi.fn(), cleanup: vi.fn() };
+    expect(safety.runPrestartGate(prestartInput(), callbacks).ok).toBe(true);
+    const rejected = prestartInput();
+    rejected.container.HostConfig.Binds = ["C:/host:/host"];
+    expect(safety.runPrestartGate(rejected, callbacks).ok).toBe(false);
+    expect(callbacks.startup).not.toHaveBeenCalled();
+    expect(callbacks.write).not.toHaveBeenCalled();
+    expect(callbacks.cleanup).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic rejection without exposing credential-like snapshot contents", () => {
+    const input = prestartInput();
+    input.container.Config.Env = { broken: "SUPABASE_ACCESS_TOKEN=super-secret" };
+    const result = safety.evaluatePrestartGate(input);
+    expect(result).toMatchObject({ ok: false, decision: "PRESTART_REJECTED" });
+    expect(JSON.stringify(result)).not.toContain("super-secret");
   });
 });

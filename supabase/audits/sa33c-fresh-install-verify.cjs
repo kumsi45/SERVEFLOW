@@ -29,6 +29,14 @@ const originalHashes = {
 };
 const forbiddenCredentialNames = /^(?:SUPABASE_ACCESS_TOKEN|SUPABASE_DB_URL|DATABASE_URL|DB_URL|PGPASSWORD|POSTGRES_PASSWORD|VITE_SUPABASE_URL|VITE_SUPABASE_ANON_KEY)$/i;
 const forbiddenMountFragments = ['/var/run/docker.sock', '\\\\.\\pipe\\docker_engine'];
+const protectedSa33fNames = new Set([
+  'serveflow-sa33e-b88095f8-4d0-db',
+  'serveflow-sa33e-b88095f8-4d0-net',
+]);
+const prestartGateOrder = Object.freeze([
+  'configuration', 'target_identity', 'image_identity', 'network_isolation',
+  'storage_and_restrictions', 'stopped_target_snapshot',
+]);
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -186,6 +194,94 @@ function validateStoppedTarget({ plan, container, network, image, persistent }) 
   for (const fragment of forbiddenMountFragments) assert(!mountText.includes(fragment.toLowerCase()), `Forbidden mount: ${fragment}`);
   assertNoHostedFallback(plan, container);
   return { container: c, network: n };
+}
+
+// This gate intentionally consumes supplied inspection snapshots only.  It never
+// calls Docker, starts a container, writes data, or invokes supplied callbacks.
+function validatePrestartConfiguration(input) {
+  assert(input && typeof input === 'object', 'Pre-start input is missing.');
+  const { plan, persistent } = input;
+  assert(plan && typeof plan === 'object', 'Disposable plan is missing.');
+  assert.match(plan.runId || '', /^[0-9a-f-]{36}$/i, 'Pre-start run ID is malformed.');
+  assert(plan.names && typeof plan.names.container === 'string' && typeof plan.names.network === 'string',
+    'Pre-start resource names are missing.');
+  assert.equal(typeof plan.imageRef, 'string', 'Explicit image reference is required.');
+  assert(plan.imageRef.length > 0, 'Explicit image reference is required.');
+  assert(persistent && Array.isArray(persistent.containerIds) && Array.isArray(persistent.networkIds)
+    && Array.isArray(persistent.volumeNames), 'Persistent resource inventory is missing.');
+}
+
+function validatePrestartTargetIdentity({ plan, persistent }) {
+  assert.notEqual(plan.containerId, plan.networkId, 'Container and network identities must be distinct.');
+  for (const name of [plan.names.container, plan.names.network]) {
+    assert(!/^supabase_.*_workspace$/i.test(name), 'Persistent workspace resource names are forbidden.');
+    assert(!protectedSa33fNames.has(name), 'Protected SA3.3F resource identity is forbidden.');
+  }
+  assert(!persistent.containerIds.includes(plan.containerId), 'A persistent container ID cannot be adopted.');
+  assert(!persistent.networkIds.includes(plan.networkId), 'A persistent network ID cannot be adopted.');
+}
+
+function validatePrestartImageIdentity({ plan, image }) {
+  requireId(plan.imageId, 'Planned image');
+  requireId(image?.Id, 'Inspected image');
+  assert.equal(image.Id, plan.imageId, 'Image identity changed.');
+  assert(!image.Config?.Volumes || Object.keys(image.Config.Volumes).length === 0,
+    'Images with declared writable volumes are forbidden.');
+}
+
+function validatePrestartNetworkIsolation({ plan, network }) {
+  const n = networkSecuritySnapshot(network);
+  assert.equal(n.id, plan.networkId, 'Network ID differs from the created resource.');
+  assert.equal(n.name, plan.names.network, 'Network name mismatch.');
+  assert.equal(n.driver, 'bridge');
+  assert.equal(n.internal, true, 'Network must be internal.');
+  assert.equal(n.attachable, false, 'Network must not be attachable.');
+  assert.equal(n.ingress, false, 'Ingress networks are forbidden.');
+}
+
+function validatePrestartStorageAndRestrictions({ plan, container }) {
+  const c = containerSecuritySnapshot(container);
+  assert.equal(c.id, plan.containerId, 'Container ID differs from the created resource.');
+  assert.equal(c.name, `/${plan.names.container}`, 'Container name mismatch.');
+  assert.deepEqual(c.binds, [], 'Bind mounts are forbidden.');
+  assert(c.mounts.every((mount) => mount.Type === 'tmpfs'), 'Only tmpfs mounts are permitted.');
+  assert.deepEqual(Object.keys(c.tmpfs).sort(), ['/sa33e', '/tmp'], 'Exact disposable tmpfs mounts are required.');
+  assert(Object.values(c.tmpfs).every((options) => /\bnosuid\b/.test(options) && /\bnodev\b/.test(options)),
+    'tmpfs mounts require nosuid and nodev.');
+  assert.deepEqual(c.portBindings, {}, 'All host port bindings are forbidden.');
+  assert.equal(c.publishAllPorts, false, 'Automatic host port publication is forbidden.');
+  assertNoHostedFallback(plan, container);
+}
+
+function evaluatePrestartGate(input) {
+  const stages = {
+    configuration: () => validatePrestartConfiguration(input),
+    target_identity: () => validatePrestartTargetIdentity(input),
+    image_identity: () => validatePrestartImageIdentity(input),
+    network_isolation: () => validatePrestartNetworkIsolation(input),
+    storage_and_restrictions: () => validatePrestartStorageAndRestrictions(input),
+    stopped_target_snapshot: () => validateStoppedTarget(input),
+  };
+  const passed = [];
+  for (const stage of prestartGateOrder) {
+    try {
+      stages[stage]();
+      passed.push(stage);
+    } catch {
+      return Object.freeze({ ok: false, decision: 'PRESTART_REJECTED', passed, failed: stage,
+        message: 'Pre-start validation rejected the proposed target.', startupAuthorized: false,
+        writeAuthorized: false, runtimeStorageVerified: false });
+    }
+  }
+  return Object.freeze({ ok: true, decision: 'PRESTART_VALIDATED_NO_STARTUP', passed, failed: null,
+    message: 'Pre-start validation is complete; inert runtime storage validation remains required.',
+    startupAuthorized: false, writeAuthorized: false, runtimeStorageVerified: false });
+}
+
+function runPrestartGate(input, _callbacks = {}) {
+  // Deliberately do not call callbacks. A later, separately authorized executor
+  // must revalidate the exact target before any inert start or write action.
+  return evaluatePrestartGate(input);
 }
 
 function buildManifest({ plan, container, network, image, persistent, repository }) {
@@ -367,7 +463,7 @@ function prepareStoppedResources() {
   const names = { network: `${prefix}-net`, container: `${prefix}-db` };
   const evidenceDir = fs.mkdtempSync(path.join(absoluteEvidenceRoot(), `${prefix}-evidence-`));
   const plan = {
-    runId, createdAt: new Date().toISOString(), imageId: image.Id, names, dockerContext: context,
+    runId, createdAt: new Date().toISOString(), imageRef: databaseImageTag, imageId: image.Id, names, dockerContext: context,
     hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
   };
   let networkId;
@@ -487,6 +583,6 @@ if (require.main === module) {
 
 module.exports = {
   buildManifest, checkSource, containerSecuritySnapshot, exactCleanupCommands, expectedHashes,
-  manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, sha256,
+  evaluatePrestartGate, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runPrestartGate, sha256,
   validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
 };
