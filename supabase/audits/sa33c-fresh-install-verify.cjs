@@ -37,6 +37,7 @@ const prestartGateOrder = Object.freeze([
   'configuration', 'target_identity', 'image_identity', 'network_isolation',
   'storage_and_restrictions', 'stopped_target_snapshot',
 ]);
+const lifecycleAuthorizationSchema = 'serveflow.sa33e.lifecycle-authorization.v1';
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -91,6 +92,12 @@ function checkSource() {
 function requireId(value, description) {
   assert.equal(typeof value, 'string', `${description} ID is missing.`);
   assert.match(value, /^(?:sha256:)?[0-9a-f]{12,64}$/i, `${description} ID is malformed.`);
+  return value;
+}
+
+function requireImageDigest(value, description) {
+  assert.equal(typeof value, 'string', `${description} image digest is missing.`);
+  assert.match(value, /^sha256:[0-9a-f]{64}$/i, `${description} image digest is malformed.`);
   return value;
 }
 
@@ -221,9 +228,18 @@ function validatePrestartTargetIdentity({ plan, persistent }) {
   assert(!persistent.networkIds.includes(plan.networkId), 'A persistent network ID cannot be adopted.');
 }
 
+function validatePreparationIdentity({ plan, persistent }) {
+  for (const name of [plan.names.container, plan.names.network]) {
+    assert(!/^supabase_.*_workspace$/i.test(name), 'Persistent workspace resource names are forbidden.');
+    assert(!protectedSa33fNames.has(name), 'Protected SA3.3F resource identity is forbidden.');
+  }
+  assert(!persistent.containerIds.includes(plan.containerId), 'A persistent container ID cannot be adopted.');
+  assert(!persistent.networkIds.includes(plan.networkId), 'A persistent network ID cannot be adopted.');
+}
+
 function validatePrestartImageIdentity({ plan, image }) {
-  requireId(plan.imageId, 'Planned image');
-  requireId(image?.Id, 'Inspected image');
+  requireImageDigest(plan.imageId, 'Planned');
+  requireImageDigest(image?.Id, 'Inspected');
   assert.equal(image.Id, plan.imageId, 'Image identity changed.');
   assert(!image.Config?.Volumes || Object.keys(image.Config.Volumes).length === 0,
     'Images with declared writable volumes are forbidden.');
@@ -282,6 +298,97 @@ function runPrestartGate(input, _callbacks = {}) {
   // Deliberately do not call callbacks. A later, separately authorized executor
   // must revalidate the exact target before any inert start or write action.
   return evaluatePrestartGate(input);
+}
+
+function lifecycleTargetBinding(input) {
+  assert(input && typeof input === 'object', 'Lifecycle target input is missing.');
+  return sha256({ plan: input.plan, container: input.container, network: input.network, image: input.image,
+    persistent: input.persistent });
+}
+
+function preparationBinding({ plan, image, persistent }) {
+  return sha256({ plan, image: { Id: image?.Id, RepoDigests: image?.RepoDigests || [] }, persistent });
+}
+
+function rejectedLifecycleAuthorization(operation, binding) {
+  return Object.freeze({ schema: lifecycleAuthorizationSchema, ok: false, operation, binding,
+    startupAuthorized: false, writeAuthorized: false, preparationAuthorized: false });
+}
+
+function authorizePreparation({ plan, image, persistent }) {
+  const binding = preparationBinding({ plan, image, persistent });
+  try {
+    validatePrestartConfiguration({ plan, persistent });
+    validatePreparationIdentity({ plan, persistent });
+    validatePrestartImageIdentity({ plan, image });
+    return Object.freeze({ schema: lifecycleAuthorizationSchema, ok: true, operation: 'prepare', binding,
+      startupAuthorized: false, writeAuthorized: false, preparationAuthorized: true });
+  } catch {
+    return rejectedLifecycleAuthorization('prepare', binding);
+  }
+}
+
+function authorizeLifecycle({ operation, input, runtimeProof } = {}) {
+  let binding = '';
+  try {
+    assert(['prepare', 'start', 'write'].includes(operation), 'Lifecycle operation is invalid.');
+    binding = lifecycleTargetBinding(input);
+    const preflight = evaluatePrestartGate(input);
+    assert(preflight && preflight.ok === true && preflight.decision === 'PRESTART_VALIDATED_NO_STARTUP'
+      && preflight.startupAuthorized === false && preflight.writeAuthorized === false
+      && preflight.runtimeStorageVerified === false, 'Static preflight is incomplete.');
+    if (operation === 'prepare') {
+      return Object.freeze({ schema: lifecycleAuthorizationSchema, ok: true, operation, binding,
+        startupAuthorized: false, writeAuthorized: false, preparationAuthorized: true });
+    }
+    if (operation === 'start') {
+      assert(runtimeProof && runtimeProof.schema === 'serveflow.sa33e.runtime-proof.v1', 'Runtime proof is missing.');
+      assert.equal(runtimeProof.binding, binding, 'Runtime proof target changed.');
+      assert.equal(runtimeProof.runtimeStorageVerified, true, 'Runtime tmpfs proof is missing.');
+      return Object.freeze({ schema: lifecycleAuthorizationSchema, ok: true, operation, binding,
+        startupAuthorized: true, writeAuthorized: false, preparationAuthorized: false });
+    }
+    throw new Error('Database/write authorization is not implemented.');
+  } catch {
+    return rejectedLifecycleAuthorization(operation || 'unknown', binding);
+  }
+}
+
+function requireLifecycleAuthorization(authorization, operation, binding) {
+  assert(authorization && typeof authorization === 'object', 'Lifecycle authorization is missing.');
+  assert.equal(authorization.schema, lifecycleAuthorizationSchema, 'Lifecycle authorization schema is invalid.');
+  assert.equal(authorization.ok, true, 'Lifecycle authorization was rejected.');
+  assert.equal(authorization.operation, operation, 'Lifecycle authorization operation mismatch.');
+  assert.equal(authorization.binding, binding, 'Lifecycle authorization target changed.');
+  if (operation === 'prepare') assert.equal(authorization.preparationAuthorized, true, 'Preparation is not authorized.');
+  if (operation === 'start') assert.equal(authorization.startupAuthorized, true, 'Startup is not authorized.');
+  if (operation === 'write') assert.equal(authorization.writeAuthorized, true, 'Write is not authorized.');
+  return authorization;
+}
+
+function executeLifecycleAction({ operation, input, authorization, actions }) {
+  const binding = operation === 'prepare'
+    ? preparationBinding(input)
+    : lifecycleTargetBinding(input);
+  requireLifecycleAuthorization(authorization, operation, binding);
+  const action = actions?.[operation];
+  assert.equal(typeof action, 'function', 'Lifecycle action is missing.');
+  return action();
+}
+
+function runMandatoryLifecycle({ operation, input, runtimeProof, gate = authorizeLifecycle, actions }) {
+  let authorization;
+  try {
+    authorization = gate({ operation, input, runtimeProof });
+    if (authorization && typeof authorization.then === 'function') {
+      Promise.resolve(authorization).catch(() => undefined);
+      return rejectedLifecycleAuthorization(operation, '');
+    }
+    const value = executeLifecycleAction({ operation, input, authorization, actions });
+    return Object.freeze({ ok: true, authorization, value });
+  } catch {
+    return rejectedLifecycleAuthorization(operation, '');
+  }
 }
 
 function buildManifest({ plan, container, network, image, persistent, repository }) {
@@ -344,7 +451,7 @@ function verifyStartGate({ manifest, container, network, image }) {
     'Container security configuration changed after preflight.');
   assert.equal(sha256(verified.network), manifest.resources.network.securitySha256,
     'Network security configuration changed after preflight.');
-  return { decision: 'START_APPROVED_FOR_EXACT_INERT_CONTAINER', containerId: verified.container.id,
+  return { decision: 'EXACT_INERT_TARGET_REVALIDATED', containerId: verified.container.id,
     networkId: verified.network.id, checkedAt: new Date().toISOString() };
 }
 
@@ -466,6 +573,10 @@ function prepareStoppedResources() {
     runId, createdAt: new Date().toISOString(), imageRef: databaseImageTag, imageId: image.Id, names, dockerContext: context,
     hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
   };
+  const preparationAuthorization = authorizePreparation({ plan, image, persistent });
+  const preparationLifecycle = runMandatoryLifecycle({ operation: 'prepare', input: { plan, image, persistent },
+    gate: () => preparationAuthorization, actions: { prepare: () => undefined } });
+  assert.equal(preparationLifecycle.ok, true, 'Preparation lifecycle authorization was rejected.');
   let networkId;
   let containerId;
   try {
@@ -480,7 +591,11 @@ function prepareStoppedResources() {
     requireId(containerId, 'Created container');
     plan.networkId = networkId;
     plan.containerId = containerId;
-    const manifest = buildManifest({ plan, container: inspectExact(containerId), network: inspectExact(networkId), image,
+    const lifecycleInput = { plan, container: inspectExact(containerId), network: inspectExact(networkId), image, persistent };
+    const targetLifecycle = runMandatoryLifecycle({ operation: 'prepare', input: lifecycleInput,
+      actions: { prepare: () => undefined } });
+    assert.equal(targetLifecycle.ok, true, 'Prepared target lifecycle authorization was rejected.');
+    const manifest = buildManifest({ ...lifecycleInput,
       persistent, repository: { migrationCount: source.migrationCount, migrationSetSha256: source.migrationSetSha256,
         migrations: migrationInventory() } });
     const manifestPath = path.join(evidenceDir, 'preflight-manifest.json');
@@ -516,9 +631,16 @@ function startVerifiedResources() {
   const context = localDockerContext();
   assert.deepEqual(context, manifest.dockerContext, 'Docker context changed after preflight.');
   const image = dockerJson(['image', 'inspect', manifest.resources.container.imageId])[0];
-  const decision = verifyStartGate({ manifest, container: inspectExact(manifest.resources.container.id),
-    network: inspectExact(manifest.resources.network.id), image });
-  docker(['start', decision.containerId]);
+  const lifecycleInput = { plan: {
+    runId: manifest.runId, imageId: manifest.resources.container.imageId, imageRef: manifest.resources.container.imageId,
+    containerId: manifest.resources.container.id, networkId: manifest.resources.network.id,
+    names: { container: manifest.resources.container.name, network: manifest.resources.network.name }, hostedFallback: manifest.hostedFallback,
+  }, container: inspectExact(manifest.resources.container.id), network: inspectExact(manifest.resources.network.id), image,
+  persistent: manifest.persistentSnapshot };
+  const decision = verifyStartGate({ manifest, container: lifecycleInput.container, network: lifecycleInput.network, image });
+  const startLifecycle = runMandatoryLifecycle({ operation: 'start', input: lifecycleInput,
+    actions: { start: () => docker(['start', decision.containerId]) } });
+  assert.equal(startLifecycle.ok, true, 'Startup lifecycle authorization was rejected.');
   const decisionPath = path.join(path.dirname(manifestPath), 'start-decision.json');
   let postStart;
   try {
@@ -582,7 +704,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  buildManifest, checkSource, containerSecuritySnapshot, exactCleanupCommands, expectedHashes,
-  evaluatePrestartGate, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runPrestartGate, sha256,
+  authorizeLifecycle, authorizePreparation, buildManifest, checkSource, containerSecuritySnapshot, executeLifecycleAction, exactCleanupCommands, expectedHashes,
+  evaluatePrestartGate, lifecycleAuthorizationSchema, lifecycleTargetBinding, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runMandatoryLifecycle, runPrestartGate, sha256,
   validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
 };

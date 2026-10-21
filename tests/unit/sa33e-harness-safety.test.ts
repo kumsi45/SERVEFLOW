@@ -4,14 +4,19 @@ import { describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const safety = require("../../supabase/audits/sa33c-fresh-install-verify.cjs") as {
+  authorizeLifecycle: (input: Record<string, any>) => Record<string, any>;
+  authorizePreparation: (input: Record<string, any>) => Record<string, any>;
   buildManifest: (input: Fixture) => Manifest;
   evaluatePrestartGate: (input: Omit<Fixture, "repository">) => Record<string, any>;
+  executeLifecycleAction: (input: Record<string, any>) => unknown;
   exactCleanupCommands: (manifest: Manifest, current: { container: Container; network: Network }) => string[][];
   validateManifest: (manifest: unknown) => Manifest;
   validateStartedTarget: (input: { manifest: Manifest; container: Container; network: Network; image: Image }) => unknown;
   validateStoppedTarget: (input: Omit<Fixture, "repository">) => unknown;
   verifyStartGate: (input: { manifest: Manifest; container: Container; network: Network; image: Image }) => { containerId: string };
   runPrestartGate: (input: Omit<Fixture, "repository">, callbacks?: Record<string, unknown>) => Record<string, any>;
+  runMandatoryLifecycle: (input: Record<string, any>) => Record<string, any>;
+  lifecycleTargetBinding: (input: Omit<Fixture, "repository">) => string;
 };
 
 type Container = Record<string, any>;
@@ -325,5 +330,92 @@ describe("B1A.4 pure pre-start safety gate", () => {
     const result = safety.evaluatePrestartGate(input);
     expect(result).toMatchObject({ ok: false, decision: "PRESTART_REJECTED" });
     expect(JSON.stringify(result)).not.toContain("super-secret");
+  });
+});
+
+describe("B1A.6 mandatory lifecycle authorization", () => {
+  function lifecycleInput() {
+    const { repository: _repository, ...input } = fixture();
+    return input;
+  }
+
+  function runtimeProof(input: ReturnType<typeof lifecycleInput>) {
+    return { schema: "serveflow.sa33e.runtime-proof.v1", binding: safety.lifecycleTargetBinding(input), runtimeStorageVerified: true };
+  }
+
+  it("routes preparation and startup through the mandatory lifecycle boundary", () => {
+    const source = readFileSync("supabase/audits/sa33c-fresh-install-verify.cjs", "utf8");
+    expect(source).toContain("runMandatoryLifecycle({ operation: 'prepare'");
+    expect(source).toContain("runMandatoryLifecycle({ operation: 'start'");
+  });
+
+  it("allows only a fully target-bound synthetic startup action", () => {
+    const input = lifecycleInput();
+    const start = vi.fn();
+    const result = safety.runMandatoryLifecycle({ operation: "start", input, runtimeProof: runtimeProof(input), actions: { start } });
+    expect(result.ok).toBe(true);
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects configuration-only preflight and never calls start or write", () => {
+    const input = lifecycleInput();
+    const start = vi.fn();
+    const write = vi.fn();
+    const result = safety.runMandatoryLifecycle({ operation: "start", input, actions: { start, write } });
+    expect(result.ok).toBe(false);
+    expect(start).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a thrown gate", () => { throw new Error("gate failed"); }],
+    ["a rejected promise", () => Promise.reject(new Error("gate rejected"))],
+    ["a malformed result", () => ({ ok: true })],
+    ["a rejected result", () => ({ schema: "serveflow.sa33e.lifecycle-authorization.v1", ok: false })],
+  ])("fails closed for %s with zero actions", (_label, gate) => {
+    const input = lifecycleInput();
+    const start = vi.fn();
+    const write = vi.fn();
+    const result = safety.runMandatoryLifecycle({ operation: "start", input, gate, actions: { start, write } });
+    expect(result.ok).toBe(false);
+    expect(start).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["identity", (input: any) => { input.container.Id = "9".repeat(64); }],
+    ["image", (input: any) => { input.image.Id = `sha256:${"8".repeat(64)}`; }],
+    ["network", (input: any) => { input.network.Internal = false; }],
+    ["port", (input: any) => { input.container.HostConfig.PortBindings = { "5432/tcp": [{ HostPort: "5432" }] }; }],
+    ["socket mount", (input: any) => { input.container.Mounts = [{ Type: "bind", Source: "/var/run/docker.sock", Destination: "/sock" }]; }],
+    ["tmpfs", (input: any) => { delete input.container.HostConfig.Tmpfs["/tmp"]; }],
+  ])("does not authorize an unsafe %s target", (_label, mutate) => {
+    const input = lifecycleInput();
+    mutate(input);
+    const start = vi.fn();
+    const result = safety.runMandatoryLifecycle({ operation: "start", input, runtimeProof: runtimeProof(input), actions: { start } });
+    expect(result.ok).toBe(false);
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("invalidates authorization when the target changes after validation", () => {
+    const input = lifecycleInput();
+    const authorization = safety.authorizeLifecycle({ operation: "start", input, runtimeProof: runtimeProof(input) });
+    input.container.HostConfig.Binds = ["C:/host:/host"];
+    const start = vi.fn();
+    expect(() => safety.executeLifecycleAction({ operation: "start", input, authorization, actions: { start } })).toThrow(/target changed/i);
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("does not turn preparation or startup authorization into write authorization", () => {
+    const input = lifecycleInput();
+    const preparePlan = structuredClone(input.plan);
+    delete preparePlan.containerId;
+    delete preparePlan.networkId;
+    const preparation = safety.authorizePreparation({ plan: preparePlan, image: input.image, persistent: input.persistent });
+    expect(preparation).toMatchObject({ ok: true, preparationAuthorized: true, startupAuthorized: false, writeAuthorized: false });
+    const write = vi.fn();
+    expect(safety.runMandatoryLifecycle({ operation: "write", input, actions: { write } }).ok).toBe(false);
+    expect(write).not.toHaveBeenCalled();
   });
 });
