@@ -16,6 +16,8 @@ const safety = require("../../supabase/audits/sa33c-fresh-install-verify.cjs") a
   verifyStartGate: (input: { manifest: Manifest; container: Container; network: Network; image: Image }) => { containerId: string };
   runPrestartGate: (input: Omit<Fixture, "repository">, callbacks?: Record<string, unknown>) => Record<string, any>;
   runMandatoryLifecycle: (input: Record<string, any>) => Record<string, any>;
+  runPreparationCreation: (input: Record<string, any>) => { networkId: string; containerId: string };
+  prepareStoppedResources: (services: Record<string, any>) => void;
   lifecycleTargetBinding: (input: Omit<Fixture, "repository">) => string;
 };
 
@@ -55,7 +57,7 @@ function fixture(): Fixture {
       dockerContext: { name: "desktop-linux", endpoint: "npipe:////./pipe/dockerDesktopLinuxEngine" },
       hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
     },
-    image: { Id: ids.image, Config: { Volumes: null } },
+    image: { Id: ids.image, RepoDigests: [`public.ecr.aws/supabase/postgres@sha256:${"f".repeat(64)}`], Config: { Volumes: null } },
     container: {
       Id: ids.container,
       Name: `/${names.container}`,
@@ -412,10 +414,166 @@ describe("B1A.6 mandatory lifecycle authorization", () => {
     const preparePlan = structuredClone(input.plan);
     delete preparePlan.containerId;
     delete preparePlan.networkId;
+    preparePlan.imageRef = input.image.RepoDigests[0];
     const preparation = safety.authorizePreparation({ plan: preparePlan, image: input.image, persistent: input.persistent });
     expect(preparation).toMatchObject({ ok: true, preparationAuthorized: true, startupAuthorized: false, writeAuthorized: false });
     const write = vi.fn();
     expect(safety.runMandatoryLifecycle({ operation: "write", input, actions: { write } }).ok).toBe(false);
     expect(write).not.toHaveBeenCalled();
+  });
+});
+
+describe("B1A.8 preparation creation dispatcher", () => {
+  function setup() {
+    const input = fixture();
+    delete input.plan.containerId;
+    delete input.plan.networkId;
+    input.plan.imageRef = input.image.RepoDigests[0];
+    const createNetwork = vi.fn(() => ids.network);
+    const createContainer = vi.fn(() => ids.container);
+    return { input, createNetwork, createContainer };
+  }
+
+  it("dispatches only exact safe command arrays to injected creation adapters", () => {
+    const { input, createNetwork, createContainer } = setup();
+    const result = safety.runPreparationCreation({ ...input, createNetwork, createContainer });
+    expect(result).toEqual({ networkId: ids.network, containerId: ids.container });
+    expect(createNetwork).toHaveBeenCalledTimes(1);
+    expect(createContainer).toHaveBeenCalledTimes(1);
+    expect(createNetwork.mock.calls[0][0]).toEqual([
+      "network", "create", "--driver", "bridge", "--internal", "--label",
+      `serveflow.sa33e.disposable=${runId}`, input.plan.names.network,
+    ]);
+    const args = createContainer.mock.calls[0][0] as string[];
+    expect(args).toEqual([
+      "create", "--name", input.plan.names.container, "--label", `serveflow.sa33e.disposable=${runId}`,
+      "--network", input.plan.names.network, "--read-only", "--cap-drop", "ALL",
+      "--security-opt", "no-new-privileges", "--no-healthcheck", "--user", "postgres",
+      "--tmpfs", "/sa33e:rw,nosuid,nodev,noexec,size=1024m,mode=0700",
+      "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777",
+      "--entrypoint", "/bin/sh", ids.image, "-c", "sleep infinity",
+    ]);
+    expect(Object.isFrozen(args)).toBe(true);
+  });
+
+  it.each([
+    ["rejected", () => ({ schema: "serveflow.sa33e.lifecycle-authorization.v1", ok: false })],
+    ["thrown", () => { throw new Error("rejected"); }],
+    ["rejected promise", () => Promise.reject(new Error("rejected"))],
+    ["missing", () => undefined],
+    ["malformed", () => ({ ok: true })],
+    ["unknown state", () => ({ schema: "unknown", ok: true, preparationAuthorized: true })],
+  ])("blocks both creation adapters for a %s extra gate", async (_label, gate) => {
+    const { input, createNetwork, createContainer } = setup();
+    expect(() => safety.runPreparationCreation({ ...input, gate, createNetwork, createContainer })).toThrow();
+    await Promise.resolve();
+    expect(createNetwork).not.toHaveBeenCalled();
+    expect(createContainer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing provenance", (input: Fixture) => { delete input.image.RepoDigests; }],
+    ["invalid provenance", (input: Fixture) => { input.plan.imageRef = "public.ecr.aws/supabase/postgres:17.6.1.141"; }],
+    ["wrong provenance", (input: Fixture) => { input.plan.imageRef = `public.ecr.aws/supabase/postgres@sha256:${"0".repeat(64)}`; }],
+    ["invalid image ID", (input: Fixture) => { input.image.Id = "sha256:short"; }],
+    ["workspace name", (input: Fixture) => { input.plan.names.container = "supabase_db_workspace"; }],
+  ])("fails closed for %s", (_label, mutate) => {
+    const { input, createNetwork, createContainer } = setup();
+    mutate(input);
+    expect(() => safety.runPreparationCreation({ ...input, createNetwork, createContainer })).toThrow();
+    expect(createNetwork).not.toHaveBeenCalled();
+    expect(createContainer).not.toHaveBeenCalled();
+  });
+
+  it("blocks container creation when the plan changes after network creation", () => {
+    const { input, createContainer } = setup();
+    const createNetwork = vi.fn(() => { input.plan.names.container = "changed"; return ids.network; });
+    expect(() => safety.runPreparationCreation({ ...input, createNetwork, createContainer })).toThrow(/target changed/i);
+    expect(createNetwork).toHaveBeenCalledOnce();
+    expect(createContainer).not.toHaveBeenCalled();
+  });
+
+  it("rejects changed configuration and unknown authorization fields before either creation call", () => {
+    const changed = setup();
+    const gate = () => {
+      const result = safety.authorizePreparation(changed.input);
+      changed.input.plan.names.network = "mutated-network";
+      return result;
+    };
+    expect(() => safety.runPreparationCreation({ ...changed.input, gate,
+      createNetwork: changed.createNetwork, createContainer: changed.createContainer })).toThrow(/target changed/i);
+    expect(changed.createNetwork).not.toHaveBeenCalled();
+    expect(changed.createContainer).not.toHaveBeenCalled();
+
+    const unknown = setup();
+    expect(() => safety.runPreparationCreation({ ...unknown.input,
+      gate: () => ({ ...safety.authorizePreparation(unknown.input), unknown: true }),
+      createNetwork: unknown.createNetwork, createContainer: unknown.createContainer })).toThrow(/unknown or missing fields/i);
+    expect(unknown.createNetwork).not.toHaveBeenCalled();
+    expect(unknown.createContainer).not.toHaveBeenCalled();
+  });
+
+  it("records the exact new network ID before a container adapter failure", () => {
+    const { input, createNetwork } = setup();
+    const onNetworkCreated = vi.fn();
+    const createContainer = vi.fn(() => { throw new Error("container create failed"); });
+    expect(() => safety.runPreparationCreation({ ...input, createNetwork, createContainer, onNetworkCreated }))
+      .toThrow(/container create failed/);
+    expect(onNetworkCreated).toHaveBeenCalledExactlyOnceWith(ids.network);
+  });
+
+  it("the CLI routes its only creation calls through this dispatcher", () => {
+    const source = readFileSync("supabase/audits/sa33c-fresh-install-verify.cjs", "utf8");
+    expect(source).toContain("({ networkId, containerId } = runPreparationCreation({ plan, image, persistent,");
+    expect(source.match(/docker\(\['create'/g)).toBeNull();
+    expect(source.match(/docker\(\['network', 'create'/g)).toBeNull();
+  });
+
+  it("exercises the CLI preparation orchestration using only injected adapters", () => {
+    const originalArgv = process.argv;
+    const input = fixture();
+    const prefix = `serveflow-sa33e-${runId.slice(0, 12)}`;
+    input.plan.names = { container: `${prefix}-db`, network: `${prefix}-net` };
+    input.container.Name = `/${input.plan.names.container}`;
+    input.container.HostConfig.NetworkMode = input.plan.names.network;
+    input.container.NetworkSettings.Networks = { [input.plan.names.network]: { NetworkID: ids.network } };
+    input.network.Name = input.plan.names.network;
+    input.plan.imageRef = input.image.RepoDigests[0];
+    expect(safety.evaluatePrestartGate({ plan: input.plan, container: input.container,
+      network: input.network, image: input.image, persistent: input.persistent })).toMatchObject({ ok: true });
+    const createNetwork = vi.fn(() => ids.network);
+    const createContainer = vi.fn(() => ids.container);
+    const writeManifest = vi.fn();
+    const remove = vi.fn();
+    const services = {
+      checkSource: () => ({ migrationCount: 278, migrationSetSha256: "f".repeat(64) }),
+      localDockerContext: () => input.plan.dockerContext,
+      persistentInventory: () => input.persistent,
+      inspectImage: () => input.image,
+      runId: () => runId,
+      createEvidenceDir: () => "C:\\Temp\\synthetic-evidence",
+      createNetwork, createContainer,
+      inspectExact: (id: string) => id === ids.container ? input.container : input.network,
+      migrationInventory: () => [], writeManifest, remove, log: vi.fn(),
+    };
+    try {
+      process.argv = [...originalArgv, "--confirm-stopped-resource-creation"];
+      safety.prepareStoppedResources(services);
+      expect(createNetwork).toHaveBeenCalledOnce();
+      expect(createContainer).toHaveBeenCalledOnce();
+      expect(writeManifest).toHaveBeenCalledOnce();
+      expect(remove).not.toHaveBeenCalled();
+
+      const rejected = { ...services, inspectImage: () => ({ ...input.image, RepoDigests: [] }) };
+      createNetwork.mockClear();
+      createContainer.mockClear();
+      writeManifest.mockClear();
+      expect(() => safety.prepareStoppedResources(rejected)).toThrow();
+      expect(createNetwork).not.toHaveBeenCalled();
+      expect(createContainer).not.toHaveBeenCalled();
+      expect(writeManifest).not.toHaveBeenCalled();
+    } finally {
+      process.argv = originalArgv;
+    }
   });
 });

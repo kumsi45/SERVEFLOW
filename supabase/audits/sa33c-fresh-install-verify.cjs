@@ -307,7 +307,26 @@ function lifecycleTargetBinding(input) {
 }
 
 function preparationBinding({ plan, image, persistent }) {
-  return sha256({ plan, image: { Id: image?.Id, RepoDigests: image?.RepoDigests || [] }, persistent });
+  return sha256({ plan, image: { Id: image?.Id, RepoDigests: image?.RepoDigests || [], Volumes: image?.Config?.Volumes }, persistent,
+    commands: preparationCommands(plan) });
+}
+
+function preparationCommands(plan) {
+  return {
+    network: ['network', 'create', '--driver', 'bridge', '--internal', '--label', `${labelKey}=${plan.runId}`, plan.names.network],
+    container: ['create', '--name', plan.names.container, '--label', `${labelKey}=${plan.runId}`,
+      '--network', plan.names.network, '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+      '--no-healthcheck', '--user', 'postgres', '--tmpfs', '/sa33e:rw,nosuid,nodev,noexec,size=1024m,mode=0700',
+      '--tmpfs', '/tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777', '--entrypoint', '/bin/sh', plan.imageId,
+      '-c', 'sleep infinity'],
+  };
+}
+
+function validatePreparationProvenance(plan, image) {
+  assert.match(plan.imageRef, /^public\.ecr\.aws\/supabase\/postgres@sha256:[0-9a-f]{64}$/i,
+    'An immutable repository image reference is required.');
+  assert(Array.isArray(image.RepoDigests) && image.RepoDigests.includes(plan.imageRef),
+    'Inspected image repository digest does not match the planned reference.');
 }
 
 function rejectedLifecycleAuthorization(operation, binding) {
@@ -321,6 +340,7 @@ function authorizePreparation({ plan, image, persistent }) {
     validatePrestartConfiguration({ plan, persistent });
     validatePreparationIdentity({ plan, persistent });
     validatePrestartImageIdentity({ plan, image });
+    validatePreparationProvenance(plan, image);
     return Object.freeze({ schema: lifecycleAuthorizationSchema, ok: true, operation: 'prepare', binding,
       startupAuthorized: false, writeAuthorized: false, preparationAuthorized: true });
   } catch {
@@ -366,14 +386,55 @@ function requireLifecycleAuthorization(authorization, operation, binding) {
   return authorization;
 }
 
+function requirePreparationAuthorization(authorization, binding) {
+  requireLifecycleAuthorization(authorization, 'prepare', binding);
+  assert.deepEqual(Object.keys(authorization).sort(), [
+    'binding', 'ok', 'operation', 'preparationAuthorized', 'schema', 'startupAuthorized', 'writeAuthorized',
+  ].sort(), 'Preparation authorization has unknown or missing fields.');
+  assert.equal(authorization.startupAuthorized, false, 'Preparation cannot authorize startup.');
+  assert.equal(authorization.writeAuthorized, false, 'Preparation cannot authorize writes.');
+}
+
 function executeLifecycleAction({ operation, input, authorization, actions }) {
-  const binding = operation === 'prepare'
+  const binding = operation === 'prepare' && !input?.container
     ? preparationBinding(input)
     : lifecycleTargetBinding(input);
   requireLifecycleAuthorization(authorization, operation, binding);
   const action = actions?.[operation];
   assert.equal(typeof action, 'function', 'Lifecycle action is missing.');
   return action();
+}
+
+// The only creation dispatcher. The CLI supplies Docker adapters; pure tests supply spies.
+// The production authorizer is always required, even when a test supplies an extra gate.
+function runPreparationCreation({ plan, image, persistent, gate, createNetwork, createContainer, onNetworkCreated }) {
+  const input = { plan, image, persistent };
+  const authorization = authorizePreparation(input);
+  const binding = preparationBinding(input);
+  requirePreparationAuthorization(authorization, binding);
+  if (gate) {
+    const additional = gate(input);
+    if (additional && typeof additional.then === 'function') {
+      Promise.resolve(additional).catch(() => undefined);
+      throw new Error('Asynchronous preparation gates are forbidden.');
+    }
+    requirePreparationAuthorization(additional, binding);
+  }
+  assert.equal(typeof createNetwork, 'function', 'Network creation adapter is missing.');
+  assert.equal(typeof createContainer, 'function', 'Container creation adapter is missing.');
+  const commands = preparationCommands(plan);
+  const networkArgs = Object.freeze([...commands.network]);
+  const containerArgs = Object.freeze([...commands.container]);
+  requirePreparationAuthorization(authorization, preparationBinding(input));
+  const networkId = createNetwork(networkArgs);
+  requireId(networkId, 'Created network');
+  if (onNetworkCreated) onNetworkCreated(networkId);
+  // Recheck after the first side effect. A mutated plan never reaches container creation.
+  requirePreparationAuthorization(authorization, preparationBinding(input));
+  assert.deepEqual(preparationCommands(plan).container, containerArgs, 'Container creation configuration changed.');
+  const containerId = createContainer(containerArgs);
+  requireId(containerId, 'Created container');
+  return { networkId, containerId };
 }
 
 function runMandatoryLifecycle({ operation, input, runtimeProof, gate = authorizeLifecycle, actions }) {
@@ -557,60 +618,57 @@ function absoluteEvidenceRoot() {
   return resolved;
 }
 
-function prepareStoppedResources() {
+function prepareStoppedResources(services = {}) {
   assert(process.argv.includes('--confirm-stopped-resource-creation'),
     'Stopped resource creation requires --confirm-stopped-resource-creation.');
-  const source = checkSource();
-  const context = localDockerContext();
-  const persistent = persistentInventory();
-  const image = dockerJson(['image', 'inspect', databaseImageTag])[0];
+  const source = (services.checkSource || checkSource)();
+  const context = (services.localDockerContext || localDockerContext)();
+  const persistent = (services.persistentInventory || persistentInventory)();
+  const image = (services.inspectImage || (() => dockerJson(['image', 'inspect', databaseImageTag])[0]))();
   requireId(image?.Id, 'Database image');
-  const runId = crypto.randomUUID();
+  const runId = (services.runId || crypto.randomUUID)();
   const prefix = `serveflow-sa33e-${runId.slice(0, 12)}`;
   const names = { network: `${prefix}-net`, container: `${prefix}-db` };
-  const evidenceDir = fs.mkdtempSync(path.join(absoluteEvidenceRoot(), `${prefix}-evidence-`));
   const plan = {
-    runId, createdAt: new Date().toISOString(), imageRef: databaseImageTag, imageId: image.Id, names, dockerContext: context,
+    runId, createdAt: new Date().toISOString(), imageRef: image?.RepoDigests?.find((value) =>
+      /^public\.ecr\.aws\/supabase\/postgres@sha256:[0-9a-f]{64}$/i.test(value)), imageId: image.Id, names, dockerContext: context,
     hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
   };
   const preparationAuthorization = authorizePreparation({ plan, image, persistent });
-  const preparationLifecycle = runMandatoryLifecycle({ operation: 'prepare', input: { plan, image, persistent },
-    gate: () => preparationAuthorization, actions: { prepare: () => undefined } });
-  assert.equal(preparationLifecycle.ok, true, 'Preparation lifecycle authorization was rejected.');
+  requireLifecycleAuthorization(preparationAuthorization, 'prepare', preparationBinding({ plan, image, persistent }));
   let networkId;
   let containerId;
+  let evidenceDir;
+  const inspect = services.inspectExact || inspectExact;
+  const remove = services.remove || ((args) => docker(args));
   try {
-    networkId = docker(['network', 'create', '--driver', 'bridge', '--internal', '--label', `${labelKey}=${runId}`, names.network]).stdout.trim();
-    requireId(networkId, 'Created network');
-    containerId = docker(['create', '--name', names.container, '--label', `${labelKey}=${runId}`,
-      '--network', names.network, '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-      '--no-healthcheck',
-      '--user', 'postgres', '--tmpfs', '/sa33e:rw,nosuid,nodev,noexec,size=1024m,mode=0700',
-      '--tmpfs', '/tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777', '--entrypoint', '/bin/sh', image.Id,
-      '-c', 'sleep infinity']).stdout.trim();
-    requireId(containerId, 'Created container');
+    evidenceDir = (services.createEvidenceDir || (() => fs.mkdtempSync(path.join(absoluteEvidenceRoot(), `${prefix}-evidence-`))))();
+    ({ networkId, containerId } = runPreparationCreation({ plan, image, persistent,
+      createNetwork: services.createNetwork || ((args) => docker(args).stdout.trim()),
+      createContainer: services.createContainer || ((args) => docker(args).stdout.trim()),
+      onNetworkCreated: (id) => { networkId = id; } }));
     plan.networkId = networkId;
     plan.containerId = containerId;
-    const lifecycleInput = { plan, container: inspectExact(containerId), network: inspectExact(networkId), image, persistent };
+    const lifecycleInput = { plan, container: inspect(containerId), network: inspect(networkId), image, persistent };
     const targetLifecycle = runMandatoryLifecycle({ operation: 'prepare', input: lifecycleInput,
       actions: { prepare: () => undefined } });
     assert.equal(targetLifecycle.ok, true, 'Prepared target lifecycle authorization was rejected.');
     const manifest = buildManifest({ ...lifecycleInput,
       persistent, repository: { migrationCount: source.migrationCount, migrationSetSha256: source.migrationSetSha256,
-        migrations: migrationInventory() } });
+        migrations: (services.migrationInventory || migrationInventory)() } });
     const manifestPath = path.join(evidenceDir, 'preflight-manifest.json');
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-    console.log(`PREFLIGHT PASS. Resources remain stopped. Manifest: ${manifestPath}`);
+    (services.writeManifest || fs.writeFileSync)(manifestPath, JSON.stringify(manifest, null, 2));
+    (services.log || console.log)(`PREFLIGHT PASS. Resources remain stopped. Manifest: ${manifestPath}`);
   } catch (error) {
     if (containerId) {
-      const current = inspectExact(containerId);
+      const current = inspect(containerId);
       if (current.Id === containerId && current.Config?.Labels?.[labelKey] === runId && !current.State?.Running) {
-        docker(['container', 'rm', containerId]);
+        remove(['container', 'rm', containerId]);
       }
     }
     if (networkId) {
-      const current = inspectExact(networkId);
-      if (current.Id === networkId && current.Labels?.[labelKey] === runId) docker(['network', 'rm', networkId]);
+      const current = inspect(networkId);
+      if (current.Id === networkId && current.Labels?.[labelKey] === runId) remove(['network', 'rm', networkId]);
     }
     throw error;
   }
@@ -705,6 +763,6 @@ if (require.main === module) {
 
 module.exports = {
   authorizeLifecycle, authorizePreparation, buildManifest, checkSource, containerSecuritySnapshot, executeLifecycleAction, exactCleanupCommands, expectedHashes,
-  evaluatePrestartGate, lifecycleAuthorizationSchema, lifecycleTargetBinding, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runMandatoryLifecycle, runPrestartGate, sha256,
-  validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
+  evaluatePrestartGate, lifecycleAuthorizationSchema, lifecycleTargetBinding, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runMandatoryLifecycle, runPrestartGate, runPreparationCreation, sha256,
+  prepareStoppedResources, validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
 };
