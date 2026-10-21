@@ -101,9 +101,21 @@ function requireImageDigest(value, description) {
   return value;
 }
 
-function environmentNames(env = []) {
-  assert(Array.isArray(env), 'Container environment data is missing.');
-  return env.map((entry) => String(entry).split('=', 1)[0]);
+function validateEnvironment(env) {
+  assert(Array.isArray(env), 'Environment metadata is missing.');
+  const seen = new Set();
+  for (const entry of env) {
+    assert.equal(typeof entry, 'string', 'Environment entry is malformed.');
+    const separator = entry.indexOf('=');
+    assert(separator > 0, 'Environment entry is malformed.');
+    const name = entry.slice(0, separator);
+    assert.match(name, /^[A-Za-z_][A-Za-z0-9_]*$/, 'Environment name is malformed.');
+    assert(!seen.has(name.toUpperCase()), 'Duplicate environment name is forbidden.');
+    seen.add(name.toUpperCase());
+    assert(!forbiddenCredentialNames.test(name), `Hosted/database credential environment is forbidden: ${name}`);
+    assert(!entry.toLowerCase().includes('supabase.co'), 'Hosted Supabase endpoints are forbidden.');
+  }
+  return env;
 }
 
 function assertNoHostedFallback(plan, container) {
@@ -111,10 +123,7 @@ function assertNoHostedFallback(plan, container) {
   assert.equal(plan.hostedFallback?.linkedProjectRead, false, 'Linked project fallback is forbidden.');
   assert.equal(plan.hostedFallback?.environmentFilesRead, false, 'Environment-file fallback is forbidden.');
   assert.deepEqual(plan.hostedFallback?.credentialSources, [], 'Hosted credential sources are forbidden.');
-  for (const name of environmentNames(container.Config?.Env)) {
-    assert(!forbiddenCredentialNames.test(name), `Hosted/database credential environment is forbidden: ${name}`);
-  }
-  assert(!JSON.stringify(container.Config?.Env || []).includes('supabase.co'), 'Hosted Supabase endpoints are forbidden.');
+  validateEnvironment(container.Config?.Env);
 }
 
 function containerSecuritySnapshot(container) {
@@ -156,6 +165,10 @@ function validateStoppedTarget({ plan, container, network, image, persistent }) 
   assert.equal(image.Id, plan.imageId, 'Image identity changed.');
   assert(!image.Config?.Volumes || Object.keys(image.Config.Volumes).length === 0,
     'Images with declared writable volumes are forbidden.');
+  const imageEnv = validateEnvironment(image.Config?.Env);
+  const containerEnv = validateEnvironment(container.Config?.Env);
+  assert(sha256(containerEnv) === sha256(imageEnv),
+    'Created container environment differs from the inspected image environment.');
   const c = containerSecuritySnapshot(container);
   const n = networkSecuritySnapshot(network);
   assert(!persistent.containerIds.includes(c.id), 'A persistent container ID cannot be reused.');
@@ -243,6 +256,7 @@ function validatePrestartImageIdentity({ plan, image }) {
   assert.equal(image.Id, plan.imageId, 'Image identity changed.');
   assert(!image.Config?.Volumes || Object.keys(image.Config.Volumes).length === 0,
     'Images with declared writable volumes are forbidden.');
+  validateEnvironment(image.Config?.Env);
 }
 
 function validatePrestartNetworkIsolation({ plan, network }) {
@@ -307,7 +321,8 @@ function lifecycleTargetBinding(input) {
 }
 
 function preparationBinding({ plan, image, persistent }) {
-  return sha256({ plan, image: { Id: image?.Id, RepoDigests: image?.RepoDigests || [], Volumes: image?.Config?.Volumes }, persistent,
+  return sha256({ plan, image: { Id: image?.Id, RepoDigests: image?.RepoDigests || [], Volumes: image?.Config?.Volumes,
+    Env: image?.Config?.Env }, persistent,
     commands: preparationCommands(plan) });
 }
 
@@ -435,6 +450,14 @@ function runPreparationCreation({ plan, image, persistent, gate, createNetwork, 
   const containerId = createContainer(containerArgs);
   requireId(containerId, 'Created container');
   return { networkId, containerId };
+}
+
+function requireSynchronousMetadata(value, name) {
+  if (value && typeof value.then === 'function') {
+    Promise.resolve(value).catch(() => undefined);
+    throw new Error(`${name} must be synchronous.`);
+  }
+  return value;
 }
 
 function runMandatoryLifecycle({ operation, input, runtimeProof, gate = authorizeLifecycle, actions }) {
@@ -618,15 +641,23 @@ function absoluteEvidenceRoot() {
   return resolved;
 }
 
-function prepareStoppedResources(services = {}) {
+// Pure orchestration seam: every dependency is explicit and required. It has no
+// Docker fallback. The production adapter bundle is constructed only by the CLI.
+function orchestratePreparation(services) {
+  const required = ['checkSource', 'localDockerContext', 'persistentInventory', 'inspectImage', 'runId',
+    'inspectExact', 'remove', 'createEvidenceDir', 'createNetwork', 'createContainer',
+    'migrationInventory', 'writeManifest', 'log'];
+  assert(services && typeof services === 'object', 'Preparation adapters are missing.');
+  assert.deepEqual(Object.keys(services).sort(), [...required].sort(), 'Preparation adapters must be complete.');
+  for (const name of required) assert.equal(typeof services[name], 'function', `Preparation adapter ${name} is missing.`);
   assert(process.argv.includes('--confirm-stopped-resource-creation'),
     'Stopped resource creation requires --confirm-stopped-resource-creation.');
-  const source = (services.checkSource || checkSource)();
-  const context = (services.localDockerContext || localDockerContext)();
-  const persistent = (services.persistentInventory || persistentInventory)();
-  const image = (services.inspectImage || (() => dockerJson(['image', 'inspect', databaseImageTag])[0]))();
+  const source = requireSynchronousMetadata(services.checkSource(), 'Source check');
+  const context = requireSynchronousMetadata(services.localDockerContext(), 'Docker context');
+  const persistent = requireSynchronousMetadata(services.persistentInventory(), 'Persistent inventory');
+  const image = requireSynchronousMetadata(services.inspectImage(), 'Image metadata');
   requireId(image?.Id, 'Database image');
-  const runId = (services.runId || crypto.randomUUID)();
+  const runId = requireSynchronousMetadata(services.runId(), 'Run ID');
   const prefix = `serveflow-sa33e-${runId.slice(0, 12)}`;
   const names = { network: `${prefix}-net`, container: `${prefix}-db` };
   const plan = {
@@ -635,17 +666,17 @@ function prepareStoppedResources(services = {}) {
     hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
   };
   const preparationAuthorization = authorizePreparation({ plan, image, persistent });
-  requireLifecycleAuthorization(preparationAuthorization, 'prepare', preparationBinding({ plan, image, persistent }));
+  requirePreparationAuthorization(preparationAuthorization, preparationBinding({ plan, image, persistent }));
   let networkId;
   let containerId;
   let evidenceDir;
-  const inspect = services.inspectExact || inspectExact;
-  const remove = services.remove || ((args) => docker(args));
+  const inspect = services.inspectExact;
+  const remove = services.remove;
   try {
-    evidenceDir = (services.createEvidenceDir || (() => fs.mkdtempSync(path.join(absoluteEvidenceRoot(), `${prefix}-evidence-`))))();
+    evidenceDir = services.createEvidenceDir(prefix);
     ({ networkId, containerId } = runPreparationCreation({ plan, image, persistent,
-      createNetwork: services.createNetwork || ((args) => docker(args).stdout.trim()),
-      createContainer: services.createContainer || ((args) => docker(args).stdout.trim()),
+      createNetwork: services.createNetwork,
+      createContainer: services.createContainer,
       onNetworkCreated: (id) => { networkId = id; } }));
     plan.networkId = networkId;
     plan.containerId = containerId;
@@ -655,10 +686,10 @@ function prepareStoppedResources(services = {}) {
     assert.equal(targetLifecycle.ok, true, 'Prepared target lifecycle authorization was rejected.');
     const manifest = buildManifest({ ...lifecycleInput,
       persistent, repository: { migrationCount: source.migrationCount, migrationSetSha256: source.migrationSetSha256,
-        migrations: (services.migrationInventory || migrationInventory)() } });
+        migrations: services.migrationInventory() } });
     const manifestPath = path.join(evidenceDir, 'preflight-manifest.json');
-    (services.writeManifest || fs.writeFileSync)(manifestPath, JSON.stringify(manifest, null, 2));
-    (services.log || console.log)(`PREFLIGHT PASS. Resources remain stopped. Manifest: ${manifestPath}`);
+    services.writeManifest(manifestPath, JSON.stringify(manifest, null, 2));
+    services.log(`PREFLIGHT PASS. Resources remain stopped. Manifest: ${manifestPath}`);
   } catch (error) {
     if (containerId) {
       const current = inspect(containerId);
@@ -672,6 +703,21 @@ function prepareStoppedResources(services = {}) {
     }
     throw error;
   }
+}
+
+function prepareStoppedResources() {
+  return orchestratePreparation({
+    checkSource, localDockerContext, persistentInventory,
+    inspectImage: () => dockerJson(['image', 'inspect', databaseImageTag])[0],
+    runId: crypto.randomUUID, inspectExact,
+    remove: (args) => docker(args),
+    createEvidenceDir: (prefix) => fs.mkdtempSync(path.join(absoluteEvidenceRoot(), `${prefix}-evidence-`)),
+    createNetwork: (args) => docker(args).stdout.trim(),
+    createContainer: (args) => docker(args).stdout.trim(),
+    migrationInventory,
+    writeManifest: (file, contents) => fs.writeFileSync(file, contents),
+    log: (message) => console.log(message),
+  });
 }
 
 function readManifestArgument() {
@@ -764,5 +810,5 @@ if (require.main === module) {
 module.exports = {
   authorizeLifecycle, authorizePreparation, buildManifest, checkSource, containerSecuritySnapshot, executeLifecycleAction, exactCleanupCommands, expectedHashes,
   evaluatePrestartGate, lifecycleAuthorizationSchema, lifecycleTargetBinding, manifestSchema, migrationInventory, networkSecuritySnapshot, originalHashes, prestartGateOrder, runMandatoryLifecycle, runPrestartGate, runPreparationCreation, sha256,
-  prepareStoppedResources, validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
+  orchestratePreparation, validateManifest, validateStartedTarget, validateStoppedTarget, verifyStartGate,
 };

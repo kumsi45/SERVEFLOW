@@ -17,7 +17,7 @@ const safety = require("../../supabase/audits/sa33c-fresh-install-verify.cjs") a
   runPrestartGate: (input: Omit<Fixture, "repository">, callbacks?: Record<string, unknown>) => Record<string, any>;
   runMandatoryLifecycle: (input: Record<string, any>) => Record<string, any>;
   runPreparationCreation: (input: Record<string, any>) => { networkId: string; containerId: string };
-  prepareStoppedResources: (services: Record<string, any>) => void;
+  orchestratePreparation: (services: Record<string, any>) => void;
   lifecycleTargetBinding: (input: Omit<Fixture, "repository">) => string;
 };
 
@@ -57,7 +57,8 @@ function fixture(): Fixture {
       dockerContext: { name: "desktop-linux", endpoint: "npipe:////./pipe/dockerDesktopLinuxEngine" },
       hostedFallback: { supabaseCliUsed: false, linkedProjectRead: false, environmentFilesRead: false, credentialSources: [] },
     },
-    image: { Id: ids.image, RepoDigests: [`public.ecr.aws/supabase/postgres@sha256:${"f".repeat(64)}`], Config: { Volumes: null } },
+    image: { Id: ids.image, RepoDigests: [`public.ecr.aws/supabase/postgres@sha256:${"f".repeat(64)}`],
+      Config: { Volumes: null, Env: ["PATH=/usr/local/bin", "PG_MAJOR=17"] } },
     container: {
       Id: ids.container,
       Name: `/${names.container}`,
@@ -493,6 +494,17 @@ describe("B1A.8 preparation creation dispatcher", () => {
     expect(createContainer).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["image identity", (input: Fixture) => { input.image.Id = `sha256:${"0".repeat(64)}`; }],
+    ["inherited environment", (input: Fixture) => { input.image.Config.Env.push("UNEXPECTED=value"); }],
+  ])("blocks container creation when %s changes after network creation", (_label, mutate) => {
+    const { input, createContainer } = setup();
+    const createNetwork = vi.fn(() => { mutate(input); return ids.network; });
+    expect(() => safety.runPreparationCreation({ ...input, createNetwork, createContainer })).toThrow(/target changed/i);
+    expect(createNetwork).toHaveBeenCalledOnce();
+    expect(createContainer).not.toHaveBeenCalled();
+  });
+
   it("rejects changed configuration and unknown authorization fields before either creation call", () => {
     const changed = setup();
     const gate = () => {
@@ -524,9 +536,12 @@ describe("B1A.8 preparation creation dispatcher", () => {
 
   it("the CLI routes its only creation calls through this dispatcher", () => {
     const source = readFileSync("supabase/audits/sa33c-fresh-install-verify.cjs", "utf8");
+    expect(source).toContain("function prepareStoppedResources() {");
+    expect(source).toContain("return orchestratePreparation({");
     expect(source).toContain("({ networkId, containerId } = runPreparationCreation({ plan, image, persistent,");
     expect(source.match(/docker\(\['create'/g)).toBeNull();
     expect(source.match(/docker\(\['network', 'create'/g)).toBeNull();
+    expect(safety).not.toHaveProperty("prepareStoppedResources");
   });
 
   it("exercises the CLI preparation orchestration using only injected adapters", () => {
@@ -558,7 +573,7 @@ describe("B1A.8 preparation creation dispatcher", () => {
     };
     try {
       process.argv = [...originalArgv, "--confirm-stopped-resource-creation"];
-      safety.prepareStoppedResources(services);
+      safety.orchestratePreparation(services);
       expect(createNetwork).toHaveBeenCalledOnce();
       expect(createContainer).toHaveBeenCalledOnce();
       expect(writeManifest).toHaveBeenCalledOnce();
@@ -568,10 +583,41 @@ describe("B1A.8 preparation creation dispatcher", () => {
       createNetwork.mockClear();
       createContainer.mockClear();
       writeManifest.mockClear();
-      expect(() => safety.prepareStoppedResources(rejected)).toThrow();
+      expect(() => safety.orchestratePreparation(rejected)).toThrow();
       expect(createNetwork).not.toHaveBeenCalled();
       expect(createContainer).not.toHaveBeenCalled();
       expect(writeManifest).not.toHaveBeenCalled();
+
+      const invalidImages = [
+        undefined,
+        { ...input.image, Config: { Volumes: null } },
+        { ...input.image, Config: { Volumes: null, Env: "PATH=/bin" } },
+        { ...input.image, Config: { Volumes: null, Env: ["PATH=/bin", "SUPABASE_ACCESS_TOKEN=forbidden"] } },
+        { ...input.image, Config: { Volumes: null, Env: ["PATH=/bin", "API_URL=https://example.supabase.co"] } },
+        { ...input.image, Config: { Volumes: null, Env: ["PATH=/bin", "PATH=/other"] } },
+        { ...input.image, Config: { Volumes: null, Env: ["MALFORMED"] } },
+      ];
+      for (const image of invalidImages) {
+        expect(() => safety.orchestratePreparation({ ...services, inspectImage: () => image })).toThrow();
+        expect(createNetwork).not.toHaveBeenCalled();
+        expect(createContainer).not.toHaveBeenCalled();
+      }
+
+      expect(() => safety.orchestratePreparation({ ...services, inspectImage: () => { throw new Error("metadata failed"); } }))
+        .toThrow(/metadata failed/i);
+      expect(createNetwork).not.toHaveBeenCalled();
+      expect(createContainer).not.toHaveBeenCalled();
+
+      expect(() => safety.orchestratePreparation({ ...services,
+        inspectImage: () => Promise.reject(new Error("metadata rejected")) })).toThrow(/synchronous/i);
+      expect(createNetwork).not.toHaveBeenCalled();
+      expect(createContainer).not.toHaveBeenCalled();
+
+      const partial = { ...services } as Record<string, any>;
+      delete partial.createContainer;
+      expect(() => safety.orchestratePreparation(partial)).toThrow(/adapters must be complete/i);
+      expect(createNetwork).not.toHaveBeenCalled();
+      expect(createContainer).not.toHaveBeenCalled();
     } finally {
       process.argv = originalArgv;
     }
